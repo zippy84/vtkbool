@@ -41,6 +41,8 @@ typedef std::vector<InterPtType> InterPtsType;
 typedef std::vector<std::pair<InterPtType, InterPtType> > OverlapsType;
 
 class VTK_EXPORT vtkPolyDataContactFilter : public vtkPolyDataAlgorithm {
+    
+    void PreparePolyData (vtkPolyData *pd);
 
     InterPtType IntersectEdgeAndLine (double *edgePtA, double *edgePtB, double *r, double *pt);
     InterPtsType IntersectPolyAndLine (vtkPoints *pts, vtkIdList *poly, double *r, double *pt);

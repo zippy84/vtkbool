@@ -31,7 +31,9 @@
 #include <vtkMath.h>
 #include <vtkIntArray.h>
 #include <vtkCellData.h>
+#include <vtkPointData.h>
 #include <vtkCleanPolyData.h>
+#include <vtkTriangleStrip.h>
 
 #include <vtkCellArray.h>
 
@@ -59,6 +61,7 @@ vtkPolyDataContactFilter::vtkPolyDataContactFilter () {
     MergeLines = true;
 
     SetNumberOfInputPorts(2);
+    SetNumberOfOutputPorts(3);
 }
 
 
@@ -77,15 +80,16 @@ int vtkPolyDataContactFilter::ProcessRequest (vtkInformation *request, vtkInform
         vtkInformation *inInfoA = inputVector[0]->GetInformationObject(0);
         vtkInformation *inInfoB = inputVector[1]->GetInformationObject(0);
 
-        // die polygone der beiden vernetzungen müssen unbedingt konvex sein
-
         vtkPolyData *_pdA = vtkPolyData::SafeDownCast(inInfoA->Get(vtkDataObject::DATA_OBJECT()));
         vtkPolyData *_pdB = vtkPolyData::SafeDownCast(inInfoB->Get(vtkDataObject::DATA_OBJECT()));
 
-        // ein output
-        vtkInformation *outInfo = outputVector->GetInformationObject(0);
+        vtkInformation *outInfoA = outputVector->GetInformationObject(0);
+        vtkInformation *outInfoB = outputVector->GetInformationObject(1);
+        vtkInformation *outInfoC = outputVector->GetInformationObject(2);
 
-        vtkPolyData *result = vtkPolyData::SafeDownCast(outInfo->Get(vtkDataObject::DATA_OBJECT()));
+        vtkPolyData *resultA = vtkPolyData::SafeDownCast(outInfoA->Get(vtkDataObject::DATA_OBJECT()));
+        vtkPolyData *resultB = vtkPolyData::SafeDownCast(outInfoB->Get(vtkDataObject::DATA_OBJECT()));
+        vtkPolyData *resultC = vtkPolyData::SafeDownCast(outInfoC->Get(vtkDataObject::DATA_OBJECT()));
 
         // durchführung der aufgabe
 
@@ -95,8 +99,8 @@ int vtkPolyDataContactFilter::ProcessRequest (vtkInformation *request, vtkInform
         pdB = vtkPolyData::New();
         pdB->DeepCopy(_pdB);
 
-        GeomHelper::PreparePolyData(pdA);
-        GeomHelper::PreparePolyData(pdB);
+        PreparePolyData(pdA);
+        PreparePolyData(pdB);
 
         if (pdA->GetNumberOfCells() == 0 || pdB->GetNumberOfCells() == 0) {
             vtkErrorMacro("One of the inputs does not contain any supported cells.");
@@ -142,17 +146,24 @@ int vtkPolyDataContactFilter::ProcessRequest (vtkInformation *request, vtkInform
         clean->SetAbsoluteTolerance(1e-5);
         clean->Update();
 
-        result->DeepCopy(clean->GetOutput());
+        resultA->DeepCopy(clean->GetOutput());
+        
+        std::vector<int> toRemove;
 
-        for (unsigned int i = 0; i < result->GetNumberOfCells(); i++) {
-            if (result->GetCellType(i) != VTK_LINE) {
+        for (unsigned int i = 0; i < resultA->GetNumberOfCells(); i++) {
+            if (resultA->GetCellType(i) != VTK_LINE) {
 
-                result->DeleteCell(i);
+                //resultA->DeleteCell(i);
+                
+                toRemove.push_back(i);
+            
             }
 
         }
 
-        result->RemoveDeletedCells();
+        //resultA->RemoveDeletedCells();
+        
+        GeomHelper::RemoveCells(resultA, toRemove);
 
         clean->Delete();
         mat->Delete();
@@ -161,22 +172,27 @@ int vtkPolyDataContactFilter::ProcessRequest (vtkInformation *request, vtkInform
 
         if (MergeLines) {
 
-            result->GetCellData()->RemoveArray("cA");
-            result->GetCellData()->RemoveArray("cB");
+            resultA->GetCellData()->RemoveArray("cA");
+            resultA->GetCellData()->RemoveArray("cB");
 
-            result->BuildLinks();
+            resultA->BuildLinks();
 
             vtkIdList *neigs = vtkIdList::New();
             vtkIdList *line = vtkIdList::New();
+            
+            toRemove.clear();
 
-            for (int i = 0; i < result->GetNumberOfPoints(); i++) {
-                result->GetPointCells(i, neigs);
+            for (int i = 0; i < resultA->GetNumberOfPoints(); i++) {
+                resultA->GetPointCells(i, neigs);
 
                 std::vector<std::pair<int, int> > ends;
 
                 for (int j = 0; j < neigs->GetNumberOfIds(); j++) {
-                    if (result->GetCellType(neigs->GetId(j)) != VTK_EMPTY_CELL) {
-                        result->GetCellPoints(neigs->GetId(j), line);
+                    //if (resultA->GetCellType(neigs->GetId(j)) != VTK_EMPTY_CELL) {
+                    
+                    if (std::count(toRemove.begin(), toRemove.end(), neigs->GetId(j)) == 0) {
+                    
+                        resultA->GetCellPoints(neigs->GetId(j), line);
 
                         ends.push_back(std::make_pair(i == line->GetId(1) ? line->GetId(0) : line->GetId(1), neigs->GetId(j)));
 
@@ -192,7 +208,9 @@ int vtkPolyDataContactFilter::ProcessRequest (vtkInformation *request, vtkInform
                     if (!found && ends.front().first != itr->first) {
                         found = true;
                     } else {
-                        result->DeleteCell(itr->second);
+                        //resultA->DeleteCell(itr->second);
+                        
+                        toRemove.push_back(itr->second);
                     }
 
                 }
@@ -205,14 +223,93 @@ int vtkPolyDataContactFilter::ProcessRequest (vtkInformation *request, vtkInform
             neigs->Delete();
 
             // das löschen ausführen
-            result->RemoveDeletedCells();
+            //resultA->RemoveDeletedCells();
+            
+            GeomHelper::RemoveCells(resultA, toRemove);
 
 
         }
+        
+        resultB->DeepCopy(pdA);
+        resultC->DeepCopy(pdB);
 
     }
 
     return 1;
+
+}
+
+void vtkPolyDataContactFilter::PreparePolyData (vtkPolyData *pd) {
+
+    pd->GetCellData()->Initialize();
+    pd->GetPointData()->Initialize();
+    
+    vtkIdType cellNbr = pd->GetNumberOfCells();
+    
+    vtkIntArray *cellIds = vtkIntArray::New();
+    
+    vtkIntArray *stripIds = vtkIntArray::New();
+    
+    for (unsigned int i = 0; i < cellNbr; i++) {
+        cellIds->InsertNextValue(i);
+        
+        if (pd->GetCellType(i) == VTK_TRIANGLE_STRIP) {
+            stripIds->InsertNextValue(i);
+        }
+    }
+    
+    vtkCellArray *cells = vtkCellArray::New();
+
+    vtkCellArray *strips = pd->GetStrips();
+
+    vtkIdType n;
+    vtkIdType *pts;
+    
+    unsigned int i = 0;
+
+    for (strips->InitTraversal(); strips->GetNextCell(n, pts);) {
+        cells->Reset();
+        
+        vtkTriangleStrip::DecomposeStrip(n, pts, cells);
+        
+        for (cells->InitTraversal(); cells->GetNextCell(n, pts);) {
+            pd->InsertNextCell(VTK_TRIANGLE, n, pts);
+            cellIds->InsertNextValue(stripIds->GetValue(i));
+            
+            cellNbr++;
+        }
+        
+        i++;
+        
+    }
+    
+    std::vector<int> toRemove;
+    
+    int type;
+
+    for (unsigned int i = 0; i < cellNbr; i++) {
+        type = pd->GetCellType(i);
+
+        if (type != VTK_POLYGON && type != VTK_QUAD && type != VTK_TRIANGLE) {
+            
+            //pd->DeleteCell(i);
+            
+            toRemove.push_back(i);
+        }
+        
+    }
+    
+    cellIds->SetName("OrigCellIds");
+    
+    pd->GetCellData()->SetScalars(cellIds);
+    
+    cells->Delete();
+    stripIds->Delete();
+    cellIds->Delete();
+    
+    //pd->RemoveDeletedCells();
+    
+    GeomHelper::RemoveCells(pd, toRemove);
 
 }
 

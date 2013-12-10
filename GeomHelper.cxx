@@ -20,6 +20,9 @@
 #define _USE_MATH_DEFINES
 #include <cmath>
 
+#include <vector>
+#include <algorithm>
+
 #include <vtkPoints.h>
 #include <vtkIdList.h>
 #include <vtkMath.h>
@@ -28,6 +31,7 @@
 #include <vtkPolyData.h>
 #include <vtkTriangleStrip.h>
 #include <vtkCellArray.h>
+#include <vtkIntArray.h>
 
 #include "GeomHelper.h"
 
@@ -57,35 +61,6 @@ void GeomHelper::ComputeNormal (vtkPoints *pts, vtkIdList *poly, double* n) {
     vtkMath::Normalize(n);
 }
 
-void GeomHelper::PreparePolyData (vtkPolyData *pd) {
-    // nicht erwünscht sind Lines, Verts, Triangle-Strips, ... sowie CellData und PointData
-
-    if (pd->GetCellData() != NULL) { pd->GetCellData()->Initialize(); }
-    if (pd->GetPointData() != NULL) { pd->GetPointData()->Initialize(); }
-
-    vtkCellArray *strips = pd->GetStrips();
-
-    vtkIdType n;
-    vtkIdType *pts;
-
-    for (strips->InitTraversal(); strips->GetNextCell(n, pts);) {
-        vtkTriangleStrip::DecomposeStrip(n, pts, pd->GetPolys());
-    }
-
-    int type;
-
-    for (unsigned int i = 0; i < pd->GetNumberOfCells(); i++) {
-        type = pd->GetCellType(i);
-
-        if (type != VTK_POLYGON && type != VTK_QUAD && type != VTK_TRIANGLE) {
-            pd->DeleteCell(i);
-        }
-    }
-
-    pd->RemoveDeletedCells();
-
-}
-
 double GeomHelper::GetAngle (double *vA, double *vB, double *n) {
     // vA drehen
     double _vA[3];
@@ -102,3 +77,96 @@ double GeomHelper::GetAngle (double *vA, double *vB, double *n) {
     return ang;
 }
 
+void GeomHelper::RemoveCells (vtkPolyData *pd, std::vector<int> &cells) {
+
+    vtkIntArray *types = vtkIntArray::New();
+
+    for (unsigned int i = 0; i < pd->GetNumberOfCells(); i++) {
+        types->InsertNextValue(pd->GetCellType(i));
+    }
+
+    vtkCellArray *verts = vtkCellArray::New();
+    verts->DeepCopy(pd->GetVerts());
+    pd->GetVerts()->Initialize();
+
+    vtkCellArray *lines = vtkCellArray::New();
+    lines->DeepCopy(pd->GetLines());
+    pd->GetLines()->Initialize();
+
+    vtkCellArray *polys = vtkCellArray::New();
+    polys->DeepCopy(pd->GetPolys());
+    pd->GetPolys()->Initialize();
+
+    vtkCellArray *strips = vtkCellArray::New();
+    strips->DeepCopy(pd->GetStrips());
+    pd->GetStrips()->Initialize();
+
+    pd->DeleteCells();
+
+    vtkCellData *cellData = vtkCellData::New();
+    cellData->CopyAllocate(pd->GetCellData());
+
+    int type;
+    vtkIdType *pts, n;
+    
+    verts->InitTraversal();
+    lines->InitTraversal();
+    polys->InitTraversal();
+    strips->InitTraversal();
+
+    int cellId;
+
+    for (unsigned int i = 0; i < types->GetNumberOfTuples(); i++) {
+        type = types->GetValue(i);
+
+        bool keep = std::count(cells.begin(), cells.end(), i) == 0;
+
+        if (type == VTK_VERTEX || type == VTK_POLY_VERTEX) {
+            verts->GetNextCell(n, pts);
+            
+            if (keep) {
+                cellId = pd->InsertNextCell(type, n, pts);
+                cellData->CopyData(pd->GetCellData(), i, cellId);
+            }
+
+        } else if (type == VTK_LINE || type == VTK_POLY_LINE) {
+            lines->GetNextCell(n, pts);
+            
+            if (keep) {
+                cellId = pd->InsertNextCell(type, n, pts);
+                cellData->CopyData(pd->GetCellData(), i, cellId);
+            }
+
+        } else if (type == VTK_POLYGON || type == VTK_TRIANGLE || type == VTK_QUAD) {
+            polys->GetNextCell(n, pts);
+            
+            if (keep) {
+                cellId = pd->InsertNextCell(type, n, pts);
+                cellData->CopyData(pd->GetCellData(), i, cellId);
+            }
+
+        } else if (type == VTK_TRIANGLE_STRIP) {
+            strips->GetNextCell(n, pts);
+            
+            if (keep) {
+                cellId = pd->InsertNextCell(type, n, pts);
+                cellData->CopyData(pd->GetCellData(), i, cellId);
+            }
+
+        }
+
+    }
+    
+    cellData->Squeeze();
+
+    pd->GetCellData()->ShallowCopy(cellData);
+
+    cellData->Delete();
+
+    strips->Delete();
+    polys->Delete();
+    lines->Delete();
+    verts->Delete();
+    types->Delete();
+
+}

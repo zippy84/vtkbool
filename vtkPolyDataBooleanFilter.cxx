@@ -32,7 +32,6 @@ using namespace std::placeholders;
 #include <vtkPolyDataAlgorithm.h>
 #include <vtkCellData.h>
 #include <vtkPointData.h>
-#include <vtkTrivialProducer.h>
 #include <vtkMath.h>
 #include <vtkIdList.h>
 #include <vtkCell.h>
@@ -100,39 +99,17 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 #endif
         cleanB->Update();
 
-        // ergebnis-vernetzungen
-
-        modPdA = vtkPolyData::New();
-        modPdA->DeepCopy(cleanA->GetOutput());
-
-        modPdB = vtkPolyData::New();
-        modPdB->DeepCopy(cleanB->GetOutput());
-
-        GeomHelper::PreparePolyData(modPdA);
-        GeomHelper::PreparePolyData(modPdB);
-
 #ifdef DEBUG
-
 
         vtkPolyDataWriter *w = vtkPolyDataWriter::New();
         w->SetFileName("modPdA.vtk");
-
-#if (VTK_MAJOR_VERSION == 5)
-        w->SetInput(modPdA);
-#else
-        w->SetInputData(modPdA);
-#endif
+        w->SetInputConnection(cleanA->GetOutputPort());
 
         std::cout << "Exporting modPdA.vtk" << std::endl;
         w->Update();
 
         w->SetFileName("modPdB.vtk");
-
-#if (VTK_MAJOR_VERSION == 5)
-        w->SetInput(modPdB);
-#else
-        w->SetInputData(modPdB);
-#endif
+        w->SetInputConnection(cleanB->GetOutputPort());
 
         std::cout << "Exporting modPdB.vtk" << std::endl;
         w->Update();
@@ -140,21 +117,33 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
 #endif
 
+        // CellData sichern
+
+        cellDataA = vtkCellData::New();
+        cellDataA->DeepCopy(cleanA->GetOutput()->GetCellData());
+
+        cellDataB = vtkCellData::New();
+        cellDataB->DeepCopy(cleanB->GetOutput()->GetCellData());
+
         // ermittelt kontaktstellen
 
-        vtkTrivialProducer *prA = vtkTrivialProducer::New();
-        prA->SetOutput(modPdA);
-
-        vtkTrivialProducer *prB = vtkTrivialProducer::New();
-        prB->SetOutput(modPdB);
-
         vtkPolyDataContactFilter *cl = vtkPolyDataContactFilter::New();
-        cl->SetInputConnection(0, prA->GetOutputPort());
-        cl->SetInputConnection(1, prB->GetOutputPort());
+        cl->SetInputConnection(0, cleanA->GetOutputPort());
+        cl->SetInputConnection(1, cleanB->GetOutputPort());
         cl->MergeLinesOff();
         cl->Update();
 
         contLines = cl->GetOutput();
+
+        resultB->DeepCopy(contLines);
+
+        // ergebnis-vernetzungen
+
+        modPdA = vtkPolyData::New();
+        modPdA->DeepCopy(cl->GetOutput(1));
+
+        modPdB = vtkPolyData::New();
+        modPdB->DeepCopy(cl->GetOutput(2));
 
         if (contLines->GetNumberOfCells() == 0) {
             vtkErrorMacro("Inputs have no contact.");
@@ -271,8 +260,6 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
         CombineRegions();
 
-        resultB->DeepCopy(contLines);
-
         /*
         vtkAppendPolyData *app = vtkAppendPolyData::New();
         app->AddInputConnection(prA->GetOutputPort());
@@ -284,9 +271,10 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
         app->Delete();
         */
 
+        cellDataB->Delete();
+        cellDataA->Delete();
+
         cl->Delete();
-        prB->Delete();
-        prA->Delete();
         modPdB->Delete();
         modPdA->Delete();
         cleanB->Delete();
@@ -651,6 +639,8 @@ void vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
 
     vtkPoints *pdPts = pd->GetPoints();
 
+    vtkIntArray *origCellIds = reinterpret_cast<vtkIntArray*>(pd->GetCellData()->GetScalars("OrigCellIds"));
+
     std::vector<int> toRemove;
 
     std::map<int, StripsType>::iterator itr;
@@ -900,6 +890,8 @@ void vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
                     if (newPolyA->GetNumberOfIds() > 2) {
                         polys.push_front(pd->InsertNextCell(VTK_POLYGON, newPolyA));
 
+                        origCellIds->InsertNextValue(origCellIds->GetValue(itr->first));
+
 #ifdef DEBUG
                         std::cout << "newPolyA added" << std::endl;
 #endif
@@ -942,6 +934,8 @@ void vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
 
                         if (newPolyB->GetNumberOfIds() > 2) {
                             polys.push_front(pd->InsertNextCell(VTK_POLYGON, newPolyB));
+
+                            origCellIds->InsertNextValue(origCellIds->GetValue(itr->first));
 
 #ifdef DEBUG
                             std::cout << "newPolyB added" << std::endl;
@@ -1062,6 +1056,8 @@ void vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
 
     }
 
+    /*
+
     std::vector<int>::const_iterator itr2;
 
     for (itr2 = toRemove.begin(); itr2 != toRemove.end(); itr2++) {
@@ -1070,6 +1066,10 @@ void vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
 
     // tatsächliches löschen
     pd->RemoveDeletedCells();
+
+    */
+
+    GeomHelper::RemoveCells(pd, toRemove);
 
 }
 
@@ -1155,6 +1155,10 @@ void vtkPolyDataBooleanFilter::AddAdjacentPoints (vtkPolyData *pd, StripsType &s
     std::cout << "AddAdjacentPoints()" << std::endl;
 #endif
 
+    vtkIntArray *origCellIds = reinterpret_cast<vtkIntArray*>(pd->GetCellData()->GetScalars("OrigCellIds"));
+
+    std::vector<int> toRemove;
+
     std::map<std::pair<int, int>, std::vector<StripPtType> > adjacentPts;
 
     StripsType::const_iterator itr;
@@ -1192,7 +1196,9 @@ void vtkPolyDataBooleanFilter::AddAdjacentPoints (vtkPolyData *pd, StripsType &s
             for (unsigned int j = 0; j < polysB->GetNumberOfIds() && !added; j++) {
 
                 if (polysA->GetId(i) == polysB->GetId(j)
-                    && pd->GetCellType(polysA->GetId(i)) != VTK_EMPTY_CELL) {
+                    //&& pd->GetCellType(polysA->GetId(i)) != VTK_EMPTY_CELL) {
+
+                    && std::count(toRemove.begin(), toRemove.end(), polysA->GetId(i)) == 0) {
 
                     // es gibt nur eins oder keins
 
@@ -1232,8 +1238,14 @@ void vtkPolyDataBooleanFilter::AddAdjacentPoints (vtkPolyData *pd, StripsType &s
 
                     // das neue muss jetzt hinzugefügt werden
 
-                    pd->DeleteCell(polysA->GetId(i));
+                    //pd->DeleteCell(polysA->GetId(i));
+
+                    toRemove.push_back(polysA->GetId(i));
+
                     pd->InsertNextCell(VTK_POLYGON, newPoly);
+
+                    origCellIds->InsertNextValue(origCellIds->GetValue(polysA->GetId(i)));
+
 
                     newPoly->Delete();
                     poly->Delete();
@@ -1248,7 +1260,9 @@ void vtkPolyDataBooleanFilter::AddAdjacentPoints (vtkPolyData *pd, StripsType &s
 
     }
 
-    pd->RemoveDeletedCells();
+    //pd->RemoveDeletedCells();
+
+    GeomHelper::RemoveCells(pd, toRemove);
 
 }
 
@@ -1992,6 +2006,48 @@ void vtkPolyDataBooleanFilter::CombineRegions () {
         }
     }
 
+    // OrigCellIds und CellData
+
+    vtkIntArray *origCellIdsA = reinterpret_cast<vtkIntArray*>(regsA->GetCellData()->GetScalars("OrigCellIds"));
+    vtkIntArray *origCellIdsB = reinterpret_cast<vtkIntArray*>(regsB->GetCellData()->GetScalars("OrigCellIds"));
+
+    vtkIntArray *newOrigCellIdsA = vtkIntArray::New();
+    newOrigCellIdsA->SetName("OrigCellIdsA");
+
+    vtkIntArray *newOrigCellIdsB = vtkIntArray::New();
+    newOrigCellIdsB->SetName("OrigCellIdsB");
+
+    vtkCellData *newCellDataA = vtkCellData::New();
+    newCellDataA->CopyAllocate(cellDataA);
+
+    vtkCellData *newCellDataB = vtkCellData::New();
+    newCellDataB->CopyAllocate(cellDataB);
+
+    for (unsigned int i = 0; i < regsA->GetNumberOfCells(); i++) {
+        newOrigCellIdsA->InsertNextValue(origCellIdsA->GetValue(i));
+        newOrigCellIdsB->InsertNextValue(-1);
+
+        newCellDataA->CopyData(cellDataA, origCellIdsA->GetValue(i), i);
+    }
+
+    for (unsigned int i = 0; i < regsB->GetNumberOfCells(); i++) {
+        newOrigCellIdsB->InsertNextValue(origCellIdsB->GetValue(i));
+        newOrigCellIdsA->InsertNextValue(-1);
+
+        newCellDataB->CopyData(cellDataB, origCellIdsB->GetValue(i), i);
+    }
+
+    regsA->GetCellData()->Initialize();
+    regsB->GetCellData()->Initialize();
+
+    regsA->GetCellData()->ShallowCopy(newCellDataA);
+    regsB->GetCellData()->ShallowCopy(newCellDataB);
+
+    newCellDataA->Delete();
+    newCellDataB->Delete();
+
+    // zusammenführung
+
     vtkAppendPolyData *app = vtkAppendPolyData::New();
 
 #if (VTK_MAJOR_VERSION == 5)
@@ -2018,6 +2074,11 @@ void vtkPolyDataBooleanFilter::CombineRegions () {
 
     // resultA ist erster output des filters
     resultA->DeepCopy(cfApp->GetOutput());
+
+    resultA->GetCellData()->AddArray(newOrigCellIdsA);
+    resultA->GetCellData()->AddArray(newOrigCellIdsB);
+
+    //resultA->GetCellData()->SetActiveAttribute("OrigCellsIdsA", vtkDataSetAttributes::SCALARS);
 
     // aufräumen
 
