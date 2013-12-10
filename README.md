@@ -14,16 +14,18 @@ This is an extension of the graphics library VTK. The goal of the extension is t
 - only the involved polygons are modified
 - meshes can be stacked (coplanar polygons are right handled)
 - 4 operation types (union, intersection, difference and difference2 - difference with interchanged operands)
-- all types of polygonal cells are supported (triangles, quads, regular polygons, triangle-strips)
+- all types of polygonal cells are supported (triangles, quads, polygons, triangle-strips)
 - the meshes don’t need to be closed
+- CellData is passed (attached by the rules of vtkAppendPolyData)
+- original cell ids are added to CellData (*OrigCellIdsA* and *OrigCellIdsB* as vtkIntArray)
 - contact lines are available
 - a paraview plugin wrapper exists
 - ready for vtk 6
 
 ## Limitations
 
-- the filter produces concave polygons (the visualization can be broken - as seen in paraview)
-- scalars on points and cells are not preserved
+- the filter produces concave polygons (the visualization can be broken)
+- PointData is not preserved - you have to do your own mapping
 - correctness depends on the polygon-defining normals (use vtkPolyDataNormals if you have problems with incorrect orientations)
 - when polygons are cut inside, holes are formed - the filter is not able to embed  holes
 
@@ -71,6 +73,10 @@ The alternative is the more generic `SetOperMode`. The method must be called wit
 For the purpose of demonstration and testing, I created examples in Paraview. The examples can be found in *paraview\_plugin/tests*. To open a contained pvsm-file, select Load State... in the file-menu of Paraview. So far, the examples contain all possible circumstances that can appear, when two meshes are combined. Tell me when this is not true!
 
 ![](https://raw.github.com/zippy84/vtkbool/master/examples.png)
+
+## Copyright
+
+2012, 2013 Ronald Römer
 
 ## License
 

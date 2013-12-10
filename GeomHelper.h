@@ -20,13 +20,15 @@
 #include <vtkPoints.h>
 #include <vtkIdList.h>
 #include <vtkPolyData.h>
+#include <vector>
 
 namespace GeomHelper {
 
     void ComputeNormal (vtkPoints *pts, vtkIdList *poly, double* n);
-    void PreparePolyData (vtkPolyData *pd);
     double GetAngle (double *vA, double *vB, double *n);
-
+    
+    void RemoveCells (vtkPolyData *pd, std::vector<int> &cells);
+    
 };
 
 #endif
