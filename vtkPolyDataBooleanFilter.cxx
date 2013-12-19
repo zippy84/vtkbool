@@ -56,19 +56,38 @@ vtkPolyDataBooleanFilter::vtkPolyDataBooleanFilter () {
 
     SetNumberOfInputPorts(2);
     SetNumberOfOutputPorts(2);
+    
+    timePdA = 0;
+    timePdB = 0;
+    
+    contLines = vtkPolyData::New();
+    
+    modPdA = vtkPolyData::New();
+    modPdB = vtkPolyData::New();
+    
+    cellDataA = vtkCellData::New();
+    cellDataB = vtkCellData::New();
 
     OperMode = OPER_UNION;
 
 }
 
 vtkPolyDataBooleanFilter::~vtkPolyDataBooleanFilter () {
-    // derzeit nix tun
+    
+    cellDataB->Delete();
+    cellDataA->Delete();
+    
+    modPdB->Delete();
+    modPdA->Delete();
+    
+    contLines->Delete();
+    
 }
 
 int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInformationVector **inputVector, vtkInformationVector *outputVector) {
 
     if (request->Has(vtkDemandDrivenPipeline::REQUEST_DATA())) {
-
+            
         vtkInformation *inInfoA = inputVector[0]->GetInformationObject(0);
         vtkInformation *inInfoB = inputVector[1]->GetInformationObject(0);
 
@@ -77,208 +96,191 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
         vtkInformation *outInfoA = outputVector->GetInformationObject(0);
         vtkInformation *outInfoB = outputVector->GetInformationObject(1);
-
+        
         resultA = vtkPolyData::SafeDownCast(outInfoA->Get(vtkDataObject::DATA_OBJECT()));
-        vtkPolyData *resultB = vtkPolyData::SafeDownCast(outInfoB->Get(vtkDataObject::DATA_OBJECT()));
+        resultB = vtkPolyData::SafeDownCast(outInfoB->Get(vtkDataObject::DATA_OBJECT()));
+        
+        if (pdA->GetMTime() > timePdA || pdB->GetMTime() > timePdB) {
+            
+            // eventuell vorhandene regionen vereinen
 
-        // eventuell vorhandene regionen vereinen
-
-        vtkCleanPolyData *cleanA = vtkCleanPolyData::New();
+            vtkCleanPolyData *cleanA = vtkCleanPolyData::New();
 #if (VTK_MAJOR_VERSION == 5)
-        cleanA->SetInput(pdA);
+            cleanA->SetInput(pdA);
 #else
-        cleanA->SetInputData(pdA);
+            cleanA->SetInputData(pdA);
 #endif
-        cleanA->Update();
+            cleanA->Update();
 
-        vtkCleanPolyData *cleanB = vtkCleanPolyData::New();
+            vtkCleanPolyData *cleanB = vtkCleanPolyData::New();
 #if (VTK_MAJOR_VERSION == 5)
-        cleanB->SetInput(pdB);
+            cleanB->SetInput(pdB);
 #else
-        cleanB->SetInputData(pdB);
+            cleanB->SetInputData(pdB);
 #endif
-        cleanB->Update();
+            cleanB->Update();
 
 #ifdef DEBUG
 
-        vtkPolyDataWriter *w = vtkPolyDataWriter::New();
-        w->SetFileName("modPdA.vtk");
-        w->SetInputConnection(cleanA->GetOutputPort());
+            vtkPolyDataWriter *w = vtkPolyDataWriter::New();
+            w->SetFileName("modPdA.vtk");
+            w->SetInputConnection(cleanA->GetOutputPort());
 
-        std::cout << "Exporting modPdA.vtk" << std::endl;
-        w->Update();
+            std::cout << "Exporting modPdA.vtk" << std::endl;
+            w->Update();
 
-        w->SetFileName("modPdB.vtk");
-        w->SetInputConnection(cleanB->GetOutputPort());
+            w->SetFileName("modPdB.vtk");
+            w->SetInputConnection(cleanB->GetOutputPort());
 
-        std::cout << "Exporting modPdB.vtk" << std::endl;
-        w->Update();
-        w->Delete();
+            std::cout << "Exporting modPdB.vtk" << std::endl;
+            w->Update();
+            w->Delete();
 
 #endif
 
-        // CellData sichern
+            // CellData sichern
+            
+            cellDataA->DeepCopy(cleanA->GetOutput()->GetCellData());
+            cellDataB->DeepCopy(cleanB->GetOutput()->GetCellData());
 
-        cellDataA = vtkCellData::New();
-        cellDataA->DeepCopy(cleanA->GetOutput()->GetCellData());
+            // ermittelt kontaktstellen
 
-        cellDataB = vtkCellData::New();
-        cellDataB->DeepCopy(cleanB->GetOutput()->GetCellData());
+            vtkPolyDataContactFilter *cl = vtkPolyDataContactFilter::New();
+            cl->SetInputConnection(0, cleanA->GetOutputPort());
+            cl->SetInputConnection(1, cleanB->GetOutputPort());
+            cl->MergeLinesOff();
+            cl->Update();
 
-        // ermittelt kontaktstellen
+            contLines->DeepCopy(cl->GetOutput());
+            
+            modPdA->DeepCopy(cl->GetOutput(1));
+            modPdB->DeepCopy(cl->GetOutput(2));
 
-        vtkPolyDataContactFilter *cl = vtkPolyDataContactFilter::New();
-        cl->SetInputConnection(0, cleanA->GetOutputPort());
-        cl->SetInputConnection(1, cleanB->GetOutputPort());
-        cl->MergeLinesOff();
-        cl->Update();
+            if (contLines->GetNumberOfCells() == 0) {
+                vtkErrorMacro("Inputs have no contact.");
 
-        contLines = cl->GetOutput();
+                return 1;
+            }
 
-        resultB->DeepCopy(contLines);
+            // in den CellDatas steht drin, welche polygone einander schneiden
 
-        // ergebnis-vernetzungen
+            vtkIntArray *contsA = reinterpret_cast<vtkIntArray*>(contLines->GetCellData()->GetScalars("cA"));
+            vtkIntArray *contsB = reinterpret_cast<vtkIntArray*>(contLines->GetCellData()->GetScalars("cB"));
 
-        modPdA = vtkPolyData::New();
-        modPdA->DeepCopy(cl->GetOutput(1));
+            PolyStripsType polyStripsA(GetPolyStrips(modPdA, contsA));
+            PolyStripsType polyStripsB(GetPolyStrips(modPdB, contsB));
 
-        modPdB = vtkPolyData::New();
-        modPdB->DeepCopy(cl->GetOutput(2));
+            // polyStripsA/B wird modifiziert
+            StripsType allStripsA(GetAllStrips(polyStripsA));
+            StripsType allStripsB(GetAllStrips(polyStripsB));
 
-        if (contLines->GetNumberOfCells() == 0) {
-            vtkErrorMacro("Inputs have no contact.");
+            // trennt die polygone an den linien
+            CutCells(modPdA, polyStripsA);
+            CutCells(modPdB, polyStripsB);
 
-            return 1;
+#ifdef DEBUG
+            vtkPolyDataWriter *w2 = vtkPolyDataWriter::New();
+            w2->SetFileName("modPdA_2.vtk");
+
+#if (VTK_MAJOR_VERSION == 5)
+            w2->SetInput(modPdA);
+#else
+            w2->SetInputData(modPdA);
+#endif
+
+            std::cout << "Exporting modPdA_2.vtk" << std::endl;
+            w2->Update();
+
+            w2->SetFileName("modPdB_2.vtk");
+
+#if (VTK_MAJOR_VERSION == 5)
+            w2->SetInput(modPdB);
+#else
+            w2->SetInputData(modPdB);
+#endif
+
+            std::cout << "Exporting modPdB_2.vtk" << std::endl;
+            w2->Update();
+            w2->Delete();
+
+#endif
+
+            AddAdjacentPoints(modPdA, allStripsA);
+            AddAdjacentPoints(modPdB, allStripsB);
+
+#ifdef DEBUG
+            vtkPolyDataWriter *w3 = vtkPolyDataWriter::New();
+            w3->SetFileName("modPdA_3.vtk");
+
+#if (VTK_MAJOR_VERSION == 5)
+            w3->SetInput(modPdA);
+#else
+            w3->SetInputData(modPdA);
+#endif
+
+            std::cout << "Exporting modPdA_3.vtk" << std::endl;
+            w3->Update();
+
+            w3->SetFileName("modPdB_3.vtk");
+
+#if (VTK_MAJOR_VERSION == 5)
+            w3->SetInput(modPdB);
+#else
+            w3->SetInputData(modPdB);
+#endif
+
+            std::cout << "Exporting modPdB_3.vtk" << std::endl;
+            w3->Update();
+            w3->Delete();
+
+#endif
+
+            DisjoinPolys(modPdA, allStripsA);
+            DisjoinPolys(modPdB, allStripsB);
+
+#ifdef DEBUG
+            vtkPolyDataWriter *w4 = vtkPolyDataWriter::New();
+            w4->SetFileName("modPdA_4.vtk");
+
+#if (VTK_MAJOR_VERSION == 5)
+            w4->SetInput(modPdA);
+#else
+            w4->SetInputData(modPdA);
+#endif
+
+            std::cout << "Exporting modPdA_4.vtk" << std::endl;
+            w4->Update();
+
+            w4->SetFileName("modPdB_4.vtk");
+
+#if (VTK_MAJOR_VERSION == 5)
+            w4->SetInput(modPdB);
+#else
+            w4->SetInputData(modPdB);
+#endif
+
+            std::cout << "Exporting modPdB_4.vtk" << std::endl;
+            w4->Update();
+            w4->Delete();
+
+#endif
+
+
+            MergePoints(modPdA, allStripsA);
+            MergePoints(modPdB, allStripsB);
+            
+            // aufräumen
+            
+            cl->Delete();
+            cleanB->Delete();
+            cleanA->Delete();
+            
+            timePdA = pdA->GetMTime();
+            timePdB = pdB->GetMTime();
+            
         }
-
-        // in den CellDatas steht drin, welche polygone einander schneiden
-
-        vtkIntArray *contsA = reinterpret_cast<vtkIntArray*>(contLines->GetCellData()->GetScalars("cA"));
-        vtkIntArray *contsB = reinterpret_cast<vtkIntArray*>(contLines->GetCellData()->GetScalars("cB"));
-
-        PolyStripsType polyStripsA(GetPolyStrips(modPdA, contsA));
-        PolyStripsType polyStripsB(GetPolyStrips(modPdB, contsB));
-
-        // polyStripsA/B wird modifiziert
-        StripsType allStripsA(GetAllStrips(polyStripsA));
-        StripsType allStripsB(GetAllStrips(polyStripsB));
-
-        // trennt die polygone an den linien
-        CutCells(modPdA, polyStripsA);
-        CutCells(modPdB, polyStripsB);
-
-#ifdef DEBUG
-        vtkPolyDataWriter *w2 = vtkPolyDataWriter::New();
-        w2->SetFileName("modPdA_2.vtk");
-
-#if (VTK_MAJOR_VERSION == 5)
-        w2->SetInput(modPdA);
-#else
-        w2->SetInputData(modPdA);
-#endif
-
-        std::cout << "Exporting modPdA_2.vtk" << std::endl;
-        w2->Update();
-
-        w2->SetFileName("modPdB_2.vtk");
-
-#if (VTK_MAJOR_VERSION == 5)
-        w2->SetInput(modPdB);
-#else
-        w2->SetInputData(modPdB);
-#endif
-
-        std::cout << "Exporting modPdB_2.vtk" << std::endl;
-        w2->Update();
-        w2->Delete();
-
-#endif
-
-        AddAdjacentPoints(modPdA, allStripsA);
-        AddAdjacentPoints(modPdB, allStripsB);
-
-#ifdef DEBUG
-        vtkPolyDataWriter *w3 = vtkPolyDataWriter::New();
-        w3->SetFileName("modPdA_3.vtk");
-
-#if (VTK_MAJOR_VERSION == 5)
-        w3->SetInput(modPdA);
-#else
-        w3->SetInputData(modPdA);
-#endif
-
-        std::cout << "Exporting modPdA_3.vtk" << std::endl;
-        w3->Update();
-
-        w3->SetFileName("modPdB_3.vtk");
-
-#if (VTK_MAJOR_VERSION == 5)
-        w3->SetInput(modPdB);
-#else
-        w3->SetInputData(modPdB);
-#endif
-
-        std::cout << "Exporting modPdB_3.vtk" << std::endl;
-        w3->Update();
-        w3->Delete();
-
-#endif
-
-        DisjoinPolys(modPdA, allStripsA);
-        DisjoinPolys(modPdB, allStripsB);
-
-#ifdef DEBUG
-        vtkPolyDataWriter *w4 = vtkPolyDataWriter::New();
-        w4->SetFileName("modPdA_4.vtk");
-
-#if (VTK_MAJOR_VERSION == 5)
-        w4->SetInput(modPdA);
-#else
-        w4->SetInputData(modPdA);
-#endif
-
-        std::cout << "Exporting modPdA_4.vtk" << std::endl;
-        w4->Update();
-
-        w4->SetFileName("modPdB_4.vtk");
-
-#if (VTK_MAJOR_VERSION == 5)
-        w4->SetInput(modPdB);
-#else
-        w4->SetInputData(modPdB);
-#endif
-
-        std::cout << "Exporting modPdB_4.vtk" << std::endl;
-        w4->Update();
-        w4->Delete();
-
-#endif
-
-
-        MergePoints(modPdA, allStripsA);
-        MergePoints(modPdB, allStripsB);
-
+        
         CombineRegions();
-
-        /*
-        vtkAppendPolyData *app = vtkAppendPolyData::New();
-        app->AddInputConnection(prA->GetOutputPort());
-        app->AddInputConnection(prB->GetOutputPort());
-        app->Update();
-
-        resultA->DeepCopy(app->GetOutput());
-
-        app->Delete();
-        */
-
-        cellDataB->Delete();
-        cellDataA->Delete();
-
-        cl->Delete();
-        modPdB->Delete();
-        modPdA->Delete();
-        cleanB->Delete();
-        cleanA->Delete();
 
     }
 
@@ -1858,23 +1860,23 @@ void vtkPolyDataBooleanFilter::CombineRegions () {
     w->Delete();
 #endif
 
-    vtkPolyData *_pdA = cfA->GetOutput();
-    vtkPolyData *_pdB = cfB->GetOutput();
+    vtkPolyData *pdA = cfA->GetOutput();
+    vtkPolyData *pdB = cfB->GetOutput();
 
     // locators erstellen
     vtkKdTreePointLocator *plA = vtkKdTreePointLocator::New();
-    plA->SetDataSet(_pdA);
+    plA->SetDataSet(pdA);
     plA->BuildLocator();
 
     vtkKdTreePointLocator *plB = vtkKdTreePointLocator::New();
-    plB->SetDataSet(_pdB);
+    plB->SetDataSet(pdB);
     plB->BuildLocator();
 
-    _pdA->BuildLinks();
-    _pdB->BuildLinks();
+    pdA->BuildLinks();
+    pdB->BuildLinks();
 
-    vtkDataArray *scalarsA = _pdA->GetPointData()->GetScalars();
-    vtkDataArray *scalarsB = _pdB->GetPointData()->GetScalars();
+    vtkDataArray *scalarsA = pdA->GetPointData()->GetScalars();
+    vtkDataArray *scalarsB = pdB->GetPointData()->GetScalars();
 
     std::map<int, int> locsA, locsB;
 
@@ -1904,8 +1906,8 @@ void vtkPolyDataBooleanFilter::CombineRegions () {
         std::cout << "line " << i << std::endl;
 #endif
 
-        PolyPair *ppA = GetEdgePolys(_pdA, fptsA, lptsA);
-        PolyPair *ppB = GetEdgePolys(_pdB, fptsB, lptsB);
+        PolyPair *ppA = GetEdgePolys(pdA, fptsA, lptsA);
+        PolyPair *ppB = GetEdgePolys(pdB, fptsB, lptsB);
 
         if (ppA != NULL && ppB != NULL) {
 
@@ -2073,12 +2075,12 @@ void vtkPolyDataBooleanFilter::CombineRegions () {
     cfApp->Update();
 
     // resultA ist erster output des filters
-    resultA->DeepCopy(cfApp->GetOutput());
+    resultA->ShallowCopy(cfApp->GetOutput());
 
     resultA->GetCellData()->AddArray(newOrigCellIdsA);
     resultA->GetCellData()->AddArray(newOrigCellIdsB);
-
-    //resultA->GetCellData()->SetActiveAttribute("OrigCellsIdsA", vtkDataSetAttributes::SCALARS);
+    
+    resultB->ShallowCopy(contLines);
 
     // aufräumen
 

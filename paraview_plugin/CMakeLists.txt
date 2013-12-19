@@ -9,7 +9,7 @@ if(ParaView_FOUND)
 
     add_paraview_plugin(
         PolyDataBooleanFilter
-        "1.0"
+        "1.1"
         SERVER_MANAGER_XML vtkPolyDataBooleanFilter.xml
         SERVER_MANAGER_SOURCES ../vtkPolyDataBooleanFilter.cxx
         SERVER_SOURCES ../vtkPolyDataContactFilter.cxx ../GeomHelper.cxx
