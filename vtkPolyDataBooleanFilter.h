@@ -95,9 +95,9 @@ class VTK_EXPORT vtkPolyDataBooleanFilter : public vtkPolyDataAlgorithm {
     vtkPolyData *resultA, *resultB, *contLines;
 
     vtkPolyData *modPdA, *modPdB;
-    
+
     vtkCellData *cellDataA, *cellDataB;
-    
+
     unsigned long timePdA, timePdB;
 
     StripsType GetStrips (vtkPolyData *pd, int polyInd, std::deque<int> &lines);
