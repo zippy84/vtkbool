@@ -56,15 +56,15 @@ vtkPolyDataBooleanFilter::vtkPolyDataBooleanFilter () {
 
     SetNumberOfInputPorts(2);
     SetNumberOfOutputPorts(2);
-    
+
     timePdA = 0;
     timePdB = 0;
-    
+
     contLines = vtkPolyData::New();
-    
+
     modPdA = vtkPolyData::New();
     modPdB = vtkPolyData::New();
-    
+
     cellDataA = vtkCellData::New();
     cellDataB = vtkCellData::New();
 
@@ -73,21 +73,21 @@ vtkPolyDataBooleanFilter::vtkPolyDataBooleanFilter () {
 }
 
 vtkPolyDataBooleanFilter::~vtkPolyDataBooleanFilter () {
-    
+
     cellDataB->Delete();
     cellDataA->Delete();
-    
+
     modPdB->Delete();
     modPdA->Delete();
-    
+
     contLines->Delete();
-    
+
 }
 
 int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInformationVector **inputVector, vtkInformationVector *outputVector) {
 
     if (request->Has(vtkDemandDrivenPipeline::REQUEST_DATA())) {
-            
+
         vtkInformation *inInfoA = inputVector[0]->GetInformationObject(0);
         vtkInformation *inInfoB = inputVector[1]->GetInformationObject(0);
 
@@ -96,12 +96,12 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
         vtkInformation *outInfoA = outputVector->GetInformationObject(0);
         vtkInformation *outInfoB = outputVector->GetInformationObject(1);
-        
+
         resultA = vtkPolyData::SafeDownCast(outInfoA->Get(vtkDataObject::DATA_OBJECT()));
         resultB = vtkPolyData::SafeDownCast(outInfoB->Get(vtkDataObject::DATA_OBJECT()));
-        
+
         if (pdA->GetMTime() > timePdA || pdB->GetMTime() > timePdB) {
-            
+
             // eventuell vorhandene regionen vereinen
 
             vtkCleanPolyData *cleanA = vtkCleanPolyData::New();
@@ -139,7 +139,7 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 #endif
 
             // CellData sichern
-            
+
             cellDataA->DeepCopy(cleanA->GetOutput()->GetCellData());
             cellDataB->DeepCopy(cleanB->GetOutput()->GetCellData());
 
@@ -152,7 +152,7 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
             cl->Update();
 
             contLines->DeepCopy(cl->GetOutput());
-            
+
             modPdA->DeepCopy(cl->GetOutput(1));
             modPdB->DeepCopy(cl->GetOutput(2));
 
@@ -164,8 +164,8 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
             // in den CellDatas steht drin, welche polygone einander schneiden
 
-            vtkIntArray *contsA = reinterpret_cast<vtkIntArray*>(contLines->GetCellData()->GetScalars("cA"));
-            vtkIntArray *contsB = reinterpret_cast<vtkIntArray*>(contLines->GetCellData()->GetScalars("cB"));
+            vtkIntArray *contsA = vtkIntArray::SafeDownCast(contLines->GetCellData()->GetScalars("cA"));
+            vtkIntArray *contsB = vtkIntArray::SafeDownCast(contLines->GetCellData()->GetScalars("cB"));
 
             PolyStripsType polyStripsA(GetPolyStrips(modPdA, contsA));
             PolyStripsType polyStripsB(GetPolyStrips(modPdB, contsB));
@@ -175,6 +175,7 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
             StripsType allStripsB(GetAllStrips(polyStripsB));
 
             // trennt die polygone an den linien
+
             CutCells(modPdA, polyStripsA);
             CutCells(modPdB, polyStripsB);
 
@@ -265,21 +266,20 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
 #endif
 
-
             MergePoints(modPdA, allStripsA);
             MergePoints(modPdB, allStripsB);
-            
+
             // aufräumen
-            
+
             cl->Delete();
             cleanB->Delete();
             cleanA->Delete();
-            
+
             timePdA = pdA->GetMTime();
             timePdB = pdB->GetMTime();
-            
+
         }
-        
+
         CombineRegions();
 
     }
@@ -641,7 +641,7 @@ void vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
 
     vtkPoints *pdPts = pd->GetPoints();
 
-    vtkIntArray *origCellIds = reinterpret_cast<vtkIntArray*>(pd->GetCellData()->GetScalars("OrigCellIds"));
+    vtkIntArray *origCellIds = vtkIntArray::SafeDownCast(pd->GetCellData()->GetScalars("OrigCellIds"));
 
     std::vector<int> toRemove;
 
@@ -1157,7 +1157,7 @@ void vtkPolyDataBooleanFilter::AddAdjacentPoints (vtkPolyData *pd, StripsType &s
     std::cout << "AddAdjacentPoints()" << std::endl;
 #endif
 
-    vtkIntArray *origCellIds = reinterpret_cast<vtkIntArray*>(pd->GetCellData()->GetScalars("OrigCellIds"));
+    vtkIntArray *origCellIds = vtkIntArray::SafeDownCast(pd->GetCellData()->GetScalars("OrigCellIds"));
 
     std::vector<int> toRemove;
 
@@ -1174,13 +1174,12 @@ void vtkPolyDataBooleanFilter::AddAdjacentPoints (vtkPolyData *pd, StripsType &s
 
     }
 
+    pd->BuildLinks();
+
     std::map<std::pair<int, int>, std::vector<StripPtType> >::iterator itr2;
-    std::vector<StripPtType>::const_iterator itr3;
+    std::vector<StripPtType>::iterator itr3;
 
     for (itr2 = adjacentPts.begin(); itr2 != adjacentPts.end(); itr2++) {
-
-        // InsertNextLinkedCell funktioniert leider nicht
-        pd->BuildLinks();
 
         // jetzt das polygon ermitteln
         vtkIdList *polysA = vtkIdList::New();
@@ -1225,7 +1224,7 @@ void vtkPolyDataBooleanFilter::AddAdjacentPoints (vtkPolyData *pd, StripsType &s
 
                                 if (lastInd < 0 || lastInd != itr3->ind) {
 
-                                    newPoly->InsertNextId(pd->GetPoints()->InsertNextPoint(itr3->pt));
+                                    newPoly->InsertNextId(pd->InsertNextLinkedPoint(itr3->pt, 1));
 
                                     lastInd = itr3->ind;
                                 }
@@ -1236,6 +1235,10 @@ void vtkPolyDataBooleanFilter::AddAdjacentPoints (vtkPolyData *pd, StripsType &s
 
                         }
 
+                        // polysA->GetId(i) wird im anschluss gelöscht
+
+                        pd->RemoveReferenceToCell(poly->GetId(k), polysA->GetId(i));
+
                     }
 
                     // das neue muss jetzt hinzugefügt werden
@@ -1244,7 +1247,7 @@ void vtkPolyDataBooleanFilter::AddAdjacentPoints (vtkPolyData *pd, StripsType &s
 
                     toRemove.push_back(polysA->GetId(i));
 
-                    pd->InsertNextCell(VTK_POLYGON, newPoly);
+                    pd->InsertNextLinkedCell(VTK_POLYGON, newPoly->GetNumberOfIds(), newPoly->GetPointer(0));
 
                     origCellIds->InsertNextValue(origCellIds->GetValue(polysA->GetId(i)));
 
@@ -2010,8 +2013,8 @@ void vtkPolyDataBooleanFilter::CombineRegions () {
 
     // OrigCellIds und CellData
 
-    vtkIntArray *origCellIdsA = reinterpret_cast<vtkIntArray*>(regsA->GetCellData()->GetScalars("OrigCellIds"));
-    vtkIntArray *origCellIdsB = reinterpret_cast<vtkIntArray*>(regsB->GetCellData()->GetScalars("OrigCellIds"));
+    vtkIntArray *origCellIdsA = vtkIntArray::SafeDownCast(regsA->GetCellData()->GetScalars("OrigCellIds"));
+    vtkIntArray *origCellIdsB = vtkIntArray::SafeDownCast(regsB->GetCellData()->GetScalars("OrigCellIds"));
 
     vtkIntArray *newOrigCellIdsA = vtkIntArray::New();
     newOrigCellIdsA->SetName("OrigCellIdsA");
@@ -2079,7 +2082,7 @@ void vtkPolyDataBooleanFilter::CombineRegions () {
 
     resultA->GetCellData()->AddArray(newOrigCellIdsA);
     resultA->GetCellData()->AddArray(newOrigCellIdsB);
-    
+
     resultB->ShallowCopy(contLines);
 
     // aufräumen

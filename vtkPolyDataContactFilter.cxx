@@ -147,22 +147,22 @@ int vtkPolyDataContactFilter::ProcessRequest (vtkInformation *request, vtkInform
         clean->Update();
 
         resultA->DeepCopy(clean->GetOutput());
-        
+
         std::vector<int> toRemove;
 
         for (unsigned int i = 0; i < resultA->GetNumberOfCells(); i++) {
             if (resultA->GetCellType(i) != VTK_LINE) {
 
                 //resultA->DeleteCell(i);
-                
+
                 toRemove.push_back(i);
-            
+
             }
 
         }
 
         //resultA->RemoveDeletedCells();
-        
+
         GeomHelper::RemoveCells(resultA, toRemove);
 
         clean->Delete();
@@ -179,7 +179,7 @@ int vtkPolyDataContactFilter::ProcessRequest (vtkInformation *request, vtkInform
 
             vtkIdList *neigs = vtkIdList::New();
             vtkIdList *line = vtkIdList::New();
-            
+
             toRemove.clear();
 
             for (int i = 0; i < resultA->GetNumberOfPoints(); i++) {
@@ -189,9 +189,9 @@ int vtkPolyDataContactFilter::ProcessRequest (vtkInformation *request, vtkInform
 
                 for (int j = 0; j < neigs->GetNumberOfIds(); j++) {
                     //if (resultA->GetCellType(neigs->GetId(j)) != VTK_EMPTY_CELL) {
-                    
+
                     if (std::count(toRemove.begin(), toRemove.end(), neigs->GetId(j)) == 0) {
-                    
+
                         resultA->GetCellPoints(neigs->GetId(j), line);
 
                         ends.push_back(std::make_pair(i == line->GetId(1) ? line->GetId(0) : line->GetId(1), neigs->GetId(j)));
@@ -209,7 +209,7 @@ int vtkPolyDataContactFilter::ProcessRequest (vtkInformation *request, vtkInform
                         found = true;
                     } else {
                         //resultA->DeleteCell(itr->second);
-                        
+
                         toRemove.push_back(itr->second);
                     }
 
@@ -224,12 +224,12 @@ int vtkPolyDataContactFilter::ProcessRequest (vtkInformation *request, vtkInform
 
             // das löschen ausführen
             //resultA->RemoveDeletedCells();
-            
+
             GeomHelper::RemoveCells(resultA, toRemove);
 
 
         }
-        
+
         resultB->DeepCopy(pdA);
         resultC->DeepCopy(pdB);
 
@@ -243,72 +243,72 @@ void vtkPolyDataContactFilter::PreparePolyData (vtkPolyData *pd) {
 
     pd->GetCellData()->Initialize();
     pd->GetPointData()->Initialize();
-    
+
     vtkIdType cellNbr = pd->GetNumberOfCells();
-    
+
     vtkIntArray *cellIds = vtkIntArray::New();
-    
+
     vtkIntArray *stripIds = vtkIntArray::New();
-    
+
     for (unsigned int i = 0; i < cellNbr; i++) {
         cellIds->InsertNextValue(i);
-        
+
         if (pd->GetCellType(i) == VTK_TRIANGLE_STRIP) {
             stripIds->InsertNextValue(i);
         }
     }
-    
+
     vtkCellArray *cells = vtkCellArray::New();
 
     vtkCellArray *strips = pd->GetStrips();
 
     vtkIdType n;
     vtkIdType *pts;
-    
+
     unsigned int i = 0;
 
     for (strips->InitTraversal(); strips->GetNextCell(n, pts);) {
         cells->Reset();
-        
+
         vtkTriangleStrip::DecomposeStrip(n, pts, cells);
-        
+
         for (cells->InitTraversal(); cells->GetNextCell(n, pts);) {
             pd->InsertNextCell(VTK_TRIANGLE, n, pts);
             cellIds->InsertNextValue(stripIds->GetValue(i));
-            
+
             cellNbr++;
         }
-        
+
         i++;
-        
+
     }
-    
+
     std::vector<int> toRemove;
-    
+
     int type;
 
     for (unsigned int i = 0; i < cellNbr; i++) {
         type = pd->GetCellType(i);
 
         if (type != VTK_POLYGON && type != VTK_QUAD && type != VTK_TRIANGLE) {
-            
+
             //pd->DeleteCell(i);
-            
+
             toRemove.push_back(i);
         }
-        
+
     }
-    
+
     cellIds->SetName("OrigCellIds");
-    
+
     pd->GetCellData()->SetScalars(cellIds);
-    
+
     cells->Delete();
     stripIds->Delete();
     cellIds->Delete();
-    
+
     //pd->RemoveDeletedCells();
-    
+
     GeomHelper::RemoveCells(pd, toRemove);
 
 }
