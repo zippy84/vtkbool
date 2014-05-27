@@ -48,6 +48,10 @@ using namespace std::placeholders;
 
 #ifdef DEBUG
 #include <vtkPolyDataWriter.h>
+#include <ctime>
+#define DIFF(s, e) float(e-s)/CLOCKS_PER_SEC
+#include <numeric>
+#include <iterator>
 #endif
 
 vtkStandardNewMacro(vtkPolyDataBooleanFilter);
@@ -100,6 +104,11 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
         resultA = vtkPolyData::SafeDownCast(outInfoA->Get(vtkDataObject::DATA_OBJECT()));
         resultB = vtkPolyData::SafeDownCast(outInfoB->Get(vtkDataObject::DATA_OBJECT()));
 
+#ifdef DEBUG
+        std::vector<float> times;
+        clock_t start;
+#endif
+
         if (pdA->GetMTime() > timePdA || pdB->GetMTime() > timePdB) {
 
             // eventuell vorhandene regionen vereinen
@@ -121,21 +130,11 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
             cleanB->Update();
 
 #ifdef DEBUG
-
-            vtkPolyDataWriter *w = vtkPolyDataWriter::New();
-            w->SetFileName("modPdA.vtk");
-            w->SetInputConnection(cleanA->GetOutputPort());
-
             std::cout << "Exporting modPdA.vtk" << std::endl;
-            w->Update();
-
-            w->SetFileName("modPdB.vtk");
-            w->SetInputConnection(cleanB->GetOutputPort());
+            GeomHelper::WriteVTK("modPdA.vtk", cleanA->GetOutput());
 
             std::cout << "Exporting modPdB.vtk" << std::endl;
-            w->Update();
-            w->Delete();
-
+            GeomHelper::WriteVTK("modPdB.vtk", cleanB->GetOutput());
 #endif
 
             // CellData sichern
@@ -145,11 +144,20 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
             // ermittelt kontaktstellen
 
+#ifdef DEBUG
+
+            start = std::clock();
+#endif
+
             vtkPolyDataContactFilter *cl = vtkPolyDataContactFilter::New();
             cl->SetInputConnection(0, cleanA->GetOutputPort());
             cl->SetInputConnection(1, cleanB->GetOutputPort());
             cl->MergeLinesOff();
             cl->Update();
+
+#ifdef DEBUG
+            times.push_back(DIFF(start, std::clock()));
+#endif
 
             contLines->DeepCopy(cl->GetOutput());
 
@@ -176,98 +184,101 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
             // trennt die polygone an den linien
 
+#ifdef DEBUG
+            start = std::clock();
+#endif
+
             CutCells(modPdA, polyStripsA);
             CutCells(modPdB, polyStripsB);
 
 #ifdef DEBUG
-            vtkPolyDataWriter *w2 = vtkPolyDataWriter::New();
-            w2->SetFileName("modPdA_2.vtk");
-
-#if (VTK_MAJOR_VERSION == 5)
-            w2->SetInput(modPdA);
-#else
-            w2->SetInputData(modPdA);
+            times.push_back(DIFF(start, std::clock()));
 #endif
 
+#ifdef DEBUG
             std::cout << "Exporting modPdA_2.vtk" << std::endl;
-            w2->Update();
-
-            w2->SetFileName("modPdB_2.vtk");
-
-#if (VTK_MAJOR_VERSION == 5)
-            w2->SetInput(modPdB);
-#else
-            w2->SetInputData(modPdB);
-#endif
+            GeomHelper::WriteVTK("modPdA_2.vtk", modPdA);
 
             std::cout << "Exporting modPdB_2.vtk" << std::endl;
-            w2->Update();
-            w2->Delete();
+            GeomHelper::WriteVTK("modPdB_2.vtk", modPdB);
+#endif
 
+#ifdef DEBUG
+            start = std::clock();
+#endif
+
+            //RestoreOrigPoints(modPdA, allStripsA);
+            //RestoreOrigPoints(modPdB, allStripsB);
+
+#ifdef DEBUG
+            times.push_back(DIFF(start, std::clock()));
+#endif
+
+#ifdef DEBUG
+            std::cout << "Exporting modPdA_3.vtk" << std::endl;
+            GeomHelper::WriteVTK("modPdA_3.vtk", modPdA);
+
+            std::cout << "Exporting modPdB_3.vtk" << std::endl;
+            GeomHelper::WriteVTK("modPdB_3.vtk", modPdB);
+#endif
+
+
+#ifdef DEBUG
+            start = std::clock();
 #endif
 
             AddAdjacentPoints(modPdA, allStripsA);
             AddAdjacentPoints(modPdB, allStripsB);
 
 #ifdef DEBUG
-            vtkPolyDataWriter *w3 = vtkPolyDataWriter::New();
-            w3->SetFileName("modPdA_3.vtk");
-
-#if (VTK_MAJOR_VERSION == 5)
-            w3->SetInput(modPdA);
-#else
-            w3->SetInputData(modPdA);
+            times.push_back(DIFF(start, std::clock()));
 #endif
 
-            std::cout << "Exporting modPdA_3.vtk" << std::endl;
-            w3->Update();
+#ifdef DEBUG
+            std::cout << "Exporting modPdA_4.vtk" << std::endl;
+            GeomHelper::WriteVTK("modPdA_4.vtk", modPdA);
 
-            w3->SetFileName("modPdB_3.vtk");
-
-#if (VTK_MAJOR_VERSION == 5)
-            w3->SetInput(modPdB);
-#else
-            w3->SetInputData(modPdB);
+            std::cout << "Exporting modPdB_4.vtk" << std::endl;
+            GeomHelper::WriteVTK("modPdB_4.vtk", modPdB);
 #endif
 
-            std::cout << "Exporting modPdB_3.vtk" << std::endl;
-            w3->Update();
-            w3->Delete();
-
+#ifdef DEBUG
+            start = std::clock();
 #endif
 
             DisjoinPolys(modPdA, allStripsA);
             DisjoinPolys(modPdB, allStripsB);
 
 #ifdef DEBUG
-            vtkPolyDataWriter *w4 = vtkPolyDataWriter::New();
-            w4->SetFileName("modPdA_4.vtk");
-
-#if (VTK_MAJOR_VERSION == 5)
-            w4->SetInput(modPdA);
-#else
-            w4->SetInputData(modPdA);
+            times.push_back(DIFF(start, std::clock()));
 #endif
 
-            std::cout << "Exporting modPdA_4.vtk" << std::endl;
-            w4->Update();
+#ifdef DEBUG
+            std::cout << "Exporting modPdA_5.vtk" << std::endl;
+            GeomHelper::WriteVTK("modPdA_5.vtk", modPdA);
 
-            w4->SetFileName("modPdB_4.vtk");
-
-#if (VTK_MAJOR_VERSION == 5)
-            w4->SetInput(modPdB);
-#else
-            w4->SetInputData(modPdB);
+            std::cout << "Exporting modPdB_5.vtk" << std::endl;
+            GeomHelper::WriteVTK("modPdB_5.vtk", modPdB);
 #endif
 
-            std::cout << "Exporting modPdB_4.vtk" << std::endl;
-            w4->Update();
-            w4->Delete();
-
+#ifdef DEBUG
+            start = std::clock();
 #endif
 
             MergePoints(modPdA, allStripsA);
             MergePoints(modPdB, allStripsB);
+
+#ifdef DEBUG
+            times.push_back(DIFF(start, std::clock()));
+#endif
+
+#ifdef DEBUG
+            std::cout << "Exporting modPdA_6.vtk" << std::endl;
+            GeomHelper::WriteVTK("modPdA_6.vtk", modPdA);
+
+            std::cout << "Exporting modPdB_6.vtk" << std::endl;
+            GeomHelper::WriteVTK("modPdB_6.vtk", modPdB);
+#endif
 
             // aufräumen
 
@@ -280,13 +291,31 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
         }
 
+#ifdef DEBUG
+        start = std::clock();
+#endif
+
         CombineRegions();
+
+#ifdef DEBUG
+        times.push_back(DIFF(start, std::clock()));
+
+        float sum = std::accumulate(times.begin(), times.end(), 0.);
+
+        std::vector<float>::const_iterator itr;
+        for (itr = times.cbegin(); itr != times.cend(); itr++) {
+            std::cout << "Time " << std::distance(times.cbegin(), itr)
+                << ": " << *itr << " (" << (*itr/sum)*100 << "%)"
+                << std::endl;
+        }
+#endif
 
     }
 
     return 1;
 
 }
+
 
 StripsType vtkPolyDataBooleanFilter::GetStrips (vtkPolyData *pd, int polyInd, std::deque<int> &lines) {
 
@@ -337,6 +366,8 @@ StripsType vtkPolyDataBooleanFilter::GetStrips (vtkPolyData *pd, int polyInd, st
 
                 double nSum = 0;
 
+                double currD = 1e-5;
+
                 // jetzt muss man die kanten durchlaufen
                 for (unsigned int j = 0; j < polyPts->GetNumberOfIds(); j++) {
                     // richtungsvektor der kante bestimmen
@@ -363,6 +394,8 @@ StripsType vtkPolyDataBooleanFilter::GetStrips (vtkPolyData *pd, int polyInd, st
                     double n = vtkMath::Norm(u);
 
                     if (vtkMath::Norm(sA) < 1e-5) {
+                        //CPY(stripPts[realInd].pt, a)
+
                         stripPts[realInd].onEdgeVert = true;
                         stripPts[realInd].edgeVert = indA;
                         stripPts[realInd].T = nSum;
@@ -370,6 +403,8 @@ StripsType vtkPolyDataBooleanFilter::GetStrips (vtkPolyData *pd, int polyInd, st
                         break;
 
                     } else if (vtkMath::Norm(sB) < 1e-5) {
+                        //CPY(stripPts[realInd].pt, b)
+
                         stripPts[realInd].onEdgeVert = true;
                         stripPts[realInd].edgeVert = indB;
                         stripPts[realInd].T = nSum+n;
@@ -393,13 +428,26 @@ StripsType vtkPolyDataBooleanFilter::GetStrips (vtkPolyData *pd, int polyInd, st
 
                         t *= n;
 
-                        if (d < 1e-5 && t > 0 && t < n) {
+                        if (d < currD && t > 0 && t < n) {
+
+                            /*
+                            // u ist nicht normiert
+                            vtkMath::MultiplyScalar(u, t/n);
+
+                            double x[3];
+                            vtkMath::Add(a, u, x);
+
+                            CPY(stripPts[realInd].pt, x)
+                            */
+
                             stripPts[realInd].edgeVert = indA;
                             stripPts[realInd].secondVert = indB;
                             stripPts[realInd].t = t;
                             stripPts[realInd].T = nSum+t;
 
-                            break;
+                            currD = d;
+
+                            //break;
 
                         }
 
@@ -755,10 +803,7 @@ void vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
                             for (itr3 = itr2->begin(); itr3 != itr2->end(); itr3++) {
 
                                 // einen neuen punkt erzeugen
-                                double pt[3];
-                                contLines->GetPoint(itr3->ind, pt);
-
-                                newPolyA->InsertNextId(pdPts->InsertNextPoint(pt));
+                                newPolyA->InsertNextId(pdPts->InsertNextPoint(itr3->pt));
                             }
 
                             // dann das eigenständige polygon bestehend aus dem strip
@@ -766,10 +811,7 @@ void vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
                             StripType::reverse_iterator itr4;
 
                             for (itr4 = itr2->rbegin(); itr4 != itr2->rend(); itr4++) {
-                                double pt[3];
-                                contLines->GetPoint(itr4->ind, pt);
-
-                                newPolyB->InsertNextId(pdPts->InsertNextPoint(pt));
+                                newPolyB->InsertNextId(pdPts->InsertNextPoint(itr4->pt));
                             }
 
                             // eine neue referenz hinzufügen
@@ -808,10 +850,7 @@ void vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
                             for (itr3 = itr2->begin(); itr3 != itr2->end(); itr3++) {
 
                                 // einen neuen punkt erzeugen
-                                double pt[3];
-                                contLines->GetPoint(itr3->ind, pt);
-
-                                actPoly->InsertNextId(pdPts->InsertNextPoint(pt));
+                                actPoly->InsertNextId(pdPts->InsertNextPoint(itr3->pt));
                             }
 
                             R[ptInd].push_back(std::make_pair(itr2->front().t, actPoly->GetId(actPoly->GetNumberOfIds()-1)));
@@ -830,11 +869,7 @@ void vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
                             StripType::reverse_iterator itr3;
 
                             for (itr3 = itr2->rbegin(); itr3 != itr2->rend(); itr3++) {
-
-                                double pt[3];
-                                contLines->GetPoint(itr3->ind, pt);
-
-                                actPoly->InsertNextId(pdPts->InsertNextPoint(pt));
+                                actPoly->InsertNextId(pdPts->InsertNextPoint(itr3->pt));
                             }
 
                             R[ptInd].push_back(std::make_pair(itr2->back().t, actPoly->GetId(actPoly->GetNumberOfIds()-1)));
@@ -1029,7 +1064,7 @@ void vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
 
                     double dV[3], d;
 
-                    contLines->GetPoint(itr3->back().ind, ptB);
+                    CPY(ptB, itr3->back().pt)
 
                     vtkMath::Subtract(ptA, ptB, dV);
 
@@ -1151,6 +1186,48 @@ bool vtkPolyDataBooleanFilter::HasArea (StripType &strip) {
     return area;
 }
 
+void vtkPolyDataBooleanFilter::RestoreOrigPoints (vtkPolyData *pd, StripsType &strips) {
+
+#ifdef DEBUG
+    std::cout << "RestoreOrigPoints()" << std::endl;
+#endif
+
+    vtkKdTreePointLocator *loc = vtkKdTreePointLocator::New();
+    loc->SetDataSet(pd);
+
+    StripsType::iterator itr;
+
+    for (itr = strips.begin(); itr != strips.end(); itr++) {
+        // manchmal wird ind nicht auf die gleiche kante abgebildet
+        RestoreOrigPt(pd, loc, itr->front());
+        RestoreOrigPt(pd, loc, itr->back());
+    }
+
+    loc->FreeSearchStructure();
+    loc->Delete();
+
+}
+
+void vtkPolyDataBooleanFilter::RestoreOrigPt (vtkPolyData *pd, vtkKdTreePointLocator *loc, StripPtType &stripPt) {
+    vtkPoints *pts = pd->GetPoints();
+
+    double origPt[3];
+
+    contLines->GetPoint(stripPt.ind, origPt);
+
+    vtkIdList *childs = vtkIdList::New();
+
+    //loc->FindPointsWithinRadius(1e-7, stripPt.pt, childs);
+    GeomHelper::FindPoints(loc, stripPt.pt, childs);
+
+    for (unsigned int i = 0; i < childs->GetNumberOfIds(); i++) {
+        pts->SetPoint(childs->GetId(i), origPt);
+    }
+
+    childs->Delete();
+
+}
+
 void vtkPolyDataBooleanFilter::AddAdjacentPoints (vtkPolyData *pd, StripsType &strips) {
 
 #ifdef DEBUG
@@ -1224,7 +1301,10 @@ void vtkPolyDataBooleanFilter::AddAdjacentPoints (vtkPolyData *pd, StripsType &s
 
                                 if (lastInd < 0 || lastInd != itr3->ind) {
 
-                                    newPoly->InsertNextId(pd->InsertNextLinkedPoint(itr3->pt, 1));
+                                    double pt[3];
+                                    contLines->GetPoint(itr3->ind, pt);
+
+                                    newPoly->InsertNextId(pd->InsertNextLinkedPoint(pt, 1));
 
                                     lastInd = itr3->ind;
                                 }
@@ -1306,7 +1386,8 @@ void vtkPolyDataBooleanFilter::DisjoinPolys (vtkPolyData *pd, StripsType &strips
 
         contLines->GetPoint(*itr2, pt);
 
-        pl->FindPointsWithinRadius(1e-7, pt, pts);
+        //pl->FindPointsWithinRadius(1e-7, pt, pts);
+        GeomHelper::FindPoints(pl, pt, pts);
 
         for (unsigned int i = 0; i < pts->GetNumberOfIds(); i++) {
             vtkIdList *polys = vtkIdList::New();
@@ -1356,7 +1437,11 @@ void vtkPolyDataBooleanFilter::MergePoints (vtkPolyData *pd, StripsType &strips)
 
         vtkIdList *neigs = vtkIdList::New();
 
-        loc->FindPointsWithinRadius(1e-7, (itr->begin()+1)->pt, neigs);
+        double pt[3];
+        contLines->GetPoint((itr->begin()+1)->ind, pt);
+
+        //loc->FindPointsWithinRadius(1e-7, pt, neigs);
+        GeomHelper::FindPoints(loc, pt, neigs);
 
         for (unsigned int i = 0; i < neigs->GetNumberOfIds(); i++) {
 
@@ -1364,7 +1449,10 @@ void vtkPolyDataBooleanFilter::MergePoints (vtkPolyData *pd, StripsType &strips)
 
         }
 
-        loc->FindPointsWithinRadius(1e-7, (itr->rbegin()+1)->pt, neigs);
+        contLines->GetPoint((itr->rbegin()+1)->ind, pt);
+
+        //loc->FindPointsWithinRadius(1e-7, pt, neigs);
+        GeomHelper::FindPoints(loc, pt, neigs);
 
         for (unsigned int i = 0; i < neigs->GetNumberOfIds(); i++) {
 
@@ -1388,7 +1476,8 @@ void vtkPolyDataBooleanFilter::MergePoints (vtkPolyData *pd, StripsType &strips)
 
         vtkIdList *verts = vtkIdList::New();
 
-        loc->FindPointsWithinRadius(1e-7, pt, verts);
+        //loc->FindPointsWithinRadius(1e-7, pt, verts);
+        GeomHelper::FindPoints(loc, pt, verts);
 
 #ifdef DEBUG
         std::cout << "ind " << itr2->first << ", neigs [";
@@ -1817,6 +1906,10 @@ void vtkPolyDataBooleanFilter::CombineRegions () {
     std::cout << "CombineRegions()" << std::endl;
 #endif
 
+    // double-Koordinaten sichern
+    modPdA->GetPointData()->AddArray(modPdA->GetPoints()->GetData());
+    modPdB->GetPointData()->AddArray(modPdB->GetPoints()->GetData());
+
     // ungenutzte punkte löschen
     vtkCleanPolyData *cleanA = vtkCleanPolyData::New();
     cleanA->PointMergingOff();
@@ -1848,23 +1941,20 @@ void vtkPolyDataBooleanFilter::CombineRegions () {
     cfA->Update();
     cfB->Update();
 
-#ifdef DEBUG
-    vtkPolyDataWriter *w = vtkPolyDataWriter::New();
-    w->SetFileName("modPdA_5.vtk");
-    w->SetInputConnection(cfA->GetOutputPort());
-    std::cout << "Exporting modPdA_5.vtk" << std::endl;
-    w->Update();
-
-    w->SetFileName("modPdB_5.vtk");
-    w->SetInputConnection(cfB->GetOutputPort());
-    std::cout << "Exporting modPdB_5.vtk" << std::endl;
-    w->Update();
-
-    w->Delete();
-#endif
-
     vtkPolyData *pdA = cfA->GetOutput();
     vtkPolyData *pdB = cfB->GetOutput();
+
+    // double-Pts wiederherstellen
+    pdA->GetPoints()->SetData(pdA->GetPointData()->GetArray(0));
+    pdB->GetPoints()->SetData(pdB->GetPointData()->GetArray(0));
+
+#ifdef DEBUG
+    std::cout << "Exporting modPdA_7.vtk" << std::endl;
+    GeomHelper::WriteVTK("modPdA_7.vtk", cfA->GetOutput());
+
+    std::cout << "Exporting modPdB_7.vtk" << std::endl;
+    GeomHelper::WriteVTK("modPdB_7.vtk", cfB->GetOutput());
+#endif
 
     // locators erstellen
     vtkKdTreePointLocator *plA = vtkKdTreePointLocator::New();
@@ -1896,14 +1986,20 @@ void vtkPolyDataBooleanFilter::CombineRegions () {
         vtkIdList *fptsA = vtkIdList::New();
         vtkIdList *lptsA = vtkIdList::New();
 
-        plA->FindPointsWithinRadius(1e-7, ptA, fptsA);
-        plA->FindPointsWithinRadius(1e-7, ptB, lptsA);
+        //plA->FindPointsWithinRadius(1e-7, ptA, fptsA);
+        //plA->FindPointsWithinRadius(1e-7, ptB, lptsA);
+
+        GeomHelper::FindPoints(plA, ptA, fptsA);
+        GeomHelper::FindPoints(plA, ptB, lptsA);
 
         vtkIdList *fptsB = vtkIdList::New();
         vtkIdList *lptsB = vtkIdList::New();
 
-        plB->FindPointsWithinRadius(1e-7, ptA, fptsB);
-        plB->FindPointsWithinRadius(1e-7, ptB, lptsB);
+        //plB->FindPointsWithinRadius(1e-7, ptA, fptsB);
+        //plB->FindPointsWithinRadius(1e-7, ptB, lptsB);
+
+        GeomHelper::FindPoints(plB, ptA, fptsB);
+        GeomHelper::FindPoints(plB, ptB, lptsB);
 
 #ifdef DEBUG
         std::cout << "line " << i << std::endl;
@@ -2077,8 +2173,16 @@ void vtkPolyDataBooleanFilter::CombineRegions () {
 
     cfApp->Update();
 
+    vtkPolyData *cfPd = cfApp->GetOutput();
+
+    // double-Koordinaten wiederherstellen
+    if (cfPd->GetPoints() != NULL) {
+        cfPd->GetPoints()->SetData(cfPd->GetPointData()->GetArray(0));
+        cfPd->GetPointData()->RemoveArray(0);
+    }
+
     // resultA ist erster output des filters
-    resultA->ShallowCopy(cfApp->GetOutput());
+    resultA->ShallowCopy(cfPd);
 
     resultA->GetCellData()->AddArray(newOrigCellIdsA);
     resultA->GetCellData()->AddArray(newOrigCellIdsB);
