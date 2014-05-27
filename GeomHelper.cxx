@@ -32,6 +32,7 @@
 #include <vtkTriangleStrip.h>
 #include <vtkCellArray.h>
 #include <vtkIntArray.h>
+#include <vtkDataWriter.h>
 
 #include "GeomHelper.h"
 
@@ -108,7 +109,7 @@ void GeomHelper::RemoveCells (vtkPolyData *pd, std::vector<int> &cells) {
 
     int type;
     vtkIdType *pts, n;
-    
+
     verts->InitTraversal();
     lines->InitTraversal();
     polys->InitTraversal();
@@ -123,7 +124,7 @@ void GeomHelper::RemoveCells (vtkPolyData *pd, std::vector<int> &cells) {
 
         if (type == VTK_VERTEX || type == VTK_POLY_VERTEX) {
             verts->GetNextCell(n, pts);
-            
+
             if (keep) {
                 cellId = pd->InsertNextCell(type, n, pts);
                 cellData->CopyData(pd->GetCellData(), i, cellId);
@@ -131,7 +132,7 @@ void GeomHelper::RemoveCells (vtkPolyData *pd, std::vector<int> &cells) {
 
         } else if (type == VTK_LINE || type == VTK_POLY_LINE) {
             lines->GetNextCell(n, pts);
-            
+
             if (keep) {
                 cellId = pd->InsertNextCell(type, n, pts);
                 cellData->CopyData(pd->GetCellData(), i, cellId);
@@ -139,7 +140,7 @@ void GeomHelper::RemoveCells (vtkPolyData *pd, std::vector<int> &cells) {
 
         } else if (type == VTK_POLYGON || type == VTK_TRIANGLE || type == VTK_QUAD) {
             polys->GetNextCell(n, pts);
-            
+
             if (keep) {
                 cellId = pd->InsertNextCell(type, n, pts);
                 cellData->CopyData(pd->GetCellData(), i, cellId);
@@ -147,7 +148,7 @@ void GeomHelper::RemoveCells (vtkPolyData *pd, std::vector<int> &cells) {
 
         } else if (type == VTK_TRIANGLE_STRIP) {
             strips->GetNextCell(n, pts);
-            
+
             if (keep) {
                 cellId = pd->InsertNextCell(type, n, pts);
                 cellData->CopyData(pd->GetCellData(), i, cellId);
@@ -156,7 +157,7 @@ void GeomHelper::RemoveCells (vtkPolyData *pd, std::vector<int> &cells) {
         }
 
     }
-    
+
     cellData->Squeeze();
 
     pd->GetCellData()->ShallowCopy(cellData);
@@ -169,4 +170,55 @@ void GeomHelper::RemoveCells (vtkPolyData *pd, std::vector<int> &cells) {
     verts->Delete();
     types->Delete();
 
+}
+
+void GeomHelper::FindPoints (vtkKdTreePointLocator *pl, double *pt, vtkIdList *pts, double tol) {
+    pts->Reset();
+
+    vtkPolyData *pd = vtkPolyData::SafeDownCast(pl->GetDataSet());
+
+    vtkIdList *closest = vtkIdList::New();
+    pl->FindClosestNPoints(10, pt, closest);
+
+    double c[3], v[3];
+
+    for (unsigned int i = 0; i < closest->GetNumberOfIds(); i++) {
+        pd->GetPoint(closest->GetId(i), c);
+        vtkMath::Subtract(pt, c, v);
+
+        if (vtkMath::Norm(v) < tol) {
+            pts->InsertNextId(closest->GetId(i));
+        }
+    }
+
+    closest->Delete();
+}
+
+void GeomHelper::WriteVTK (const char *name, vtkPolyData *pd) {
+    vtkDataWriter *w = vtkDataWriter::New();
+
+    vtkPoints *pts = pd->GetPoints();
+
+    std::ofstream f(name);
+    f << "# vtk DataFile Version 3.0\n"
+      << "vtk output\n"
+      << "ASCII\n"
+      << "DATASET POLYDATA\n"
+      << "POINTS " << pts->GetNumberOfPoints() << " double\n";
+
+    f << std::setprecision(12);
+
+    double pt[3];
+    for (unsigned int i = 0; i < pts->GetNumberOfPoints(); i++) {
+        pts->GetPoint(i, pt);
+        f << pt[0] << " " << pt[1] << " " << pt[2] << "\n";
+    }
+
+    w->WriteCells(&f, pd->GetLines(),"LINES");
+    w->WriteCells(&f, pd->GetPolys(),"POLYGONS");
+    w->WriteCellData(&f, pd);
+
+    f.close();
+
+    w->Delete();
 }

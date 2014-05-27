@@ -34,6 +34,7 @@
 #include <vtkPointData.h>
 #include <vtkCleanPolyData.h>
 #include <vtkTriangleStrip.h>
+#include <vtkDoubleArray.h>
 
 #include <vtkCellArray.h>
 
@@ -50,6 +51,7 @@ vtkPolyDataContactFilter::vtkPolyDataContactFilter () {
     contLines->Allocate(1000);
 
     contPts = vtkPoints::New();
+    contPts->SetDataTypeToDouble();
     contLines->SetPoints(contPts);
 
     contA = vtkIntArray::New();
@@ -306,6 +308,12 @@ void vtkPolyDataContactFilter::PreparePolyData (vtkPolyData *pd) {
     cells->Delete();
     stripIds->Delete();
     cellIds->Delete();
+
+    vtkDoubleArray *doublePts = vtkDoubleArray::New();
+    doublePts->DeepCopy(pd->GetPoints()->GetData());
+
+    pd->GetPoints()->SetData(doublePts);
+    doublePts->Delete();
 
     //pd->RemoveDeletedCells();
 

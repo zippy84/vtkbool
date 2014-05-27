@@ -112,6 +112,9 @@ class VTK_EXPORT vtkPolyDataBooleanFilter : public vtkPolyDataAlgorithm {
 
     bool HasArea (StripType &strip);
 
+    void RestoreOrigPoints (vtkPolyData *pd, StripsType &strips);
+    void RestoreOrigPt (vtkPolyData *pd, vtkKdTreePointLocator *loc, StripPtType &stripPt);
+
     void AddAdjacentPoints (vtkPolyData *pd, StripsType &strips);
     void DisjoinPolys (vtkPolyData *pd, StripsType &strips);
     void MergePoints (vtkPolyData *pd, StripsType &strips);

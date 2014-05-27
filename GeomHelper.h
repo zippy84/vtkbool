@@ -20,15 +20,20 @@
 #include <vtkPoints.h>
 #include <vtkIdList.h>
 #include <vtkPolyData.h>
+#include <vtkKdTreePointLocator.h>
 #include <vector>
 
 namespace GeomHelper {
 
     void ComputeNormal (vtkPoints *pts, vtkIdList *poly, double* n);
     double GetAngle (double *vA, double *vB, double *n);
-    
+
     void RemoveCells (vtkPolyData *pd, std::vector<int> &cells);
-    
+
+    void FindPoints (vtkKdTreePointLocator *pl, double *pt, vtkIdList *pts, double tol = 1e-7);
+
+    void WriteVTK (const char *name, vtkPolyData *pd);
+
 };
 
 #endif
