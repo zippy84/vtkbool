@@ -1,5 +1,5 @@
 /*
-   Copyright 2012, 2013 Ronald Römer
+   Copyright 2012-2014 Ronald Römer
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -43,8 +43,6 @@
 
 vtkStandardNewMacro(vtkPolyDataContactFilter);
 
-#define CPY(a, b) a[0] = b[0]; a[1] = b[1]; a[2] = b[2];
-
 vtkPolyDataContactFilter::vtkPolyDataContactFilter () {
 
     contLines = vtkPolyData::New();
@@ -59,8 +57,6 @@ vtkPolyDataContactFilter::vtkPolyDataContactFilter () {
 
     contA->SetName("cA");
     contB->SetName("cB");
-
-    MergeLines = true;
 
     SetNumberOfInputPorts(2);
     SetNumberOfOutputPorts(3);
@@ -124,7 +120,7 @@ int vtkPolyDataContactFilter::ProcessRequest (vtkInformation *request, vtkInform
 
         vtkMatrix4x4 *mat = vtkMatrix4x4::New();
 
-        obbA->IntersectWithOBBTree(obbB, mat, IntersectOBBNodes, this);
+        obbA->IntersectWithOBBTree(obbB, mat, InterOBBNodes, this);
 
         /*
         for (int i = 0; i < pdA->GetNumberOfCells(); i++) {
@@ -171,66 +167,6 @@ int vtkPolyDataContactFilter::ProcessRequest (vtkInformation *request, vtkInform
         mat->Delete();
         obbB->Delete();
         obbA->Delete();
-
-        if (MergeLines) {
-
-            resultA->GetCellData()->RemoveArray("cA");
-            resultA->GetCellData()->RemoveArray("cB");
-
-            resultA->BuildLinks();
-
-            vtkIdList *neigs = vtkIdList::New();
-            vtkIdList *line = vtkIdList::New();
-
-            toRemove.clear();
-
-            for (int i = 0; i < resultA->GetNumberOfPoints(); i++) {
-                resultA->GetPointCells(i, neigs);
-
-                std::vector<std::pair<int, int> > ends;
-
-                for (int j = 0; j < neigs->GetNumberOfIds(); j++) {
-                    //if (resultA->GetCellType(neigs->GetId(j)) != VTK_EMPTY_CELL) {
-
-                    if (std::count(toRemove.begin(), toRemove.end(), neigs->GetId(j)) == 0) {
-
-                        resultA->GetCellPoints(neigs->GetId(j), line);
-
-                        ends.push_back(std::make_pair(i == line->GetId(1) ? line->GetId(0) : line->GetId(1), neigs->GetId(j)));
-
-                        line->Reset();
-                    }
-                }
-
-                std::vector<std::pair<int, int> >::const_iterator itr;
-
-                bool found = false;
-
-                for (itr = ends.begin()+1; itr != ends.end(); itr++) {
-                    if (!found && ends.front().first != itr->first) {
-                        found = true;
-                    } else {
-                        //resultA->DeleteCell(itr->second);
-
-                        toRemove.push_back(itr->second);
-                    }
-
-                }
-
-                neigs->Reset();
-
-            }
-
-            line->Delete();
-            neigs->Delete();
-
-            // das löschen ausführen
-            //resultA->RemoveDeletedCells();
-
-            GeomHelper::RemoveCells(resultA, toRemove);
-
-
-        }
 
         resultB->DeepCopy(pdA);
         resultC->DeepCopy(pdB);
@@ -321,55 +257,50 @@ void vtkPolyDataContactFilter::PreparePolyData (vtkPolyData *pd) {
 
 }
 
-InterPtType vtkPolyDataContactFilter::IntersectEdgeAndLine (double *edgePtA, double *edgePtB, double *r, double *pt) {
+#ifdef DEBUG
+int ind = 0;
+#endif
+
+InterPtType vtkPolyDataContactFilter::InterEdgeLine (double *eA, double *eB, double *r, double *pt) {
 
     InterPtType inter;
 
     // richtungsvektor der kante bestimmen
 
     double e[3];
-    vtkMath::Subtract(edgePtB, edgePtA, e);
-    double le = vtkMath::Normalize(e);
+    vtkMath::Subtract(eB, eA, e);
+    double l = vtkMath::Normalize(e);
 
     // schnittpunkt ermitteln
 
     double v[3];
     vtkMath::Cross(r, e, v);
 
-    double nV = vtkMath::Norm(v);
+    double n = vtkMath::Norm(v);
 
-    if (nV*nV > 1e-6) {
+    if (n*n > 1e-9) {
         double p[3];
 
-        vtkMath::Subtract(edgePtA, pt, p);
+        vtkMath::Subtract(eA, pt, p);
 
-        double t = vtkMath::Determinant3x3(p, e, v)/(nV*nV);
-        double s = vtkMath::Determinant3x3(p, r, v)/(nV*nV);
+        double s = vtkMath::Determinant3x3(p, r, v)/(n*n);
 
-        double sPt[] = {
-            pt[0]+t*r[0],
-            pt[1]+t*r[1],
-            pt[2]+t*r[2]
-        };
+        if (s > -1e-6 && s < l+1e-6) {
+            double t = vtkMath::Determinant3x3(p, e, v)/(n*n);
 
-        CPY(inter.pt, sPt)
+            inter.pt[0] = pt[0]+t*r[0];
+            inter.pt[1] = pt[1]+t*r[1];
+            inter.pt[2] = pt[2]+t*r[2];
 
-        if (std::fabs(s) < 1e-6) {
-            inter.onEnd = 0;
-            inter.isOnEdge = true;
+            inter.onEdge = true;
+
             inter.t = t;
 
-        } else if (std::fabs(le-s) < 1e-6) {
-            inter.onEnd = 1;
-            inter.isOnEdge = true;
-            inter.t = t;
+            inter.outer = s < 0 || s > l;
 
-        } else if (s > 0 && s < le) {
-
-            // der schnittpunkt liegt irgendwo auf der kante
-
-            inter.isOnEdge = true;
-            inter.t = t;
+#ifdef DEBUG
+            inter.ind = ind++;
+#endif
 
         }
 
@@ -381,15 +312,17 @@ InterPtType vtkPolyDataContactFilter::IntersectEdgeAndLine (double *edgePtA, dou
 
 }
 
-InterPtsType vtkPolyDataContactFilter::IntersectPolyAndLine (vtkPoints *pts, vtkIdList *poly, double *r, double *pt) {
+InterPtsType vtkPolyDataContactFilter::InterPolyLine (vtkPoints *pts, vtkIdList *poly, double *r, double *pt) {
+
+#ifdef DEBUG
+    std::cout << "InterPolyLine()" << std::endl;
+#endif
 
     InterPtsType interPts;
 
-    // durchläuft die kanten und ermittelt die schnittpunkte, die in iterPts gesammelt werden
+    // durchläuft die kanten und ermittelt die schnittpunkte
 
-    int edgeNbr = poly->GetNumberOfIds();
-
-    for (unsigned int i = 0; i < edgeNbr; i++) {
+    for (unsigned int i = 0; i < poly->GetNumberOfIds(); i++) {
         // kante ermitteln
 
         double ptA[3], ptB[3];
@@ -399,28 +332,84 @@ InterPtsType vtkPolyDataContactFilter::IntersectPolyAndLine (vtkPoints *pts, vtk
 
         // schnittpunkt
 
-        InterPtType inter(IntersectEdgeAndLine(ptA, ptB, r, pt));
+        InterPtType inter(InterEdgeLine(ptA, ptB, r, pt));
 
-        if (inter.isOnEdge) {
-            if (inter.onEnd == 0 && i == 0) {
-                edgeNbr--;
-            } else if (inter.onEnd == 1) {
-                i++;
-            }
-
+        if (inter.onEdge) {
             interPts.push_back(inter);
-
         }
 
     }
 
     std::sort(interPts.begin(), interPts.end());
 
-    return interPts;
+    // jetzt müssen noch spezielle gelöscht werden
+
+    InterPtsType interPts2;
+
+    InterPtsType::const_iterator itr;
+
+#ifdef DEBUG
+    for (itr = interPts.begin(); itr != interPts.end(); itr++) {
+        std::cout << "ind " << itr->ind
+            << ", pt [" << itr->pt[0] << ", " << itr->pt[1] << ", " << itr->pt[2] << "]"
+            << ", onEdge " << itr->onEdge
+            << ", t " << itr->t
+            << ", outer " << itr->outer
+            << std::endl;
+    }
+#endif
+
+    if (interPts.size() > 1) {
+
+        std::vector<const InterPtType*> omits;
+
+        for (itr = interPts.begin(); itr != interPts.end()-1; itr++) {
+
+            double v[3];
+            vtkMath::Subtract(itr->pt, (itr+1)->pt, v);
+
+            if (vtkMath::Norm(v) < 1e-5) {
+                if (itr->outer != (itr+1)->outer) {
+                    if (itr->outer) {
+                        omits.push_back(&*itr);
+                    } else {
+                        omits.push_back(&*(itr+1));
+                    }
+                } else {
+                    // beide
+                    omits.push_back(&*itr);
+                    omits.push_back(&*(itr+1));
+                }
+
+            }
+        }
+
+        for (itr = interPts.begin(); itr != interPts.end(); itr++) {
+            if (std::count(omits.begin(), omits.end(), &*itr) == 0) {
+                interPts2.push_back(*itr);
+            } else {
+#ifdef DEBUG
+                std::cout << "omit " << itr->ind << std::endl;
+#endif
+
+            }
+        }
+
+    }
+
+    // wenn alles richtig ist, müsste die anzahl gerade sein
+
+    return interPts2;
 
 }
 
-void vtkPolyDataContactFilter::IntersectPolys (vtkIdType idA, vtkIdType idB) {
+void vtkPolyDataContactFilter::InterPolys (vtkIdType idA, vtkIdType idB) {
+
+#ifdef DEBUG
+    std::cout << "InterPolys()" << std::endl;
+
+    std::cout << "idA " << idA << ", idB " << idB << std::endl;
+#endif
 
     vtkIdList *polyA = vtkIdList::New();
     vtkIdList *polyB = vtkIdList::New();
@@ -480,16 +469,43 @@ void vtkPolyDataContactFilter::IntersectPolys (vtkIdType idA, vtkIdType idB) {
         s[inds[1]] = (nA[inds[0]]*dB-nB[inds[0]]*dA)/det;
         s[i] = 0;
 
-        InterPtsType intersA(IntersectPolyAndLine(pdA->GetPoints(), polyA, r, s));
-        InterPtsType intersB(IntersectPolyAndLine(pdB->GetPoints(), polyB, r, s));
+#ifdef DEBUG
+        std::cout << "r [" << r[0] << ", " << r[1] << ", " << r[2] << "]"
+            << ", s [" << s[0] << ", " << s[1] << ", " << s[2] << "]"
+            << std::endl;
 
-        if (intersA.size() > 1 && intersB.size() > 1) {
+        // für paraview
+        std::cout << "s2 [" << (s[0]+10*r[0])
+            << ", " << (s[1]+10*r[1])
+            << ", " << (s[2]+10*r[2])
+            << "]" << std::endl;
+
+
+#endif
+
+        InterPtsType intersA(InterPolyLine(pdA->GetPoints(), polyA, r, s));
+        InterPtsType intersB(InterPolyLine(pdB->GetPoints(), polyB, r, s));
+
+#ifdef DEBUG
+        std::cout << "intersA " << intersA.size()
+            << ", intersB " << intersB.size()
+            << std::endl;
+#endif
+
+        if (intersA.size() != 0 && intersB.size() != 0
+            && intersA.size()%2 == 0 && intersB.size()%2 == 0) {
 
             OverlapsType overlaps(OverlapLines(intersA, intersB));
 
             OverlapsType::const_iterator itr;
 
             for (itr = overlaps.begin(); itr != overlaps.end(); itr++) {
+
+#ifdef DEBUG
+                std::cout << "first " << itr->first.ind
+                    << ", second " << itr->second.ind
+                    << std::endl;
+#endif
 
                 vtkIdList *linePts = vtkIdList::New();
 
@@ -514,21 +530,16 @@ void vtkPolyDataContactFilter::IntersectPolys (vtkIdType idA, vtkIdType idB) {
 
 }
 
-
 OverlapsType vtkPolyDataContactFilter::OverlapLines (InterPtsType &intersA, InterPtsType &intersB) {
 
     OverlapsType ols;
 
-    unsigned int i = 0, j;
-
-    while (i < intersA.size()-1) {
+    for (unsigned int i = 0; i < intersA.size(); i += 2) {
 
         InterPtType &fA = intersA[i];
         InterPtType &sA = intersA[i+1];
 
-        j = 0;
-
-        while (j < intersB.size()-1) {
+        for (unsigned int j = 0; j < intersB.size(); j += 2) {
             InterPtType &fB = intersB[j];
             InterPtType &sB = intersB[j+1];
 
@@ -557,19 +568,6 @@ OverlapsType vtkPolyDataContactFilter::OverlapLines (InterPtsType &intersA, Inte
                 ols.push_back(ol);
             }
 
-
-            if (sB.onEnd != -1) {
-                j++;
-            } else {
-                j += 2;
-            }
-
-        }
-
-        if (sA.onEnd != -1) {
-            i++;
-        } else {
-            i += 2;
         }
 
     }
@@ -578,7 +576,7 @@ OverlapsType vtkPolyDataContactFilter::OverlapLines (InterPtsType &intersA, Inte
 
 }
 
-int vtkPolyDataContactFilter::IntersectOBBNodes (vtkOBBNode *nodeA, vtkOBBNode *nodeB, vtkMatrix4x4 *mat, void *caller) {
+int vtkPolyDataContactFilter::InterOBBNodes (vtkOBBNode *nodeA, vtkOBBNode *nodeB, vtkMatrix4x4 *mat, void *caller) {
     vtkPolyDataContactFilter *self = reinterpret_cast<vtkPolyDataContactFilter*>(caller);
 
     vtkIdList *cellsA = nodeA->Cells;
@@ -590,7 +588,9 @@ int vtkPolyDataContactFilter::IntersectOBBNodes (vtkOBBNode *nodeA, vtkOBBNode *
         for (int j = 0; j < cellsB->GetNumberOfIds(); j++) {
             vtkIdType cj = cellsB->GetId(j);
 
-            self->IntersectPolys(ci, cj);
+            self->InterPolys(ci, cj);
         }
     }
+
+    return 0;
 }

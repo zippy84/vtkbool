@@ -1,5 +1,5 @@
 /*
-   Copyright 2012, 2013 Ronald Römer
+   Copyright 2012-2014 Ronald Römer
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -172,7 +172,7 @@ void GeomHelper::RemoveCells (vtkPolyData *pd, std::vector<int> &cells) {
 
 }
 
-void GeomHelper::FindPoints (vtkKdTreePointLocator *pl, double *pt, vtkIdList *pts, double tol) {
+void GeomHelper::FindPoints (vtkKdTreePointLocator *pl, const double *pt, vtkIdList *pts, double tol) {
     pts->Reset();
 
     vtkPolyData *pd = vtkPolyData::SafeDownCast(pl->GetDataSet());

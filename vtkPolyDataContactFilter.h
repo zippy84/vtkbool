@@ -1,5 +1,5 @@
 /*
-   Copyright 2012, 2013 Ronald Römer
+   Copyright 2012-2014 Ronald Römer
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -24,16 +24,21 @@ class vtkMatrix4x4;
 
 class InterPtType {
 public:
-    InterPtType () : isOnEdge(false), onEnd(-1) {}
+    InterPtType () : onEdge(false) {}
 
-    bool operator< (const InterPtType &otherPt) const {
-        return t < otherPt.t;
+    double pt[3];
+    double t;
+    bool onEdge;
+
+    bool outer;
+
+    bool operator< (const InterPtType &other) const {
+        return t < other.t;
     }
 
-    double t;
-    bool isOnEdge;
-    int onEnd;
-    double pt[3];
+#ifdef DEBUG
+    int ind;
+#endif
 };
 
 typedef std::vector<InterPtType> InterPtsType;
@@ -44,9 +49,9 @@ class VTK_EXPORT vtkPolyDataContactFilter : public vtkPolyDataAlgorithm {
 
     void PreparePolyData (vtkPolyData *pd);
 
-    InterPtType IntersectEdgeAndLine (double *edgePtA, double *edgePtB, double *r, double *pt);
-    InterPtsType IntersectPolyAndLine (vtkPoints *pts, vtkIdList *poly, double *r, double *pt);
-    void IntersectPolys (vtkIdType idA, vtkIdType idB);
+    InterPtType InterEdgeLine (double *edgePtA, double *edgePtB, double *r, double *pt);
+    InterPtsType InterPolyLine (vtkPoints *pts, vtkIdList *poly, double *r, double *pt);
+    void InterPolys (vtkIdType idA, vtkIdType idB);
     OverlapsType OverlapLines (InterPtsType &intersA, InterPtsType &intersB);
 
     vtkIntArray *contA, *contB;
@@ -56,18 +61,12 @@ class VTK_EXPORT vtkPolyDataContactFilter : public vtkPolyDataAlgorithm {
 
     vtkPolyData *pdA, *pdB;
 
-    bool MergeLines;
-
 public:
     vtkTypeMacro(vtkPolyDataContactFilter, vtkPolyDataAlgorithm);
 
     static vtkPolyDataContactFilter* New();
 
-    static int IntersectOBBNodes (vtkOBBNode *nodeA, vtkOBBNode *nodeB, vtkMatrix4x4 *mat, void *caller);
-
-    vtkSetMacro(MergeLines, bool);
-    vtkGetMacro(MergeLines, bool);
-    vtkBooleanMacro(MergeLines, bool);
+    static int InterOBBNodes (vtkOBBNode *nodeA, vtkOBBNode *nodeB, vtkMatrix4x4 *mat, void *caller);
 
 protected:
     vtkPolyDataContactFilter ();
