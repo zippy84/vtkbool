@@ -1,5 +1,5 @@
 /*
-   Copyright 2012, 2013 Ronald Römer
+   Copyright 2012-2014 Ronald Römer
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ namespace GeomHelper {
 
     void RemoveCells (vtkPolyData *pd, std::vector<int> &cells);
 
-    void FindPoints (vtkKdTreePointLocator *pl, double *pt, vtkIdList *pts, double tol = 1e-7);
+    void FindPoints (vtkKdTreePointLocator *pl, const double *pt, vtkIdList *pts, double tol = 1e-7);
 
     void WriteVTK (const char *name, vtkPolyData *pd);
 

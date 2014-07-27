@@ -1,5 +1,5 @@
 /*
-   Copyright 2012, 2013 Ronald Römer
+   Copyright 2012-2014 Ronald Römer
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -34,32 +34,33 @@
 #define OPER_DIFFERENCE 2
 #define OPER_DIFFERENCE2 3
 
+#define CAPT_NOT 0
+#define CAPT_EDGE 1
+#define CAPT_A 2
+#define CAPT_B 3
+
 class StripPtType {
 public:
-    StripPtType () : ind(-1), edgeVert(-1), secondVert(-1), onEdgeVert(false), t(0), T(0) {}
+    StripPtType () : T(0), t(0), edgeA(-1), edgeB(-1), onEnd(false), capt(CAPT_NOT) {}
 
-    // ind muss gesetzt sein
+    double T, t;
     int ind;
+    double pt[3];
+    int edgeA, edgeB;
+    bool onEnd;
+    int capt;
+    double captPt[3];
 
-    int edgeVert, secondVert;
-    bool onEdgeVert;
-    double t;
-
-    // umlaufendes t
-    double T;
+    double cutPt[3];
 
     bool operator< (const StripPtType &other) const {
         return t < other.t;
     }
 
-    // koordinaten
-    double pt[3];
-
 #ifdef DEBUG
     // zur überprüfung der sortierung
     int pos;
 #endif
-
 };
 
 typedef std::deque<StripPtType> StripType;
@@ -67,6 +68,8 @@ typedef std::deque<StripPtType> StripType;
 typedef std::vector<StripType> StripsType;
 
 typedef std::map<int, StripsType> PolyStripsType;
+
+typedef std::map<int, StripPtType> StripPointsType;
 
 typedef std::vector<std::pair<double, int> > ReplsType;
 
@@ -100,7 +103,9 @@ class VTK_EXPORT vtkPolyDataBooleanFilter : public vtkPolyDataAlgorithm {
 
     unsigned long timePdA, timePdB;
 
-    StripsType GetStrips (vtkPolyData *pd, int polyInd, std::deque<int> &lines);
+    std::vector<int> locked;
+
+    StripPointsType GetStripPoints(vtkPolyData *pd, int polyInd, std::deque<int> &lines);
     PolyStripsType GetPolyStrips (vtkPolyData *pd, vtkIntArray *conts);
 
     StripsType GetAllStrips (PolyStripsType &polyStrips);
@@ -114,6 +119,8 @@ class VTK_EXPORT vtkPolyDataBooleanFilter : public vtkPolyDataAlgorithm {
 
     void RestoreOrigPoints (vtkPolyData *pd, StripsType &strips);
     void RestoreOrigPt (vtkPolyData *pd, vtkKdTreePointLocator *loc, StripPtType &stripPt);
+
+    void ResolveOverlaps (vtkPolyData *pd, StripsType &strips, vtkIntArray *conts);
 
     void AddAdjacentPoints (vtkPolyData *pd, StripsType &strips);
     void DisjoinPolys (vtkPolyData *pd, StripsType &strips);

@@ -76,7 +76,7 @@ For the purpose of demonstration and testing, I created examples in Paraview. Th
 
 ## Copyright
 
-2012, 2013 Ronald Römer
+2012-2014 Ronald Römer
 
 ## License
 
