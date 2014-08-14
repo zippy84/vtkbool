@@ -14,9 +14,6 @@
    limitations under the License.
 */
 
-// C++0x/C++11
-#include <random>
-
 #define _USE_MATH_DEFINES
 #include <cmath>
 
@@ -178,7 +175,10 @@ void GeomHelper::FindPoints (vtkKdTreePointLocator *pl, const double *pt, vtkIdL
     vtkPolyData *pd = vtkPolyData::SafeDownCast(pl->GetDataSet());
 
     vtkIdList *closest = vtkIdList::New();
-    pl->FindClosestNPoints(10, pt, closest);
+
+    // vtkKdTree.cxx#L2529
+    // arbeitet mit single-precision
+    pl->FindPointsWithinRadius(std::max(1e-5, tol), pt, closest);
 
     double c[3], v[3];
 
@@ -214,8 +214,8 @@ void GeomHelper::WriteVTK (const char *name, vtkPolyData *pd) {
         f << pt[0] << " " << pt[1] << " " << pt[2] << "\n";
     }
 
-    w->WriteCells(&f, pd->GetLines(),"LINES");
-    w->WriteCells(&f, pd->GetPolys(),"POLYGONS");
+    w->WriteCells(&f, pd->GetLines(), "LINES");
+    w->WriteCells(&f, pd->GetPolys(), "POLYGONS");
     w->WriteCellData(&f, pd);
 
     f.close();

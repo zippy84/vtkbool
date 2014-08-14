@@ -19,8 +19,9 @@ This is an extension of the graphics library VTK. The goal of the extension is t
 - CellData is passed (attached by the rules of vtkAppendPolyData)
 - original cell ids are added to CellData (*OrigCellIdsA* and *OrigCellIdsB* as vtkIntArray)
 - contact lines are available
-- a paraview plugin wrapper exists
-- ready for vtk 6
+- it is also a plugin for Paraview
+- Python wrapped
+- ready for VTK 6
 
 ## Limitations
 
@@ -31,7 +32,6 @@ This is an extension of the graphics library VTK. The goal of the extension is t
 
 ## Todo
 
-- Python wrapping
 - acceleration with OpenMP
 
 ## Build Requirements
@@ -67,6 +67,44 @@ The usage of the library is very simple. Look at *tests.cxx* and you can see how
 - SetOperModeToDifference2
 
 The alternative is the more generic `SetOperMode`. The method must be called with the number of the desired operation, an integer between 0 and 3, with the same meaning as mentioned before. After updating the pipeline, the result is stored in the first output, typically accessable with `GetOutputPort()`. The second output, `GetOutputPort(1)`, contains the lines of contact between the inputs. The inputs must be outputs of filters or sources returning vtkPolyData. The outputs from this filter are of the same type.
+
+## Python
+
+The Python module will be generated automatically, if three conditions are met:
+
+- vtkbool is built as a library
+- Python 2.x is installed with header files
+- VTK itself is wrapped to Python
+
+After a successful compilation, the module can be used as follows:
+
+```python
+import sys
+sys.path.append('/path/to/your/build/directory')
+
+import vtk
+import libvtkboolPython as vtkbool
+
+cube = vtk.vtkCubeSource()
+
+sphere = vtk.vtkSphereSource()
+sphere.SetCenter(.5, .5, .5)
+sphere.SetThetaResolution(20)
+sphere.SetPhiResolution(20)
+
+boolean = vtkbool.vtkPolyDataBooleanFilter()
+boolean.SetInputConnection(0, cube.GetOutputPort())
+boolean.SetInputConnection(1, sphere.GetOutputPort())
+boolean.SetOperModeToDifference()
+
+# write the result, if you want ...
+
+writer = vtk.vtkPolyDataWriter()
+writer.SetInputConnection(boolean.GetOutputPort())
+writer.SetFileName('result.vtk')
+
+writer.Update()
+```
 
 ## Examples
 
