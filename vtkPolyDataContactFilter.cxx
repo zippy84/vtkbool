@@ -171,6 +171,9 @@ int vtkPolyDataContactFilter::ProcessRequest (vtkInformation *request, vtkInform
         resultB->DeepCopy(pdA);
         resultC->DeepCopy(pdB);
 
+        pdB->Delete();
+        pdA->Delete();
+
     }
 
     return 1;

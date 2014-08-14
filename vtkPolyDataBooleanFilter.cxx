@@ -256,7 +256,7 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
             GeomHelper::WriteVTK("modPdA_5.vtk", modPdA);
 
             std::cout << "Exporting modPdB_5.vtk" << std::endl;
-            GeomHelper::WriteVTK("modPdB_6.vtk", modPdB);
+            GeomHelper::WriteVTK("modPdB_5.vtk", modPdB);
 #endif
 
 #ifdef DEBUG
@@ -632,9 +632,10 @@ PolyStripsType vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIntA
 
                     CPY(sp.cutPt, sp.captPt)
                 }
-            }
+            } else {
 
-            CPY(sp.cutPt, sp.pt)
+                CPY(sp.cutPt, sp.pt)
+            }
 
         }
 
@@ -1748,7 +1749,6 @@ void vtkPolyDataBooleanFilter::MergePoints (vtkPolyData *pd, StripsType &strips)
 
                     mergeVert.polyInd = polys->GetId(0);
                     mergeVert.vert = poly->GetId(j);
-                    mergeVert.vertInd = j;
 
                     pd->GetPoint(indA, mergeVert.pt);
 
@@ -1765,7 +1765,6 @@ void vtkPolyDataBooleanFilter::MergePoints (vtkPolyData *pd, StripsType &strips)
 
                     mergeVert.polyInd = polys->GetId(0);
                     mergeVert.vert = poly->GetId(j);
-                    mergeVert.vertInd = j;
 
                     pd->GetPoint(indB, mergeVert.pt);
 

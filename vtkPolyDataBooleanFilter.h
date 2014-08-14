@@ -80,7 +80,7 @@ public:
     int polyInd;
 
     // dies ist die ecke die ausgetauscht werden muss
-    int vert, vertInd;
+    int vert;
 
     // dies ist der punkt für die paarbildung
     double pt[3];
