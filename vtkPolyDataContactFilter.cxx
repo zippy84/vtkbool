@@ -16,7 +16,9 @@
 
 #include <cmath>
 #include <vector>
+#include <map>
 #include <algorithm>
+#include <iterator>
 
 #include <vtkInformation.h>
 #include <vtkInformationVector.h>
@@ -301,6 +303,12 @@ InterPtType vtkPolyDataContactFilter::InterEdgeLine (double *eA, double *eB, dou
 
             inter.outer = s < 0 || s > l;
 
+            if (s > -1e-6 && s < 1e-6) {
+                inter.end = 0;
+            } else if (s > l-1e-6 && s < l+1e-6) {
+                inter.end = 1;
+            }
+
 #ifdef DEBUG
             inter.ind = ind++;
 #endif
@@ -330,14 +338,21 @@ InterPtsType vtkPolyDataContactFilter::InterPolyLine (vtkPoints *pts, vtkIdList 
 
         double ptA[3], ptB[3];
 
-        pts->GetPoint(poly->GetId(i), ptA);
-        pts->GetPoint(poly->GetId((i+1)%poly->GetNumberOfIds()), ptB);
+        int endA = poly->GetId(i);
+        int endB = poly->GetId((i+1)%poly->GetNumberOfIds());
+
+        pts->GetPoint(endA, ptA);
+        pts->GetPoint(endB, ptB);
 
         // schnittpunkt
 
         InterPtType inter(InterEdgeLine(ptA, ptB, r, pt));
 
         if (inter.onEdge) {
+            if (inter.end > -1) {
+                inter.end = inter.end == 0 ? endA : endB;
+            }
+
             interPts.push_back(inter);
         }
 
@@ -347,7 +362,7 @@ InterPtsType vtkPolyDataContactFilter::InterPolyLine (vtkPoints *pts, vtkIdList 
 
     // jetzt müssen noch spezielle gelöscht werden
 
-    InterPtsType interPts2;
+    InterPtsType interPts2, interPts3;
 
     InterPtsType::const_iterator itr;
 
@@ -358,6 +373,7 @@ InterPtsType vtkPolyDataContactFilter::InterPolyLine (vtkPoints *pts, vtkIdList 
             << ", onEdge " << itr->onEdge
             << ", t " << itr->t
             << ", outer " << itr->outer
+            << ", end " << itr->end
             << std::endl;
     }
 #endif
@@ -398,11 +414,97 @@ InterPtsType vtkPolyDataContactFilter::InterPolyLine (vtkPoints *pts, vtkIdList 
             }
         }
 
+        // löst probleme mit den kongruenten kanten
+
+        std::map<int, int> ends;
+
+        for (itr = interPts2.begin(); itr != interPts2.end(); itr++) {
+            if (itr->end > -1) {
+                ends[itr->end] = std::distance(interPts2.cbegin(), itr);
+            }
+        }
+
+        double n[3];
+        GeomHelper::ComputeNormal(pts, poly, n);
+
+        for (unsigned int i = 0; i < poly->GetNumberOfIds(); i++) {
+            int indA = poly->GetId(i);
+            int indB = poly->GetId((i+1)%poly->GetNumberOfIds());
+
+            if (ends.count(indA) == 1 && ends.count(indB) == 1) {
+                double ptA[3], ptB[3];
+
+                pts->GetPoint(indA, ptA);
+                pts->GetPoint(indB, ptB);
+
+                double e[3];
+
+                vtkMath::Subtract(ptB, ptA, e);
+                vtkMath::Normalize(e);
+
+                double p[3], d;
+
+                vtkMath::Cross(e, n, p);
+                vtkMath::Normalize(p);
+
+                // p zeigt nach außen
+
+                d = vtkMath::Dot(p, ptA);
+
+                // erstes ende
+
+                if (ends[indA] > 0 && ends[indA] < interPts2.size()-1) {
+
+                    int prev = poly->GetId((i+poly->GetNumberOfIds()-1)%poly->GetNumberOfIds());
+
+                    double prevPt[3];
+                    pts->GetPoint(prev, prevPt);
+
+                    double prevD = vtkMath::Dot(p, prevPt)-d;
+
+                    if (prevD > 0) {
+                        interPts2[ends[indA]].count++;
+                    }
+
+                }
+
+                // zweites ende
+
+                if (ends[indB] > 0 && ends[indB] < interPts2.size()-1) {
+
+                    int next = poly->GetId((i+2)%poly->GetNumberOfIds());
+
+                    double nextPt[3];
+                    pts->GetPoint(next, nextPt);
+
+                    double nextD = vtkMath::Dot(p, nextPt)-d;
+
+                    if (nextD > 0) {
+                        interPts2[ends[indB]].count++;
+                    }
+
+                }
+
+            }
+        }
+
+        for (itr = interPts2.begin(); itr != interPts2.end(); itr++) {
+            for (unsigned int i = 0; i < itr->count; i++) {
+                interPts3.push_back(*itr);
+            }
+
+#ifdef DEBUG
+            if (itr->count > 1) {
+                std::cout << "ind " << itr->ind << ", count " << itr->count << std::endl;
+            }
+#endif
+        }
+
     }
 
     // wenn alles richtig ist, müsste die anzahl gerade sein
 
-    return interPts2;
+    return interPts3;
 
 }
 

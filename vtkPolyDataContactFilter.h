@@ -24,13 +24,15 @@ class vtkMatrix4x4;
 
 class InterPtType {
 public:
-    InterPtType () : onEdge(false) {}
+    InterPtType () : onEdge(false), end(-1), count(1) {}
 
     double pt[3];
     double t;
     bool onEdge;
 
     bool outer;
+
+    int end, count;
 
     bool operator< (const InterPtType &other) const {
         return t < other.t;

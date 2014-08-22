@@ -5,7 +5,7 @@ set(CMAKE_CXX_FLAGS "-std=c++0x -Wno-deprecated -fPIC")
 
 option(BUILD_PARAVIEW_PLUGIN "" On)
 option(BUILD_AS_DEBUG "" Off)
-#option(BUILD_TESTS "" Off)
+option(BUILD_TESTS "" Off)
 
 set(vtk_libs
     vtkCommon
