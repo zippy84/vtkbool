@@ -414,7 +414,7 @@ InterPtsType vtkPolyDataContactFilter::InterPolyLine (vtkPoints *pts, vtkIdList 
             }
         }
 
-        // löst probleme mit den kongruenten kanten
+        // löst probleme mit kongruenten kanten
 
         std::map<int, int> ends;
 
@@ -426,6 +426,62 @@ InterPtsType vtkPolyDataContactFilter::InterPolyLine (vtkPoints *pts, vtkIdList 
 
         double n[3];
         GeomHelper::ComputeNormal(pts, poly, n);
+
+        // punkte die durch jeweils zwei kongruente kanten begrenzt sind
+
+        double p[3], d;
+
+        vtkMath::Cross(r, n, p);
+        vtkMath::Normalize(p);
+
+        d = vtkMath::Dot(p, pt);
+
+        for (unsigned int i = 0; i < poly->GetNumberOfIds(); i++) {
+            if (ends.count(poly->GetId(i)) == 0) {
+                double endPt[3], endD;
+
+                pts->GetPoint(poly->GetId(i), endPt);
+
+                endD = std::fabs(vtkMath::Dot(p, endPt)-d);
+
+                if (endD < 1e-6) {
+                    InterPtType inter;
+
+                    int j = 0;
+
+                    for (int k = 1; k < 3; k++) {
+                        if (std::fabs(r[k]) > std::fabs(r[j])) {
+                            j = k;
+                        }
+                    }
+
+                    inter.t = (endPt[j]-pt[j])/r[j];
+
+                    inter.pt[0] = endPt[0];
+                    inter.pt[1] = endPt[1];
+                    inter.pt[2] = endPt[2];
+
+                    inter.end = poly->GetId(i);
+
+                    inter.count++;
+
+                    interPts2.push_back(inter);
+
+                }
+            }
+        }
+
+        std::sort(interPts2.begin(), interPts2.end());
+
+        // ends aktualisieren
+
+        for (itr = interPts2.begin(); itr != interPts2.end(); itr++) {
+            if (itr->end > -1) {
+                ends[itr->end] = std::distance(interPts2.cbegin(), itr);
+            }
+        }
+
+        // punkte die durch jeweils eine kongruente kante begrenzt sind
 
         for (unsigned int i = 0; i < poly->GetNumberOfIds(); i++) {
             int indA = poly->GetId(i);
@@ -442,8 +498,6 @@ InterPtsType vtkPolyDataContactFilter::InterPolyLine (vtkPoints *pts, vtkIdList 
                 vtkMath::Subtract(ptB, ptA, e);
                 vtkMath::Normalize(e);
 
-                double p[3], d;
-
                 vtkMath::Cross(e, n, p);
                 vtkMath::Normalize(p);
 
@@ -453,7 +507,8 @@ InterPtsType vtkPolyDataContactFilter::InterPolyLine (vtkPoints *pts, vtkIdList 
 
                 // erstes ende
 
-                if (ends[indA] > 0 && ends[indA] < interPts2.size()-1) {
+                if (ends[indA] > 0 && ends[indA] < interPts2.size()-1
+                    && interPts2[ends[indA]].count == 1) {
 
                     int prev = poly->GetId((i+poly->GetNumberOfIds()-1)%poly->GetNumberOfIds());
 
@@ -470,7 +525,8 @@ InterPtsType vtkPolyDataContactFilter::InterPolyLine (vtkPoints *pts, vtkIdList 
 
                 // zweites ende
 
-                if (ends[indB] > 0 && ends[indB] < interPts2.size()-1) {
+                if (ends[indB] > 0 && ends[indB] < interPts2.size()-1
+                    && interPts2[ends[indB]].count == 1) {
 
                     int next = poly->GetId((i+2)%poly->GetNumberOfIds());
 
