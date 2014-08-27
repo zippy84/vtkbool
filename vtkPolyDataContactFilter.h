@@ -30,7 +30,7 @@ public:
     double t;
     bool onEdge;
 
-    bool outer;
+    int edge[2];
 
     int end, count;
 
