@@ -169,6 +169,9 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
                 return 1;
             }
 
+            origPtsNoA = modPdA->GetPoints()->GetNumberOfPoints();
+            origPtsNoB = modPdB->GetPoints()->GetNumberOfPoints();
+
             // in den CellDatas steht drin, welche polygone einander schneiden
 
             vtkIntArray *contsA = vtkIntArray::SafeDownCast(contLines->GetCellData()->GetScalars("cA"));
@@ -206,8 +209,8 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
             start = std::clock();
 #endif
 
-            RestoreOrigPoints(modPdA, allStripsA);
-            RestoreOrigPoints(modPdB, allStripsB);
+            RestoreOrigPoints(modPdA, origPtsNoA, allStripsA);
+            RestoreOrigPoints(modPdB, origPtsNoB, allStripsB);
 
 #ifdef DEBUG
             times.push_back(DIFF(start, std::clock()));
@@ -379,7 +382,7 @@ StripPointsType vtkPolyDataBooleanFilter::GetStripPoints(vtkPolyData *pd, int po
 
                 double nSum = 0;
 
-                double currD = 1e-5;
+                std::map<int, double> ts;
 
                 // jetzt muss man die kanten durchlaufen
                 for (unsigned int j = 0; j < polyPts->GetNumberOfIds(); j++) {
@@ -421,8 +424,13 @@ StripPointsType vtkPolyDataBooleanFilter::GetStripPoints(vtkPolyData *pd, int po
 
                     t *= n;
 
-                    if (d < currD && t > -1e-5 && t < n+1e-5) {
+                    if (d < 1e-5 && t > -1e-5 && t < n+1e-5) {
                         // liegt im toleranzbereich der kante
+
+                        if ((ts.count(indA) == 1 && t < ts[indA])
+                            || (ts.count(indB) == 1 && (n-t) < ts[indB])) {
+                            continue;
+                        }
 
                         stripPts[realInd].edgeA = indA;
                         stripPts[realInd].edgeB = indB;
@@ -457,7 +465,9 @@ StripPointsType vtkPolyDataBooleanFilter::GetStripPoints(vtkPolyData *pd, int po
                             << ", d " << d << std::endl;
 #endif
 
-                        currD = d;
+                        ts.clear();
+                        ts[indA] = t;
+                        ts[indB] = n-t;
 
                     }
 
@@ -1311,7 +1321,7 @@ bool vtkPolyDataBooleanFilter::HasArea (StripType &strip) {
 }
 
 
-void vtkPolyDataBooleanFilter::RestoreOrigPoints (vtkPolyData *pd, StripsType &strips) {
+void vtkPolyDataBooleanFilter::RestoreOrigPoints (vtkPolyData *pd, int origPtsNo, StripsType &strips) {
 
 #ifdef DEBUG
     std::cout << "RestoreOrigPoints()" << std::endl;
@@ -1323,8 +1333,8 @@ void vtkPolyDataBooleanFilter::RestoreOrigPoints (vtkPolyData *pd, StripsType &s
     StripsType::iterator itr;
 
     for (itr = strips.begin(); itr != strips.end(); itr++) {
-        RestoreOrigPt(pd, loc, itr->front());
-        RestoreOrigPt(pd, loc, itr->back());
+        RestoreOrigPt(pd, origPtsNo, loc, itr->front());
+        RestoreOrigPt(pd, origPtsNo, loc, itr->back());
     }
 
     loc->FreeSearchStructure();
@@ -1333,7 +1343,7 @@ void vtkPolyDataBooleanFilter::RestoreOrigPoints (vtkPolyData *pd, StripsType &s
 }
 
 
-void vtkPolyDataBooleanFilter::RestoreOrigPt (vtkPolyData *pd, vtkKdTreePointLocator *loc, StripPtType &stripPt) {
+void vtkPolyDataBooleanFilter::RestoreOrigPt (vtkPolyData *pd, int origPtsNo, vtkKdTreePointLocator *loc, StripPtType &stripPt) {
     vtkPoints *pts = pd->GetPoints();
 
     vtkIdList *childs = vtkIdList::New();
@@ -1342,6 +1352,11 @@ void vtkPolyDataBooleanFilter::RestoreOrigPt (vtkPolyData *pd, vtkKdTreePointLoc
     GeomHelper::FindPoints(loc, stripPt.cutPt, childs);
 
     for (unsigned int i = 0; i < childs->GetNumberOfIds(); i++) {
+        // nur dann alle verschieben, wenn der schnittpunkt in eine ecke eingerastet ist
+        if (stripPt.capt == CAPT_EDGE && childs->GetId(i) < origPtsNo) {
+            continue;
+        }
+
         pts->SetPoint(childs->GetId(i), stripPt.pt);
     }
 

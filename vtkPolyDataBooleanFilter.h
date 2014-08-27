@@ -117,8 +117,10 @@ class VTK_EXPORT vtkPolyDataBooleanFilter : public vtkPolyDataAlgorithm {
 
     bool HasArea (StripType &strip);
 
-    void RestoreOrigPoints (vtkPolyData *pd, StripsType &strips);
-    void RestoreOrigPt (vtkPolyData *pd, vtkKdTreePointLocator *loc, StripPtType &stripPt);
+    int origPtsNoA, origPtsNoB;
+
+    void RestoreOrigPoints (vtkPolyData *pd, int origPtsNo, StripsType &strips);
+    void RestoreOrigPt (vtkPolyData *pd, int origPtsNo, vtkKdTreePointLocator *loc, StripPtType &stripPt);
 
     void ResolveOverlaps (vtkPolyData *pd, StripsType &strips, vtkIntArray *conts);
 
