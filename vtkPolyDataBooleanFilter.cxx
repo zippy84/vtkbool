@@ -387,11 +387,13 @@ StripPointsType vtkPolyDataBooleanFilter::GetStripPoints(vtkPolyData *pd, int po
                 // jetzt muss man die kanten durchlaufen
                 for (unsigned int j = 0; j < polyPts->GetNumberOfIds(); j++) {
 
+                    int k = (j+1)%polyPts->GetNumberOfIds();
+
                     int indA, indB;
                     double a[3], b[3];
 
                     indA = polyPts->GetId(j);
-                    indB = polyPts->GetId((j+1)%polyPts->GetNumberOfIds());
+                    indB = polyPts->GetId(k);
 
                     pd->GetPoint(indA, a);
                     pd->GetPoint(indB, b);
@@ -429,45 +431,46 @@ StripPointsType vtkPolyDataBooleanFilter::GetStripPoints(vtkPolyData *pd, int po
 
                         if ((ts.count(indA) == 1 && t < ts[indA])
                             || (ts.count(indB) == 1 && (n-t) < ts[indB])) {
-                            continue;
-                        }
-
-                        stripPts[realInd].edgeA = indA;
-                        stripPts[realInd].edgeB = indB;
-
-                        stripPts[realInd].T = nSum;
-                        stripPts[realInd].t = std::min(n, std::max(0., t));
-
-                        if (vtkMath::Norm(sA) < 1e-5) {
-                            CPY(stripPts[realInd].captPt, a)
-                            stripPts[realInd].capt = CAPT_A;
-
-                        } else if (vtkMath::Norm(sB) < 1e-5) {
-                            CPY(stripPts[realInd].captPt, b)
-                            stripPts[realInd].capt = CAPT_B;
-
                         } else {
-                            // u ist nicht normiert
-                            vtkMath::MultiplyScalar(u, t/n);
 
-                            double x[3];
-                            vtkMath::Add(a, u, x);
+                            stripPts[realInd].edgeA = indA;
+                            stripPts[realInd].edgeB = indB;
 
-                            // projektion
-                            CPY(stripPts[realInd].captPt, x)
+                            stripPts[realInd].T = nSum;
+                            stripPts[realInd].t = std::min(n, std::max(0., t));
 
-                            stripPts[realInd].capt = CAPT_EDGE;
-                        }
+                            if (vtkMath::Norm(sA) < 1e-5) {
+                                CPY(stripPts[realInd].captPt, a)
+                                stripPts[realInd].capt = CAPT_A;
+
+                            } else if (vtkMath::Norm(sB) < 1e-5) {
+                                CPY(stripPts[realInd].captPt, b)
+                                stripPts[realInd].capt = k > 0 ? CAPT_B : CAPT_C;
+
+                            } else {
+                                // u ist nicht normiert
+                                vtkMath::MultiplyScalar(u, t/n);
+
+                                double x[3];
+                                vtkMath::Add(a, u, x);
+
+                                // projektion
+                                CPY(stripPts[realInd].captPt, x)
+
+                                stripPts[realInd].capt = CAPT_EDGE;
+                            }
 
 #ifdef DEBUG
-                        std::cout << "ind " << realInd
-                            << ", indA " << indA
-                            << ", d " << d << std::endl;
+                            std::cout << "ind " << realInd
+                                << ", indA " << indA
+                                << ", d " << d << std::endl;
 #endif
 
-                        ts.clear();
-                        ts[indA] = t;
-                        ts[indB] = n-t;
+                            ts.clear();
+                            ts[indA] = t;
+                            ts[indB] = n-t;
+
+                        }
 
                     }
 
@@ -617,17 +620,21 @@ PolyStripsType vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIntA
                         sp.t = 0;
                         sp.edgeB = -1;
                         sp.onEnd = true;
-                    } else if (sp.capt == CAPT_B) {
+                    } else if (sp.capt == CAPT_B || sp.capt == CAPT_C) {
                         sp.t = 0;
 
-                        double endA[3], endB[3];
-                        pd->GetPoint(sp.edgeA, endA);
-                        pd->GetPoint(sp.edgeB, endB);
+                        if (sp.capt == CAPT_B) {
+                            double endA[3], endB[3];
+                            pd->GetPoint(sp.edgeA, endA);
+                            pd->GetPoint(sp.edgeB, endB);
 
-                        double l[3];
-                        vtkMath::Subtract(endA, endB, l);
+                            double l[3];
+                            vtkMath::Subtract(endA, endB, l);
 
-                        sp.T += vtkMath::Norm(l);
+                            sp.T += vtkMath::Norm(l);
+                        } else {
+                            sp.T = 0;
+                        }
 
                         sp.edgeA = sp.edgeB;
                         sp.edgeB = -1;

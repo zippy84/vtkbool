@@ -38,6 +38,7 @@
 #define CAPT_EDGE 1
 #define CAPT_A 2
 #define CAPT_B 3
+#define CAPT_C 4
 
 class StripPtType {
 public:
