@@ -1496,54 +1496,103 @@ void vtkPolyDataBooleanFilter::AddAdjacentPoints (vtkPolyData *pd, StripsType &s
 
     for (itr = strips.begin(); itr != strips.end(); itr++) {
         // anfang und ende
-
-        if (!itr->front().onEnd && itr->front().edgeA > -1) {
+        if (itr->front().capt == CAPT_EDGE) {
             adjacentPts[std::make_pair(itr->front().edgeA, itr->front().edgeB)].push_back(itr->front());
+        }
+
+        if (itr->back().capt == CAPT_EDGE) {
+            adjacentPts[std::make_pair(itr->back().edgeA, itr->back().edgeB)].push_back(itr->back());
         }
 
     }
 
     pd->BuildLinks();
 
+    vtkKdTreePointLocator *loc = vtkKdTreePointLocator::New();
+    loc->SetDataSet(pd);
+    loc->BuildLocator();
+
     std::map<std::pair<int, int>, std::vector<StripPtType> >::iterator itr2;
     std::vector<StripPtType>::iterator itr3;
 
     for (itr2 = adjacentPts.begin(); itr2 != adjacentPts.end(); itr2++) {
 
-        // jetzt das polygon ermitteln
-        vtkIdList *polysA = vtkIdList::New();
-        vtkIdList *polysB = vtkIdList::New();
-
-        pd->GetPointCells(itr2->first.first, polysA);
-        pd->GetPointCells(itr2->first.second, polysB);
-
         // sortieren nach t, allerdings in umgekehrter reihenfolge
         std::sort(itr2->second.rbegin(), itr2->second.rend());
 
+#ifdef DEBUG
+        std::cout << "edge [" << itr2->first.first << ", " << itr2->first.second << "] -> [";
+
+        for (itr3 = itr2->second.begin(); itr3 != itr2->second.end(); itr3++) {
+            std::cout << itr3->ind << ", ";
+        }
+
+        std::cout << "]" << std::endl;
+#endif
+
+        vtkIdList *ptsA = vtkIdList::New();
+        vtkIdList *ptsB = vtkIdList::New();
+
+        double ptA[3], ptB[3];
+
+        pd->GetPoint(itr2->first.first, ptA);
+        pd->GetPoint(itr2->first.second, ptB);
+
+        //loc->FindPointsWithinRadius(1e-7, ptA, ptsA);
+        //loc->FindPointsWithinRadius(1e-7, ptB, ptsB);
+        GeomHelper::FindPoints(loc, ptA, ptsA);
+        GeomHelper::FindPoints(loc, ptB, ptsB);
+
+        std::map<int, int> polyPtsA, polyPtsB;
+
+        vtkIdList *polys = vtkIdList::New();
+
+        for (int i = 0; i < ptsA->GetNumberOfIds(); i++) {
+            pd->GetPointCells(ptsA->GetId(i), polys);
+
+            for (int j = 0; j < polys->GetNumberOfIds(); j++) {
+                polyPtsA[polys->GetId(j)] = ptsA->GetId(i);
+            }
+        }
+
+        for (int i = 0; i < ptsB->GetNumberOfIds(); i++) {
+            pd->GetPointCells(ptsB->GetId(i), polys);
+
+            for (int j = 0; j < polys->GetNumberOfIds(); j++) {
+                polyPtsB[polys->GetId(j)] = ptsB->GetId(i);
+            }
+        }
+
+        polys->Delete();
+
+        std::map<int, int>::const_iterator itr4, itr5;
+
         bool added = false;
 
-        for (unsigned int i = 0; i < polysA->GetNumberOfIds() && !added; i++) {
-            for (unsigned int j = 0; j < polysB->GetNumberOfIds() && !added; j++) {
-
-                if (polysA->GetId(i) == polysB->GetId(j)
+        for (itr4 = polyPtsA.begin(); itr4 != polyPtsA.end() && !added; itr4++) {
+            for (itr5 = polyPtsB.begin(); itr5 != polyPtsB.end() && !added; itr5++) {
+                if (itr4->first == itr5->first
                     //&& pd->GetCellType(polysA->GetId(i)) != VTK_EMPTY_CELL) {
-
-                    && std::count(toRemove.begin(), toRemove.end(), polysA->GetId(i)) == 0) {
+                    && std::count(toRemove.begin(), toRemove.end(), itr4->first) == 0) {
 
                     // es gibt nur eins oder keins
 
+#ifdef DEBUG
+                    std::cout << "poly " << itr4->first << std::endl;
+#endif
+
                     vtkIdList *poly = vtkIdList::New();
 
-                    pd->GetCellPoints(polysA->GetId(i), poly);
+                    pd->GetCellPoints(itr4->first, poly);
 
                     vtkIdList *newPoly = vtkIdList::New();
 
-                    for (unsigned int k = 0; k < poly->GetNumberOfIds(); k++) {
+                    for (int k = 0; k < poly->GetNumberOfIds(); k++) {
 
                         newPoly->InsertNextId(poly->GetId(k));
 
-                        if (itr2->second.front().edgeB == poly->GetId(k)
-                            && itr2->second.front().edgeA == poly->GetId((k+1)%poly->GetNumberOfIds())) {
+                        if (itr5->second == poly->GetId(k)
+                            && itr4->second == poly->GetId((k+1)%poly->GetNumberOfIds())) {
 
                             // die ursprüngliche kante ist noch vorhanden
 
@@ -1564,39 +1613,41 @@ void vtkPolyDataBooleanFilter::AddAdjacentPoints (vtkPolyData *pd, StripsType &s
 
                         }
 
-                        // polysA->GetId(i) wird im anschluss gelöscht
+                        // itr4->first wird im anschluss gelöscht
 
-                        pd->RemoveReferenceToCell(poly->GetId(k), polysA->GetId(i));
+                        pd->RemoveReferenceToCell(poly->GetId(k), itr4->first);
 
                     }
 
                     // das neue muss jetzt hinzugefügt werden
 
-                    //pd->DeleteCell(polysA->GetId(i));
+                    //pd->DeleteCell(itr4->first);
 
-                    toRemove.push_back(polysA->GetId(i));
+                    toRemove.push_back(itr4->first);
 
                     pd->InsertNextLinkedCell(VTK_POLYGON, newPoly->GetNumberOfIds(), newPoly->GetPointer(0));
 
-                    origCellIds->InsertNextValue(origCellIds->GetValue(polysA->GetId(i)));
+                    origCellIds->InsertNextValue(origCellIds->GetValue(itr4->first));
 
 
                     newPoly->Delete();
                     poly->Delete();
 
                 }
-
             }
         }
 
-        polysA->Delete();
-        polysB->Delete();
+        ptsB->Delete();
+        ptsA->Delete();
 
     }
 
     //pd->RemoveDeletedCells();
 
     GeomHelper::RemoveCells(pd, toRemove);
+
+    loc->FreeSearchStructure();
+    loc->Delete();
 
 }
 
@@ -2101,14 +2152,37 @@ PolyPair* GetEdgePolys (vtkPolyData *pd, vtkIdList *ptsA, vtkIdList *ptsB) {
 
             if (polyPts.count(polys->GetId(j)) > 0) {
 
-                if (first != NULL) {
-                    PolyAtEdge *second = new PolyAtEdge(pd, polys->GetId(j), polyPts[polys->GetId(j)], ptsB->GetId(i));
+                // die kante muss auch existieren
 
-                    pp = new PolyPair(first, second);
+                bool adj = false;
 
-                    break;
-                } else {
-                    first = new PolyAtEdge(pd, polys->GetId(j), polyPts[polys->GetId(j)], ptsB->GetId(i));
+                vtkIdList *poly = vtkIdList::New();
+                pd->GetCellPoints(polys->GetId(j), poly);
+
+                int numPts = poly->GetNumberOfIds();
+
+                for (unsigned int k = 0; k < numPts; k++) {
+                    if (poly->GetId(k) == ptsB->GetId(i)
+                        && (polyPts[polys->GetId(j)] == poly->GetId((k+1)%numPts)
+                            || polyPts[polys->GetId(j)] == poly->GetId((k+numPts-1)%numPts))) {
+                        adj = true;
+
+                        break;
+                    }
+                }
+
+                poly->Delete();
+
+                if (adj) {
+                    if (first != NULL) {
+                        PolyAtEdge *second = new PolyAtEdge(pd, polys->GetId(j), polyPts[polys->GetId(j)], ptsB->GetId(i));
+
+                        pp = new PolyPair(first, second);
+
+                        break;
+                    } else {
+                        first = new PolyAtEdge(pd, polys->GetId(j), polyPts[polys->GetId(j)], ptsB->GetId(i));
+                    }
                 }
 
             }
@@ -2274,6 +2348,23 @@ void vtkPolyDataBooleanFilter::CombineRegions () {
             std::cout << "polyId " << ppA->pB->polyId << ", sA " << lsA << ", loc " << ppA->pB->loc << std::endl;
             std::cout << "polyId " << ppB->pA->polyId << ", sB " << fsB << ", loc " << ppB->pA->loc << std::endl;
             std::cout << "polyId " << ppB->pB->polyId << ", sB " << lsB << ", loc " << ppB->pB->loc << std::endl;
+
+            if (locsA.count(fsA) > 0 && locsA[fsA] != ppA->pA->loc) {
+                std::cout << "sA " << fsA << ": " << locsA[fsA] << " -> " << ppA->pA->loc << std::endl;
+            }
+
+            if (locsA.count(lsA) > 0 && locsA[lsA] != ppA->pB->loc) {
+                std::cout << "sA " << lsA << ": " << locsA[lsA] << " -> " << ppA->pB->loc << std::endl;
+            }
+
+            if (locsB.count(fsB) > 0 && locsB[fsB] != ppB->pA->loc) {
+                std::cout << "sB " << fsB << ": " << locsB[fsB] << " -> " << ppB->pA->loc << std::endl;
+            }
+
+            if (locsB.count(lsB) > 0 && locsB[lsB] != ppB->pB->loc) {
+                std::cout << "sB " << lsB << ": " << locsB[lsB] << " -> " << ppB->pB->loc << std::endl;
+            }
+
 #endif
 
             locsA[fsA] = ppA->pA->loc;
