@@ -2292,39 +2292,62 @@ void vtkPolyDataBooleanFilter::CombineRegions () {
     vtkDataArray *scalarsA = pdA->GetPointData()->GetScalars();
     vtkDataArray *scalarsB = pdB->GetPointData()->GetScalars();
 
+    vtkIdList *line = vtkIdList::New();
+
+    double ptA[3], ptB[3];
+
+    vtkIdList *fptsA = vtkIdList::New();
+    vtkIdList *lptsA = vtkIdList::New();
+
+    vtkIdList *fptsB = vtkIdList::New();
+    vtkIdList *lptsB = vtkIdList::New();
+
     std::map<int, int> locsA, locsB;
 
     for (unsigned int i = 0; i < contLines->GetNumberOfCells(); i++) {
-        vtkIdList *line = vtkIdList::New();
 
         contLines->GetCellPoints(i, line);
-
-        double ptA[3], ptB[3];
 
         contLines->GetPoint(line->GetId(0), ptA);
         contLines->GetPoint(line->GetId(1), ptB);
 
-        vtkIdList *fptsA = vtkIdList::New();
-        vtkIdList *lptsA = vtkIdList::New();
-
         //plA->FindPointsWithinRadius(1e-7, ptA, fptsA);
-        //plA->FindPointsWithinRadius(1e-7, ptB, lptsA);
+        //plB->FindPointsWithinRadius(1e-7, ptA, fptsB);
 
         GeomHelper::FindPoints(plA, ptA, fptsA);
-        GeomHelper::FindPoints(plA, ptB, lptsA);
-
-        vtkIdList *fptsB = vtkIdList::New();
-        vtkIdList *lptsB = vtkIdList::New();
-
-        //plB->FindPointsWithinRadius(1e-7, ptA, fptsB);
-        //plB->FindPointsWithinRadius(1e-7, ptB, lptsB);
-
         GeomHelper::FindPoints(plB, ptA, fptsB);
-        GeomHelper::FindPoints(plB, ptB, lptsB);
 
 #ifdef DEBUG
         std::cout << "line " << i << std::endl;
+#else
+
+        // bereits behandelte regionen werden nicht noch einmal untersucht
+
+        int notLocated = 0;
+
+        for (int j = 0; j < fptsA->GetNumberOfIds(); j++) {
+            if (locsA.count(scalarsA->GetTuple1(fptsA->GetId(j))) == 0) {
+                notLocated++;
+            }
+        }
+
+        for (int j = 0; j < fptsB->GetNumberOfIds(); j++) {
+            if (locsB.count(scalarsB->GetTuple1(fptsB->GetId(j))) == 0) {
+                notLocated++;
+            }
+        }
+
+        if (notLocated == 0) {
+            continue;
+        }
+
 #endif
+
+        //plA->FindPointsWithinRadius(1e-7, ptB, lptsA);
+        //plB->FindPointsWithinRadius(1e-7, ptB, lptsB);
+
+        GeomHelper::FindPoints(plA, ptB, lptsA);
+        GeomHelper::FindPoints(plB, ptB, lptsB);
 
         PolyPair *ppA = GetEdgePolys(pdA, fptsA, lptsA);
         PolyPair *ppB = GetEdgePolys(pdB, fptsB, lptsB);
@@ -2383,15 +2406,15 @@ void vtkPolyDataBooleanFilter::CombineRegions () {
             delete ppB;
         }
 
-        lptsB->Delete();
-        fptsB->Delete();
-
-        lptsA->Delete();
-        fptsA->Delete();
-
-        line->Delete();
-
     }
+
+    lptsB->Delete();
+    fptsB->Delete();
+
+    lptsA->Delete();
+    fptsA->Delete();
+
+    line->Delete();
 
     // reale kombination der ermittelten regionen
 
