@@ -160,6 +160,11 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
             contLines->DeepCopy(cl->GetOutput());
 
+#ifdef DEBUG
+            std::cout << "Exporting contLines.vtk" << std::endl;
+            GeomHelper::WriteVTK("contLines.vtk", contLines);
+#endif
+
             modPdA->DeepCopy(cl->GetOutput(1));
             modPdB->DeepCopy(cl->GetOutput(2));
 
@@ -169,13 +174,70 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
                 return 1;
             }
 
-            origPtsNoA = modPdA->GetPoints()->GetNumberOfPoints();
-            origPtsNoB = modPdB->GetPoints()->GetNumberOfPoints();
+            origPtsNoA = modPdA->GetNumberOfPoints();
+            origPtsNoB = modPdB->GetNumberOfPoints();
 
             // in den CellDatas steht drin, welche polygone einander schneiden
 
             vtkIntArray *contsA = vtkIntArray::SafeDownCast(contLines->GetCellData()->GetScalars("cA"));
             vtkIntArray *contsB = vtkIntArray::SafeDownCast(contLines->GetCellData()->GetScalars("cB"));
+
+            // gültigkeit des schnitts prüfen
+
+            bool valid = true;
+
+            vtkIdList *cells = vtkIdList::New();
+
+            for (int i = 0; i < contLines->GetNumberOfPoints() && valid; i++) {
+                contLines->GetPointCells(i, cells);
+
+                // der schnitt endet abrupt
+                if (cells->GetNumberOfIds() == 1) {
+                    valid = false;
+                    break;
+                }
+
+                vtkIdList *line = vtkIdList::New();
+
+                std::map<int, std::set<int> > countsA, countsB;
+
+                for (int j = 0; j < cells->GetNumberOfIds(); j++) {
+                    contLines->GetCellPoints(cells->GetId(j), line);
+
+                    int target = line->GetId(0) == i ? line->GetId(1) : line->GetId(0);
+
+                    int indA = contsA->GetValue(cells->GetId(j));
+                    int indB = contsB->GetValue(cells->GetId(j));
+
+                    // sind am punkt sind mehr als zwei linien beteiligt?
+
+                    countsA[indA].insert(target);
+
+                    if (countsA[indA].size() > 2) {
+                        valid = false;
+                        break;
+                    }
+
+                    countsB[indB].insert(target);
+
+                    if (countsB[indB].size() > 2) {
+                        valid = false;
+                        break;
+                    }
+
+                }
+
+                line->Delete();
+            }
+
+            cells->Delete();
+
+            if (!valid) {
+                vtkErrorMacro("Contact is ambiguous or incomplete.");
+
+                return 1;
+            }
+
 
             PolyStripsType polyStripsA(GetPolyStrips(modPdA, contsA));
             PolyStripsType polyStripsB(GetPolyStrips(modPdB, contsB));
