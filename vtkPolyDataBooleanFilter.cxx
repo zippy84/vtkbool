@@ -202,8 +202,6 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
                 // der schnitt endet abrupt
                 if (cells->GetNumberOfIds() == 1) {
-                    std::cout << "i=" << i << ", cells=" << cells->GetId(0) << std::endl;
-
                     valid = false;
                     break;
                 }
@@ -225,12 +223,6 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
                     countsA[indA].insert(target);
 
                     if (countsA[indA].size() > 2) {
-                        std::cout << "i=" << i << ", indA=" << indA << ", counts=[";
-                        for (itr = countsA[indA].begin(); itr != countsA[indA].end(); itr++) {
-                            std::cout << *itr << ",";
-                        }
-                        std::cout << "]" << std::endl;
-
                         valid = false;
                         break;
                     }
@@ -238,12 +230,6 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
                     countsB[indB].insert(target);
 
                     if (countsB[indB].size() > 2) {
-                        std::cout << "i=" << i << ", indB=" << indB << ", counts=[";
-                        for (itr = countsB[indB].begin(); itr != countsB[indB].end(); itr++) {
-                            std::cout << *itr << ",";
-                        }
-                        std::cout << "]" << std::endl;
-
                         valid = false;
                         break;
                     }
@@ -332,8 +318,8 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
             start = std::clock();
 #endif
 
-            AddAdjacentPoints(modPdA, contsA, allStripsA);
-            AddAdjacentPoints(modPdB, contsB, allStripsB);
+            AddAdjacentPoints(modPdA, allStripsA, contsA);
+            AddAdjacentPoints(modPdB, allStripsB, contsB);
 
 #ifdef DEBUG
             times.push_back(DIFF(start, std::clock()));
@@ -1565,7 +1551,7 @@ void vtkPolyDataBooleanFilter::ResolveOverlaps (vtkPolyData *pd, StripsType &str
 }
 
 
-void vtkPolyDataBooleanFilter::AddAdjacentPoints (vtkPolyData *pd, vtkIntArray *conts, StripsType &strips) {
+void vtkPolyDataBooleanFilter::AddAdjacentPoints (vtkPolyData *pd, StripsType &strips, vtkIntArray *conts) {
 
 #ifdef DEBUG
     std::cout << "AddAdjacentPoints()" << std::endl;
