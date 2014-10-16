@@ -129,7 +129,7 @@ class VTK_EXPORT vtkPolyDataBooleanFilter : public vtkPolyDataAlgorithm {
 
     void ResolveOverlaps (vtkPolyData *pd, StripsType &strips, vtkIntArray *conts);
 
-    void AddAdjacentPoints (vtkPolyData *pd, vtkIntArray *conts, StripsType &strips);
+    void AddAdjacentPoints (vtkPolyData *pd, StripsType &strips, vtkIntArray *conts);
     void DisjoinPolys (vtkPolyData *pd, StripsType &strips);
     void MergePoints (vtkPolyData *pd, StripsType &strips);
 
