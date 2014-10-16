@@ -58,6 +58,10 @@ public:
         return t < other.t;
     }
 
+    bool operator== (const StripPtType &other) const {
+        return ind == other.ind;
+    }
+
 #ifdef DEBUG
     // zur überprüfung der sortierung
     int pos;
@@ -125,7 +129,7 @@ class VTK_EXPORT vtkPolyDataBooleanFilter : public vtkPolyDataAlgorithm {
 
     void ResolveOverlaps (vtkPolyData *pd, StripsType &strips, vtkIntArray *conts);
 
-    void AddAdjacentPoints (vtkPolyData *pd, StripsType &strips);
+    void AddAdjacentPoints (vtkPolyData *pd, vtkIntArray *conts, StripsType &strips);
     void DisjoinPolys (vtkPolyData *pd, StripsType &strips);
     void MergePoints (vtkPolyData *pd, StripsType &strips);
 
