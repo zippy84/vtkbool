@@ -63,7 +63,7 @@ def create_cylinder(r=.5, h=1., res=30):
 
     return prod
 
-def add_boundtube(prev, x, y):
+def add_tube(prev, x, y):
     cylA = create_cylinder(r=3.155, h=8.6)
 
     cube = vtk.vtkCubeSource()
@@ -99,7 +99,7 @@ def add_boundtube(prev, x, y):
 
     return bC
 
-def add_boundstud(prev, x, y):
+def add_stud(prev, x, y):
     cylA = create_cylinder(r=2.5, h=2.)
 
     trA = vtk.vtkTransform()
@@ -181,18 +181,18 @@ boolA.SetInputConnection(subA.GetOutputPort())
 boolA.SetInputConnection(1, subB.GetOutputPort())
 boolA.SetOperModeToDifference()
 
-tubeA = add_boundtube(boolA, 0, 0)
-tubeB = add_boundtube(tubeA, -8, 0)
-tubeC = add_boundtube(tubeB, 8, 0)
+tubeA = add_tube(boolA, 0, 0)
+tubeB = add_tube(tubeA, -8, 0)
+tubeC = add_tube(tubeB, 8, 0)
 
-studA = add_boundstud(tubeC, -12, -4)
-studB = add_boundstud(studA, -12, 4)
-studC = add_boundstud(studB, -4, -4)
-studD = add_boundstud(studC, -4, 4)
-studE = add_boundstud(studD, 4, -4)
-studF = add_boundstud(studE, 4, 4)
-studG = add_boundstud(studF, 12, -4)
-studH = add_boundstud(studG, 12, 4)
+studA = add_stud(tubeC, -12, -4)
+studB = add_stud(studA, -12, 4)
+studC = add_stud(studB, -4, -4)
+studD = add_stud(studC, -4, 4)
+studE = add_stud(studD, 4, -4)
+studF = add_stud(studE, 4, 4)
+studG = add_stud(studF, 12, -4)
+studH = add_stud(studG, 12, 4)
 
 boundA = add_bound(studH, -12, -4, 180)
 boundB = add_bound(boundA, -12, 4, 0)
