@@ -194,8 +194,6 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
             vtkIdList *cells = vtkIdList::New();
 
-            std::set<int>::const_iterator itr;
-
             for (int i = 0; i < contLines->GetNumberOfPoints() && valid; i++) {
                 cells->Reset();
                 contLines->GetPointCells(i, cells);
@@ -244,7 +242,7 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
             if (!valid) {
                 vtkErrorMacro("Contact is ambiguous or incomplete.");
 
-                //return 1;
+                return 1;
             }
 
 
