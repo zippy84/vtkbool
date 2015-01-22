@@ -276,45 +276,52 @@ InterPtType vtkPolyDataContactFilter::InterEdgeLine (double *eA, double *eB, dou
     vtkMath::Subtract(eB, eA, e);
     double l = vtkMath::Normalize(e);
 
-    // schnittpunkt ermitteln
+    double p[3];
+    vtkMath::Subtract(eA, pt, p);
 
-    double v[3];
-    vtkMath::Cross(r, e, v);
+    double w = std::fabs(vtkMath::Determinant3x3(r, e, p));
 
-    double n = vtkMath::Norm(v);
+    if (w < 1e-4) { // ~89.995deg
+        // schnittpunkt ermitteln
 
-    if (n*n > 1e-9) {
-        double p[3];
+        double v[3];
+        vtkMath::Cross(r, e, v);
 
-        vtkMath::Subtract(eA, pt, p);
+        double n = vtkMath::Norm(v);
 
-        double s = vtkMath::Determinant3x3(p, r, v)/(n*n);
+        if (n > 1e-4) { // ~0.0057deg
 
-        if (s > -1e-6 && s < l+1e-6) {
-            double t = vtkMath::Determinant3x3(p, e, v)/(n*n);
+            double s = vtkMath::Determinant3x3(p, r, v)/(n*n);
 
-            inter.pt[0] = pt[0]+t*r[0];
-            inter.pt[1] = pt[1]+t*r[1];
-            inter.pt[2] = pt[2]+t*r[2];
+            if (s > -1e-6 && s < l+1e-6) {
+                double t = vtkMath::Determinant3x3(p, e, v)/(n*n);
 
-            inter.onEdge = true;
+                inter.pt[0] = pt[0]+t*r[0];
+                inter.pt[1] = pt[1]+t*r[1];
+                inter.pt[2] = pt[2]+t*r[2];
 
-            inter.t = t;
+                inter.onEdge = true;
 
-            if (s > -1e-6 && s < 1e-6) {
-                inter.end = 0;
-            } else if (s > l-1e-6 && s < l+1e-6) {
-                inter.end = 1;
-            }
+                inter.t = t;
+
+                if (s > -1e-6 && s < 1e-6) {
+                    inter.end = 0;
+                } else if (s > l-1e-6 && s < l+1e-6) {
+                    inter.end = 1;
+                }
 
 #ifdef DEBUG
-            inter.ind = ind++;
+                inter.ind = ind++;
 #endif
 
+            }
+
+        } else {
+            // parallel
         }
 
     } else {
-        // parallel
+        // windschief
     }
 
     return inter;
@@ -416,8 +423,8 @@ InterPtsType vtkPolyDataContactFilter::InterPolyLine (vtkPoints *pts, vtkIdList 
                 double prevD = vtkMath::Dot(p, prevPt)-d;
                 double nextD = vtkMath::Dot(p, nextPt)-d;
 
-                if ((prevD < 0 && nextD < 0)
-                    || (prevD > 0 && nextD > 0)) {
+                if ((prevD < -1e-6 && nextD < -1e-6)
+                    || (prevD > 1e-6 && nextD > 1e-6)) {
                     omits.push_back(&*itr);
                     omits.push_back(&*(itr+1));
                 } else {
@@ -431,6 +438,18 @@ InterPtsType vtkPolyDataContactFilter::InterPolyLine (vtkPoints *pts, vtkIdList 
             }
 
         }
+
+#ifdef DEBUG
+        std::vector<const InterPtType*>::const_iterator itr2;
+
+        std::cout << "omits [";
+
+        for (itr2 = omits.begin(); itr2 != omits.end(); itr2++) {
+            std::cout << (*itr2)->ind << ", ";
+        }
+
+        std::cout << "]" << std::endl;
+#endif
 
         std::set<int> ends;
 
@@ -446,7 +465,7 @@ InterPtsType vtkPolyDataContactFilter::InterPolyLine (vtkPoints *pts, vtkIdList 
 
         // punkte die durch jeweils zwei kongruente kanten begrenzt sind
 
-        InterPtsType::iterator itr2;
+        InterPtsType::iterator itr3;
 
         for (unsigned int i = 0; i < poly->GetNumberOfIds(); i++) {
             if (ends.count(i) == 0) {
@@ -459,26 +478,27 @@ InterPtsType vtkPolyDataContactFilter::InterPolyLine (vtkPoints *pts, vtkIdList 
                 if (endD < 1e-6) {
                     InterPtType inter;
 
-                    int j = 0;
+                    double v[3];
+                    vtkMath::Subtract(endPt, pt, v);
+                    inter.t = vtkMath::Dot(v, r);
 
-                    for (int k = 1; k < 3; k++) {
-                        if (std::fabs(r[k]) > std::fabs(r[j])) {
-                            j = k;
-                        }
-                    }
+                    double w[3];
+                    CPY(w, r)
 
-                    inter.t = (endPt[j]-pt[j])/r[j];
+                    vtkMath::MultiplyScalar(w, inter.t);
 
-                    inter.pt[0] = endPt[0];
-                    inter.pt[1] = endPt[1];
-                    inter.pt[2] = endPt[2];
+                    vtkMath::Add(pt, w, inter.pt);
 
                     inter.count++;
 
                     inter.end = i;
 
-                    itr2 = std::lower_bound(interPts2.begin(), interPts2.end(), inter);
-                    interPts2.insert(itr2, inter);
+#ifdef DEBUG
+                    inter.ind = ind++;
+#endif
+
+                    itr3 = std::lower_bound(interPts2.begin(), interPts2.end(), inter);
+                    interPts2.insert(itr3, inter);
 
                 }
             }
@@ -554,14 +574,20 @@ InterPtsType vtkPolyDataContactFilter::InterPolyLine (vtkPoints *pts, vtkIdList 
             }
         }
 
-        for (itr = interPts2.begin(); itr != interPts2.end(); itr++) {
-            for (unsigned int i = 0; i < itr->count; i++) {
-                interPts3.push_back(*itr);
+        InterPtsType::iterator itr4;
+
+        for (itr4 = interPts2.begin(); itr4 != interPts2.end(); itr4++) {
+            if (itr4->end > -1) {
+                pts->GetPoint(poly->GetId(itr4->end), itr4->pt);
+            }
+
+            for (unsigned int i = 0; i < itr4->count; i++) {
+                interPts3.push_back(*itr4);
             }
 
 #ifdef DEBUG
-            if (itr->count > 1) {
-                std::cout << "ind " << itr->ind << ", count " << itr->count << std::endl;
+            if (itr4->count > 1) {
+                std::cout << "ind " << itr4->ind << ", count " << itr4->count << std::endl;
             }
 #endif
         }
