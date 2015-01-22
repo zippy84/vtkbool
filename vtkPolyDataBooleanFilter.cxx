@@ -44,8 +44,6 @@ using namespace std::placeholders;
 #include "vtkPolyDataContactFilter.h"
 #include "GeomHelper.h"
 
-#define CPY(a, b) a[0] = b[0]; a[1] = b[1]; a[2] = b[2];
-
 #ifdef DEBUG
 #include <vtkPolyDataWriter.h>
 #include <ctime>
