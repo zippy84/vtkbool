@@ -33,8 +33,6 @@
 
 #include "GeomHelper.h"
 
-#define CPY(a, b) a[0] = b[0]; a[1] = b[1]; a[2] = b[2];
-
 void GeomHelper::ComputeNormal (vtkPoints *pts, vtkIdList *poly, double* n) {
 
     n[0] = 0; n[1] = 0; n[2] = 0;
