@@ -5,7 +5,7 @@ set(CMAKE_CXX_FLAGS "-std=c++0x -Wno-deprecated -fPIC")
 
 option(BUILD_PARAVIEW_PLUGIN "" On)
 option(BUILD_AS_DEBUG "" Off)
-option(BUILD_TESTS "" Off)
+option(BUILD_TESTING "" Off)
 
 set(vtk_libs
     vtkCommon
@@ -23,7 +23,7 @@ if(BUILD_AS_DEBUG)
 endif()
 
 if(BUILD_PARAVIEW_PLUGIN)
-    set(BUILD_TESTS Off CACHE BOOL "" FORCE)
+    set(BUILD_TESTING Off CACHE BOOL "" FORCE)
 
     add_subdirectory(paraview_plugin ${CMAKE_BINARY_DIR}/paraview_plugin)
 
@@ -39,10 +39,22 @@ else()
         add_library(${PROJECT_NAME} SHARED ${srcs})
         target_link_libraries(${PROJECT_NAME} ${vtk_libs})
 
-        if(BUILD_TESTS)
+        if(BUILD_TESTING)
+            enable_testing()
 
-            add_executable(tests tests.cxx)
-            target_link_libraries(tests ${PROJECT_NAME} ${vtk_libs})
+            add_executable(testing testing/testing.cxx)
+            target_link_libraries(testing ${PROJECT_NAME} ${vtk_libs})
+
+            add_test(Test_0 testing 0)
+            add_test(Test_1 testing 1)
+            add_test(Test_2 testing 2)
+            add_test(Test_3 testing 3)
+            add_test(Test_4 testing 4)
+            add_test(Test_5 testing 5)
+            add_test(Test_6 testing 6)
+            add_test(Test_7 testing 7)
+            add_test(Test_8 testing 8)
+            add_test(Test_9 testing 9)
 
         endif()
 
@@ -69,7 +81,6 @@ else()
             endif()
 
         endif()
-
 
     endif(VTK_FOUND)
 
