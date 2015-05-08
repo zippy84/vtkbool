@@ -134,8 +134,10 @@ class VTK_EXPORT vtkPolyDataBooleanFilter : public vtkPolyDataAlgorithm {
     void MergePoints (vtkPolyData *pd, StripsType &strips);
 
     void CombineRegions ();
+    void MergeRegions ();
 
     int OperMode;
+    bool MergeAll;
 
 public:
     vtkTypeMacro(vtkPolyDataBooleanFilter, vtkPolyDataAlgorithm);
@@ -150,6 +152,10 @@ public:
     void SetOperModeToIntersection () { OperMode = OPER_INTERSECTION; };
     void SetOperModeToDifference () { OperMode = OPER_DIFFERENCE; };
     void SetOperModeToDifference2 () { OperMode = OPER_DIFFERENCE2; };
+
+    vtkSetMacro(MergeAll, bool);
+    vtkGetMacro(MergeAll, bool);
+    vtkBooleanMacro(MergeAll, bool);
 
 protected:
     vtkPolyDataBooleanFilter ();

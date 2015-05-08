@@ -72,6 +72,8 @@ vtkPolyDataBooleanFilter::vtkPolyDataBooleanFilter () {
 
     OperMode = OPER_UNION;
 
+    MergeAll = false;
+
 }
 
 vtkPolyDataBooleanFilter::~vtkPolyDataBooleanFilter () {
@@ -112,6 +114,7 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
             // eventuell vorhandene regionen vereinen
 
             vtkCleanPolyData *cleanA = vtkCleanPolyData::New();
+            cleanA->SetTolerance(1e-9);
 #if (VTK_MAJOR_VERSION == 5)
             cleanA->SetInput(pdA);
 #else
@@ -120,6 +123,7 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
             cleanA->Update();
 
             vtkCleanPolyData *cleanB = vtkCleanPolyData::New();
+            cleanB->SetTolerance(1e-9);
 #if (VTK_MAJOR_VERSION == 5)
             cleanB->SetInput(pdB);
 #else
@@ -382,7 +386,11 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
         start = std::clock();
 #endif
 
-        CombineRegions();
+        if (MergeAll) {
+            MergeRegions();
+        } else {
+            CombineRegions();
+        }
 
 #ifdef DEBUG
         times.push_back(DIFF(start, std::clock()));
@@ -2678,5 +2686,93 @@ void vtkPolyDataBooleanFilter::CombineRegions () {
 
     cleanB->Delete();
     cleanA->Delete();
+
+}
+
+
+void vtkPolyDataBooleanFilter::MergeRegions () {
+
+#ifdef DEBUG
+    std::cout << "MergeRegions()" << std::endl;
+#endif
+
+    vtkIntArray *origCellIdsA = vtkIntArray::New();
+    origCellIdsA->DeepCopy(modPdA->GetCellData()->GetScalars("OrigCellIds"));
+    origCellIdsA->SetName("OrigCellIdsA");
+
+    vtkIntArray *origCellIdsB = vtkIntArray::New();
+    origCellIdsB->DeepCopy(modPdB->GetCellData()->GetScalars("OrigCellIds"));
+    origCellIdsB->SetName("OrigCellIdsB");
+
+    vtkPolyData *pdA = vtkPolyData::New();
+    pdA->CopyStructure(modPdA);
+
+    vtkPolyData *pdB = vtkPolyData::New();
+    pdB->CopyStructure(modPdB);
+
+    pdA->GetCellData()->AddArray(origCellIdsA);
+    pdB->GetCellData()->AddArray(origCellIdsB);
+
+    origCellIdsA->Delete();
+    origCellIdsB->Delete();
+
+    vtkIntArray *padIdsA = vtkIntArray::New();
+    vtkIntArray *padIdsB = vtkIntArray::New();
+
+    for (int i = 0; i < pdA->GetNumberOfCells(); i++) {
+        padIdsA->InsertNextValue(-1);
+    }
+
+    for (int i = 0; i < pdB->GetNumberOfCells(); i++) {
+        padIdsB->InsertNextValue(-1);
+    }
+
+    padIdsA->SetName("OrigCellIdsB");
+    padIdsB->SetName("OrigCellIdsA");
+
+    pdA->GetCellData()->AddArray(padIdsA);
+    pdB->GetCellData()->AddArray(padIdsB);
+
+    padIdsA->Delete();
+    padIdsB->Delete();
+
+    vtkAppendPolyData *app = vtkAppendPolyData::New();
+#if (VTK_MAJOR_VERSION == 5)
+    app->AddInput(pdA);
+    app->AddInput(pdB);
+#else
+    app->AddInputData(pdA);
+    app->AddInputData(pdB);
+#endif
+
+    app->Update();
+
+    vtkPolyData *appPd = app->GetOutput();
+
+    appPd->GetPointData()->AddArray(appPd->GetPoints()->GetData());
+
+    vtkCleanPolyData *clean = vtkCleanPolyData::New();
+    clean->PointMergingOff();
+#if (VTK_MAJOR_VERSION == 5)
+    clean->SetInput(appPd);
+#else
+    clean->SetInputData(appPd);
+#endif
+
+    clean->Update();
+
+    vtkPolyData *cleanPd = clean->GetOutput();
+
+    cleanPd->GetPoints()->SetData(cleanPd->GetPointData()->GetArray(0));
+    cleanPd->GetPointData()->RemoveArray(0);
+
+    resultA->ShallowCopy(cleanPd);
+    resultB->ShallowCopy(contLines);
+
+    clean->Delete();
+    app->Delete();
+
+    pdB->Delete();
+    pdA->Delete();
 
 }
