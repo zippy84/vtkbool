@@ -5,7 +5,7 @@ if(ParaView_FOUND)
 
     set(VTK_DIR ${ParaView_DIR}/VTK CACHE STRING "" FORCE)
 
-    include_directories(..)
+    include_directories("..")
 
     add_paraview_plugin(
         PolyDataBooleanFilter
@@ -13,9 +13,7 @@ if(ParaView_FOUND)
         SERVER_MANAGER_XML vtkPolyDataBooleanFilter.xml
         SERVER_MANAGER_SOURCES ../vtkPolyDataBooleanFilter.cxx
         SERVER_SOURCES ../vtkPolyDataContactFilter.cxx ../GeomHelper.cxx
-        GUI_RESOURCE_FILES vtkPolyDataBooleanFilterGUI.xml
+        #GUI_RESOURCE_FILES vtkPolyDataBooleanFilterGUI.xml
     )
-
-    target_link_libraries(PolyDataBooleanFilter ${vtk_libs})
 
 endif(ParaView_FOUND)

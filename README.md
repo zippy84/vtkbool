@@ -32,11 +32,12 @@ This is an extension of the graphics library VTK. The goal of the extension is t
 
 ## Todo
 
+- integration of holes
 - acceleration with OpenMP
 
 ## Build Requirements
 
-CMake >= 2.6, VTK >= 5.2, Paraview >= 3.10, gcc >= 4.7 (including libstdc++)
+CMake >= 2.8, VTK >= 6.1, Paraview >= 5.0, gcc >= 4.7 (including libstdc++)
 
 Other versions may also work. It is hard to find out, since when a feature is supported.
 
@@ -114,7 +115,7 @@ For the purpose of demonstration and testing, I created examples in Paraview. Th
 
 ## Copyright
 
-2012-2014 Ronald Römer
+2012-2016 Ronald Römer
 
 ## License
 

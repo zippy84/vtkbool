@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 2.8)
 project(vtkbool)
 
 set(CMAKE_CXX_FLAGS "-std=c++0x -Wno-deprecated -fPIC")
@@ -7,16 +7,12 @@ option(BUILD_PARAVIEW_PLUGIN "" On)
 option(BUILD_AS_DEBUG "" Off)
 option(BUILD_TESTING "" Off)
 
-set(vtk_libs
-    vtkCommon
-    vtkFiltering
-    vtkIO
-    vtkGraphics)
-
 set(srcs
     vtkPolyDataBooleanFilter.cxx
     vtkPolyDataContactFilter.cxx
     GeomHelper.cxx)
+
+include_directories(".")
 
 if(BUILD_AS_DEBUG)
     add_definitions(-DDEBUG)
@@ -31,19 +27,19 @@ else()
 
     unset(VTK_DIR CACHE)
 
-    find_package(VTK REQUIRED)
+    find_package(VTK REQUIRED COMPONENTS vtkFiltersSources vtkIOLegacy NO_MODULE)
 
     if(VTK_FOUND)
         include(${VTK_USE_FILE})
 
         add_library(${PROJECT_NAME} SHARED ${srcs})
-        target_link_libraries(${PROJECT_NAME} ${vtk_libs})
+        target_link_libraries(${PROJECT_NAME} ${VTK_LIBRARIES})
 
         if(BUILD_TESTING)
             enable_testing()
 
             add_executable(testing testing/testing.cxx)
-            target_link_libraries(testing ${PROJECT_NAME} ${vtk_libs})
+            target_link_libraries(testing ${PROJECT_NAME} ${VTK_LIBRARIES})
 
             add_test(Test_0 testing 0)
             add_test(Test_1 testing 1)
@@ -58,11 +54,8 @@ else()
 
         endif()
 
-        string(FIND "${VTK_LANGUAGES}" "PYTHON" VTK_PYTHON)
-
-        if (NOT ${VTK_PYTHON} EQUAL -1)
-
-            find_package(PythonLibs REQUIRED)
+        if(VTK_WRAP_PYTHON)
+            find_package(PythonLibs 2.7 REQUIRED)
 
             if(PYTHONLIBS_FOUND)
 
@@ -79,7 +72,6 @@ else()
                 target_link_libraries(${PROJECT_NAME}Python ${PROJECT_NAME}PythonD)
 
             endif()
-
         endif()
 
     endif(VTK_FOUND)

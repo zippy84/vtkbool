@@ -48,6 +48,10 @@
                 </Documentation>
             </IntVectorProperty>
 
+            <Hints>
+                <ShowInMenu category="Extensions"/>
+            </Hints>
+
         </SourceProxy>
     </ProxyGroup>
 </ServerManagerConfiguration>

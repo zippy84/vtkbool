@@ -2,7 +2,7 @@
 # *-* coding: UTF-8 *-*
 
 import sys
-sys.path.append('/home/zippy/vtkbool_light/build2')
+sys.path.append('/home/zippy/vtkbool_light/build')
 
 import vtk
 import libvtkboolPython as vtkbool
