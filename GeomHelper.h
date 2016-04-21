@@ -36,7 +36,7 @@ namespace GeomHelper {
 
     void WriteVTK (const char *name, vtkPolyData *pd);
 
-};
+}
 
 #endif
 

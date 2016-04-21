@@ -25,7 +25,7 @@ if(BUILD_PARAVIEW_PLUGIN)
 
 else()
 
-    unset(VTK_DIR CACHE)
+    #unset(VTK_DIR CACHE)
 
     find_package(VTK REQUIRED COMPONENTS vtkFiltersSources vtkIOLegacy NO_MODULE)
 
