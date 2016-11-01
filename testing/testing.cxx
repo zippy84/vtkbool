@@ -14,9 +14,6 @@
    limitations under the License.
 */
 
-#include "vtkPolyDataBooleanFilter.h"
-#include "GeomHelper.h"
-
 #include <vtkKdTreePointLocator.h>
 #include <vtkCubeSource.h>
 #include <vtkCylinderSource.h>
@@ -26,6 +23,13 @@
 #include <vtkCellData.h>
 #include <vtkMath.h>
 #include <vtkTrivialProducer.h>
+#include <vtkTriangleFilter.h>
+#include <vtkLinearSubdivisionFilter.h>
+#include <vtkVectorText.h>
+#include <vtkPolyDataNormals.h>
+#include <vtkLinearExtrusionFilter.h>
+#include <vtkPlaneSource.h>
+
 #include <map>
 #include <vector>
 #include <set>
@@ -33,23 +37,16 @@
 #include <iostream>
 #include <sstream>
 #include <iomanip>
-
-#define _USE_MATH_DEFINES
 #include <cmath>
 
-typedef std::vector<int> IdsType;
+#include "vtkPolyDataBooleanFilter.h"
+
+#include "Utilities.h"
+using Utilities::IdsType;
+
+//#define DD
+
 typedef std::map<int, IdsType> LinksType;
-
-class P {
-public:
-    P (int ind, double t) : ind(ind), t(t) {}
-    int ind;
-    double t;
-
-    bool operator< (const P &other) const {
-        return t < other.t;
-    }
-};
 
 class Test {
     vtkPolyData *lines, *pd;
@@ -65,6 +62,7 @@ public:
         loc->BuildLocator();
 
         lines->BuildLinks();
+        pd->BuildLinks();
 
         cells = vtkIdList::New();
         poly = vtkIdList::New();
@@ -82,302 +80,241 @@ public:
     }
 
     int run () {
-        int errA = checkConnectivity(0);
-        int errB = checkConnectivity(1);
+
+#ifdef DEBUG
+        Utilities::WriteVTK("merged.vtk", pd);
+#endif
+
+        vtkIntArray *origCellIdsA = vtkIntArray::SafeDownCast(pd->GetCellData()->GetArray("OrigCellIdsA"));
+        vtkIntArray *origCellIdsB = vtkIntArray::SafeDownCast(pd->GetCellData()->GetArray("OrigCellIdsB"));
+
+        int errA = checkConnectivity(0, origCellIdsA);
+        int errB = checkConnectivity(1, origCellIdsB);
 
         return errA > 0 || errB > 0;
+
     }
 
 private:
-    int checkConnectivity (int input) {
+    int checkConnectivity (int input, vtkIntArray *origIds) {
         std::cout << "Checking input " << input << std::endl;
 
         int err = 0;
 
-        vtkIntArray *origIds = vtkIntArray::SafeDownCast(input == 0 ? pd->GetCellData()->GetArray("OrigCellIdsA") : pd->GetCellData()->GetArray("OrigCellIdsB"));
+        for (int i = 0; i < pd->GetNumberOfCells() && err < 1; i++) {
+            if (origIds->GetValue(i) > -1) {
+                pd->GetCellPoints(i, poly);
+                if (poly->GetNumberOfIds() < 3) {
+                    std::cout << "poly " << i << " has too few points" << std::endl;
 
-        int numLines = lines->GetNumberOfCells();
-
-        double ptA[3], ptB[3], endPt[3];
-
-        vtkIdList *line = vtkIdList::New();
-
-        for (int i = 0; i < numLines; i++) {
-
-            lines->GetCellPoints(i, line);
-
-            lines->GetPoint(line->GetId(0), ptA);
-            lines->GetPoint(line->GetId(1), ptB);
-
-            std::map<int, int> srcs;
-
-            GeomHelper::FindPoints(loc, ptA, pts);
-
-            LinksType links;
-
-            for (int j = 0; j < pts->GetNumberOfIds(); j++) {
-                pd->GetPointCells(pts->GetId(j), cells);
-
-                for (int k = 0; k < cells->GetNumberOfIds(); k++) {
-                    if (origIds->GetValue(cells->GetId(k)) > -1) {
-                        links[cells->GetId(k)].push_back(pts->GetId(j));
-                    }
-                }
-
-                srcs[pts->GetId(j)] = 0;
-            }
-
-            GeomHelper::FindPoints(loc, ptB, pts);
-
-            for (int j = 0; j < pts->GetNumberOfIds(); j++) {
-                pd->GetPointCells(pts->GetId(j), cells);
-
-                for (int k = 0; k < cells->GetNumberOfIds(); k++) {
-                    if (origIds->GetValue(cells->GetId(k)) > -1) {
-                        links[cells->GetId(k)].push_back(pts->GetId(j));
-                    }
-                }
-
-                srcs[pts->GetId(j)] = 1;
-            }
-
-            // links muss auf die reduziert werden, denen zwei oder mehr punkte zugeordnet sind
-
-            LinksType::iterator itr = links.begin();
-            IdsType::const_iterator itr2;
-
-            LinksType links2;
-            IdsType ids;
-
-            while (itr != links.end()) {
-                itr2 = itr->second.begin();
-
-                while (itr2 != itr->second.end()) {
-                    links2[*itr2++].push_back(itr->first);
-                }
-
-                if (itr->second.size() == 1) {
-                    links.erase(itr++);
-                } else {
-                    ids.push_back(itr->first);
-                    ++itr;
+                    err++;
                 }
             }
-
-            if (links.size() == 0) {
-                // ...
-                std::cout << "E0: line " << i << " has no neighbors" << std::endl;
-            } else if (links.size() == 1) {
-                // kann vorkommen, aber nur in einem bestimmten fall
-                pd->GetCellPoints(links.begin()->first, poly);
-                IdsType &pts = links.begin()->second;
-
-                double a[3], b[3], v[3], t = 0;
-
-                std::vector<P> ps;
-
-                int numPts = poly->GetNumberOfIds();
-
-                for (int j = 0; j < numPts; j++) {
-                    int k = (j+1)%numPts;
-                    pd->GetPoint(poly->GetId(j), a);
-                    pd->GetPoint(poly->GetId(k), b);
-
-                    vtkMath::Subtract(a, b, v);
-                    t += vtkMath::Norm(v);
-
-                    if (std::count(pts.begin(), pts.end(), poly->GetId(k)) == 1) {
-                        ps.push_back(P(k, t));
-                    }
-
-                }
-
-                if (ps.back().ind == 0) {
-                    ps.back().t = 0;
-                }
-
-                std::sort(ps.begin(), ps.end());
-
-                int s = 0;
-
-                std::vector<P>::const_iterator itr_;
-
-                for (itr_ = ps.begin(); itr_ != ps.end()-1; ++itr_) {
-                    if ((itr_+1)->t-itr_->t < 1e-7) {
-                        ++s;
-                    }
-                }
-
-                if (s > 0) {
-                    // punkte wiederholen sich
-
-                    if (s == pts.size()-1) {
-                        // punkte befinden sich alle an der gleichen stelle
-                        std::cout << "E1_1: line " << i << " has a polygon at one end with repeated points"
-                                  << " (poly " << links.begin()->first
-                                  << ", n " << (s+1)
-                                  << ")" << std::endl;
-                    } else {
-                        // eine reale kante verhanden
-                        // hier fehlt der zweite nachbar
-                        std::cout << "E1_2: line " << i << " has only one neighbor with repeated points"
-                                  << " (poly " << links.begin()->first
-                                  << ", n " << (s+1)
-                                  << ")" << std::endl;
-                    }
-
-                } else {
-                    if (pts.size() == 2) {
-                        // kein zweiter nachbar vorhanden
-                        std::cout << "E2_1: line " << i << " has only one neighbor"
-                                  << " (poly "  << links.begin()->first
-                                  << ")" << std::endl;
-                    } else {
-                        // 3 punkte, diese müssen aber einmalig sein
-                        std::set<int> uniqs(pts.begin(), pts.end());
-
-                        if (uniqs.size() < pts.size()) {
-                            std::cout << "E2_2: line " << i << " is adjacent by a polygon with folded edges - repeated indices"
-                                      << " (poly "  << links.begin()->first
-                                      << ")" << std::endl;
-                        }
-                    }
-                }
-
-            } else if (links.size() == 2) {
-                // diese dürfen nicht verbunden sein
-                IdsType &f = links[ids[0]];
-                IdsType &s = links[ids[1]];
-
-                if (f.size() > 2 || s.size() > 2) {
-                    std::cout << "E3: line " << i << " has neighbors with repeated points"
-                              << " (polyA " << ids[0] << " -> n " << f.size()
-                              << ", polyB " << ids[1] << " -> n " << s.size()
-                              << ")" << std::endl;
-                    ++err;
-                }
-
-                lines->GetPointCells(line->GetId(0), cells);
-                int linkedA = cells->GetNumberOfIds();
-
-                lines->GetPointCells(line->GetId(1), cells);
-                int linkedB = cells->GetNumberOfIds();
-
-                if (linkedA == linkedB) {
-                    if (f[0] == s[0] || f[1] == s[1]) {
-                        std::cout << "E4_1" << std::endl;
-                        ++err;
-                    }
-                } else if (linkedA == 4) {
-                    if (f[0] == s[0]) {
-                        std::cout << "E4_2" << std::endl;
-                        ++err;
-                    }
-                } else {
-                    if (f[1] == s[1]) {
-                        std::cout << "E4_3" << std::endl;
-                        ++err;
-                    }
-                }
-
-            } else {
-                // kann nicht vorkommen
-            }
-
-            // man muss prüfen ob alle an einem punkt beteiligten polygone aneinandergrenzen
-
-            std::set<int> endsA, endsB;
-
-            for (int j = 0; j < 2; j++) {
-                std::set<int> &ends = j == 0 ? endsA : endsB;
-
-                lines->GetPointCells(line->GetId(j), cells);
-
-                for (int k = 0; k < cells->GetNumberOfIds(); k++) {
-                    lines->GetCellPoints(cells->GetId(k), poly);
-                    int end = poly->GetId(0) == line->GetId(j) ? 1 : 0;
-
-                    lines->GetPoint(poly->GetId(end), endPt);
-                    GeomHelper::FindPoints(loc, endPt, pts);
-
-                    for (int l = 0; l < pts->GetNumberOfIds(); l++) {
-                        ends.insert(pts->GetId(l));
-                    }
-                }
-            }
-
-            for (itr = links2.begin(); itr != links2.end(); ++itr) {
-
-                std::map<int, int> counts;
-
-                for (itr2 = itr->second.begin(); itr2 != itr->second.end(); ++itr2) {
-                    pd->GetCellPoints(*itr2, poly);
-
-                    int numPts = poly->GetNumberOfIds();
-
-                    for (int j = 0; j < numPts; j++) {
-                        if (poly->GetId(j) == itr->first) {
-                            counts[poly->GetId((j+1)%numPts)]++;
-                            counts[poly->GetId((j+numPts-1)%numPts)]++;
-                            break;
-                        }
-                    }
-                }
-
-                std::set<int> &ends = srcs[itr->first] == 0 ? endsA : endsB;
-
-                std::map<int, int>::const_iterator itr3;
-
-                int filtered = 0;
-
-                IdsType ones;
-
-                for (itr3 = counts.begin(); itr3 != counts.end(); ++itr3) {
-                    if (itr3->second == 1) {
-                        if (ends.count(itr3->first) == 1) {
-                            filtered++;
-                        } else {
-                            ones.push_back(itr3->first);
-                        }
-                    }
-                }
-
-                if (filtered < 2) {
-                    // die region wird nicht von zwei linien begrenzt
-                    std::cout << "E5_1: polygons [";
-
-                    for (itr2 = itr->second.begin(); itr2 != itr->second.end(); ++itr2) {
-                        std::cout << *itr2 << ", ";
-                    }
-
-                    std::cout << "] on point " << itr->first << " are not bounded by two lines" << std::endl;
-
-                    ++err;
-
-                } else if (ones.size() > 0) {
-                    // ganze region existiert, es sind aber nicht alle punkte miteinander verbunden
-                    std::cout << "E5_2: polygons [";
-
-                    for (itr2 = itr->second.begin(); itr2 != itr->second.end(); ++itr2) {
-                        std::cout << *itr2 << ", ";
-                    }
-
-                    std::cout << "] on point " << itr->first << " are not connected (ones [";
-
-                    for (itr2 = ones.begin(); itr2 != ones.end(); ++itr2) {
-                        std::cout << *itr2 << ", ";
-                    }
-
-                    std::cout << "])" << std::endl;
-
-                    ++err;
-                }
-
-            }
-
         }
 
-        line->Delete();
+        if (err == 0) {
+
+            int numLines = lines->GetNumberOfCells();
+
+            double ptA[3], ptB[3];
+
+            vtkIdList *line = vtkIdList::New();
+
+            for (int i = 0; i < numLines; i++) {
+
+                lines->GetCellPoints(i, line);
+
+                lines->GetPoint(line->GetId(0), ptA);
+                lines->GetPoint(line->GetId(1), ptB);
+
+                Utilities::FindPoints(loc, ptA, pts);
+
+                LinksType links;
+
+                // sammelt polygone und deren punkte am jeweiligen ende der linie
+
+                // bei einem normalen schnitt sollte jedes polygon zwei punkte haben
+
+                for (int j = 0; j < pts->GetNumberOfIds(); j++) {
+                    pd->GetPointCells(pts->GetId(j), cells);
+
+                    for (int k = 0; k < cells->GetNumberOfIds(); k++) {
+                        if (origIds->GetValue(cells->GetId(k)) > -1) {
+                            links[cells->GetId(k)].push_back(pts->GetId(j));
+                        }
+                    }
+                }
+
+                Utilities::FindPoints(loc, ptB, pts);
+
+                for (int j = 0; j < pts->GetNumberOfIds(); j++) {
+                    pd->GetPointCells(pts->GetId(j), cells);
+
+                    for (int k = 0; k < cells->GetNumberOfIds(); k++) {
+                        if (origIds->GetValue(cells->GetId(k)) > -1) {
+                            links[cells->GetId(k)].push_back(pts->GetId(j));
+                        }
+                    }
+                }
+
+                LinksType::const_iterator itr;
+
+                IdsType polys;
+
+                for (itr = links.begin(); itr != links.end(); ++itr) {
+                    const IdsType &pts = itr->second;
+                    if (pts.size() > 1) {
+                        // gibt es doppelte punkte
+
+                        pd->GetCellPoints(itr->first, poly);
+                        int numPts = poly->GetNumberOfIds();
+
+                        double a[3], b[3];
+                        for (int j = 0; j < numPts; j++) {
+                            pd->GetPoint(poly->GetId(j), a);
+                            pd->GetPoint(poly->GetId((j+1)%numPts), b);
+
+                            if (Utilities::GetD3(a, b) < 1e-6) {
+                                std::cout << "poly " << itr->first << " has duplicated points" << std::endl;
+
+                                err++;
+                                break;
+                            }
+                        }
+
+                        polys.push_back(itr->first);
+                    }
+                }
+
+                if (err > 0) {
+                    break;
+                }
+
+                if (polys.size() == 2) {
+                    IdsType &f = links[polys[0]],
+                            &s = links[polys[1]];
+
+                    lines->GetPointCells(line->GetId(0), cells);
+                    int linkedA = cells->GetNumberOfIds();
+
+                    lines->GetPointCells(line->GetId(1), cells);
+                    int linkedB = cells->GetNumberOfIds();
+
+                    if (linkedA == linkedB) {
+                        std::set<int> all;
+                        all.insert(f.begin(), f.end());
+                        all.insert(s.begin(), s.end());
+
+                        if (all.size() < 4) {
+                            err++;
+                        }
+                    } else if (linkedA == 4) {
+                        if (f[0] == s[0]) {
+                            err++;
+                        }
+                    } else {
+                        if (f[1] == s[1]) {
+                            err++;
+                        }
+                    }
+
+                    if (err > 0) {
+                        std::cout << "polys " << polys[0] << ", " << polys[1]
+                            << " are connected" << std::endl;
+                    }
+
+                } else if (polys.size() == 1) {
+                    IdsType &f = links[polys[0]];
+
+                    if (f.size() < 3) {
+                        std::cout << "line " << i << " has too few neighbors" << std::endl;
+                        err++;
+                    } else {
+                        if (f[0] == f[1] || f[0] == f[2] || f[1] == f[2]) {
+                            std::cout << "poly " << polys[0] << " is self connected" << std::endl;
+                            err++;
+                        }
+                    }
+                } else if (polys.size() == 0) {
+                    std::cout << "line " << i << " has zero neighbors" << std::endl;
+                    err++;
+                }
+
+                // sucht nach lücken
+
+                IdsType::const_iterator itr2, itr3;
+
+                for (int j = 0; j < 2 && err < 1; j++) {
+                    double pt[3];
+                    lines->GetPoint(line->GetId(j), pt);
+
+                    IdsType ids;
+
+                    Utilities::FindPoints(loc, pt, pts);
+                    int numPts = pts->GetNumberOfIds();
+
+                    for (int k = 0; k < numPts; k++) {
+                        pd->GetPointCells(pts->GetId(k), cells);
+                        int numCells = cells->GetNumberOfIds();
+
+                        for (int l = 0; l < numCells; l++) {
+                            if (origIds->GetValue(cells->GetId(l)) > -1) {
+
+                                pd->GetCellPoints(cells->GetId(l), poly);
+                                int numPts_ = poly->GetNumberOfIds();
+
+                                for (int m = 0; m < numPts_; m++) {
+                                    if (poly->GetId(m) == pts->GetId(k)) {
+                                        ids.push_back(poly->GetId((m+1)%numPts_));
+                                        ids.push_back(poly->GetId((m+numPts_-1)%numPts_));
+
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                    }
+
+                    std::sort(ids.begin(), ids.end());
+
+                    IdsType ids2 = ids;
+                    ids2.erase(std::unique(ids2.begin(), ids2.end()), ids2.end());
+
+                    IdsType ids3;
+                    for (itr2 = ids2.begin(); itr2 != ids2.end(); ++itr2) {
+                        if (std::count(ids.begin(), ids.end(), *itr2) == 1) {
+                            ids3.push_back(*itr2);
+                        }
+                    }
+
+                    int c = 0;
+
+                    for (itr2 = ids3.begin(); itr2 != ids3.end(); ++itr2) {
+                        for (itr3 = itr2+1; itr3 != ids3.end(); ++itr3) {
+                            double a[3], b[3];
+                            pd->GetPoint(*itr2, a);
+                            pd->GetPoint(*itr3, b);
+
+                            if (Utilities::GetD3(a, b) < 1e-6) {
+                                c++;
+                            }
+                        }
+                    }
+
+                    if (ids3.size() != 2*c) {
+                        std::cout << "line " << i << " has gaps at " << line->GetId(j) << std::endl;
+
+                        err++;
+                    }
+
+                }
+
+            }
+
+            line->Delete();
+
+        }
 
         return err;
 
@@ -403,14 +340,22 @@ int main (int argc, char *argv[]) {
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, cu->GetOutputPort());
         bf->SetInputConnection(1, cyl->GetOutputPort());
+
+#ifndef DD
         bf->MergeAllOn();
+#else
+        bf->SetOperModeToDifference();
+#endif
 
         bf->Update();
 
+#ifndef DD
         Test test(bf->GetOutput(0), bf->GetOutput(1));
         int ok = test.run();
-
-        //GeomHelper::WriteVTK("test1.vtk", bf->GetOutput(0));
+#else
+        int ok = 0;
+        Utilities::WriteVTK("test0.vtk", bf->GetOutput(0));
+#endif
 
         bf->Delete();
         cyl->Delete();
@@ -430,14 +375,22 @@ int main (int argc, char *argv[]) {
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, cu->GetOutputPort());
         bf->SetInputConnection(1, cyl->GetOutputPort());
+
+#ifndef DD
         bf->MergeAllOn();
+#else
+        bf->SetOperModeToDifference();
+#endif
 
         bf->Update();
 
+#ifndef DD
         Test test(bf->GetOutput(0), bf->GetOutput(1));
         int ok = test.run();
-
-        //GeomHelper::WriteVTK("test2.vtk", bf->GetOutput(0));
+#else
+        int ok = 0;
+        Utilities::WriteVTK("test1.vtk", bf->GetOutput(0));
+#endif
 
         bf->Delete();
         cyl->Delete();
@@ -456,14 +409,22 @@ int main (int argc, char *argv[]) {
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, cu->GetOutputPort());
         bf->SetInputConnection(1, cyl->GetOutputPort());
+
+#ifndef DD
         bf->MergeAllOn();
+#else
+        bf->SetOperModeToDifference();
+#endif
 
         bf->Update();
 
+#ifndef DD
         Test test(bf->GetOutput(0), bf->GetOutput(1));
         int ok = test.run();
-
-        //GeomHelper::WriteVTK("test3.vtk", bf->GetOutput(0));
+#else
+        int ok = 0;
+        Utilities::WriteVTK("test2.vtk", bf->GetOutput(0));
+#endif
 
         bf->Delete();
         cyl->Delete();
@@ -482,14 +443,22 @@ int main (int argc, char *argv[]) {
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, cubeA->GetOutputPort());
         bf->SetInputConnection(1, cubeB->GetOutputPort());
+
+#ifndef DD
         bf->MergeAllOn();
+#else
+        bf->SetOperModeToDifference();
+#endif
 
         bf->Update();
 
+#ifndef DD
         Test test(bf->GetOutput(0), bf->GetOutput(1));
         int ok = test.run();
-
-        //GeomHelper::WriteVTK("test4.vtk", bf->GetOutput(0));
+#else
+        int ok = 0;
+        Utilities::WriteVTK("test3.vtk", bf->GetOutput(0));
+#endif
 
         bf->Delete();
         cubeB->Delete();
@@ -506,14 +475,22 @@ int main (int argc, char *argv[]) {
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, cubeA->GetOutputPort());
         bf->SetInputConnection(1, cubeB->GetOutputPort());
+
+#ifndef DD
         bf->MergeAllOn();
+#else
+        bf->SetOperModeToDifference();
+#endif
 
         bf->Update();
 
+#ifndef DD
         Test test(bf->GetOutput(0), bf->GetOutput(1));
         int ok = test.run();
-
-        //GeomHelper::WriteVTK("test5.vtk", bf->GetOutput(0));
+#else
+        int ok = 0;
+        Utilities::WriteVTK("test4.vtk", bf->GetOutput(0));
+#endif
 
         bf->Delete();
         cubeB->Delete();
@@ -522,6 +499,8 @@ int main (int argc, char *argv[]) {
         return ok;
 
     } else if (t == 5) {
+        // mehrer punkte in einem strip ohne fläche
+         
         vtkCubeSource *cu = vtkCubeSource::New();
 
         vtkPolyData *cyl = vtkPolyData::New();
@@ -542,11 +521,11 @@ int main (int argc, char *argv[]) {
         int ind = 0;
 
         for (int i = 0; i < 32; i++) {
-            double x0 = .5*cos(i*2*M_PI/32);
-            double z0 = .5*sin(i*2*M_PI/32);
+            double x0 = .5*std::cos(i*2*pi/32);
+            double z0 = .5*std::sin(i*2*pi/32);
 
-            double x1 = .5*cos((i+1)*2*M_PI/32);
-            double z1 = .5*sin((i+1)*2*M_PI/32);
+            double x1 = .5*std::cos((i+1)*2*pi/32);
+            double z1 = .5*std::sin((i+1)*2*pi/32);
 
             pts->SetPoint(ind, x0, .75, z0);
             top->SetId(i, ind++);
@@ -583,14 +562,29 @@ int main (int argc, char *argv[]) {
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, cu->GetOutputPort());
         bf->SetInputConnection(1, prod->GetOutputPort());
+
+#ifndef DD
         bf->MergeAllOn();
+#else
+        bf->SetOperModeToDifference();
+#endif
 
         bf->Update();
 
+#ifndef DD
         Test test(bf->GetOutput(0), bf->GetOutput(1));
         int ok = test.run();
+#else
+        int ok = 0;
+        Utilities::WriteVTK("test5.vtk", bf->GetOutput(0));
+#endif
 
-        //GeomHelper::WriteVTK("test6.vtk", bf->GetOutput(0));
+        bf->Delete();
+        prod->Delete();
+        
+        pts->Delete();
+        cyl->Delete();
+        cu->Delete();
 
         return ok;
 
@@ -606,14 +600,22 @@ int main (int argc, char *argv[]) {
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, cu->GetOutputPort());
         bf->SetInputConnection(1, sp->GetOutputPort());
+
+#ifndef DD
         bf->MergeAllOn();
+#else
+        bf->SetOperModeToDifference();
+#endif
 
         bf->Update();
 
+#ifndef DD
         Test test(bf->GetOutput(0), bf->GetOutput(1));
         int ok = test.run();
-
-        //GeomHelper::WriteVTK("test7.vtk", bf->GetOutput(0));
+#else
+        int ok = 0;
+        Utilities::WriteVTK("test6.vtk", bf->GetOutput(0));
+#endif
 
         bf->Delete();
         sp->Delete();
@@ -623,35 +625,38 @@ int main (int argc, char *argv[]) {
 
     }  else if (t == 7) {
         // enthält schmale schnitte an den ecken der polygone
-        // gelöst mit einführung von CAPT_*
-
-        // außerdem ist hier mind. eine überlappung enthalten
-        // siehe ResolveOverlaps
 
         vtkSphereSource *spA = vtkSphereSource::New();
         spA->SetRadius(50);
-        spA->SetPhiResolution(100);
-        spA->SetThetaResolution(100);
+        spA->SetPhiResolution(6);
+        spA->SetThetaResolution(6);
+        
 
         vtkSphereSource *spB = vtkSphereSource::New();
         spB->SetRadius(50);
-        spB->SetCenter(25, 0, 0);
+        spB->SetCenter(0, 25, 0);
         spB->SetPhiResolution(10);
-        spB->SetThetaResolution(10);
-
-        // die gleichen probleme kann man auch mit 79, 215 und 296 statt 10 erzeugen
+        spB->SetThetaResolution(333);
 
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, spA->GetOutputPort());
         bf->SetInputConnection(1, spB->GetOutputPort());
+
+#ifndef DD
         bf->MergeAllOn();
+#else
+        bf->SetOperModeToDifference();
+#endif
 
         bf->Update();
 
+#ifndef DD
         Test test(bf->GetOutput(0), bf->GetOutput(1));
         int ok = test.run();
-
-        //GeomHelper::WriteVTK("test8.vtk", bf->GetOutput(0));
+#else
+        int ok = 0;
+        Utilities::WriteVTK("test7.vtk", bf->GetOutput(0));
+#endif
 
         bf->Delete();
         spB->Delete();
@@ -660,30 +665,36 @@ int main (int argc, char *argv[]) {
         return ok;
 
     } else if (t == 8) {
-        // bei linie 50 wird auch ein polygon übersprungen
-
         vtkSphereSource *spA = vtkSphereSource::New();
         spA->SetRadius(50);
-        spA->SetPhiResolution(100);
+        spA->SetPhiResolution(97);
         spA->SetThetaResolution(100);
 
         vtkSphereSource *spB = vtkSphereSource::New();
         spB->SetRadius(50);
         spB->SetCenter(25, 0, 0);
-        spB->SetPhiResolution(173);
-        spB->SetThetaResolution(173);
+        spB->SetPhiResolution(81);
+        spB->SetThetaResolution(195);
 
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, spA->GetOutputPort());
         bf->SetInputConnection(1, spB->GetOutputPort());
+
+#ifndef DD
         bf->MergeAllOn();
+#else
+        bf->SetOperModeToDifference();
+#endif
 
         bf->Update();
 
+#ifndef DD
         Test test(bf->GetOutput(0), bf->GetOutput(1));
         int ok = test.run();
-
-        //GeomHelper::WriteVTK("test9.vtk", bf->GetOutput(0));
+#else
+        int ok = 0;
+        Utilities::WriteVTK("test8.vtk", bf->GetOutput(0));
+#endif
 
         bf->Delete();
         spB->Delete();
@@ -693,9 +704,6 @@ int main (int argc, char *argv[]) {
 
     } else if (t == 9) {
         // enthält sehr scharfwinklige schnitte mit kanten
-        // ein punkt im toleranzbereich einer ecke, der andere in der mitte einer angrenzenden kante
-
-        // gelöst mit ts
 
         vtkSphereSource *spA = vtkSphereSource::New();
         spA->SetRadius(50);
@@ -711,14 +719,22 @@ int main (int argc, char *argv[]) {
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, spA->GetOutputPort());
         bf->SetInputConnection(1, spB->GetOutputPort());
+
+#ifndef DD
         bf->MergeAllOn();
+#else
+        bf->SetOperModeToDifference();
+#endif
 
         bf->Update();
 
+#ifndef DD
         Test test(bf->GetOutput(0), bf->GetOutput(1));
         int ok = test.run();
-
-        //GeomHelper::WriteVTK("test10.vtk", bf->GetOutput(0));
+#else
+        int ok = 0;
+        Utilities::WriteVTK("test9.vtk", bf->GetOutput(0));
+#endif
 
         bf->Delete();
         spB->Delete();
@@ -726,5 +742,185 @@ int main (int argc, char *argv[]) {
 
         return ok;
 
+    } else if (t == 10) {
+        // strip liegt auf einer kante und beginnt im gleichen punkt
+
+        vtkCubeSource *cu = vtkCubeSource::New();
+
+        vtkCylinderSource *cyl = vtkCylinderSource::New();
+        cyl->SetResolution(32);
+        cyl->SetRadius(.25);
+        cyl->SetCenter(.25, 0, 0);
+
+        vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
+        bf->SetInputConnection(0, cu->GetOutputPort());
+        bf->SetInputConnection(1, cyl->GetOutputPort());
+
+#ifndef DD
+        bf->MergeAllOn();
+#else
+        bf->SetOperModeToDifference();
+#endif
+
+        bf->Update();
+
+#ifndef DD
+        Test test(bf->GetOutput(0), bf->GetOutput(1));
+        int ok = test.run();
+#else
+        int ok = 0;
+        Utilities::WriteVTK("test10.vtk", bf->GetOutput(0));
+#endif
+
+        bf->Delete();
+        cyl->Delete();
+        cu->Delete();
+
+        return ok;
+
+    } else if (t == 11) {
+        vtkCubeSource *cubeA = vtkCubeSource::New();
+
+        vtkTriangleFilter *tf = vtkTriangleFilter::New();
+        tf->SetInputConnection(cubeA->GetOutputPort());
+
+        vtkLinearSubdivisionFilter *sf = vtkLinearSubdivisionFilter::New();
+        sf->SetInputConnection(tf->GetOutputPort());
+        sf->SetNumberOfSubdivisions(4);
+
+        vtkCubeSource *cubeB = vtkCubeSource::New();
+        cubeB->SetXLength(.5);
+        cubeB->SetZLength(.5);
+        cubeB->SetCenter(0, 0, .25);
+
+        vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
+        bf->SetInputConnection(0, sf->GetOutputPort());
+        bf->SetInputConnection(1, cubeB->GetOutputPort());
+
+#ifndef DD
+        bf->MergeAllOn();
+#else
+        bf->SetOperModeToDifference();
+#endif
+
+        bf->Update();
+
+#ifndef DD
+        Test test(bf->GetOutput(0), bf->GetOutput(1));
+        int ok = test.run();
+#else
+        int ok = 0;
+        Utilities::WriteVTK("test11.vtk", bf->GetOutput(0));
+#endif
+
+        bf->Delete();
+        sf->Delete();
+        tf->Delete();
+        cubeB->Delete();
+        cubeA->Delete();
+
+        return ok;
+
+    } else if (t == 12) {
+        vtkVectorText *text = vtkVectorText::New();
+        text->SetText("zippy84");
+
+        vtkLinearExtrusionFilter *ef = vtkLinearExtrusionFilter::New();
+        ef->SetInputConnection(text->GetOutputPort());
+        ef->SetExtrusionTypeToNormalExtrusion();
+        ef->SetVector(0, 0, 1);
+
+        // TODO: vtkPolyDataBooleanFilter muss prüfen, ob polygone konsistent orientiert sind
+        // -> AddAdjacentPoints und CombineRegions funktionieren sonst nicht
+        vtkPolyDataNormals *nf = vtkPolyDataNormals::New();
+        nf->SetInputConnection(ef->GetOutputPort());
+        nf->FlipNormalsOn();
+        nf->ConsistencyOn();
+
+        nf->Update();
+
+        double ext[6];
+        nf->GetOutput()->GetPoints()->GetBounds(ext);
+
+        double dx = ext[0]+(ext[1]-ext[0])/2,
+            dy = ext[2]+(ext[3]-ext[2])/2;
+
+        vtkCubeSource *cube = vtkCubeSource::New();
+        cube->SetXLength(10);
+        cube->SetYLength(5);
+        cube->SetCenter(dx, dy, .5);
+
+        vtkTriangleFilter *tf = vtkTriangleFilter::New();
+        tf->SetInputConnection(cube->GetOutputPort());
+
+        vtkLinearSubdivisionFilter *sf = vtkLinearSubdivisionFilter::New();
+        sf->SetInputConnection(tf->GetOutputPort());
+        sf->SetNumberOfSubdivisions(3);
+
+        vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
+        bf->SetInputConnection(0, nf->GetOutputPort());
+        bf->SetInputConnection(1, sf->GetOutputPort());
+
+#ifndef DD
+        bf->MergeAllOn();
+#else
+        bf->SetOperModeToDifference2();
+#endif
+
+        bf->Update();
+
+#ifndef DD
+        Test test(bf->GetOutput(0), bf->GetOutput(1));
+        int ok = test.run();
+#else
+        int ok = 0;
+        Utilities::WriteVTK("test12.vtk", bf->GetOutput(0));
+#endif
+
+        bf->Delete();
+        sf->Delete();
+        tf->Delete();
+        cube->Delete();
+        ef->Delete();
+        nf->Delete();
+        text->Delete();
+
+        return ok;
+
+    } else if (t == 13) {
+        vtkSphereSource *sp = vtkSphereSource::New();
+        sp->SetRadius(.5);
+        sp->SetPhiResolution(8);
+        sp->SetThetaResolution(8);
+
+        vtkPlaneSource *pl = vtkPlaneSource::New();
+        pl->SetResolution(5, 5);
+
+        vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
+        bf->SetInputConnection(0, sp->GetOutputPort());
+        bf->SetInputConnection(1, pl->GetOutputPort());
+
+#ifndef DD
+        bf->MergeAllOn();
+#else
+        bf->SetOperModeToUnion();
+#endif
+
+        bf->Update();
+
+#ifndef DD
+        Test test(bf->GetOutput(0), bf->GetOutput(1));
+        int ok = test.run();
+#else
+        int ok = 0;
+        Utilities::WriteVTK("test13.vtk", bf->GetOutput(0));
+#endif
+
+        bf->Delete();
+        pl->Delete();
+        sp->Delete();
+
+        return ok;
     }
+
 }

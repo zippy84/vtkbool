@@ -20,10 +20,15 @@
 #include <vector>
 #include <deque>
 #include <map>
+#include <set>
 #include <utility>
+#include <iostream>
 
 #include <vtkPolyDataAlgorithm.h>
 #include <vtkKdTreePointLocator.h>
+
+#include "Utilities.h"
+using Utilities::IdsType;
 
 #define LOC_NONE 0
 #define LOC_INSIDE 1
@@ -38,112 +43,176 @@
 #define CAPT_EDGE 1
 #define CAPT_A 2
 #define CAPT_B 3
-#define CAPT_C 4
 
-class StripPtType {
+#define SIDE_START 0
+#define SIDE_END 1
+
+class StripPt {
 public:
-    StripPtType () : T(0), t(0), edgeA(-1), edgeB(-1), onEnd(false), capt(CAPT_NOT) {}
+    StripPt () : t(0), capt(CAPT_NOT) {
+        edge[0] = NOUSE;
+        edge[1] = NOUSE;
+    }
 
-    double T, t;
+    double t;
     int ind;
     double pt[3];
-    int edgeA, edgeB;
-    bool onEnd;
+    int edge[2];
     int capt;
     double captPt[3];
 
     double cutPt[3];
 
-    bool operator< (const StripPtType &other) const {
+    friend std::ostream& operator<< (std::ostream &out, const StripPt &s) {
+        out << "ind=" << s.ind
+            << ", edge=[" << s.edge[0] << ", " << s.edge[1] << "]"
+            << ", t=" << s.t
+            << ", capt=" << s.capt;
+        return out;
+    }
+};
+
+class StripPtR {
+public:
+    StripPtR (int _ind) : ind(_ind) {
+        strip = NOUSE;
+        side = NOUSE;
+        ref = NOUSE;
+    }
+
+    int ind;
+    int desc[2];
+
+    // nicht gesetzt bei CAPT_NOT
+    int strip;
+    int side;
+    int ref;
+
+    friend std::ostream& operator<< (std::ostream &out, const StripPtR &s) {
+        out << "ind=" << s.ind
+            << ", desc=[" << s.desc[0] << ", " << s.desc[1] << "]"
+            << ", strip=" << s.strip
+            << ", side=" << s.side
+            << ", ref=" << s.ref;
+        return out;
+    }
+};
+
+typedef std::map<int, StripPt> StripPtsType;
+typedef std::deque<StripPtR> StripType;
+typedef std::vector<StripType> StripsType;
+
+class PStrips {
+public:
+    PStrips () {}
+    double n[3];
+    IdsType poly;
+    StripPtsType pts;
+    StripsType strips;
+};
+
+typedef std::map<int, PStrips> PolyStripsType;
+
+typedef std::vector<std::reference_wrapper<StripPtR>> RefsType;
+
+class StripPtL {
+public:
+    StripPtL (const StripPt &sp) : ind(sp.ind) {
+        CPY(pt, sp.pt)
+        CPY(cutPt, sp.cutPt)
+    }
+
+    int ind;
+    double pt[3];
+    double cutPt[3];
+
+    bool operator< (const StripPtL &other) const {
+        return ind < other.ind;
+    }
+};
+
+class StripPtL2 {
+public:
+    StripPtL2 (const StripPt &sp) : ind(sp.ind), t(sp.t) {
+        CPY(pt, sp.pt)
+        edge[0] = sp.edge[0];
+        edge[1] = sp.edge[1];
+    }
+
+    int ind;
+    int edge[2];
+    double pt[3];
+    double t;
+
+    bool operator< (const StripPtL2 &other) const {
+        return ind < other.ind;
+    }
+};
+
+class StripPtL3 {
+public:
+    StripPtL3 (const double *_pt, double _t, int _ind = NOUSE) : t(_t), ind(_ind) {
+        CPY(pt, _pt)
+    }
+    int ind;
+    double pt[3];
+    double t;
+
+    bool operator< (const StripPtL3 &other) const {
         return t < other.t;
     }
 
-    bool operator== (const StripPtType &other) const {
-        return ind == other.ind;
+    friend std::ostream& operator<< (std::ostream &out, const StripPtL3 &s) {
+        out << "ind=" << s.ind
+            << ", t=" << s.t
+            << ", pt=[" << s.pt[0] << ", " << s.pt[1] << ", " << s.pt[2] << "]";
+        return out;
     }
-
-#ifdef DEBUG
-    // zur überprüfung der sortierung
-    int pos;
-#endif
 };
 
-typedef std::deque<StripPtType> StripType;
-
-typedef std::vector<StripType> StripsType;
-
-typedef std::map<int, StripsType> PolyStripsType;
-
-typedef std::map<int, StripPtType> StripPointsType;
-
-typedef std::vector<std::pair<double, int> > ReplsType;
-
-class MergeVertType {
+class MergePt {
 public:
-    MergeVertType () : used(false) {}
-
+    MergePt (int _polyInd, int _ind, double *_pt) : polyInd(_polyInd), ind(_ind) {
+        CPY(pt, _pt)
+    }
     int polyInd;
-
-    // dies ist die ecke die ausgetauscht werden muss
-    int vert;
-
-    // dies ist der punkt für die paarbildung
-    double pt[3];
-
-    bool used;
-
-#ifdef DEBUG
     int ind;
-#endif
-
+    double pt[3];
 };
 
 
 class VTK_EXPORT vtkPolyDataBooleanFilter : public vtkPolyDataAlgorithm {
     vtkPolyData *resultA, *resultB, *contLines;
-
     vtkPolyData *modPdA, *modPdB;
-
     vtkCellData *cellDataA, *cellDataB;
 
     unsigned long timePdA, timePdB;
 
-    std::vector<int> locked;
+    PolyStripsType polyStripsA, polyStripsB;
 
-    StripPointsType GetStripPoints(vtkPolyData *pd, int polyInd, std::deque<int> &lines);
-    PolyStripsType GetPolyStrips (vtkPolyData *pd, vtkIntArray *conts);
+    std::set<int> involvedA, involvedB;
 
-    StripsType GetAllStrips (PolyStripsType &polyStrips);
-
-    void CutCells (vtkPolyData *pd, PolyStripsType &polyStrips);
-    void RemoveDuplicates (vtkPolyData *pd, std::deque<int> &lines);
-
-    void CompleteStrips (StripsType &strips);
-
+    void GetStripPoints (vtkPolyData *pd, PStrips &pStrips, IdsType &lines);
+    void GetPolyStrips (vtkPolyData *pd, vtkIntArray *conts, PolyStripsType &polyStrips);
+    void RemoveDuplicates (IdsType &lines);
+    void CompleteStrips (PStrips &pStrips);
     bool HasArea (StripType &strip);
-
-    int origPtsNoA, origPtsNoB;
-
-    void RestoreOrigPoints (vtkPolyData *pd, int origPtsNo, StripsType &strips);
-    void RestoreOrigPt (vtkPolyData *pd, int origPtsNo, vtkKdTreePointLocator *loc, StripPtType &stripPt);
-
-    void ResolveOverlaps (vtkPolyData *pd, StripsType &strips, vtkIntArray *conts);
-
-    void AddAdjacentPoints (vtkPolyData *pd, StripsType &strips, vtkIntArray *conts);
-    void DisjoinPolys (vtkPolyData *pd, StripsType &strips);
-    void MergePoints (vtkPolyData *pd, StripsType &strips);
-
+    void CutCells (vtkPolyData *pd, PolyStripsType &polyStrips);
+    void RestoreOrigPoints (vtkPolyData *pd, PolyStripsType &polyStrips);
+    void DisjoinPolys (vtkPolyData *pd, PolyStripsType &polyStrips);
+    void ResolveOverlaps (vtkPolyData *pd, vtkIntArray *conts, PolyStripsType &polyStrips);
+    void AddAdjacentPoints (vtkPolyData *pd, vtkIntArray *conts, PolyStripsType &polyStrips);
+    void MergePoints (vtkPolyData *pd, PolyStripsType &polyStrips);
+    void DecomposePolys ();
     void CombineRegions ();
     void MergeRegions ();
 
     int OperMode;
-    bool MergeAll;
+    bool MergeAll, DecPolys;
 
 public:
     vtkTypeMacro(vtkPolyDataBooleanFilter, vtkPolyDataAlgorithm);
     static vtkPolyDataBooleanFilter* New ();
-
-    static bool SortFct (const StripType &stripA, const StripType &stripB, double *n);
 
     vtkSetClampMacro(OperMode, int, OPER_UNION, OPER_DIFFERENCE2);
     vtkGetMacro(OperMode, int);
@@ -156,6 +225,10 @@ public:
     vtkSetMacro(MergeAll, bool);
     vtkGetMacro(MergeAll, bool);
     vtkBooleanMacro(MergeAll, bool);
+
+    vtkSetMacro(DecPolys, bool);
+    vtkGetMacro(DecPolys, bool);
+    vtkBooleanMacro(DecPolys, bool);
 
 protected:
     vtkPolyDataBooleanFilter ();
