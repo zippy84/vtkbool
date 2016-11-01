@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 project(vtkbool)
 
-set(CMAKE_CXX_FLAGS "-std=c++0x -Wno-deprecated -fPIC")
+set(CMAKE_CXX_FLAGS "-std=c++11 -Wno-deprecated -fPIC")
 
 option(BUILD_PARAVIEW_PLUGIN "" On)
 option(BUILD_AS_DEBUG "" Off)
@@ -10,7 +10,8 @@ option(BUILD_TESTING "" Off)
 set(srcs
     vtkPolyDataBooleanFilter.cxx
     vtkPolyDataContactFilter.cxx
-    GeomHelper.cxx)
+    Utilities.cxx
+    Decomposer.cxx)
 
 include_directories(".")
 
@@ -27,7 +28,7 @@ else()
 
     #unset(VTK_DIR CACHE)
 
-    find_package(VTK REQUIRED COMPONENTS vtkFiltersSources vtkIOLegacy NO_MODULE)
+    find_package(VTK REQUIRED COMPONENTS vtkFiltersSources vtkIOLegacy vtkFiltersExtraction vtkFiltersGeometry vtkFiltersModeling vtkRenderingFreeType NO_MODULE)
 
     if(VTK_FOUND)
         include(${VTK_USE_FILE})
@@ -41,16 +42,9 @@ else()
             add_executable(testing testing/testing.cxx)
             target_link_libraries(testing ${PROJECT_NAME} ${VTK_LIBRARIES})
 
-            add_test(Test_0 testing 0)
-            add_test(Test_1 testing 1)
-            add_test(Test_2 testing 2)
-            add_test(Test_3 testing 3)
-            add_test(Test_4 testing 4)
-            add_test(Test_5 testing 5)
-            add_test(Test_6 testing 6)
-            add_test(Test_7 testing 7)
-            add_test(Test_8 testing 8)
-            add_test(Test_9 testing 9)
+            foreach(i RANGE 13)
+                add_test(Test_${i} testing ${i})
+            endforeach()
 
         endif()
 
