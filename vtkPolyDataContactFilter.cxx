@@ -41,7 +41,9 @@
 #include <vtkCellArray.h>
 
 #include "vtkPolyDataContactFilter.h"
-#include "GeomHelper.h"
+#include "Utilities.h"
+
+#undef DEBUG
 
 vtkStandardNewMacro(vtkPolyDataContactFilter);
 
@@ -136,34 +138,22 @@ int vtkPolyDataContactFilter::ProcessRequest (vtkInformation *request, vtkInform
         contLines->GetCellData()->AddArray(contB);
 
         vtkCleanPolyData *clean = vtkCleanPolyData::New();
-
-#if (VTK_MAJOR_VERSION == 5)
-        clean->SetInput(contLines);
-#else
         clean->SetInputData(contLines);
-#endif
         clean->ToleranceIsAbsoluteOn();
         clean->SetAbsoluteTolerance(1e-5);
         clean->Update();
 
         resultA->DeepCopy(clean->GetOutput());
 
-        std::vector<int> toRemove;
+        int numCellsA = resultA->GetNumberOfCells();
 
-        for (unsigned int i = 0; i < resultA->GetNumberOfCells(); i++) {
+        for (int i = 0; i < numCellsA; i++) {
             if (resultA->GetCellType(i) != VTK_LINE) {
-
-                //resultA->DeleteCell(i);
-
-                toRemove.push_back(i);
-
+                resultA->DeleteCell(i);
             }
-
         }
 
-        //resultA->RemoveDeletedCells();
-
-        GeomHelper::RemoveCells(resultA, toRemove);
+        resultA->RemoveDeletedCells();
 
         clean->Delete();
         mat->Delete();
@@ -187,13 +177,12 @@ void vtkPolyDataContactFilter::PreparePolyData (vtkPolyData *pd) {
     pd->GetCellData()->Initialize();
     pd->GetPointData()->Initialize();
 
-    vtkIdType cellNbr = pd->GetNumberOfCells();
+    vtkIdType numCells = pd->GetNumberOfCells();
 
     vtkIntArray *cellIds = vtkIntArray::New();
-
     vtkIntArray *stripIds = vtkIntArray::New();
 
-    for (unsigned int i = 0; i < cellNbr; i++) {
+    for (int i = 0; i < numCells; i++) {
         cellIds->InsertNextValue(i);
 
         if (pd->GetCellType(i) == VTK_TRIANGLE_STRIP) {
@@ -208,7 +197,7 @@ void vtkPolyDataContactFilter::PreparePolyData (vtkPolyData *pd) {
     vtkIdType n;
     vtkIdType *pts;
 
-    unsigned int i = 0;
+    int i = 0;
 
     for (strips->InitTraversal(); strips->GetNextCell(n, pts);) {
         cells->Reset();
@@ -219,25 +208,19 @@ void vtkPolyDataContactFilter::PreparePolyData (vtkPolyData *pd) {
             pd->InsertNextCell(VTK_TRIANGLE, n, pts);
             cellIds->InsertNextValue(stripIds->GetValue(i));
 
-            cellNbr++;
+            numCells++;
         }
 
         i++;
 
     }
 
-    std::vector<int> toRemove;
-
     int type;
-
-    for (unsigned int i = 0; i < cellNbr; i++) {
+    for (int i = 0; i < numCells; i++) {
         type = pd->GetCellType(i);
 
         if (type != VTK_POLYGON && type != VTK_QUAD && type != VTK_TRIANGLE) {
-
-            //pd->DeleteCell(i);
-
-            toRemove.push_back(i);
+            pd->DeleteCell(i);
         }
 
     }
@@ -256,9 +239,7 @@ void vtkPolyDataContactFilter::PreparePolyData (vtkPolyData *pd) {
     pd->GetPoints()->SetData(doublePts);
     doublePts->Delete();
 
-    //pd->RemoveDeletedCells();
-
-    GeomHelper::RemoveCells(pd, toRemove);
+    pd->RemoveDeletedCells();
 
 }
 
@@ -279,7 +260,7 @@ InterPtType vtkPolyDataContactFilter::InterEdgeLine (double *eA, double *eB, dou
     double p[3];
     vtkMath::Subtract(eA, pt, p);
 
-    double w = std::fabs(vtkMath::Determinant3x3(r, e, p));
+    double w = std::abs(vtkMath::Determinant3x3(r, e, p));
 
     if (w < 1e-4) { // ~89.995deg
         // schnittpunkt ermitteln
@@ -338,8 +319,10 @@ InterPtsType vtkPolyDataContactFilter::InterPolyLine (vtkPoints *pts, vtkIdList 
 
     // durchläuft die kanten und ermittelt die schnittpunkte
 
-    for (int i = 0; i < poly->GetNumberOfIds(); i++) {
-        int j = (i+1)%poly->GetNumberOfIds();
+    int numPts = poly->GetNumberOfIds();
+
+    for (int i = 0; i < numPts; i++) {
+        int j = (i+1)%numPts;
 
         // kante ermitteln
 
@@ -387,7 +370,7 @@ InterPtsType vtkPolyDataContactFilter::InterPolyLine (vtkPoints *pts, vtkIdList 
     if (interPts.size() > 1) {
 
         double n[3];
-        GeomHelper::ComputeNormal(pts, poly, n);
+        Utilities::ComputeNormal(pts, poly, n);
 
         double p[3], d;
 
@@ -412,8 +395,8 @@ InterPtsType vtkPolyDataContactFilter::InterPolyLine (vtkPoints *pts, vtkIdList 
 
             if (shared > -1 && (itr->end == shared || (itr+1)->end == shared)) {
 
-                int prev = (shared+poly->GetNumberOfIds()-1)%poly->GetNumberOfIds();
-                int next = (shared+1)%poly->GetNumberOfIds();
+                int prev = (shared+numPts-1)%numPts;
+                int next = (shared+1)%numPts;
 
                 double prevPt[3], nextPt[3];
 
@@ -443,11 +426,9 @@ InterPtsType vtkPolyDataContactFilter::InterPolyLine (vtkPoints *pts, vtkIdList 
         std::vector<const InterPtType*>::const_iterator itr2;
 
         std::cout << "omits [";
-
         for (itr2 = omits.begin(); itr2 != omits.end(); itr2++) {
             std::cout << (*itr2)->ind << ", ";
         }
-
         std::cout << "]" << std::endl;
 #endif
 
@@ -467,13 +448,13 @@ InterPtsType vtkPolyDataContactFilter::InterPolyLine (vtkPoints *pts, vtkIdList 
 
         InterPtsType::iterator itr3;
 
-        for (unsigned int i = 0; i < poly->GetNumberOfIds(); i++) {
+        for (int i = 0; i < numPts; i++) {
             if (ends.count(i) == 0) {
                 double endPt[3], endD;
 
                 pts->GetPoint(poly->GetId(i), endPt);
 
-                endD = std::fabs(vtkMath::Dot(p, endPt)-d);
+                endD = std::abs(vtkMath::Dot(p, endPt)-d);
 
                 if (endD < 1e-6) {
                     InterPtType inter;
@@ -514,8 +495,8 @@ InterPtsType vtkPolyDataContactFilter::InterPolyLine (vtkPoints *pts, vtkIdList 
 
         // punkte die durch jeweils eine kongruente kante begrenzt sind
 
-        for (unsigned int i = 0; i < poly->GetNumberOfIds(); i++) {
-            int j = (i+1)%poly->GetNumberOfIds();
+        for (int i = 0; i < numPts; i++) {
+            int j = (i+1)%numPts;
 
             if (locs.count(i) == 1 && locs.count(j) == 1) {
                 double ptA[3], ptB[3];
@@ -540,7 +521,7 @@ InterPtsType vtkPolyDataContactFilter::InterPolyLine (vtkPoints *pts, vtkIdList 
                 if (locs[i] > 0 && locs[i] < interPts2.size()-1
                     && interPts2[locs[i]].count == 1) {
 
-                    int prev = poly->GetId((i+poly->GetNumberOfIds()-1)%poly->GetNumberOfIds());
+                    int prev = poly->GetId((i+numPts-1)%numPts);
 
                     double prevPt[3];
                     pts->GetPoint(prev, prevPt);
@@ -558,7 +539,7 @@ InterPtsType vtkPolyDataContactFilter::InterPolyLine (vtkPoints *pts, vtkIdList 
                 if (locs[j] > 0 && locs[j] < interPts2.size()-1
                     && interPts2[locs[j]].count == 1) {
 
-                    int next = poly->GetId((j+1)%poly->GetNumberOfIds());
+                    int next = poly->GetId((j+1)%numPts);
 
                     double nextPt[3];
                     pts->GetPoint(next, nextPt);
@@ -581,7 +562,7 @@ InterPtsType vtkPolyDataContactFilter::InterPolyLine (vtkPoints *pts, vtkIdList 
                 pts->GetPoint(poly->GetId(itr4->end), itr4->pt);
             }
 
-            for (unsigned int i = 0; i < itr4->count; i++) {
+            for (int i = 0; i < itr4->count; i++) {
                 interPts3.push_back(*itr4);
             }
 
@@ -603,9 +584,7 @@ InterPtsType vtkPolyDataContactFilter::InterPolyLine (vtkPoints *pts, vtkIdList 
 void vtkPolyDataContactFilter::InterPolys (vtkIdType idA, vtkIdType idB) {
 
 #ifdef DEBUG
-    std::cout << "InterPolys()" << std::endl;
-
-    std::cout << "idA " << idA << ", idB " << idB << std::endl;
+    std::cout << "InterPolys() -> idA " << idA << ", idB " << idB << std::endl;
 #endif
 
     vtkIdList *polyA = vtkIdList::New();
@@ -618,8 +597,8 @@ void vtkPolyDataContactFilter::InterPolys (vtkIdType idA, vtkIdType idB) {
 
     double nA[3], nB[3], ptA[3], ptB[3], dA, dB;
 
-    GeomHelper::ComputeNormal(pdA->GetPoints(), polyA, nA);
-    GeomHelper::ComputeNormal(pdB->GetPoints(), polyB, nB);
+    Utilities::ComputeNormal(pdA->GetPoints(), polyA, nA);
+    Utilities::ComputeNormal(pdB->GetPoints(), polyB, nB);
 
     pdA->GetPoint(polyA->GetId(0), ptA);
     pdB->GetPoint(polyB->GetId(0), ptB);
@@ -629,7 +608,7 @@ void vtkPolyDataContactFilter::InterPolys (vtkIdType idA, vtkIdType idB) {
 
     // sind die ebenen parallel?
 
-    double p = std::fabs(vtkMath::Dot(nA, nB));
+    double p = std::abs(vtkMath::Dot(nA, nB));
 
     if (p < 0.999999) {
 
@@ -639,12 +618,12 @@ void vtkPolyDataContactFilter::InterPolys (vtkIdType idA, vtkIdType idB) {
         vtkMath::Cross(nA, nB, r);
         vtkMath::Normalize(r);
 
-        // lsg. des lin. gls. mittels cramersche regel
+        // lsg. des lin. gls. mittels cramerscher regel
 
-        unsigned int i = 0;
+        int i = 0;
 
-         for (unsigned int j = 1; j < 3; j++) {
-            if (std::fabs(r[j]) > std::fabs(r[i])) {
+         for (int j = 1; j < 3; j++) {
+            if (std::abs(r[j]) > std::abs(r[i])) {
                 i = j;
             }
         }
@@ -670,14 +649,6 @@ void vtkPolyDataContactFilter::InterPolys (vtkIdType idA, vtkIdType idB) {
         std::cout << "r [" << r[0] << ", " << r[1] << ", " << r[2] << "]"
             << ", s [" << s[0] << ", " << s[1] << ", " << s[2] << "]"
             << std::endl;
-
-        // für paraview
-        std::cout << "s2 [" << (s[0]+10*r[0])
-            << ", " << (s[1]+10*r[1])
-            << ", " << (s[2]+10*r[2])
-            << "]" << std::endl;
-
-
 #endif
 
         InterPtsType intersA(InterPolyLine(pdA->GetPoints(), polyA, r, s));
@@ -731,12 +702,12 @@ OverlapsType vtkPolyDataContactFilter::OverlapLines (InterPtsType &intersA, Inte
 
     OverlapsType ols;
 
-    for (unsigned int i = 0; i < intersA.size(); i += 2) {
+    for (int i = 0; i < intersA.size(); i += 2) {
 
         InterPtType &fA = intersA[i];
         InterPtType &sA = intersA[i+1];
 
-        for (unsigned int j = 0; j < intersB.size(); j += 2) {
+        for (int j = 0; j < intersB.size(); j += 2) {
             InterPtType &fB = intersB[j];
             InterPtType &sB = intersB[j+1];
 
@@ -779,10 +750,13 @@ int vtkPolyDataContactFilter::InterOBBNodes (vtkOBBNode *nodeA, vtkOBBNode *node
     vtkIdList *cellsA = nodeA->Cells;
     vtkIdList *cellsB = nodeB->Cells;
 
-    for (int i = 0; i < cellsA->GetNumberOfIds(); i++) {
+    int numCellsA = cellsA->GetNumberOfIds(),
+        numCellsB = cellsB->GetNumberOfIds();
+
+    for (int i = 0; i < numCellsA; i++) {
         vtkIdType ci = cellsA->GetId(i);
 
-        for (int j = 0; j < cellsB->GetNumberOfIds(); j++) {
+        for (int j = 0; j < numCellsB; j++) {
             vtkIdType cj = cellsB->GetId(j);
 
             self->InterPolys(ci, cj);

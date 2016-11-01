@@ -21,9 +21,7 @@
 #include <algorithm>
 #include <cmath>
 #include <functional>
-
-// siehe std::bind
-using namespace std::placeholders;
+#include <queue>
 
 #include <vtkInformation.h>
 #include <vtkInformationVector.h>
@@ -42,10 +40,22 @@ using namespace std::placeholders;
 
 #include "vtkPolyDataBooleanFilter.h"
 #include "vtkPolyDataContactFilter.h"
-#include "GeomHelper.h"
+
+#include "Utilities.h"
+using Utilities::IdsType;
+using Utilities::GetNormal;
+
+#include "Decomposer.h"
+
+using Decomposer::Base;
+using Decomposer::Transform;
+using Decomposer::DecType;
+using Decomposer::Decompose;
 
 #ifdef DEBUG
 #include <vtkPolyDataWriter.h>
+#include <vtkExtractCells.h>
+#include <vtkGeometryFilter.h>
 #include <ctime>
 #define DIFF(s, e) float(e-s)/CLOCKS_PER_SEC
 #include <numeric>
@@ -73,6 +83,7 @@ vtkPolyDataBooleanFilter::vtkPolyDataBooleanFilter () {
     OperMode = OPER_UNION;
 
     MergeAll = false;
+    DecPolys = false;
 
 }
 
@@ -115,28 +126,20 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
             vtkCleanPolyData *cleanA = vtkCleanPolyData::New();
             cleanA->SetTolerance(1e-9);
-#if (VTK_MAJOR_VERSION == 5)
-            cleanA->SetInput(pdA);
-#else
             cleanA->SetInputData(pdA);
-#endif
             cleanA->Update();
 
             vtkCleanPolyData *cleanB = vtkCleanPolyData::New();
             cleanB->SetTolerance(1e-9);
-#if (VTK_MAJOR_VERSION == 5)
-            cleanB->SetInput(pdB);
-#else
             cleanB->SetInputData(pdB);
-#endif
             cleanB->Update();
 
 #ifdef DEBUG
             std::cout << "Exporting modPdA.vtk" << std::endl;
-            GeomHelper::WriteVTK("modPdA.vtk", cleanA->GetOutput());
+            Utilities::WriteVTK("modPdA.vtk", cleanA->GetOutput());
 
             std::cout << "Exporting modPdB.vtk" << std::endl;
-            GeomHelper::WriteVTK("modPdB.vtk", cleanB->GetOutput());
+            Utilities::WriteVTK("modPdB.vtk", cleanB->GetOutput());
 #endif
 
             // CellData sichern
@@ -164,13 +167,13 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
 #ifdef DEBUG
             std::cout << "Exporting contLines.vtk" << std::endl;
-            GeomHelper::WriteVTK("contLines.vtk", contLines);
+            Utilities::WriteVTK("contLines.vtk", contLines);
 
             std::cout << "Exporting modPdA_1.vtk" << std::endl;
-            GeomHelper::WriteVTK("modPdA_1.vtk", cl->GetOutput(1));
+            Utilities::WriteVTK("modPdA_1.vtk", cl->GetOutput(1));
 
             std::cout << "Exporting modPdB_1.vtk" << std::endl;
-            GeomHelper::WriteVTK("modPdB_1.vtk", cl->GetOutput(2));
+            Utilities::WriteVTK("modPdB_1.vtk", cl->GetOutput(2));
 #endif
 
             modPdA->DeepCopy(cl->GetOutput(1));
@@ -181,9 +184,6 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
                 return 1;
             }
-
-            origPtsNoA = modPdA->GetNumberOfPoints();
-            origPtsNoB = modPdB->GetNumberOfPoints();
 
             // in den CellDatas steht drin, welche polygone einander schneiden
 
@@ -247,13 +247,16 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
                 return 1;
             }
 
+#ifdef DEBUG
+            start = std::clock();
+#endif
 
-            PolyStripsType polyStripsA(GetPolyStrips(modPdA, contsA));
-            PolyStripsType polyStripsB(GetPolyStrips(modPdB, contsB));
+            GetPolyStrips(modPdA, contsA, polyStripsA);
+            GetPolyStrips(modPdB, contsB, polyStripsB);
 
-            // polyStripsA/B wird modifiziert
-            StripsType allStripsA(GetAllStrips(polyStripsA));
-            StripsType allStripsB(GetAllStrips(polyStripsB));
+#ifdef DEBUG
+            times.push_back(DIFF(start, std::clock()));
+#endif
 
             // trennt die polygone an den linien
 
@@ -270,18 +273,18 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
 #ifdef DEBUG
             std::cout << "Exporting modPdA_2.vtk" << std::endl;
-            GeomHelper::WriteVTK("modPdA_2.vtk", modPdA);
+            Utilities::WriteVTK("modPdA_2.vtk", modPdA);
 
             std::cout << "Exporting modPdB_2.vtk" << std::endl;
-            GeomHelper::WriteVTK("modPdB_2.vtk", modPdB);
+            Utilities::WriteVTK("modPdB_2.vtk", modPdB);
 #endif
 
 #ifdef DEBUG
             start = std::clock();
 #endif
 
-            RestoreOrigPoints(modPdA, origPtsNoA, allStripsA);
-            RestoreOrigPoints(modPdB, origPtsNoB, allStripsB);
+            RestoreOrigPoints(modPdA, polyStripsA);
+            RestoreOrigPoints(modPdB, polyStripsB);
 
 #ifdef DEBUG
             times.push_back(DIFF(start, std::clock()));
@@ -289,18 +292,18 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
 #ifdef DEBUG
             std::cout << "Exporting modPdA_3.vtk" << std::endl;
-            GeomHelper::WriteVTK("modPdA_3.vtk", modPdA);
+            Utilities::WriteVTK("modPdA_3.vtk", modPdA);
 
             std::cout << "Exporting modPdB_3.vtk" << std::endl;
-            GeomHelper::WriteVTK("modPdB_3.vtk", modPdB);
+            Utilities::WriteVTK("modPdB_3.vtk", modPdB);
 #endif
 
 #ifdef DEBUG
             start = std::clock();
 #endif
 
-            ResolveOverlaps(modPdA, allStripsA, contsA);
-            ResolveOverlaps(modPdB, allStripsB, contsB);
+            ResolveOverlaps(modPdA, contsA, polyStripsA);
+            ResolveOverlaps(modPdB, contsB, polyStripsB);
 
 #ifdef DEBUG
             times.push_back(DIFF(start, std::clock()));
@@ -308,18 +311,18 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
 #ifdef DEBUG
             std::cout << "Exporting modPdA_4.vtk" << std::endl;
-            GeomHelper::WriteVTK("modPdA_4.vtk", modPdA);
+            Utilities::WriteVTK("modPdA_4.vtk", modPdA);
 
             std::cout << "Exporting modPdB_4.vtk" << std::endl;
-            GeomHelper::WriteVTK("modPdB_4.vtk", modPdB);
+            Utilities::WriteVTK("modPdB_4.vtk", modPdB);
 #endif
 
 #ifdef DEBUG
             start = std::clock();
 #endif
 
-            AddAdjacentPoints(modPdA, allStripsA, contsA);
-            AddAdjacentPoints(modPdB, allStripsB, contsB);
+            AddAdjacentPoints(modPdA, contsA, polyStripsA);
+            AddAdjacentPoints(modPdB, contsB, polyStripsB);
 
 #ifdef DEBUG
             times.push_back(DIFF(start, std::clock()));
@@ -327,18 +330,18 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
 #ifdef DEBUG
             std::cout << "Exporting modPdA_5.vtk" << std::endl;
-            GeomHelper::WriteVTK("modPdA_5.vtk", modPdA);
+            Utilities::WriteVTK("modPdA_5.vtk", modPdA);
 
             std::cout << "Exporting modPdB_5.vtk" << std::endl;
-            GeomHelper::WriteVTK("modPdB_5.vtk", modPdB);
+            Utilities::WriteVTK("modPdB_5.vtk", modPdB);
 #endif
 
 #ifdef DEBUG
             start = std::clock();
 #endif
 
-            DisjoinPolys(modPdA, allStripsA);
-            DisjoinPolys(modPdB, allStripsB);
+            DisjoinPolys(modPdA, polyStripsA);
+            DisjoinPolys(modPdB, polyStripsB);
 
 #ifdef DEBUG
             times.push_back(DIFF(start, std::clock()));
@@ -346,18 +349,18 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
 #ifdef DEBUG
             std::cout << "Exporting modPdA_6.vtk" << std::endl;
-            GeomHelper::WriteVTK("modPdA_6.vtk", modPdA);
+            Utilities::WriteVTK("modPdA_6.vtk", modPdA);
 
             std::cout << "Exporting modPdB_6.vtk" << std::endl;
-            GeomHelper::WriteVTK("modPdB_6.vtk", modPdB);
+            Utilities::WriteVTK("modPdB_6.vtk", modPdB);
 #endif
 
 #ifdef DEBUG
             start = std::clock();
 #endif
 
-            MergePoints(modPdA, allStripsA);
-            MergePoints(modPdB, allStripsB);
+            MergePoints(modPdA, polyStripsA);
+            MergePoints(modPdB, polyStripsB);
 
 #ifdef DEBUG
             times.push_back(DIFF(start, std::clock()));
@@ -365,11 +368,20 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
 #ifdef DEBUG
             std::cout << "Exporting modPdA_7.vtk" << std::endl;
-            GeomHelper::WriteVTK("modPdA_7.vtk", modPdA);
+            Utilities::WriteVTK("modPdA_7.vtk", modPdA);
 
             std::cout << "Exporting modPdB_7.vtk" << std::endl;
-            GeomHelper::WriteVTK("modPdB_7.vtk", modPdB);
+            Utilities::WriteVTK("modPdB_7.vtk", modPdB);
 #endif
+
+            involvedA.clear();
+            involvedB.clear();
+
+            int numLines = contLines->GetNumberOfCells();
+            for (int i = 0; i < numLines; i++) {
+                involvedA.insert(contsA->GetValue(i));
+                involvedB.insert(contsB->GetValue(i));
+            }
 
             // aufräumen
 
@@ -394,6 +406,23 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
 #ifdef DEBUG
         times.push_back(DIFF(start, std::clock()));
+#endif
+
+        if (DecPolys) {
+
+#ifdef DEBUG
+        start = std::clock();
+#endif
+
+            DecomposePolys();
+
+#ifdef DEBUG
+        times.push_back(DIFF(start, std::clock()));
+#endif
+        }
+
+#ifdef DEBUG
+        // http://www.gnu.org/software/libc/manual/html_node/CPU-Time.html
 
         float sum = std::accumulate(times.begin(), times.end(), 0.);
 
@@ -411,64 +440,53 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
 }
 
-
-StripPointsType vtkPolyDataBooleanFilter::GetStripPoints(vtkPolyData *pd, int polyInd, std::deque<int> &lines) {
+void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, PStrips &pStrips, IdsType &lines) {
 
 #ifdef DEBUG
-    std::cout << "GetStripPoints()"
-        << std::endl << "polyInd " << polyInd << std::endl;
-
+    std::cout << "GetStripPoints()" << std::endl;
 #endif
 
-    StripPointsType stripPts;
+    StripPtsType &pts = pStrips.pts;
+    IdsType &poly = pStrips.poly;
 
-    // aus folgenden ecken setzt sich das polygon zusammen
+    int numPts = poly.size();
 
-    vtkIdList *polyPts = vtkIdList::New();
-    pd->GetCellPoints(polyInd, polyPts);
+    double tol = 1e-5;
 
-    RemoveDuplicates(contLines, lines);
-
-    std::deque<int>::const_iterator itr;
+    IdsType::const_iterator itr;
 
     for (itr = lines.begin(); itr != lines.end(); itr++) {
-        // def. der linie
 
         vtkIdList *linePts = vtkIdList::New();
-
         contLines->GetCellPoints(*itr, linePts);
 
         // diese punkte durchlaufen
 
-        for (unsigned int i = 0; i < 2; i++) {
+        for (int i = 0; i < 2; i++) {
 
             int realInd = linePts->GetId(i);
 
-            if (stripPts.count(realInd) == 0) {
+            if (pts.count(realInd) == 0) {
                 // lage analysieren
 
-                stripPts[realInd].ind = realInd;
+                pts[realInd].ind = realInd;
 
                 // die koordinaten
                 double pt[3];
                 contLines->GetPoint(realInd, pt);
 
-                CPY(stripPts[realInd].pt, pt)
+                CPY(pts[realInd].pt, pt)
 
-                double nSum = 0;
-
-                std::map<int, double> ts;
+                double lastD = DBL_MAX;
 
                 // jetzt muss man die kanten durchlaufen
-                for (unsigned int j = 0; j < polyPts->GetNumberOfIds(); j++) {
-
-                    int k = (j+1)%polyPts->GetNumberOfIds();
+                for (int j = 0; j < numPts; j++) {
 
                     int indA, indB;
                     double a[3], b[3];
 
-                    indA = polyPts->GetId(j);
-                    indB = polyPts->GetId(k);
+                    indA = poly[j];
+                    indB = poly[(j+1)%numPts];
 
                     pd->GetPoint(indA, a);
                     pd->GetPoint(indB, b);
@@ -480,7 +498,6 @@ StripPointsType vtkPolyDataBooleanFilter::GetStripPoints(vtkPolyData *pd, int po
                     // richtungsvektor und länge der kante
 
                     double u[3];
-
                     vtkMath::Subtract(b, a, u);
 
                     double n = vtkMath::Norm(u);
@@ -497,281 +514,169 @@ StripPointsType vtkPolyDataBooleanFilter::GetStripPoints(vtkPolyData *pd, int po
 
                     double d = vtkMath::Norm(w)/n;
 
-                    // t ist bis hier eine fraktion von n
-
-                    t *= n;
-
-                    if (d < 1e-5 && t > -1e-5 && t < n+1e-5) {
+                    if (d < tol && d < lastD && t > -tol && t < 1+tol) {
                         // liegt im toleranzbereich der kante
 
-                        if ((ts.count(indA) == 1 && t < ts[indA])
-                            || (ts.count(indB) == 1 && (n-t) < ts[indB])) {
+                        pts[realInd].edge[0] = indA;
+                        pts[realInd].edge[1] = indB;
+
+                        pts[realInd].t = std::min(1., std::max(0., t));
+
+                        if (vtkMath::Norm(sA) < tol) {
+                            CPY(pts[realInd].captPt, a)
+                            pts[realInd].capt = CAPT_A;
+
+                            break;
+
+                        } else if (vtkMath::Norm(sB) < tol) {
+                            CPY(pts[realInd].captPt, b)
+                            pts[realInd].capt = CAPT_B;
+
+                            break;
+
                         } else {
+                            // u ist nicht normiert
+                            vtkMath::MultiplyScalar(u, t);
 
-                            stripPts[realInd].edgeA = indA;
-                            stripPts[realInd].edgeB = indB;
+                            double x[3];
+                            vtkMath::Add(a, u, x);
 
-                            stripPts[realInd].T = nSum;
-                            stripPts[realInd].t = std::min(n, std::max(0., t));
+                            // projektion
+                            CPY(pts[realInd].captPt, x)
 
-                            if (vtkMath::Norm(sA) < 1e-5) {
-                                CPY(stripPts[realInd].captPt, a)
-                                stripPts[realInd].capt = CAPT_A;
+                            pts[realInd].capt = CAPT_EDGE;
 
-                            } else if (vtkMath::Norm(sB) < 1e-5) {
-                                CPY(stripPts[realInd].captPt, b)
-                                stripPts[realInd].capt = k > 0 ? CAPT_B : CAPT_C;
-
-                            } else {
-                                // u ist nicht normiert
-                                vtkMath::MultiplyScalar(u, t/n);
-
-                                double x[3];
-                                vtkMath::Add(a, u, x);
-
-                                // projektion
-                                CPY(stripPts[realInd].captPt, x)
-
-                                stripPts[realInd].capt = CAPT_EDGE;
-                            }
-
-#ifdef DEBUG
-                            std::cout << "ind " << realInd
-                                << ", indA " << indA
-                                << ", d " << d << std::endl;
-#endif
-
-                            ts.clear();
-                            ts[indA] = t;
-                            ts[indB] = n-t;
-
+                            lastD = d;
                         }
 
                     }
-
-                    nSum += n;
-
                 }
-
             }
-
-        }
-
-        // jetzt kommt die entscheidende sache
-
-        double tol = .996195; // 5deg
-
-        StripPtType &spA = stripPts[linePts->GetId(0)];
-        StripPtType &spB = stripPts[linePts->GetId(1)];
-
-        if (spA.capt != CAPT_NOT && spB.capt != CAPT_NOT) {
-            double vA[3], vB[3];
-
-            vtkMath::Subtract(spB.pt, spA.pt, vA);
-            vtkMath::Subtract(spB.captPt, spA.pt, vB);
-
-            vtkMath::Normalize(vA);
-            vtkMath::Normalize(vB);
-
-            double ang = vtkMath::Dot(vA, vB);
-
-            if (ang < tol) {
-                locked.push_back(spB.ind);
-            }
-
-            // anders kombiniert
-
-            vtkMath::Subtract(spA.pt, spB.pt, vA);
-            vtkMath::Subtract(spA.captPt, spB.pt, vB);
-
-            vtkMath::Normalize(vA);
-            vtkMath::Normalize(vB);
-
-            ang = vtkMath::Dot(vA, vB);
-
-            if (ang < tol) {
-                locked.push_back(spA.ind);
-            }
-
         }
 
         linePts->Delete();
 
     }
 
-    polyPts->Delete();
+    StripPtsType::iterator itr2;
+
+    for (itr2 = pts.begin(); itr2 != pts.end(); ++itr2) {
+        StripPt &sp = itr2->second;
+
+        if (sp.capt != CAPT_NOT) {
+            if (sp.capt == CAPT_B) {
+                sp.t = 0;
+
+                sp.edge[0] = sp.edge[1];
+
+                int i = std::find(poly.begin(), poly.end(), sp.edge[0])-poly.begin();
+
+                sp.edge[1] = poly[(i+1)%numPts];
+
+                sp.capt = CAPT_A;
+
+            }
+
+            // für den schnitt werden die eingerasteten koordinaten verwendet
+
+            CPY(sp.cutPt, sp.captPt)
+        } else {
+
+            CPY(sp.cutPt, sp.pt)
+        }
+
+    }
 
 #ifdef DEBUG
-    std::cout << "stripPts:" << std::endl;
-
-    std::map<int, StripPtType>::const_iterator itr2;
-
-    for (itr2 = stripPts.begin(); itr2 != stripPts.end(); itr2++) {
-
-        std::cout << "ind " << itr2->second.ind
-                  << ", edgeA " << itr2->second.edgeA
-                  << ", edgeB " << itr2->second.edgeB
-                  << ", T " << itr2->second.T
-                  << ", t " << itr2->second.t
-                  << ", capt " << itr2->second.capt
-                  << std::endl;
-
+    std::cout << "pts: " << std::endl;
+    for (itr2 = pts.begin(); itr2 != pts.end(); ++itr2) {
+        std::cout << itr2->first << ": " << itr2->second << std::endl;
     }
 #endif
 
-    return stripPts;
 }
 
-
-PolyStripsType vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIntArray *conts) {
-
+void vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIntArray *conts, PolyStripsType &polyStrips) {
 #ifdef DEBUG
     std::cout << "GetPolyStrips()" << std::endl;
 #endif
 
-    std::map<int, StripsType> polyStrips;
+    polyStrips.clear();
 
-    std::map<int, std::deque<int> > polyLines;
+    std::map<int, IdsType> polyLines;
 
-    if (conts != NULL) {
-
-        for (int i = 0; i < conts->GetNumberOfTuples(); i++) {
-
-            int poly = conts->GetValue(i);
-
-            polyLines[poly].push_back(i);
-        }
+    for (int i = 0; i < conts->GetNumberOfTuples(); i++) {
+        int poly = conts->GetValue(i);
+        polyLines[poly].push_back(i);
     }
 
-    std::map<int, StripPointsType> polyPts;
+    std::map<int, IdsType>::iterator itr;
 
-    std::map<int, std::deque<int> >::iterator itr;
+    for (itr = polyLines.begin(); itr != polyLines.end(); ++itr) {
+        IdsType &lines = itr->second;
+        RemoveDuplicates(lines);
 
-    for (itr = polyLines.begin(); itr != polyLines.end(); itr++) {
-        polyPts[itr->first] = GetStripPoints(pd, itr->first, itr->second);
-    }
+        PStrips &pStrips = polyStrips[itr->first];
 
+        vtkIdList *polyPts = vtkIdList::New();
+        pd->GetCellPoints(itr->first, polyPts);
 
-    std::map<int, StripPointsType>::iterator itr2;
-    StripPointsType::iterator itr3;
+        int numPts = polyPts->GetNumberOfIds();
 
-    for (itr2 = polyPts.begin(); itr2 != polyPts.end(); itr2++) {
-        StripPointsType &stripPts = itr2->second;
+        double pts_[numPts][3];
 
-        for (itr3 = stripPts.begin(); itr3 != stripPts.end(); itr3++) {
-            StripPtType &sp = itr3->second;
-
-            if (sp.capt != CAPT_NOT) {
-                if (std::count(locked.begin(), locked.end(), sp.ind) > 0) { // wenn unter den gesperrten
-                    if (sp.capt == CAPT_EDGE) {
-                        // CAPT_EDGE -> CAPT_NONE
-
-                        sp.T = sp.t = 0;
-                        sp.edgeA = sp.edgeB = -1;
-                        sp.capt = CAPT_NOT;
-
-                        CPY(sp.cutPt, sp.pt)
-
-                    } else {
-                        // CAPT_A/B -> CAPT_EDGE
-
-                        double a[3], b[3], c[3];
-                        pd->GetPoint(sp.edgeA, a);
-                        pd->GetPoint(sp.edgeB, b);
-
-                        vtkMath::Subtract(b, a, c);
-                        vtkMath::MultiplyScalar(c, sp.t/vtkMath::Norm(c));
-
-                        // projektion
-                        vtkMath::Add(a, c, sp.captPt);
-
-                        sp.capt = CAPT_EDGE;
-
-                        CPY(sp.cutPt, sp.captPt)
-
-                    }
-                } else {
-                    if (sp.capt == CAPT_A) {
-                        sp.t = 0;
-                        sp.edgeB = -1;
-                        sp.onEnd = true;
-                    } else if (sp.capt == CAPT_B || sp.capt == CAPT_C) {
-                        sp.t = 0;
-
-                        if (sp.capt == CAPT_B) {
-                            double endA[3], endB[3];
-                            pd->GetPoint(sp.edgeA, endA);
-                            pd->GetPoint(sp.edgeB, endB);
-
-                            double l[3];
-                            vtkMath::Subtract(endA, endB, l);
-
-                            sp.T += vtkMath::Norm(l);
-                        } else {
-                            sp.T = 0;
-                        }
-
-                        sp.edgeA = sp.edgeB;
-                        sp.edgeB = -1;
-
-                        sp.onEnd = true;
-
-                        sp.capt = CAPT_A;
-
-                    }
-
-                    // für den schnitt werden die eingerasteten koordinaten verwendet
-
-                    CPY(sp.cutPt, sp.captPt)
-                }
-            } else {
-
-                CPY(sp.cutPt, sp.pt)
-            }
-
+        for (int i = 0; i < numPts; i++) {
+            pStrips.poly.push_back(polyPts->GetId(i));
+            pd->GetPoint(pStrips.poly.back(), pts_[i]);
         }
+
+        GetNormal(pts_, pStrips.n, numPts);
+
+        GetStripPoints(pd, pStrips, lines);
+
+        StripsType &strips = pStrips.strips;
+        StripType strip;
 
         // zusammensetzen
 
-        std::deque<int> &lines = polyLines[itr2->first];
-
-        StripsType &strips = polyStrips[itr2->first];
-        StripType strip;
+        std::deque<int> _lines(lines.begin(), lines.end());
 
         int i = 0;
 
-        while (lines.size() > 0) {
-
+        while (_lines.size() > 0) {
             vtkIdList *linePts = vtkIdList::New();
-            contLines->GetCellPoints(lines[i], linePts);
+            contLines->GetCellPoints(_lines[i], linePts);
 
             int indA = linePts->GetId(0);
             int indB = linePts->GetId(1);
 
             if (strip.empty()) {
-                strip.push_back(stripPts[indA]);
-                strip.push_back(stripPts[indB]);
+                strip.push_back(StripPtR(indA));
+                strip.push_back(StripPtR(indB));
 
-                lines.erase(lines.begin());
+                _lines.erase(_lines.begin());
             } else {
-                if (strip.back().capt == CAPT_NOT && strip.back().ind == indA) {
-                    strip.push_back(stripPts[indB]);
-                    lines.erase(lines.begin()+i);
+                StripPt &start = pStrips.pts[strip.front().ind],
+                    &end = pStrips.pts[strip.back().ind];
+
+                if (end.capt == CAPT_NOT && end.ind == indA) {
+                    strip.push_back(StripPtR(indB));
+                    _lines.erase(_lines.begin()+i);
                     i = 0;
 
-                } else if (strip.back().capt == CAPT_NOT && strip.back().ind == indB) {
-                    strip.push_back(stripPts[indA]);
-                    lines.erase(lines.begin()+i);
+                } else if (end.capt == CAPT_NOT && end.ind == indB) {
+                    strip.push_back(StripPtR(indA));
+                    _lines.erase(_lines.begin()+i);
                     i = 0;
 
-                } else if (strip.front().capt == CAPT_NOT && strip.front().ind == indA) {
-                    strip.push_front(stripPts[indB]);
-                    lines.erase(lines.begin()+i);
+                } else if (start.capt == CAPT_NOT && start.ind == indA) {
+                    strip.push_front(StripPtR(indB));
+                    _lines.erase(_lines.begin()+i);
                     i = 0;
 
-                } else if (strip.front().capt == CAPT_NOT && strip.front().ind == indB) {
-                    strip.push_front(stripPts[indA]);
-                    lines.erase(lines.begin()+i);
+                } else if (start.capt == CAPT_NOT && start.ind == indB) {
+                    strip.push_front(StripPtR(indA));
+                    _lines.erase(_lines.begin()+i);
                     i = 0;
 
                 } else {
@@ -780,21 +685,15 @@ PolyStripsType vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIntA
                 }
             }
 
-            // ein strip ist abgeschlossen, wenn beide enden auf kanten liegen
-            // oder wenn beide enden gleich sind (strip bildet ein eigenens polygon)
+            StripPt &_start = pStrips.pts[strip.front().ind],
+                &_end = pStrips.pts[strip.back().ind];
 
-            if ((strip.front().capt != CAPT_NOT && strip.back().capt != CAPT_NOT)
-                || (strip.front().ind == strip.back().ind)
-                || (i == lines.size())) {
-
-                // den strip nach dem T+t sortieren
-                if ((strip.front().T+strip.front().t) > (strip.back().T+strip.back().t)) {
-                    std::reverse(strip.begin(), strip.end());
-                }
+            if ((_start.capt != CAPT_NOT && _end.capt != CAPT_NOT)
+                || (_start.ind == _end.ind)
+                || (i == _lines.size())) {
 
                 // einen neuen strip anlegen
                 strips.push_back(strip);
-
                 strip.clear();
 
                 i = 0;
@@ -804,597 +703,80 @@ PolyStripsType vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIntA
 
         }
 
-        CompleteStrips(strips);
+        CompleteStrips(pStrips);
 
-    }
-
-
-#ifdef DEBUG
-    std::vector<int>::const_iterator itr4;
-
-    std::cout << "locked [";
-
-    for (itr4 = locked.begin(); itr4 != locked.end(); itr4++) {
-        std::cout << *itr4 << ", ";
-    }
-
-    std::cout << "]" << std::endl;
-#endif
-
-    // für den durchlauf mit modPdB
-    locked.clear();
-
-    return polyStrips;
-
-}
-
-
-StripsType vtkPolyDataBooleanFilter::GetAllStrips (PolyStripsType &polyStrips) {
-    StripsType all;
-
-    PolyStripsType::const_iterator itr;
-
-    for (itr = polyStrips.begin(); itr != polyStrips.end(); itr++) {
-        all.insert(all.end(), itr->second.begin(), itr->second.end());
-    }
-
-    return all;
-
-}
-
-
-bool vtkPolyDataBooleanFilter::SortFct (const StripType &stripA, const StripType &stripB, double *n) {
-
-    if (stripA.front().ind != stripB.front().ind) {
-
-        return (stripA.front().T+stripA.front().t) < (stripB.front().T+stripB.front().t);
-
-    } else {
-        // in umgekehrter reihenfolge
-
-        if (stripA.back().ind != stripB.back().ind) {
-            return (stripA.back().T+stripA.back().t) > (stripB.back().T+stripB.back().t);
-
-        } else {
-
-            // anfang und ende sind gleich
-
-            // hier muss man mit der normale arbeiten
-
-            vtkPoints *pts = vtkPoints::New();
-
-            vtkIdList *poly = vtkIdList::New();
-
-            StripType::const_iterator itr;
-
-            for (itr = stripA.begin(); itr != stripA.end(); itr++) {
-                poly->InsertNextId(pts->InsertNextPoint(itr->pt));
-            }
-
-            StripType::const_reverse_iterator itr2;
-
-            for (itr2 = stripB.rbegin()+1; itr2 != stripB.rend()-1; itr2++) {
-                poly->InsertNextId(pts->InsertNextPoint(itr2->pt));
-            }
-
-            double s[3];
-
-            GeomHelper::ComputeNormal(pts, poly, s);
-
-            // diese normale muss man jetzt mit der normale des polygons vergleichen in dem der strip liegt
-
-            double ang = vtkMath::Dot(n, s);
-
-            poly->Delete();
-            pts->Delete();
-
-            return ang < 0;
-
-        }
     }
 
 }
 
+void vtkPolyDataBooleanFilter::RemoveDuplicates (IdsType &lines) {
 
-void vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polyStrips) {
+    IdsType unique;
 
-#ifdef DEBUG
-    std::cout << "CutCells()" << std::endl;
-#endif
-
-    vtkPoints *pdPts = pd->GetPoints();
-
-    vtkIntArray *origCellIds = vtkIntArray::SafeDownCast(pd->GetCellData()->GetScalars("OrigCellIds"));
-
-    std::vector<int> toRemove;
-
-    std::map<int, StripsType>::iterator itr;
-
-    for (itr = polyStrips.begin(); itr != polyStrips.end(); itr++) {
-
-        // die zu teilenden polygone
-        std::deque<int> polys;
-        polys.push_back(itr->first);
-
-        // die normale des polygons wird benötigt
-
-        vtkIdList *orig = vtkIdList::New();
-        pd->GetCellPoints(itr->first, orig);
-
-        double n[3];
-        GeomHelper::ComputeNormal(pd->GetPoints(), orig, n);
-
-        orig->Delete();
-
-#ifdef DEBUG
-        std::cout << "orig " << itr->first << std::endl;
-#endif
-
-        StripsType &strips = itr->second;
-
-        // sortieren der strips mit einer speziellen funktion
-        // bindet die normale an die SortFct, sodass die funktion die geforderten zwei argument besitzt
-
-        std::function<bool(const StripType&, const StripType&)> _SortFct = std::bind(vtkPolyDataBooleanFilter::SortFct, _1, _2, n);
-
-        std::sort(strips.begin(), strips.end(), _SortFct);
-
-        StripsType::iterator itr2;
-
-        for (itr2 = strips.begin(); itr2 != strips.end(); itr2++) {
-
-#ifdef DEBUG
-            std::cout << "strip:" << std::endl
-                << "pos " << itr2->front().pos
-                << std::endl;
-#endif
-
-            // map für die ecken die ersetzt werden müssen
-
-            std::map<int, ReplsType> R;
-
-            int Q = -1;
-
-            if (itr2->front().capt == CAPT_NOT && itr2->back().capt == CAPT_NOT) {
-                // der strip bildet ein polygon im inneren
-
-#ifdef DEBUG
-                std::cout << "is a hole" << std::endl;
-#endif
-
-                continue;
-            }
-
-            int cycle = 0;
-
-            while (true) {
-
-                if (cycle == polys.size()) {
-                    // es wurde ein fall nicht berücksichtigt ...
-
-                    break;
-                }
-
-                int polyInd = polys.front();
-                polys.pop_front();
-
-                vtkIdList *poly = vtkIdList::New();
-                pd->GetCellPoints(polyInd, poly);
-
-#ifdef DEBUG
-                std::cout << "polyInd " << polyInd << ", poly [";
-
-                for (unsigned int i = 0; i < poly->GetNumberOfIds(); i++) {
-                    std::cout << poly->GetId(i) << ", ";
-                }
-
-                std::cout << "]" << std::endl;
-#endif
-
-                // zwei neue polygone
-                vtkIdList *newPolyA = vtkIdList::New();
-                vtkIdList *newPolyB = vtkIdList::New();
-
-                if (itr2->front().edgeA == itr2->back().edgeA) {
-
-#ifdef DEBUG
-                    std::cout << "case 1" << std::endl;
-#endif
-
-                    // der strip bildet ein eigenständiges polygon auf einer kante
-
-                    for (unsigned int i = 0; i < poly->GetNumberOfIds(); i++) {
-                        int ptInd = poly->GetId(i);
-
-                        if (ptInd == itr2->front().edgeA) {
-                            if (!itr2->front().onEnd) {
-                                newPolyA->InsertNextId(ptInd);
-                            }
-
-                            // den strip einfügen
-
-                            StripType::iterator itr3;
-
-                            for (itr3 = itr2->begin(); itr3 != itr2->end(); itr3++) {
-
-                                // einen neuen punkt erzeugen
-                                newPolyA->InsertNextId(pdPts->InsertNextPoint(itr3->cutPt));
-                            }
-
-                            // dann das eigenständige polygon bestehend aus dem strip
-
-                            StripType::reverse_iterator itr4;
-
-                            for (itr4 = itr2->rbegin(); itr4 != itr2->rend(); itr4++) {
-                                newPolyB->InsertNextId(pdPts->InsertNextPoint(itr4->cutPt));
-                            }
-
-                            // eine neue referenz hinzufügen
-                            R[ptInd].push_back(std::make_pair(itr2->front().t, newPolyB->GetId(newPolyB->GetNumberOfIds()-1)));
-                            R[ptInd].push_back(std::make_pair(itr2->back().t, newPolyA->GetId(newPolyA->GetNumberOfIds()-1)));
-
-                        } else {
-                            newPolyA->InsertNextId(ptInd);
-                        }
-                    }
-
-                } else {
-
-#ifdef DEBUG
-                    std::cout << "case 2" << std::endl;
-#endif
-
-                    vtkIdList *actPoly = newPolyA;
-
-                    // kanten durchlaufen
-
-                    int refs[] = {-1, -1};
-
-                    for (unsigned int i = 0; i < poly->GetNumberOfIds(); i++) {
-                        int ptInd = poly->GetId(i);
-
-                        if (ptInd == itr2->front().edgeA) {
-                            // den strip einfügen
-
-                            if (!itr2->front().onEnd) {
-                                actPoly->InsertNextId(ptInd);
-                            }
-
-                            StripType::iterator itr3;
-
-                            for (itr3 = itr2->begin(); itr3 != itr2->end(); itr3++) {
-
-                                // einen neuen punkt erzeugen
-                                actPoly->InsertNextId(pdPts->InsertNextPoint(itr3->cutPt));
-                            }
-
-                            R[ptInd].push_back(std::make_pair(itr2->front().t, actPoly->GetId(actPoly->GetNumberOfIds()-1)));
-
-                            refs[0] = ptInd;
-
-                            actPoly = (actPoly == newPolyA) ? newPolyB : newPolyA;
-
-
-                        } else if (ptInd == itr2->back().edgeA) {
-
-                            if (!itr2->back().onEnd) {
-                                actPoly->InsertNextId(ptInd);
-                            }
-
-                            StripType::reverse_iterator itr3;
-
-                            for (itr3 = itr2->rbegin(); itr3 != itr2->rend(); itr3++) {
-                                actPoly->InsertNextId(pdPts->InsertNextPoint(itr3->cutPt));
-                            }
-
-                            R[ptInd].push_back(std::make_pair(itr2->back().t, actPoly->GetId(actPoly->GetNumberOfIds()-1)));
-
-                            refs[1] = ptInd;
-
-                            Q = actPoly->GetId(actPoly->GetNumberOfIds()-itr2->size());
-
-                            actPoly = (actPoly == newPolyA) ? newPolyB : newPolyA;
-
-                        } else {
-
-                            actPoly->InsertNextId(ptInd);
-                        }
-
-                    }
-
-                    // die ersetzungen müssen getauscht werden
-
-                    if (newPolyB->GetNumberOfIds() > 0) {
-                        int tmp = R[refs[0]].front().second;
-                        R[refs[0]].front().second = R[refs[1]].front().second;
-                        R[refs[1]].front().second = tmp;
-
-                    }
-
-                }
-
-#ifdef DEBUG
-                std::cout << "newPolyA [";
-
-                for (unsigned int i = 0; i < newPolyA->GetNumberOfIds(); i++) {
-                    std::cout << newPolyA->GetId(i) << ", ";
-                }
-
-                std::cout << "]"
-                    << std::endl << "newPolyB [";
-
-                for (unsigned int i = 0; i < newPolyB->GetNumberOfIds(); i++) {
-                    std::cout << newPolyB->GetId(i) << ", ";
-                }
-
-                std::cout << "]" << std::endl;
-
-#endif
-
-                if (newPolyB->GetNumberOfIds() > 0) {
-
-                    // die alte entfernen und die beiden neuen hinzufügen
-
-                    toRemove.push_back(polyInd);
-
-                    // strips können lediglich aus zwei punkten bestehen und auf einer kante des polygons liegen
-
-                    if (newPolyA->GetNumberOfIds() > 2) {
-                        polys.push_front(pd->InsertNextCell(VTK_POLYGON, newPolyA));
-
-                        origCellIds->InsertNextValue(origCellIds->GetValue(itr->first));
-
-#ifdef DEBUG
-                        std::cout << "newPolyA added" << std::endl;
-#endif
-
-
-                    }
-
-                    if (HasArea(*itr2)) {
-
-                        /*
-                        folgendes muss gemacht werden, wenn zwei strips im gleichen punkt enden
-
-                        nachdem der erste strip behandelt wurde, endet der zweite strip auf jeden fall in einer ecke der entstandenen polygone
-
-                        das bedeutet, dass das ende des zweiten strips, ohne einsatz von R, den falschen edgeA besitzt, nämlich den der kante davor
-
-                        der eigentlich edgeA wird deshalb dem newPolyB hinzugefügt
-
-                        dieser befindet sich an stelle 0 des neuen polygons, muss deshalb entfernt werden
-                        */
-
-                        double eA[3], eB[3];
-                        pd->GetPoint(newPolyB->GetId(0), eA);
-                        pd->GetPoint(newPolyB->GetId(newPolyB->GetNumberOfIds()-1), eB);
-
-                        // wenn die koordinaten nahezu gleich sind, dann die erste id entfernen
-
-                        double v[3];
-                        vtkMath::Subtract(eA, eB, v);
-
-                        if (vtkMath::Norm(v) < 1e-6) {
-                            newPolyB->DeleteId(newPolyB->GetId(0));
-
-#ifdef DEBUG
-                        std::cout << "first point deleted" << std::endl;
-#endif
-
-
-                        }
-
-                        if (newPolyB->GetNumberOfIds() > 2) {
-                            polys.push_front(pd->InsertNextCell(VTK_POLYGON, newPolyB));
-
-                            origCellIds->InsertNextValue(origCellIds->GetValue(itr->first));
-
-#ifdef DEBUG
-                            std::cout << "newPolyB added" << std::endl;
-#endif
-
-                        }
-
-                    }
-
-                    // die neuen polygone zugänglich machen
-
-                    pd->BuildCells();
-
-                    cycle = 0;
-
-                    // abbruch der while-schleife
-                    break;
-
-                } else {
-                    // zurückstellen, da der strip nicht in diesem polygon liegt
-                    polys.push_back(polyInd);
-
-                    cycle++;
-                }
-
-                newPolyB->Delete();
-                newPolyA->Delete();
-
-            }
-
-            // enden der verbliebenen strips aktualisieren
-            // das T muss nicht aktualisiert werden
-
-            StripsType::iterator itr3;
-
-            for (itr3 = itr2+1; itr3 != strips.end(); itr3++) {
-                if (R.count(itr3->front().edgeA) > 0) {
-
-#ifdef DEBUG
-                    std::cout << "pos " << itr3->front().pos
-                        << ", back().edgeA " << itr3->back().edgeA;
-#endif
-
-                    ReplsType &repls = R[itr3->front().edgeA];
-
-                    ReplsType::const_reverse_iterator itr4;
-
-                    for (itr4 = repls.rbegin(); itr4 != repls.rend(); itr4++) {
-
-                        if (itr3->front().t >= itr4->first) {
-
-                            // wenn sich das ende auf der gleichen kante befindet, müssen auch dessen daten aktualisiert werden
-                            // unabhängig von Q
-
-                            if (itr3->back().edgeA == itr3->front().edgeA) {
-                                itr3->back().edgeA = itr4->second;
-                                itr3->back().t -= itr4->first;
-                            }
-
-#ifdef DEBUG
-                            std::cout << " -> " << itr3->back().edgeA
-                                << ", front().edgeA " << itr3->front().edgeA;
-#endif
-
-                            itr3->front().t -= itr4->first;
-                            itr3->front().edgeA = itr4->second;
-
-#ifdef DEBUG
-                            std::cout << " -> " << itr3->front().edgeA << std::endl;
-#endif
-
-                            if (std::fabs(itr3->front().t) < 1e-7) {
-                                itr3->front().t = 0;
-                                itr3->front().onEnd = true;
-                            }
-
-                            break;
-
-                        }
-
-                    }
-
-                }
-
-                if (Q > -1) {
-
-                    double qPt[3];
-                    pd->GetPoint(Q, qPt);
-
-                    double dV[3], d;
-
-                    vtkMath::Subtract(qPt, itr3->back().cutPt, dV);
-
-                    d = vtkMath::Norm(dV);
-
-                    if (d < 1e-7) {
-
-#ifdef DEBUG
-                        std::cout << "back().edgeA " << itr3->back().edgeA << " -> " << Q << std::endl;
-#endif
-
-                        itr3->back().edgeA = Q;
-
-                        itr3->back().onEnd = true;
-                        itr3->back().t = 0;
-
-                        Q = -1;
-
-                    }
-
-                }
-
-            }
-
-        }
-
-    }
-
-    /*
-
-    std::vector<int>::const_iterator itr2;
-
-    for (itr2 = toRemove.begin(); itr2 != toRemove.end(); itr2++) {
-        pd->DeleteCell(*itr2);
-    }
-
-    // tatsächliches löschen
-    pd->RemoveDeletedCells();
-
-    */
-
-    GeomHelper::RemoveCells(pd, toRemove);
-
-}
-
-
-void vtkPolyDataBooleanFilter::RemoveDuplicates (vtkPolyData *pd, std::deque<int> &lines) {
-
-    std::deque<int> uniqueLines;
-
-    unsigned int i, j;
+    int i, j;
 
     // die indexe der enden auf übereinstimmung prüfen
 
     vtkIdList *linePtsA = vtkIdList::New();
     vtkIdList *linePtsB = vtkIdList::New();
 
-    for (i = 0; i < lines.size()-1; i++) {
+    int numLines = lines.size();
 
+    for (i = 0; i < numLines-1; i++) {
         j = i+1;
 
-        pd->GetCellPoints(lines[i], linePtsA);
+        contLines->GetCellPoints(lines[i], linePtsA);
 
         while (j < lines.size()) {
-
-            pd->GetCellPoints(lines[j], linePtsB);
+            contLines->GetCellPoints(lines[j], linePtsB);
 
             if ((linePtsA->GetId(0) == linePtsB->GetId(0) && linePtsA->GetId(1) == linePtsB->GetId(1)) ||
                 (linePtsA->GetId(0) == linePtsB->GetId(1) && linePtsA->GetId(1) == linePtsB->GetId(0))) {
-
-                // übereinstimmung
-
+                // stimmen überein
                 break;
             }
 
             j++;
         }
 
-        if (j == lines.size()) {
+        if (j == numLines) {
             // keine vorzeitige unterbrechung der while-schleife
-
-            uniqueLines.push_back(lines[i]);
+            unique.push_back(lines[i]);
         }
     }
 
-    uniqueLines.push_back(lines.back());
+    unique.push_back(lines.back());
 
     linePtsA->Delete();
     linePtsB->Delete();
 
-    lines.swap(uniqueLines);
+    lines.swap(unique);
 
 }
 
+void vtkPolyDataBooleanFilter::CompleteStrips (PStrips &pStrips) {
+    StripsType::iterator itr;
 
-void vtkPolyDataBooleanFilter::CompleteStrips (StripsType &strips) {
-    for (unsigned int i = 0; i < strips.size(); i++) {
-        if (strips[i].front().edgeA != strips[i].back().edgeA) {
+    for (itr = pStrips.strips.begin(); itr != pStrips.strips.end(); ++itr) {
+        StripPt &start = pStrips.pts[itr->front().ind],
+            &end = pStrips.pts[itr->back().ind];
 
-            if (strips[i].front().capt == CAPT_NOT) {
-                strips[i].insert(strips[i].begin(), strips[i].rbegin(), strips[i].rend()-1);
-            } else if (strips[i].back().capt == CAPT_NOT) {
-                strips[i].insert(strips[i].end(), strips[i].rbegin()+1, strips[i].rend());
+        if (start.ind != end.ind) {
+            if (start.capt == CAPT_NOT) {
+                itr->insert(itr->begin(), itr->rbegin(), itr->rend()-1);
+            } else if (end.capt == CAPT_NOT) {
+                itr->insert(itr->end(), itr->rbegin()+1, itr->rend());
             }
         }
     }
 }
 
-
 bool vtkPolyDataBooleanFilter::HasArea (StripType &strip) {
     bool area = true;
 
-    unsigned int n = strip.size();
-
+    int n = strip.size();
     if (n%2 == 1) {
-
-        for (unsigned int i = 0; i < (n-1)/2; i++) {
+        for (int i = 0; i < (n-1)/2; i++) {
             area = strip[i].ind != strip[n-i-1].ind;
         }
     }
@@ -1402,376 +784,560 @@ bool vtkPolyDataBooleanFilter::HasArea (StripType &strip) {
     return area;
 }
 
+void vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polyStrips) {
+    vtkPoints *pdPts = pd->GetPoints();
 
-void vtkPolyDataBooleanFilter::RestoreOrigPoints (vtkPolyData *pd, int origPtsNo, StripsType &strips) {
+    vtkIntArray *origCellIds = vtkIntArray::SafeDownCast(pd->GetCellData()->GetScalars("OrigCellIds"));
+
+    PolyStripsType::iterator itr;
+
+    for (itr = polyStrips.begin(); itr != polyStrips.end(); ++itr) {
+
+        int polyInd = itr->first;
+        PStrips &pStrips = itr->second;
+
+#ifdef DEBUG
+        if (polyInd != 204) {
+            //continue;
+        }
+#endif
+
+        StripsType &strips = pStrips.strips;
+        StripPtsType &pts = pStrips.pts;
+
+        IdsType &poly = pStrips.poly;
+
+#ifdef DEBUG
+        IdsType::iterator itr_;
+        std::cout << "polyInd=" << polyInd << ", poly=[";
+        for (itr_ = poly.begin(); itr_ != poly.end(); ++itr_) {
+            std::cout << *itr_ << ", ";
+        }
+        std::cout << "]" << std::endl;
+#endif
+
+        int numPts = poly.size();
+
+        std::map<int, RefsType> edges;
+
+        StripsType::iterator itr2;
+        StripType::iterator itr3;
+
+        // holes löschen
+        strips.erase(std::remove_if(strips.begin(), strips.end(), [&](const StripType &s) {
+            return pts[s.front().ind].capt == CAPT_NOT && pts[s.back().ind].capt == CAPT_NOT; }), strips.end());
+
+        for (itr2 = strips.begin(); itr2 != strips.end(); ++itr2) {
+            StripType &strip = *itr2;
+
+            // init
+            if (pts[strip.front().ind].edge[0] == pts[strip.back().ind].edge[0]
+                && strip.front().ind != strip.back().ind
+                && pts[strip.front().ind].t > pts[strip.back().ind].t) {
+
+                std::reverse(strip.begin(), strip.end());
+            }
+
+            StripPt &start = pts[strip.front().ind],
+                &end = pts[strip.back().ind];
+
+            strip.front().side = SIDE_START;
+            strip.back().side = SIDE_END;
+
+            strip.front().ref = start.edge[0];
+            strip.back().ref = end.edge[0];
+
+            int ind = itr2-strips.begin();
+
+            strip.front().strip = strip.back().strip = ind;
+
+            for (itr3 = strip.begin(); itr3 != strip.end(); ++itr3) {
+                StripPt &sp = pts[itr3->ind];
+
+                itr3->desc[0] = pdPts->InsertNextPoint(sp.cutPt);
+                itr3->desc[1] = pdPts->InsertNextPoint(sp.cutPt);
+
+#ifdef DEBUG
+                std::cout << sp << " => " << *itr3 << std::endl;
+#endif
+
+            }
+
+            // ordnet zu
+
+            edges[start.edge[0]].push_back(std::ref(strip.front()));
+            edges[end.edge[0]].push_back(std::ref(strip.back()));
+        }
+
+        // sortiert die punkte auf den kanten
+
+        std::map<int, RefsType>::iterator itr4;
+
+        IdsType::iterator itr5;
+        StripType::reverse_iterator itr6;
+
+        RefsType::iterator itr7;
+
+        std::vector<IdsType>::iterator itr8;
+
+
+        for (itr4 = edges.begin(); itr4 != edges.end(); ++itr4) {
+            RefsType &edge = itr4->second;
+
+#ifdef DEBUG
+            std::cout << "edge (" << itr4->first << ", _)" << std::endl;
+#endif
+
+            std::sort(edge.begin(), edge.end(), [&](const StripPtR &a, const StripPtR &b) {
+                StripPt &a_ = pts[a.ind],
+                    &b_ = pts[b.ind];
+
+#ifdef DEBUG
+                std::cout << "a_: " << a_ << " -> strip " << a.strip << std::endl;
+                std::cout << "b_: " << b_ << " -> strip " << b.strip << std::endl;
+#endif
+
+                if (a_.ind == b_.ind) {
+                    // strips beginnen im gleichen punkt
+
+                    if (a.strip != b.strip) {
+                        // gehören nicht dem gleichen strip an
+
+                        StripType &stripA = strips[a.strip],
+                            &stripB = strips[b.strip];
+
+                        // andere enden ermitteln
+
+                        StripPtR &eA = (&a == &(stripA.front())) ? stripA.back() : stripA.front(),
+                            &eB = (&b == &(stripB.front())) ? stripB.back() : stripB.front();
+
+                        StripPt &eA_ = pts[eA.ind],
+                            &eB_ = pts[eB.ind];
+
+#ifdef DEBUG
+                        std::cout << "eA_: " << eA_ << std::endl;
+                        std::cout << "eB_: " << eA_ << std::endl;
+#endif
+
+                        if (eA_.ind != eB_.ind) {
+                            int i = std::find(poly.begin(), poly.end(), itr4->first)-poly.begin();
+
+                            int iA = std::find(poly.begin(), poly.end(), eA_.edge[0])-poly.begin(),
+                                iB = std::find(poly.begin(), poly.end(), eB_.edge[0])-poly.begin();
+
+                            double dA = Utilities::Mod(iA-i, numPts)+eA_.t,
+                                dB = Utilities::Mod(iB-i, numPts)+eB_.t;
+
+                            if (i == iA && a_.t > eA_.t) {
+                               dA += numPts;
+                            }
+
+                            if (i == iB && b_.t > eB_.t) {
+                               dB += numPts;
+                            }
+
+#ifdef DEBUG
+                            std::cout << "dA=" << dA << ", dB=" << dB << std::endl;
+#endif
+
+                            return dB < dA;
+                        } else {
+                            RefsType poly_;
+
+                            if (a.side == SIDE_START) {
+                                poly_.insert(poly_.end(), stripA.begin(), stripA.end());
+                            } else {
+                                poly_.insert(poly_.end(), stripA.rbegin(), stripA.rend());
+                            }
+
+                            if (b.side == SIDE_START) {
+                                poly_.insert(poly_.end(), stripB.rbegin()+1, stripB.rend()-1);
+                            } else {
+                                poly_.insert(poly_.end(), stripB.begin()+1, stripB.end()-1);
+                            }
+
+                            int num = poly_.size();
+                            double pts_[num][3];
+
+                            for (itr7 = poly_.begin(); itr7 != poly_.end(); ++itr7) {
+                                StripPtR &sp = *itr7;
+                                int i = itr7-poly_.begin();
+
+                                CPY(pts_[i], pts[sp.ind].cutPt)
+                            }
+
+                            double n[3];
+                            GetNormal(pts_, n, num);
+
+                            double ang = vtkMath::Dot(pStrips.n, n);
+
+#ifdef DEBUG
+                            std::cout << "ang=" << ang*180/pi << std::endl;
+#endif
+
+                            return ang < .999999;
+
+                        }
+                    } else {
+                        // gleicher strip
+
+                        StripType &strip = strips[a.strip];
+
+                        if (HasArea(strip)) {
+                            RefsType poly_(strip.begin(), strip.end()-1);
+
+                            int num = poly_.size();
+                            double pts_[num][3];
+
+                            for (itr7 = poly_.begin(); itr7 != poly_.end(); ++itr7) {
+                                StripPtR &sp = *itr7;
+                                int i = itr7-poly_.begin();
+
+                                CPY(pts_[i], pts[sp.ind].cutPt)
+                            }
+
+                            double n[3];
+                            GetNormal(pts_, n, num);
+
+                            double ang = vtkMath::Dot(pStrips.n, n);
+
+                            if (ang > .999999) {
+                                std::reverse(strip.begin(), strip.end());
+                                return true;
+                            } else {
+                                return false;
+                            }
+
+                        } else {
+                            // reihenfolge von a und b bereits richtig
+                            return false;
+                        }
+                    }
+
+                } else {
+                    return a_.t < b_.t;
+                }
+            });
+
+#ifdef DEBUG
+            std::cout << "after sort" << std::endl;
+            for (itr7 = edge.begin(); itr7 != edge.end(); ++itr7) {
+                std::cout << itr7->get().strip << ": " << pts[itr7->get().ind] << std::endl;
+            }
+#endif
+
+        }
+
+        // baut die strips ein
+
+        std::deque<IdsType> polys;
+        polys.push_back(pStrips.poly);
+
+        int i = 0;
+
+        std::deque<IdsType>::iterator itr9;
+
+        for (itr2 = strips.begin(); itr2 != strips.end(); ++itr2) {
+            StripType &strip = *itr2;
+
+            StripPtR &start = strip.front(),
+                &end = strip.back();
+
+#ifdef DEBUG
+            std::cout << "strip " << start.strip
+                << " refs=[" << start.ref << ", " << end.ref << "]"
+                << std::endl;
+#endif
+
+            int cycle = 0;
+
+            while (true) {
+
+                if (cycle == polys.size()) {
+                    break;
+                }
+
+                IdsType p = polys.front();
+                polys.pop_front();
+
+                std::vector<IdsType> divided(2);
+
+                if (std::find(p.begin(), p.end(), start.ref) != p.end()) {
+                    if (start.ref == end.ref) {
+                        for (itr5 = p.begin(); itr5 != p.end(); ++itr5) {
+                            divided[0].push_back(*itr5);
+
+#ifdef DEBUG
+                            std::cout << "add d[0] " << *itr5 << std::endl;
+#endif
+
+                            if (*itr5 == start.ref) {
+                                for (itr3 = strip.begin(); itr3 != strip.end(); ++itr3) {
+                                    divided[0].push_back(itr3->desc[0]);
+
+#ifdef DEBUG
+                                    std::cout << "add d[0] " << itr3->desc[0] << std::endl;
+#endif
+
+                                }
+                            }
+                        }
+
+                        // strip selbst ist ein polygon
+
+                        for (itr6 = strip.rbegin(); itr6 != strip.rend(); ++itr6) {
+                            divided[1].push_back(itr6->desc[1]);
+
+#ifdef DEBUG
+                            std::cout << "add d[1] " << itr6->desc[1] << std::endl;
+#endif
+
+                        }
+
+                    } else {
+                        int d = 0;
+                        for (itr5 = p.begin(); itr5 != p.end(); ++itr5) {
+                            divided[d].push_back(*itr5);
+
+#ifdef DEBUG
+                            std::cout << "add d[" << d << "] " << *itr5 << std::endl;
+#endif
+
+                            if (*itr5 == start.ref) {
+                                for (itr3 = strip.begin(); itr3 != strip.end(); ++itr3) {
+                                    divided[d].push_back(itr3->desc[0]);
+
+#ifdef DEBUG
+                                    std::cout << "add d[" << d << "] " << itr3->desc[0] << std::endl;
+#endif
+
+                                }
+                                d++;
+                            } else if (*itr5 == end.ref) {
+                                for (itr6 = strip.rbegin(); itr6 != strip.rend(); ++itr6) {
+                                    divided[d].push_back(itr6->desc[1]);
+
+#ifdef DEBUG
+                                    std::cout << "add d[" << d << "] " << itr6->desc[1] << std::endl;
+#endif
+
+                                }
+                                d++;
+                            }
+
+                            d %= 2;
+                        }
+                    }
+                }
+
+                if (divided[1].size() > 0) {
+
+                    // refs aktualisieren
+
+                    int stripInd = itr2-strips.begin();
+
+                    for (itr4 = edges.begin(); itr4 != edges.end(); ++itr4) {
+                        RefsType &edge = itr4->second;
+
+                        for (itr7 = edge.begin()+1; itr7 != edge.end(); ++itr7) {
+                            StripPtR &sp = *itr7;
+
+                            RefsType::reverse_iterator itr7_(itr7);
+
+                            for (; itr7_ != edge.rend(); ++itr7_) {
+                                // pt davor
+                                StripPtR &pre = *itr7_;
+
+                                if (pre.strip != sp.strip) {
+                                    if (pre.strip <= stripInd) {
+                                        // der davor wurde bereits verwendet
+
+                                        if (pre.side == SIDE_END) {
+                                            sp.ref = pre.desc[0];
+                                        } else {
+                                            sp.ref = pre.desc[1];
+                                        }
+
+                                        break;
+                                    }
+                                } else {
+                                    // gehört dem gleichen strip an
+                                    sp.ref = pre.ref;
+                                    break;
+                                }
+                            }
+
+
+                        }
+
+                        // sonderfall
+                        if (edge.size() > 1) {
+                            StripPtR &a = edge.front(),
+                                &b = *(edge.begin()+1);
+
+                            if (a.ind == b.ind
+                                && b.strip == stripInd
+                                && pts[a.ind].capt == CAPT_A) {
+
+                                if (b.side == SIDE_START) {
+                                    a.ref = b.desc[0];
+                                } else {
+                                    a.ref = b.desc[1];
+                                }
+
+                            }
+                        }
+                    }
+
+                    // doppelte punkte entfernen
+
+                    for (itr8 = divided.begin(); itr8 != divided.end(); ++itr8) {
+#ifdef DEBUG
+                        std::cout << "d[" << itr8-divided.begin() << "]" << std::endl;
+#endif
+
+                        IdsType &div = *itr8;
+
+                        IdsType _div;
+
+                        int num = div.size();
+
+                        for (int i = 0; i < num; i++) {
+                            double ptA[3], ptB[3];
+                            pd->GetPoint(div[i], ptA);
+                            pd->GetPoint(div[(i+1)%num], ptB);
+
+                            double d = Utilities::GetD3(ptA, ptB);
+
+#ifdef DEBUG
+                            std::cout << "edge (" << div[i] << ", "
+                                      << div[(i+1)%num] << "), d=" << d
+                                      << std::endl;
+#endif
+
+                            if (d > 1e-6) {
+                                _div.push_back(div[i]);
+                            } else {
+#ifdef DEBUG
+                                std::cout << "rm " << div[i] << std::endl;
+#endif
+                            }
+                        }
+
+                        div = std::move(_div);
+                    }
+
+                    // prüfen ob erstellte polygone gültig
+
+                    if (divided[0].size() > 2) {
+                        polys.push_back(divided[0]);
+                    }
+
+                    if (HasArea(strip) && divided[1].size() > 2) {
+                        polys.push_back(divided[1]);
+                    }
+
+                    cycle = 0;
+
+                    break;
+
+                } else {
+                    polys.push_back(p);
+
+                    cycle++;
+                }
+
+            }
+
+            i++;
+
+            if (i == 4) {
+                //break;
+            }
+
+        }
+
+        // erzeugte polys hinzufügen
+
+        for (itr9 = polys.begin(); itr9 != polys.end(); ++itr9) {
+            IdsType &p = *itr9;
+
+            int num = p.size();
+
+            vtkIdList *cell = vtkIdList::New();
+            cell->SetNumberOfIds(num);
+
+            for (int i = 0; i < num; i++) {
+                cell->SetId(i, p[i]);
+            }
+
+            pd->InsertNextCell(VTK_POLYGON, cell);
+
+            origCellIds->InsertNextValue(origCellIds->GetValue(polyInd));
+
+            cell->Delete();
+        }
+
+        pd->DeleteCell(polyInd);
+
+    }
+
+    pd->RemoveDeletedCells();
+    pd->BuildCells();
+
+}
+
+void vtkPolyDataBooleanFilter::RestoreOrigPoints (vtkPolyData *pd, PolyStripsType &polyStrips) {
 
 #ifdef DEBUG
     std::cout << "RestoreOrigPoints()" << std::endl;
 #endif
 
-    vtkKdTreePointLocator *loc = vtkKdTreePointLocator::New();
-    loc->SetDataSet(pd);
+    std::vector<StripPtL> ends;
 
-    StripsType::iterator itr;
+    PolyStripsType::iterator itr;
+    StripPtsType::iterator itr2;
 
-    for (itr = strips.begin(); itr != strips.end(); itr++) {
-        RestoreOrigPt(pd, origPtsNo, loc, itr->front());
-        RestoreOrigPt(pd, origPtsNo, loc, itr->back());
-    }
+    for (itr = polyStrips.begin(); itr != polyStrips.end(); ++itr) {
+        PStrips &pStrips = itr->second;
 
-    loc->FreeSearchStructure();
-    loc->Delete();
-
-}
-
-
-void vtkPolyDataBooleanFilter::RestoreOrigPt (vtkPolyData *pd, int origPtsNo, vtkKdTreePointLocator *loc, StripPtType &stripPt) {
-    vtkPoints *pts = pd->GetPoints();
-
-    vtkIdList *childs = vtkIdList::New();
-
-    //loc->FindPointsWithinRadius(1e-7, stripPt.cutPt, childs);
-    GeomHelper::FindPoints(loc, stripPt.cutPt, childs);
-
-    for (unsigned int i = 0; i < childs->GetNumberOfIds(); i++) {
-        // nur dann alle verschieben, wenn der schnittpunkt in eine ecke eingerastet ist
-        if (stripPt.capt == CAPT_EDGE && childs->GetId(i) < origPtsNo) {
-            continue;
-        }
-
-        pts->SetPoint(childs->GetId(i), stripPt.pt);
-    }
-
-    childs->Delete();
-
-}
-
-
-void vtkPolyDataBooleanFilter::ResolveOverlaps (vtkPolyData *pd, StripsType &strips, vtkIntArray *conts) {
-    std::map<std::pair<int, int>, std::map<int, int> > skipped;
-
-    StripsType::const_iterator itr;
-    StripType::const_iterator itr2;
-
-    for (itr = strips.begin(); itr != strips.end(); itr++) {
-
-        for (itr2 = itr->begin(); itr2 != itr->end(); itr2++) {
-            if (itr2 != itr->begin() && itr2 != itr->end()-1) {
-                continue;
+        for (itr2 = pStrips.pts.begin(); itr2 != pStrips.pts.end(); ++itr2) {
+            StripPt &sp = itr2->second;
+            /*
+            if (sp.capt == CAPT_A) {
+                ends.push_back(sp);
             }
+            */
 
-            // anfang oder ende des strips
-
-            const StripPtType &sp = *itr2;
-
-            if (sp.capt == CAPT_EDGE) {
-
-                vtkIdList *links = vtkIdList::New();
-                contLines->GetPointCells(sp.ind, links);
-
-                if (links->GetNumberOfIds() == 2
-                    && conts->GetValue(links->GetId(0)) != conts->GetValue(links->GetId(1))) {
-
-                    // kein berührender schnitt
-
-                    vtkIdList *polysA = vtkIdList::New();
-                    vtkIdList *polysB = vtkIdList::New();
-
-                    pd->GetPointCells(sp.edgeA, polysA);
-                    pd->GetPointCells(sp.edgeB, polysB);
-
-                    for (unsigned int i = 0; i < polysA->GetNumberOfIds(); i++) {
-                        for (unsigned int j = 0; j < polysB->GetNumberOfIds(); j++) {
-                            if (polysA->GetId(i) == polysB->GetId(j)) {
-                                // es existiert noch ein polygon mit der kante
-
-                                vtkIdList *poly = vtkIdList::New();
-                                pd->GetCellPoints(polysA->GetId(i), poly);
-
-                                for (unsigned int k = 0; k < poly->GetNumberOfIds(); k++) {
-                                    if (poly->GetId(k) == sp.edgeB
-                                        && poly->GetId((k+1)%poly->GetNumberOfIds()) == sp.edgeA) {
-
-                                        // die kante liegt noch in der form vor
-
-                                        std::map<int, int> &counts = skipped[std::make_pair(sp.ind, polysA->GetId(i))];
-
-                                        counts[sp.edgeA]++;
-                                        counts[sp.edgeB]++;
-
-                                    }
-
-                                }
-
-                                poly->Delete();
-
-                            }
-                        }
-                    }
-
-                    polysB->Delete();
-                    polysA->Delete();
-
-                }
-            }
+            ends.push_back(sp);
         }
-
     }
-
-#ifdef DEBUG
-    std::cout << "skipped " << skipped.size() << std::endl;
-#endif
-
-    std::map<std::pair<int, int>, std::map<int, int> >::const_iterator itr3;
-    std::map<int, int>::const_iterator itr4;
-
-    for (itr3 = skipped.begin(); itr3 != skipped.end(); itr3++) {
-#ifdef DEBUG
-        std::cout << "ind " << itr3->first.first
-            << " poly " << itr3->first.second
-            << std::endl;
-
-        std::cout << "[";
-
-        for (itr4 = itr3->second.begin(); itr4 != itr3->second.end(); itr4++) {
-            std::cout << "(" << itr4->first << ", " << itr4->second << "), ";
-        }
-
-        std::cout << "]" << std::endl;
-
-#endif
-
-        for (itr4 = itr3->second.begin(); itr4 != itr3->second.end(); itr4++) {
-            if (itr4->second == 2) {
-                double pt[3];
-                contLines->GetPoint(itr3->first.first, pt);
-
-                pd->ReplaceCellPoint(itr3->first.second, itr4->first, pd->GetPoints()->InsertNextPoint(pt));
-            }
-        }
-
-    }
-
-}
-
-
-void vtkPolyDataBooleanFilter::AddAdjacentPoints (vtkPolyData *pd, StripsType &strips, vtkIntArray *conts) {
-
-#ifdef DEBUG
-    std::cout << "AddAdjacentPoints()" << std::endl;
-#endif
-
-    vtkIntArray *origCellIds = vtkIntArray::SafeDownCast(pd->GetCellData()->GetScalars("OrigCellIds"));
-
-    std::vector<int> toRemove;
-
-    std::map<std::pair<int, int>, std::vector<StripPtType> > adjacentPts;
-
-    StripsType::const_iterator itr;
-
-    for (itr = strips.begin(); itr != strips.end(); itr++) {
-        // anfang und ende
-        if (itr->front().capt == CAPT_EDGE) {
-            std::vector<StripPtType> &pts = adjacentPts[std::make_pair(itr->front().edgeA, itr->front().edgeB)];
-            if (std::count(pts.begin(), pts.end(), itr->front()) == 0) {
-                pts.push_back(itr->front());
-            }
-        }
-
-        if (itr->back().capt == CAPT_EDGE) {
-            std::vector<StripPtType> &pts = adjacentPts[std::make_pair(itr->back().edgeA, itr->back().edgeB)];
-            if (std::count(pts.begin(), pts.end(), itr->back()) == 0) {
-                pts.push_back(itr->back());
-            }
-        }
-
-    }
-
-    pd->BuildLinks();
 
     vtkKdTreePointLocator *loc = vtkKdTreePointLocator::New();
     loc->SetDataSet(pd);
     loc->BuildLocator();
 
-    std::map<std::pair<int, int>, std::vector<StripPtType> >::iterator itr2;
-    std::vector<StripPtType>::iterator itr3;
+    vtkIdList *pts = vtkIdList::New();
 
-    for (itr2 = adjacentPts.begin(); itr2 != adjacentPts.end(); itr2++) {
+    std::vector<StripPtL>::const_iterator itr3;
 
-        std::vector<StripPtType> &ends = itr2->second;
+    for (itr3 = ends.begin(); itr3 != ends.end(); ++itr3) {
+        Utilities::FindPoints(loc, itr3->cutPt, pts);
+        int numPts = pts->GetNumberOfIds();
 
-        // sortieren nach t, allerdings in umgekehrter reihenfolge
-        std::sort(ends.rbegin(), ends.rend());
-
-#ifdef DEBUG
-        std::cout << "edge [" << itr2->first.first << ", " << itr2->first.second << "] -> [";
-
-        for (itr3 = ends.begin(); itr3 != ends.end(); itr3++) {
-            std::cout << itr3->ind << ", ";
+        for (int i = 0; i < numPts; i++) {
+            pd->GetPoints()->SetPoint(pts->GetId(i), itr3->pt);
         }
-
-        std::cout << "]" << std::endl;
-#endif
-
-        // gruppen bilden
-
-        std::vector<int> grp;
-        vtkIdList *cells = vtkIdList::New();
-
-        for (int i = 0; i < ends.size(); i++) {
-            contLines->GetPointCells(ends[i].ind, cells);
-
-            bool good = cells->GetNumberOfIds() == 2
-                && conts->GetValue(cells->GetId(0)) == conts->GetValue(cells->GetId(1));
-
-            if (good) {
-                grp.push_back(i);
-            }
-
-            if (grp.size() > 0 && (!good || i == ends.size()-1)) {
-                // das bisherige für die gruppe ausführen
-
-                std::vector<int>::const_iterator itr6;
-
-#ifdef DEBUG
-                std::cout << "grp [";
-                for (itr6 = grp.begin(); itr6 != grp.end(); itr6++) {
-                    std::cout << ends[*itr6].ind << ", ";
-                }
-                std::cout << "]" << std::endl;
-#endif
-
-                double ptA[3], ptB[3];
-
-                if (grp.front() == 0) {
-                    pd->GetPoint(itr2->first.second, ptA);
-                } else {
-                    contLines->GetPoint(ends[grp.front()-1].ind, ptA);
-                }
-
-                if (grp.back() == ends.size()-1) {
-                    pd->GetPoint(itr2->first.first, ptB);
-                } else {
-                    contLines->GetPoint(ends[grp.back()+1].ind, ptB);
-                }
-
-                vtkIdList *ptsA = vtkIdList::New();
-                vtkIdList *ptsB = vtkIdList::New();
-
-                //loc->FindPointsWithinRadius(1e-7, ptA, ptsA);
-                //loc->FindPointsWithinRadius(1e-7, ptB, ptsB);
-                GeomHelper::FindPoints(loc, ptA, ptsA);
-                GeomHelper::FindPoints(loc, ptB, ptsB);
-
-                std::map<int, int> polyPtsA, polyPtsB;
-
-                vtkIdList *polys = vtkIdList::New();
-
-                for (int j = 0; j < ptsA->GetNumberOfIds(); j++) {
-                    pd->GetPointCells(ptsA->GetId(j), polys);
-
-                    for (int k = 0; k < polys->GetNumberOfIds(); k++) {
-                        polyPtsA[polys->GetId(k)] = ptsA->GetId(j);
-                    }
-                }
-
-                for (int j = 0; j < ptsB->GetNumberOfIds(); j++) {
-                    pd->GetPointCells(ptsB->GetId(j), polys);
-
-                    for (int k = 0; k < polys->GetNumberOfIds(); k++) {
-                        polyPtsB[polys->GetId(k)] = ptsB->GetId(j);
-                    }
-                }
-
-                polys->Delete();
-
-                std::map<int, int>::const_iterator itr4, itr5;
-
-                bool added = false;
-
-                for (itr4 = polyPtsA.begin(); itr4 != polyPtsA.end() && !added; itr4++) {
-                    for (itr5 = polyPtsB.begin(); itr5 != polyPtsB.end() && !added; itr5++) {
-                        if (itr4->first == itr5->first
-                            //&& pd->GetCellType(itr4->first) != VTK_EMPTY_CELL) {
-                            && std::count(toRemove.begin(), toRemove.end(), itr4->first) == 0) {
-
-                            // es gibt nur eins oder keins
-
-#ifdef DEBUG
-                            std::cout << "poly " << itr4->first << std::endl;
-#endif
-
-                            vtkIdList *poly = vtkIdList::New();
-
-                            pd->GetCellPoints(itr4->first, poly);
-
-                            vtkIdList *newPoly = vtkIdList::New();
-
-                            for (int k = 0; k < poly->GetNumberOfIds(); k++) {
-
-                                newPoly->InsertNextId(poly->GetId(k));
-
-                                if (itr4->second == poly->GetId(k)
-                                    && itr5->second == poly->GetId((k+1)%poly->GetNumberOfIds())) {
-
-                                    // die ursprüngliche kante ist noch vorhanden
-
-                                    for (itr6 = grp.begin(); itr6 != grp.end(); itr6++) {
-                                        newPoly->InsertNextId(pd->InsertNextLinkedPoint(ends[*itr6].pt, 1));
-                                    }
-
-                                    added = true;
-
-                                }
-
-                                // itr4->first wird im anschluss gelöscht
-
-                                pd->RemoveReferenceToCell(poly->GetId(k), itr4->first);
-
-                            }
-
-                            // das neue muss jetzt hinzugefügt werden
-
-                            //pd->DeleteCell(itr4->first);
-
-                            toRemove.push_back(itr4->first);
-
-                            pd->InsertNextLinkedCell(VTK_POLYGON, newPoly->GetNumberOfIds(), newPoly->GetPointer(0));
-
-                            origCellIds->InsertNextValue(origCellIds->GetValue(itr4->first));
-
-
-                            newPoly->Delete();
-                            poly->Delete();
-
-                        }
-                    }
-                }
-
-                ptsB->Delete();
-                ptsA->Delete();
-
-                grp.clear();
-
-            }
-
-        }
-
-        cells->Delete();
-
     }
 
-    //pd->RemoveDeletedCells();
-
-    GeomHelper::RemoveCells(pd, toRemove);
+    pts->Delete();
 
     loc->FreeSearchStructure();
     loc->Delete();
 
 }
 
-
-void vtkPolyDataBooleanFilter::DisjoinPolys (vtkPolyData *pd, StripsType &strips) {
+void vtkPolyDataBooleanFilter::DisjoinPolys (vtkPolyData *pd, PolyStripsType &polyStrips) {
 
 #ifdef DEBUG
     std::cout << "DisjoinPolys()" << std::endl;
@@ -1779,70 +1345,214 @@ void vtkPolyDataBooleanFilter::DisjoinPolys (vtkPolyData *pd, StripsType &strips
 
     pd->BuildLinks();
 
-    std::set<int> touchedPts;
+    std::set<StripPtL> ends;
 
-    StripsType::const_iterator itr;
+    PolyStripsType::iterator itr;
+    StripPtsType::iterator itr2;
 
-    for (itr = strips.begin(); itr != strips.end(); itr++) {
-        if (itr->front().onEnd) {
-            touchedPts.insert(itr->front().ind);
-        }
+    for (itr = polyStrips.begin(); itr != polyStrips.end(); ++itr) {
+        PStrips &pStrips = itr->second;
 
-        if (itr->back().onEnd) {
-            touchedPts.insert(itr->back().ind);
+        for (itr2 = pStrips.pts.begin(); itr2 != pStrips.pts.end(); ++itr2) {
+            StripPt &sp = itr2->second;
+            if (sp.capt == CAPT_A) {
+                ends.insert(sp);
+            }
         }
     }
 
-    vtkKdTreePointLocator *pl = vtkKdTreePointLocator::New();
-    pl->SetDataSet(pd);
-    pl->BuildLocator();
+    vtkKdTreePointLocator *loc = vtkKdTreePointLocator::New();
+    loc->SetDataSet(pd);
+    loc->BuildLocator();
 
-    std::set<int>::const_iterator itr2;
+    vtkIdList *pts = vtkIdList::New();
+    vtkIdList *cells = vtkIdList::New();
 
-    for (itr2 = touchedPts.begin(); itr2 != touchedPts.end(); itr2++) {
-        vtkIdList *pts = vtkIdList::New();
+    std::set<StripPtL>::const_iterator itr3;
 
-        double pt[3];
+    for (itr3 = ends.begin(); itr3 != ends.end(); ++itr3) {
+        Utilities::FindPoints(loc, itr3->pt, pts);
+        int numPts = pts->GetNumberOfIds();
 
-        contLines->GetPoint(*itr2, pt);
+        for (int i = 0; i < numPts; i++) {
+            pd->GetPointCells(pts->GetId(i), cells);
+            int numCells = cells->GetNumberOfIds();
 
-        //pl->FindPointsWithinRadius(1e-7, pt, pts);
-        GeomHelper::FindPoints(pl, pt, pts);
+            if (numCells > 1) {
+                for (int j = 0; j < numCells; j++) {
+                    pd->ReplaceCellPoint(cells->GetId(j), pts->GetId(i), pd->GetPoints()->InsertNextPoint(itr3->pt));
+                }
+            }
+        }
+    }
 
-        for (unsigned int i = 0; i < pts->GetNumberOfIds(); i++) {
-            vtkIdList *polys = vtkIdList::New();
+    cells->Delete();
+    pts->Delete();
 
-            pd->GetPointCells(pts->GetId(i), polys);
+    loc->FreeSearchStructure();
+    loc->Delete();
 
-            if (polys->GetNumberOfIds() > 1) {
+}
+
+void vtkPolyDataBooleanFilter::ResolveOverlaps (vtkPolyData *pd, vtkIntArray *conts, PolyStripsType &polyStrips) {
 
 #ifdef DEBUG
-                std::cout << "Point " << pts->GetId(i) << " Polys " << polys->GetNumberOfIds() << std::endl;
+    std::cout << "ResolveOverlaps()" << std::endl;
 #endif
 
-                for (unsigned int j = 0; j < polys->GetNumberOfIds(); j++) {
+    pd->BuildCells();
+    pd->BuildLinks();
 
-                    pd->ReplaceCellPoint(polys->GetId(j), pts->GetId(i), pd->GetPoints()->InsertNextPoint(pt));
+    contLines->BuildLinks();
 
+    std::vector<StripPtL2> ends;
+
+    PolyStripsType::iterator itr;
+    StripPtsType::iterator itr2;
+
+    for (itr = polyStrips.begin(); itr != polyStrips.end(); ++itr) {
+        PStrips &pStrips = itr->second;
+
+        for (itr2 = pStrips.pts.begin(); itr2 != pStrips.pts.end(); ++itr2) {
+            StripPt &sp = itr2->second;
+            if (sp.capt == CAPT_EDGE) {
+                ends.push_back(sp);
+            }
+        }
+    }
+
+    vtkIdList *links = vtkIdList::New();
+
+    vtkIdList *cellsA = vtkIdList::New(),
+        *cellsB = vtkIdList::New();
+
+    int numCellsA, numCellsB;
+
+    typedef std::map<int, int> CountsType;
+    std::map<Pair, CountsType> skipped;
+
+    std::vector<StripPtL2>::const_iterator itr3;
+
+    for (itr3 = ends.begin(); itr3 != ends.end(); ++itr3) {
+        contLines->GetPointCells(itr3->ind, links);
+
+        if (links->GetNumberOfIds() == 2
+            && conts->GetValue(links->GetId(0)) != conts->GetValue(links->GetId(1))) {
+
+            // kein berührender schnitt
+
+            pd->GetPointCells(itr3->edge[0], cellsA);
+            pd->GetPointCells(itr3->edge[1], cellsB);
+
+            numCellsA = cellsA->GetNumberOfIds();
+            numCellsB = cellsB->GetNumberOfIds();
+
+            for (int i = 0; i < numCellsA; i++) {
+                for (int j = 0; j < numCellsB; j++) {
+                    if (cellsA->GetId(i) == cellsB->GetId(j)) {
+                        // kante existiert noch
+
+                        vtkIdList *poly = vtkIdList::New();
+                        pd->GetCellPoints(cellsA->GetId(i), poly);
+
+                        int numPts = poly->GetNumberOfIds();
+
+                        for (int k = 0; k < numPts; k++) {
+                            if (poly->GetId(k) == itr3->edge[1]
+                                && poly->GetId((k+1)%numPts) == itr3->edge[0]) {
+
+                                CountsType &c = skipped[Pair(itr3->ind, cellsA->GetId(i))];
+
+                                c[itr3->edge[0]]++;
+                                c[itr3->edge[1]]++;
+                            }
+                        }
+
+                        poly->Delete();
+
+                    }
                 }
-
             }
 
         }
 
+        links->Reset();
     }
 
-    pl->FreeSearchStructure();
-    pl->Delete();
+    cellsB->Delete();
+    cellsA->Delete();
 
-}
+    links->Delete();
 
+    std::map<Pair, CountsType>::iterator itr4;
+    CountsType::iterator itr5;
 
-void vtkPolyDataBooleanFilter::MergePoints (vtkPolyData *pd, StripsType &strips) {
+    for (itr4 = skipped.begin(); itr4 != skipped.end(); ++itr4) {
+        const Pair &pair = itr4->first;
+        CountsType &c = itr4->second;
 
 #ifdef DEBUG
-    std::cout << "MergePoints()" << std::endl;
+        std::cout << pair << ": [";
+        for (itr5 = c.begin(); itr5 != c.end(); ++itr5) {
+            std::cout << "(" << itr5->first << ", " << itr5->second << "), ";
+        }
+        std::cout << "]" << std::endl;
 #endif
+
+        double pt[3];
+        contLines->GetPoint(pair.f, pt);
+
+        for (itr5 = c.begin(); itr5 != c.end(); ++itr5) {
+            if (itr5->second == 2) {
+                int i = pd->GetPoints()->InsertNextPoint(pt);
+
+#ifdef DEBUG
+                std::cout << "repl " << itr5->first << " -> " << i << std::endl;
+#endif
+
+                pd->ReplaceCellPoint(pair.g, itr5->first, i);
+            }
+        }
+    }
+}
+
+void vtkPolyDataBooleanFilter::AddAdjacentPoints (vtkPolyData *pd, vtkIntArray *conts, PolyStripsType &polyStrips) {
+
+#ifdef DEBUG
+    std::cout << "AddAdjacentPoints()" << std::endl;
+#endif
+
+    PolyStripsType::iterator itr;
+    StripPtsType::iterator itr2;
+
+    std::set<StripPtL2> ends;
+    std::set<StripPtL2>::const_iterator itr3;
+
+    for (itr = polyStrips.begin(); itr != polyStrips.end(); ++itr) {
+        PStrips &pStrips = itr->second;
+
+        for (itr2 = pStrips.pts.begin(); itr2 != pStrips.pts.end(); ++itr2) {
+            StripPt &sp = itr2->second;
+
+            if (sp.capt == CAPT_EDGE) {
+                ends.insert(sp);
+            }
+        }
+    }
+
+    vtkIntArray *origCellIds = vtkIntArray::SafeDownCast(pd->GetCellData()->GetScalars("OrigCellIds"));
+
+    typedef std::vector<StripPtL3> AType;
+    typedef std::map<Pair, AType> BType;
+
+    BType edges;
+
+    for (itr3 = ends.begin(); itr3 != ends.end(); ++itr3) {
+        edges[Pair(itr3->edge[0], itr3->edge[1])].push_back(StripPtL3(itr3->pt, itr3->t, itr3->ind));
+    }
+
+    AType::iterator itr4;
+    BType::iterator itr5;
 
     pd->BuildLinks();
 
@@ -1850,262 +1560,489 @@ void vtkPolyDataBooleanFilter::MergePoints (vtkPolyData *pd, StripsType &strips)
     loc->SetDataSet(pd);
     loc->BuildLocator();
 
-    std::map<unsigned int, std::vector<unsigned int> > ends;
+    typedef std::vector<Pair> CType;
 
-    StripsType::const_iterator itr;
+    IdsType::const_iterator itr6;
+    CType::const_iterator itr7, itr8;
 
-    for (itr = strips.begin(); itr != strips.end(); itr++) {
+    vtkIdList *cells = vtkIdList::New();
 
-        vtkIdList *neigs = vtkIdList::New();
+    for (itr5 = edges.begin(); itr5 != edges.end(); ++itr5) {
+        const Pair &pair = itr5->first;
+        AType &pts = itr5->second;
 
-        //loc->FindPointsWithinRadius(1e-7, (itr->begin()+1)->pt, neigs);
-        GeomHelper::FindPoints(loc, (itr->begin()+1)->pt, neigs);
+        double ptA[3], ptB[3];
 
-        for (unsigned int i = 0; i < neigs->GetNumberOfIds(); i++) {
+        pd->GetPoint(pair.f, ptA);
+        pd->GetPoint(pair.g, ptB);
 
-            ends[itr->front().ind].push_back(neigs->GetId(i));
+        pts.push_back(StripPtL3(ptA, 0.));
+        pts.push_back(StripPtL3(ptB, 1.));
 
-        }
-
-        //loc->FindPointsWithinRadius(1e-7, (itr->rbegin()+1)->pt, neigs);
-        GeomHelper::FindPoints(loc, (itr->rbegin()+1)->pt, neigs);
-
-        for (unsigned int i = 0; i < neigs->GetNumberOfIds(); i++) {
-
-            ends[itr->back().ind].push_back(neigs->GetId(i));
-
-        }
-
-        neigs->Delete();
-
-    }
-
-    std::map<unsigned int, std::vector<unsigned int> >::const_iterator itr2;
-
-    for (itr2 = ends.begin(); itr2 != ends.end(); itr2++) {
-
-        double pt[3];
-
-        contLines->GetPoint(itr2->first, pt);
-
-        std::vector<MergeVertType> mergeVerts;
-
-        vtkIdList *verts = vtkIdList::New();
-
-        //loc->FindPointsWithinRadius(1e-7, pt, verts);
-        GeomHelper::FindPoints(loc, pt, verts);
+        std::sort(pts.rbegin(), pts.rend());
 
 #ifdef DEBUG
-        std::cout << "ind " << itr2->first << ", neigs [";
-
-        for (int i = 0; i < itr2->second.size(); i++) {
-            std::cout << itr2->second[i] << ", ";
+        if (std::find_if(pts.begin(), pts.end(), [](const StripPtL3 &s) {
+            return s.ind == 123;
+        }) == pts.end()) {
+            //continue;
         }
 
+        for (itr4 = pts.begin(); itr4 != pts.end(); ++itr4) {
+            std::cout << *itr4 << std::endl;
+        }
+#endif
+
+        IdsType voids;
+
+        voids.push_back(0);
+
+        for (itr4 = pts.begin()+1; itr4 != pts.end()-1; ++itr4) {
+            contLines->GetPointCells(itr4->ind, cells);
+            int numCells = cells->GetNumberOfIds();
+
+            std::set<int> seeds;
+
+            for (int i = 0; i < numCells; i++) {
+                seeds.insert(cells->GetId(i));
+            }
+
+            if (seeds.size() == 1) {
+                voids.push_back(itr4-pts.begin());
+            }
+        }
+
+        voids.push_back(pts.size()-1);
+
+#ifdef DEBUG
+        std::cout << "voids=[";
+        for (itr6 = voids.begin(); itr6 != voids.end(); ++itr6) {
+            std::cout << *itr6 << ", ";
+        }
         std::cout << "]" << std::endl;
-
 #endif
 
-        vtkIdList *polys = vtkIdList::New();
+        for (itr6 = voids.begin(); itr6 != voids.end()-1; ++itr6) {
+            AType pts_(pts.begin()+(*itr6), pts.begin()+(*(itr6+1))+1);
 
-        for (unsigned int i = 0; i < verts->GetNumberOfIds(); i++) {
-            pd->GetPointCells(verts->GetId(i), polys);
+            if (pts_.size() > 2) {
 
-            if (polys->GetNumberOfIds() > 0) {
-                // dieser vert wird von einem polygon verwendet
+                vtkIdList *ptsA = vtkIdList::New();
+                vtkIdList *ptsB = vtkIdList::New();
 
-                vtkIdList *poly = vtkIdList::New();
+                Utilities::FindPoints(loc, pts_.front().pt, ptsA);
+                Utilities::FindPoints(loc, pts_.back().pt, ptsB);
 
-                pd->GetCellPoints(polys->GetId(0), poly);
+                int numPtsA = ptsA->GetNumberOfIds(),
+                    numPtsB = ptsB->GetNumberOfIds();
 
-                // rel. index
+                CType polysA, polysB;
 
-                unsigned int ptNbr = poly->GetNumberOfIds();
-
-                unsigned int j;
-
-                for (j = 0; j < ptNbr; j++) {
-                    if (verts->GetId(i) == poly->GetId(j)) {
-                        break;
+                for (int j = 0; j < numPtsA; j++) {
+                    pd->GetPointCells(ptsA->GetId(j), cells);
+                    int numCells = cells->GetNumberOfIds();
+                    for (int k = 0; k < numCells; k++) {
+                        polysA.push_back(Pair(cells->GetId(k), ptsA->GetId(j)));
                     }
                 }
 
-                // es können beide zutreffen
-
-                int indA = poly->GetId((j+1)%ptNbr);
-                int indB = poly->GetId((j+ptNbr-1)%ptNbr);
-
-                if (std::count(itr2->second.begin(), itr2->second.end(), indA) == 0) {
-
-                    MergeVertType mergeVert;
-
-                    mergeVert.polyInd = polys->GetId(0);
-                    mergeVert.vert = poly->GetId(j);
-
-                    pd->GetPoint(indA, mergeVert.pt);
-
-#ifdef DEBUG
-                    mergeVert.ind = indA;
-#endif
-
-                    mergeVerts.push_back(mergeVert);
-                }
-
-                if (std::count(itr2->second.begin(), itr2->second.end(), indB) == 0) {
-
-                    MergeVertType mergeVert;
-
-                    mergeVert.polyInd = polys->GetId(0);
-                    mergeVert.vert = poly->GetId(j);
-
-                    pd->GetPoint(indB, mergeVert.pt);
-
-#ifdef DEBUG
-                    mergeVert.ind = indB;
-#endif
-
-                    mergeVerts.push_back(mergeVert);
-                }
-
-                poly->Delete();
-            }
-        }
-
-        polys->Delete();
-
-        verts->Delete();
-
-        // jetzt kommt die paarbildung
-
-        std::vector<MergeVertType>::iterator itr3, itr4;
-
-#ifdef DEBUG
-        std::cout << "mergeVerts " << mergeVerts.size() << std::endl;
-
-        for (itr3 = mergeVerts.begin(); itr3 != mergeVerts.end(); itr3++) {
-
-            std::cout << "polyInd " << itr3->polyInd
-                << ", vert " << itr3->vert
-                << ", ind " << itr3->ind << std::endl;
-        }
-
-#endif
-
-        if (mergeVerts.size() > 1) {
-
-            std::deque<std::pair<MergeVertType, MergeVertType> > pairs;
-
-            for (itr3 = mergeVerts.begin(); itr3 != mergeVerts.end()-1; itr3++) {
-
-                if (itr3->used) {
-                    continue;
-                }
-
-                for (itr4 = itr3+1; itr4 != mergeVerts.end(); itr4++) {
-
-                    if (itr4->used) {
-                        continue;
-                    }
-
-                    double dV[3], d;
-
-                    vtkMath::Subtract(itr3->pt, itr4->pt, dV);
-
-                    d = vtkMath::Norm(dV);
-
-                    if (d < 1e-7) {
-                        // paar gefunden
-
-#ifdef DEBUG
-                        std::cout << "pair [" << itr3->vert << ", " << itr4->vert << "]" << std::endl;
-#endif
-
-                        pairs.push_back(std::make_pair(*itr3, *itr4));
-
-                        itr3->used = true;
-                        itr4->used = true;
-
-                        break;
-
-                    }
-
-                }
-
-            }
-
-            std::deque<MergeVertType> group;
-
-            int i = 0;
-
-            while (pairs.size() > 0) {
-
-                if (group.empty()) {
-                    group.push_back(pairs[0].first);
-                    group.push_back(pairs[0].second);
-
-                    pairs.pop_front();
-
-                    i = 0;
-
-                } else {
-                    if (group.front().vert == pairs[i].first.vert) {
-                        group.push_front(pairs[i].second);
-                        pairs.erase(pairs.begin()+i);
-                        i = 0;
-
-                    } else if (group.front().vert == pairs[i].second.vert) {
-                        group.push_front(pairs[i].first);
-                        pairs.erase(pairs.begin()+i);
-                        i = 0;
-
-                    } else if (group.back().vert == pairs[i].first.vert) {
-                        group.push_back(pairs[i].second);
-                        pairs.erase(pairs.begin()+i);
-                        i = 0;
-
-                    } else if (group.back().vert == pairs[i].second.vert) {
-                        group.push_back(pairs[i].first);
-                        pairs.erase(pairs.begin()+i);
-                        i = 0;
-
-                    } else {
-                        i++;
+                for (int j = 0; j < numPtsB; j++) {
+                    pd->GetPointCells(ptsB->GetId(j), cells);
+                    int numCells = cells->GetNumberOfIds();
+                    for (int k = 0; k < numCells; k++) {
+                        polysB.push_back(Pair(cells->GetId(k), ptsB->GetId(j)));
                     }
                 }
 
-                if (i == pairs.size()) {
+                for (itr7 = polysA.begin(); itr7 != polysA.end(); ++itr7) {
+                    for (itr8 = polysB.begin(); itr8 != polysB.end(); ++itr8) {
 
-                    std::deque<MergeVertType>::const_iterator itr4;
+                        if (itr7->f == itr8->f
+                            && pd->GetCellType(itr7->f) != VTK_EMPTY_CELL) {
 
-#ifdef DEBUG
-                    std::cout << "group [" << group.front().vert << ", ";;
-#endif
+                            vtkIdList *poly = vtkIdList::New();
+                            pd->GetCellPoints(itr7->f, poly);
 
-                    for (itr4 = group.begin()+1; itr4 != group.end(); itr4++) {
-                        pd->ReplaceCellPoint(itr4->polyInd, itr4->vert, group.front().vert);
+                            int numPts = poly->GetNumberOfIds();
 
-#ifdef DEBUG
-                        std::cout << itr4->vert << ", ";
-#endif
+                            vtkIdList *poly_ = vtkIdList::New();
 
+                            for (int j = 0; j < numPts; j++) {
+                                poly_->InsertNextId(poly->GetId(j));
+
+                                if (itr7->g == poly->GetId(j)
+                                    && itr8->g == poly->GetId((j+1)%numPts)) {
+
+                                    // ursprüngliche kante
+
+                                    for (itr4 = pts_.begin()+1; itr4 != pts_.end()-1; ++itr4) {
+                                        poly_->InsertNextId(pd->InsertNextLinkedPoint(itr4->pt, 1));
+                                    }
+
+                                }
+
+                                pd->RemoveReferenceToCell(poly->GetId(j), itr7->f);
+                            }
+
+                            pd->DeleteCell(itr7->f);
+
+                            pd->InsertNextLinkedCell(VTK_POLYGON, poly_->GetNumberOfIds(), poly_->GetPointer(0));
+
+                            origCellIds->InsertNextValue(origCellIds->GetValue(itr7->f));
+
+                            poly->Delete();
+                            poly_->Delete();
+
+                        }
                     }
-
-#ifdef DEBUG
-                    std::cout << "]" << std::endl;
-#endif
-
-                    group.clear();
-
                 }
+
+                ptsA->Delete();
+                ptsB->Delete();
 
             }
 
         }
 
     }
+
+    cells->Delete();
 
     loc->FreeSearchStructure();
     loc->Delete();
+
+    pd->RemoveDeletedCells();
+
+}
+
+void vtkPolyDataBooleanFilter::MergePoints (vtkPolyData *pd, PolyStripsType &polyStrips) {
+
+#ifdef DEBUG
+    std::cout << "MergePoints()" << std::endl;
+#endif
+
+    vtkKdTreePointLocator *loc = vtkKdTreePointLocator::New();
+    loc->SetDataSet(pd);
+    loc->BuildLocator();
+
+    // essenziell
+    pd->BuildLinks();
+
+    PolyStripsType::iterator itr;
+    StripsType::iterator itr2;
+
+    typedef std::set<int> AType;
+    typedef std::map<int, AType> BType;
+
+    BType inds;
+
+    vtkIdList *pts = vtkIdList::New();
+
+    for (itr = polyStrips.begin(); itr != polyStrips.end(); ++itr) {
+        PStrips &pStrips = itr->second;
+
+        for (itr2 = pStrips.strips.begin(); itr2 != pStrips.strips.end(); ++itr2) {
+            StripType &strip = *itr2;
+
+            StripPtR &s = strip.front(),
+                &e = strip.back();
+
+            Utilities::FindPoints(loc, pStrips.pts[(strip.begin()+1)->ind].pt, pts);
+            int numPts = pts->GetNumberOfIds();
+
+            for (int i = 0; i < numPts; i++) {
+                inds[s.ind].insert(pts->GetId(i));
+            }
+
+            Utilities::FindPoints(loc, pStrips.pts[(strip.end()-2)->ind].pt, pts);
+            numPts = pts->GetNumberOfIds();
+
+            for (int i = 0; i < numPts; i++) {
+                inds[e.ind].insert(pts->GetId(i));
+            }
+        }
+    }
+
+    vtkIdList *poly = vtkIdList::New(),
+        *polys = vtkIdList::New();
+
+    typedef std::vector<MergePt> CType;
+    typedef std::vector<Pair> DType;
+    typedef std::deque<int> EType;
+
+    BType::iterator itr3;
+    CType::iterator itr4, itr5;
+    EType::iterator itr6;
+
+#ifdef DEBUG
+    AType::const_iterator _itr;
+#endif
+
+    for (itr3 = inds.begin(); itr3 != inds.end(); ++itr3) {
+        AType &bads = itr3->second;
+
+#ifdef DEBUG
+        std::cout << "ind=" << itr3->first << ", bads=[";
+        for (_itr = bads.begin(); _itr != bads.end(); ++_itr) {
+            std::cout << *_itr << ", ";
+        }
+        std::cout << "]" << std::endl;
+#endif
+
+        CType mergePts;
+
+        double pt[3];
+        contLines->GetPoint(itr3->first, pt);
+
+        Utilities::FindPoints(loc, pt, pts);
+        int numPts = pts->GetNumberOfIds();
+
+        assert(numPts > 0);
+
+#ifdef DEBUG
+        std::cout << "pts=[";
+        for (int i = 0; i < numPts; i++) {
+            int ind = pts->GetId(i);
+            pd->GetPointCells(ind, polys);
+            if (polys->GetNumberOfIds() > 0) {
+                std::cout << ind << " -> " << polys->GetId(0) << ", ";
+            }
+        }
+        std::cout << "]" << std::endl;
+#endif
+
+        for (int i = 0; i < numPts; i++) {
+            int ind = pts->GetId(i);
+
+            pd->GetPointCells(ind, polys);
+
+            if (polys->GetNumberOfIds() > 0) {
+                // sollte nur von einem verwendet werden
+
+                pd->GetCellPoints(polys->GetId(0), poly);
+                int numPts_ = poly->GetNumberOfIds();
+
+                int j = 0;
+                for (; j < numPts_; j++) {
+                    if (poly->GetId(j) == ind) {
+                        break;
+                    }
+                }
+
+                // davor und danach
+                int before = poly->GetId((j+numPts_-1)%numPts_),
+                    after = poly->GetId((j+1)%numPts_);
+
+                double pt_[3];
+
+                if (std::count(bads.begin(), bads.end(), before) == 0) {
+                    pd->GetPoint(before, pt_);
+                    mergePts.push_back(MergePt(polys->GetId(0), ind, pt_));
+                }
+
+                if (std::count(bads.begin(), bads.end(), after) == 0) {
+                    pd->GetPoint(after, pt_);
+                    mergePts.push_back(MergePt(polys->GetId(0), ind, pt_));
+                }
+
+            }
+        }
+
+#ifdef DEBUG
+        for (itr4 = mergePts.begin(); itr4 != mergePts.end(); ++itr4) {
+            std::cout << (itr4-mergePts.begin())
+                      << ": (" << itr4->polyInd << ", " << itr4->ind
+                      << ", [" << itr4->pt[0] << ", " << itr4->pt[1] << ", " << itr4->pt[2]
+                      << "])" << std::endl;
+        }
+#endif
+
+        // benachbarte polygone finden
+
+        DType pairs;
+
+        for (itr4 = mergePts.begin(); itr4 != mergePts.end(); ++itr4) {
+            for (itr5 = itr4+1; itr5 != mergePts.end(); ++itr5) {
+                if (Utilities::GetD3(itr4->pt, itr5->pt) < 1e-6) {
+                    // paar gefunden
+                    pairs.push_back(Pair(itr4-mergePts.begin(), itr5-mergePts.begin()));
+                }
+            }
+        }
+
+#ifdef DEBUG
+        DType::const_iterator _itr2;
+        for (_itr2 = pairs.begin(); _itr2 != pairs.end(); ++_itr2) {
+            std::cout << *_itr2 << std::endl;
+        }
+#endif
+
+        // gruppiert anhand von aneinandergrenzung
+
+        EType group;
+
+        int i = 0;
+
+        while (pairs.size() > 0) {
+            Pair &pair = pairs[i];
+
+            if (group.empty()) {
+                group.push_back(pair.f);
+                group.push_back(pair.g);
+
+                pairs.erase(pairs.begin());
+            } else {
+                MergePt &a = mergePts[pair.f],
+                    &b = mergePts[pair.g];
+
+                if (mergePts[group.front()].ind == a.ind) {
+                    group.push_front(pair.g);
+                    pairs.erase(pairs.begin()+i);
+                    i = 0;
+                } else if (mergePts[group.front()].ind == b.ind) {
+                    group.push_front(pair.f);
+                    pairs.erase(pairs.begin()+i);
+                    i = 0;
+                } else if (mergePts[group.back()].ind == a.ind) {
+                    group.push_back(pair.g);
+                    pairs.erase(pairs.begin()+i);
+                    i = 0;
+                } else if (mergePts[group.back()].ind == b.ind) {
+                    group.push_back(pair.f);
+                    pairs.erase(pairs.begin()+i);
+                    i = 0;
+                } else {
+                    i++;
+                }
+
+            }
+
+            if (i == pairs.size()) {
+                for (itr6 = group.begin()+1; itr6 != group.end(); ++itr6) {
+#ifdef DEBUG
+                    std::cout << "repl " <<  mergePts[*itr6].ind << " -> " << mergePts[group.front()].ind << std::endl;
+#endif
+
+                    pd->ReplaceCellPoint(mergePts[*itr6].polyInd, mergePts[*itr6].ind, mergePts[group.front()].ind);
+                }
+
+                group.clear();
+                i = 0;
+            }
+
+        }
+
+    }
+
+    pts->Delete();
+    poly->Delete();
+    polys->Delete();
+
+    loc->FreeSearchStructure();
+    loc->Delete();
+
+}
+
+void vtkPolyDataBooleanFilter::DecomposePolys () {
+
+#ifdef DEBUG
+    std::cout << "DecomposePolys()" << std::endl;
+#endif
+
+    vtkPolyData *pd = vtkPolyData::New();
+    pd->DeepCopy(resultA);
+
+    vtkCellData *cellData = pd->GetCellData();
+
+    vtkIntArray *origCellIdsA = vtkIntArray::SafeDownCast(cellData->GetScalars("OrigCellIdsA")),
+        *origCellIdsB = vtkIntArray::SafeDownCast(cellData->GetScalars("OrigCellIdsB"));
+
+    int numCells = pd->GetNumberOfCells();
+
+    vtkIdList *cells = vtkIdList::New();
+    for (int i = 0; i < numCells; i++) {
+        if (involvedA.count(origCellIdsA->GetValue(i)) > 0
+            || involvedB.count(origCellIdsB->GetValue(i)) > 0) {
+            cells->InsertNextId(i);
+        }
+    }
+
+#ifdef _DEBUG
+
+    vtkExtractCells *extract = vtkExtractCells::New();
+    extract->SetInputData(pd);
+    extract->SetCellList(cells);
+
+    vtkGeometryFilter *gf = vtkGeometryFilter::New();
+    gf->SetInputConnection(extract->GetOutputPort());
+
+    vtkCleanPolyData *clean = vtkCleanPolyData::New();
+    clean->PointMergingOff();
+    clean->SetInputConnection(gf->GetOutputPort());
+    clean->Update();
+
+    Utilities::WriteVTK("extracted.vtk", clean->GetOutput());
+
+    clean->Delete();
+    gf->Delete();
+    extract->Delete();
+    cells->Delete();
+
+#else
+
+    for (int i = 0; i < cells->GetNumberOfIds(); i++) {
+        vtkIdList *poly = vtkIdList::New();
+        pd->GetCellPoints(cells->GetId(i), poly);
+
+        int numPts = poly->GetNumberOfIds();
+
+        double pts[numPts][3],
+            pts2[numPts][2];
+
+        for (int j = 0; j < numPts; j++) {
+            pd->GetPoint(poly->GetId(j), pts[j]);
+        }
+
+        // transformiert in 2d
+        Base base(pts, numPts);
+        Transform(pts, pts2, numPts, base);
+
+        // zerlegt
+        DecType dec;
+        Decompose(pts2, numPts).collect(dec);
+
+        if (dec.size() > 1) {
+            vtkIdList *poly2 = vtkIdList::New();
+
+            DecType::const_iterator itr;
+            IdsType::const_iterator itr2;
+            for (itr = dec.begin(); itr != dec.end(); ++itr) {
+                poly2->Reset();
+                for (itr2 = itr->begin(); itr2 != itr->end(); ++itr2) {
+                    poly2->InsertNextId(poly->GetId(*itr2));
+                }
+
+                pd->InsertNextCell(VTK_POLYGON, poly2);
+
+                origCellIdsA->InsertNextValue(origCellIdsA->GetValue(cells->GetId(i)));
+                origCellIdsB->InsertNextValue(origCellIdsB->GetValue(cells->GetId(i)));
+            }
+
+            poly2->Delete();
+
+            // löscht das nicht-konvexe polygon
+            pd->DeleteCell(cells->GetId(i));
+        }
+
+        poly->Delete();
+
+    }
+
+    pd->RemoveDeletedCells();
+
+#endif
+
+    resultA->ShallowCopy(pd);
 
 }
 
@@ -2122,9 +2059,11 @@ public:
         poly = vtkIdList::New();
         pd->GetCellPoints(polyId, poly);
 
-        for (unsigned int i = 0; i < poly->GetNumberOfIds(); i++) {
+        int numPts = poly->GetNumberOfIds();
+
+        for (int i = 0; i < numPts; i++) {
             if (poly->GetId(i) == ptIds[0]) {
-                if (poly->GetId((i+1)%poly->GetNumberOfIds()) != ptIds[1]) {
+                if (poly->GetId((i+1)%numPts) != ptIds[1]) {
                     int tmp = ptIds[0];
                     ptIds[0] = ptIds[1];
                     ptIds[1] = tmp;
@@ -2142,7 +2081,7 @@ public:
         vtkMath::Subtract(ptB, ptA, e);
         vtkMath::Normalize(e);
 
-        GeomHelper::ComputeNormal(pd->GetPoints(), poly, n);
+        Utilities::ComputeNormal(pd->GetPoints(), poly, n);
 
         vtkMath::Cross(e, n, r);
 
@@ -2161,13 +2100,11 @@ public:
 
 
 class PolyPair {
-
 public:
     double alpha;
 
     PolyPair (PolyAtEdge *pA, PolyAtEdge *pB) : pA(pA), pB(pB) {
-        alpha = GeomHelper::GetAngle(pA->r, pB->r, pA->e);
-
+        alpha = Utilities::GetAngle(pA->r, pB->r, pA->e);
     }
 
     ~PolyPair () {
@@ -2178,16 +2115,14 @@ public:
     PolyAtEdge *pA, *pB;
 
     void GetLoc (PolyAtEdge *pT, int mode) {
-        double beta = GeomHelper::GetAngle(pA->r, pT->r, pA->e);
+        double beta = Utilities::GetAngle(pA->r, pT->r, pA->e);
 
 #ifdef DEBUG
-        std::cout << "GetLoc()" << std::endl;
-
-        std::cout << "polyId " << pT->polyId << ", beta " << (beta*180/M_PI) << std::endl;
-
+        std::cout << "GetLoc() -> polyId "
+                  << pT->polyId << ", beta " << (beta*180/pi) << std::endl;
 #endif
 
-        if (beta < 1e-7 || beta > 2*M_PI-1e-7) {
+        if (beta < 1e-7 || beta > 2*pi-1e-7) {
             // konkruent gegenüber dem polygon hinter pA
 
             double o = vtkMath::Dot(pA->n, pT->n);
@@ -2207,7 +2142,7 @@ public:
                 pT->loc = LOC_OUTSIDE;
             }
 
-        } else if (std::fabs(beta-alpha) < 1e-7) {
+        } else if (std::abs(beta-alpha) < 1e-7) {
 
             double o = vtkMath::Dot(pB->n, pT->n);
 
@@ -2246,28 +2181,31 @@ PolyPair* GetEdgePolys (vtkPolyData *pd, vtkIdList *ptsA, vtkIdList *ptsB) {
 
     std::map<int, int> polyPts;
 
+    int numPtsA = ptsA->GetNumberOfIds(),
+        numPtsB = ptsB->GetNumberOfIds();
+
     vtkIdList *polys = vtkIdList::New();
 
-    for (unsigned int i = 0; i < ptsA->GetNumberOfIds(); i++) {
+    for (int i = 0; i < numPtsA; i++) {
         polys->Reset();
 
         pd->GetPointCells(ptsA->GetId(i), polys);
+        int numCells = polys->GetNumberOfIds();
 
-        for (unsigned int j = 0; j < polys->GetNumberOfIds(); j++) {
-
+        for (int j = 0; j < numCells; j++) {
             polyPts[polys->GetId(j)] = ptsA->GetId(i);
-
         }
     }
 
     PolyAtEdge *first = NULL;
 
-    for (unsigned int i = 0; i < ptsB->GetNumberOfIds(); i++) {
+    for (int i = 0; i < numPtsB; i++) {
         polys->Reset();
 
         pd->GetPointCells(ptsB->GetId(i), polys);
+        int numCells = polys->GetNumberOfIds();
 
-        for (unsigned int j = 0; j < polys->GetNumberOfIds(); j++) {
+        for (int j = 0; j < numCells; j++) {
 
             if (polyPts.count(polys->GetId(j)) > 0) {
 
@@ -2280,7 +2218,7 @@ PolyPair* GetEdgePolys (vtkPolyData *pd, vtkIdList *ptsA, vtkIdList *ptsB) {
 
                 int numPts = poly->GetNumberOfIds();
 
-                for (unsigned int k = 0; k < numPts; k++) {
+                for (int k = 0; k < numPts; k++) {
                     if (poly->GetId(k) == ptsB->GetId(i)
                         && (polyPts[polys->GetId(j)] == poly->GetId((k+1)%numPts)
                             || polyPts[polys->GetId(j)] == poly->GetId((k+numPts-1)%numPts))) {
@@ -2321,7 +2259,6 @@ PolyPair* GetEdgePolys (vtkPolyData *pd, vtkIdList *ptsA, vtkIdList *ptsB) {
     }
 
 #ifdef DEBUG
-
     if (pp != NULL) {
         std::cout << "pA: polyInd " << pp->pA->polyId
             << ", ptIdA " << pp->pA->ptIds[0] << ", ptIdB " << pp->pA->ptIds[1] << std::endl;
@@ -2329,10 +2266,9 @@ PolyPair* GetEdgePolys (vtkPolyData *pd, vtkIdList *ptsA, vtkIdList *ptsB) {
         std::cout << "pB: polyInd " << pp->pB->polyId
             << ", ptIdA " << pp->pB->ptIds[0] << ", ptIdB " << pp->pB->ptIds[1] << std::endl;
 
-        std::cout << "alpha " << (pp->alpha*180/M_PI) << std::endl;
+        std::cout << "alpha " << (pp->alpha*180/pi) << std::endl;
 
     }
-
 #endif
 
     return pp;
@@ -2353,19 +2289,11 @@ void vtkPolyDataBooleanFilter::CombineRegions () {
     // ungenutzte punkte löschen
     vtkCleanPolyData *cleanA = vtkCleanPolyData::New();
     cleanA->PointMergingOff();
-#if (VTK_MAJOR_VERSION == 5)
-    cleanA->SetInput(modPdA);
-#else
     cleanA->SetInputData(modPdA);
-#endif
 
     vtkCleanPolyData *cleanB = vtkCleanPolyData::New();
     cleanB->PointMergingOff();
-#if (VTK_MAJOR_VERSION == 5)
-    cleanB->SetInput(modPdB);
-#else
     cleanB->SetInputData(modPdB);
-#endif
 
     // regionen mit skalaren ausstatten
     vtkPolyDataConnectivityFilter *cfA = vtkPolyDataConnectivityFilter::New();
@@ -2390,10 +2318,10 @@ void vtkPolyDataBooleanFilter::CombineRegions () {
 
 #ifdef DEBUG
     std::cout << "Exporting modPdA_8.vtk" << std::endl;
-    GeomHelper::WriteVTK("modPdA_8.vtk", cfA->GetOutput());
+    Utilities::WriteVTK("modPdA_8.vtk", cfA->GetOutput());
 
     std::cout << "Exporting modPdB_8.vtk" << std::endl;
-    GeomHelper::WriteVTK("modPdB_8.vtk", cfB->GetOutput());
+    Utilities::WriteVTK("modPdB_8.vtk", cfB->GetOutput());
 #endif
 
     // locators erstellen
@@ -2423,18 +2351,15 @@ void vtkPolyDataBooleanFilter::CombineRegions () {
 
     std::map<int, int> locsA, locsB;
 
-    for (unsigned int i = 0; i < contLines->GetNumberOfCells(); i++) {
+    for (int i = 0; i < contLines->GetNumberOfCells(); i++) {
 
         contLines->GetCellPoints(i, line);
 
         contLines->GetPoint(line->GetId(0), ptA);
         contLines->GetPoint(line->GetId(1), ptB);
 
-        //plA->FindPointsWithinRadius(1e-7, ptA, fptsA);
-        //plB->FindPointsWithinRadius(1e-7, ptA, fptsB);
-
-        GeomHelper::FindPoints(plA, ptA, fptsA);
-        GeomHelper::FindPoints(plB, ptA, fptsB);
+        Utilities::FindPoints(plA, ptA, fptsA);
+        Utilities::FindPoints(plB, ptA, fptsB);
 
 #ifdef DEBUG
         std::cout << "line " << i << std::endl;
@@ -2462,11 +2387,8 @@ void vtkPolyDataBooleanFilter::CombineRegions () {
 
 #endif
 
-        //plA->FindPointsWithinRadius(1e-7, ptB, lptsA);
-        //plB->FindPointsWithinRadius(1e-7, ptB, lptsB);
-
-        GeomHelper::FindPoints(plA, ptB, lptsA);
-        GeomHelper::FindPoints(plB, ptB, lptsB);
+        Utilities::FindPoints(plA, ptB, lptsA);
+        Utilities::FindPoints(plB, ptB, lptsB);
 
         PolyPair *ppA = GetEdgePolys(pdA, fptsA, lptsA);
         PolyPair *ppB = GetEdgePolys(pdB, fptsB, lptsB);
@@ -2572,7 +2494,7 @@ void vtkPolyDataBooleanFilter::CombineRegions () {
     vtkPolyData *regsA = cfA->GetOutput();
 
     if (comb[0] == LOC_INSIDE && OperMode != OPER_INTERSECTION) {
-        for (unsigned int i = 0; i < regsA->GetNumberOfCells(); i++) {
+        for (int i = 0; i < regsA->GetNumberOfCells(); i++) {
             regsA->ReverseCell(i);
         }
     }
@@ -2582,7 +2504,7 @@ void vtkPolyDataBooleanFilter::CombineRegions () {
     vtkPolyData *regsB = cfB->GetOutput();
 
     if (comb[1] == LOC_INSIDE && OperMode != OPER_INTERSECTION) {
-        for (unsigned int i = 0; i < regsB->GetNumberOfCells(); i++) {
+        for (int i = 0; i < regsB->GetNumberOfCells(); i++) {
             regsB->ReverseCell(i);
         }
     }
@@ -2604,14 +2526,14 @@ void vtkPolyDataBooleanFilter::CombineRegions () {
     vtkCellData *newCellDataB = vtkCellData::New();
     newCellDataB->CopyAllocate(cellDataB);
 
-    for (unsigned int i = 0; i < regsA->GetNumberOfCells(); i++) {
+    for (int i = 0; i < regsA->GetNumberOfCells(); i++) {
         newOrigCellIdsA->InsertNextValue(origCellIdsA->GetValue(i));
         newOrigCellIdsB->InsertNextValue(-1);
 
         newCellDataA->CopyData(cellDataA, origCellIdsA->GetValue(i), i);
     }
 
-    for (unsigned int i = 0; i < regsB->GetNumberOfCells(); i++) {
+    for (int i = 0; i < regsB->GetNumberOfCells(); i++) {
         newOrigCellIdsB->InsertNextValue(origCellIdsB->GetValue(i));
         newOrigCellIdsA->InsertNextValue(-1);
 
@@ -2630,14 +2552,8 @@ void vtkPolyDataBooleanFilter::CombineRegions () {
     // zusammenführung
 
     vtkAppendPolyData *app = vtkAppendPolyData::New();
-
-#if (VTK_MAJOR_VERSION == 5)
-    app->AddInput(regsA);
-    app->AddInput(regsB);
-#else
     app->AddInputData(regsA);
     app->AddInputData(regsB);
-#endif
 
     // entfernt ungenutzte punkte
     vtkCleanPolyData *cleanApp = vtkCleanPolyData::New();
@@ -2737,13 +2653,8 @@ void vtkPolyDataBooleanFilter::MergeRegions () {
     padIdsB->Delete();
 
     vtkAppendPolyData *app = vtkAppendPolyData::New();
-#if (VTK_MAJOR_VERSION == 5)
-    app->AddInput(pdA);
-    app->AddInput(pdB);
-#else
     app->AddInputData(pdA);
     app->AddInputData(pdB);
-#endif
 
     app->Update();
 
@@ -2753,11 +2664,7 @@ void vtkPolyDataBooleanFilter::MergeRegions () {
 
     vtkCleanPolyData *clean = vtkCleanPolyData::New();
     clean->PointMergingOff();
-#if (VTK_MAJOR_VERSION == 5)
-    clean->SetInput(appPd);
-#else
     clean->SetInputData(appPd);
-#endif
 
     clean->Update();
 
