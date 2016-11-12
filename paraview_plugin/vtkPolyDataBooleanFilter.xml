@@ -29,14 +29,14 @@
                 </Documentation>
             </InputProperty>
 
-            <IntVectorProperty name="Merge all" command="SetMergeAll" number_of_elements="1" default_values="0">
+            <IntVectorProperty name="Merge" command="SetMergeAll" number_of_elements="1" default_values="0">
                 <BooleanDomain name="bool"/>
                 <Documentation>
                     Ignore operation mode and merge all divided regions into one output.
                 </Documentation>
             </IntVectorProperty>
 
-            <IntVectorProperty name="Decompose polygons" command="SetDecPolys" number_of_elements="1" default_values="0">
+            <IntVectorProperty name="Decompose" command="SetDecPolys" number_of_elements="1" default_values="0">
                 <BooleanDomain name="bool"/>
                 <Documentation>
                     Decompose non-convex polygons.

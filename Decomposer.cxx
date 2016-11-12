@@ -157,17 +157,34 @@ namespace Decomposer {
         std::vector<Cut> cuts, cuts2;
 
         for (int i = 0; i < num; i++) {
+            int j = (i+1)%num;
+            
             double *ptI = pts[i],
-                *ptJ = pts[(i+1)%num];
+                *ptJ = pts[j];
 
             if (i == ind) {
                 cuts.push_back(Cut(ind, x, 0, 0));
             } else {
-                double s[2], t, u;
-                if (Intersect(x, _ei, ptI, ptJ, s, &t, &u)) {
-                    Cut cut(i, s, t, u);
+                // sind die punkte x, ptI auf _ei?
+                
+                double ptK[] = {x[0]+1, x[1]};
+                
+                double l = x[0]*(ptI[1]-ptK[1])-x[1]*(ptI[0]-ptK[0])+(ptI[0]*ptK[1]-ptK[0]*ptI[1]);
+                
+                if (std::abs(l) < 1e-9) {
+                    double t = x[0]-ptI[0];
+                    Cut cut(i, ptI, t, 0);
                     cuts.push_back(std::move(cut));
+                    
+                } else {
+                    double s[2], t, u;
+                    if (Intersect(x, _ei, ptI, ptJ, s, &t, &u)) {
+                        Cut cut(i, s, t, u);
+                        cuts.push_back(std::move(cut));
+                    }
+                    
                 }
+                
             }
         }
 
@@ -296,36 +313,226 @@ namespace Decomposer {
         int t = 0, u, v;
 
         for (;;) {
-
-            Vert &tVert = _poly[t],
-                &uVert = _poly[(u = tVert.succ)],
-                &vVert = _poly[(v = uVert.succ)];
+            u = _poly[t].succ;
+            v = _poly[u].succ;
 
             /*
             std::cout << "-- " << t << ": (" << u << ", " << v << ")" << std::endl;
-            */
-
-            double tPt[3], uPt[3], vPt[3];
-            CPY(tPt, tVert.pt)
-            CPY(uPt, uVert.pt)
-            CPY(vPt, vVert.pt)
-
-            double dT = GetD(tPt, vPt);
-
-            double cA = (uPt[1]-tPt[1])*(vPt[0]-tPt[0])-(uPt[0]-tPt[0])*(vPt[1]-tPt[1]),
-                cB = (uPt[1]-x[1])*(vPt[0]-x[0])-(uPt[0]-x[0])*(vPt[1]-x[1]);
-
-            /*
-            std::cout << "cA=" << cA << " cB=" << cB << std::endl;
             */
 
             if (v == 0) {
                 break;
             }
 
-            if (cB < -tol) {
+            double cA = (_poly[u].pt[1]-_poly[t].pt[1])*(_poly[v].pt[0]-_poly[t].pt[0])
+                    -(_poly[u].pt[0]-_poly[t].pt[0])*(_poly[v].pt[1]-_poly[t].pt[1]),
+                cB = (_poly[u].pt[1]-x[1])*(_poly[v].pt[0]-x[0])
+                    -(_poly[u].pt[0]-x[0])*(_poly[v].pt[1]-x[1]);
+
+            auto fct = [&]() {
+                int w = v;
+                for (;;) {
+                    Vert &vA = _poly[w],
+                        &vB = _poly[vA.succ];
+
+                    /*
+                    std::cout << "edge=[" << w << "," << vA.succ << "]" << std::endl;
+                    */
+
+                    double k[2], q, r;
+                    if (Intersect(x, _poly[u].r, vA.pt, vB.pt, k, &q, &r) && q > tol) {
+                        if (r > tol) {
+                            Vert vK(x, k, vA.succ);
+                            _poly.push_back(std::move(vK));
+                            int indK = _poly.size()-1;
+                            
+                            _poly[u].succ = indK;
+
+                            lBags.push(Bag(u, indK, _poly[u].phi));
+
+                            /*
+                            std::cout << "add M" << _poly[u].pt[0]
+                                << "," << _poly[u].pt[1]
+                                << " L" << k[0]
+                                << "," << k[1] << std::endl;
+                            */
+
+                            vp.push_back(indK);
+                        } else {
+                            // k ist vA
+                            _poly[u].succ = w;
+                            lBags.push(Bag(u, w, _poly[u].phi));
+                            vp.push_back(w);
+                        }
+
+                        t = u;
+
+                        break;
+                        
+                    } else {
+                        // x, u, vA sind lin. abh.
+                        
+                        double l = x[0]*(vA.pt[1]-_poly[u].pt[1])-x[1]*(vA.pt[0]-_poly[u].pt[0])+(vA.pt[0]*_poly[u].pt[1]-_poly[u].pt[0]*vA.pt[1]);
+                        
+                        if (std::abs(l) < 1e-9) {
+                            // vA muss jenseits von u liegen
+                            
+                            double m11 = x[0],
+                                m12 = _poly[u].pt[0]-x[0],
+                                m21 = x[1],
+                                m22 = _poly[u].pt[1]-x[1],
+                                v1 = vA.pt[0],
+                                v2 = vA.pt[1];
+
+                            double det = m11*m22-m12*m21,
+                                _t = (m11*v2-v1*m21)/det;
+
+                            if (_t > 1) {
+                                _poly[u].succ = w;
+                                vp.push_back(w);
+                                t = u;
+                                
+                                break;
+                            }
+                        }
+                        
+                    }
+
+                    w = vA.succ;
+                    if (w == 0) {
+                        // schnitt ist genau auf 0
+                        _poly[u].succ = 0;
+                        break;
+                    }
+                }
+            };
+
+            /*
+            std::cout << "cA=" << cA << ", cB=" << cB << std::endl;
+            */
+            
+            double dU = GetD(_poly[u].pt, x),
+                dV = GetD(_poly[v].pt, x),
+                dT = GetD(_poly[t].pt, _poly[v].pt);
+
+            if (_poly[v].ind == ind) {
+                /*
+                std::cout << "Case 0(a)" << std::endl;
+                */
+
+                vp.push_back(v);
+                t = u;
+
+            } else if (_poly[u].ind == ind) {
+                /*
+                std::cout << "Case 0(b)" << std::endl;
+                */
+
+                vp.push_back(v);
+                t = u;
+
+            } else if (dT < tol) {
+                /*
+                std::cout << "Case 0(c)" << std::endl;
+                */
+
+                fct();
+
+            } else if (dV < tol) {
+                /*
+                std::cout << "Case 0(d)" << std::endl;
+                */
+
+                double ref[] = {_poly[u].pt[0]-_poly[v].pt[0], _poly[u].pt[1]-_poly[v].pt[1]};
+
+                double minAng = DBL_MAX;
+
+                int last = _poly[v].succ, m;
+
+                for (;;) {
+                    Vert &next = _poly[last];
+
+                    if (next.ind == ind) {
+                        break;
+                    }
+
+                    assert(next.ind != -1);
+
+                    double vec[] = {next.pt[0]-_poly[v].pt[0], next.pt[1]-_poly[v].pt[1]},
+                        ang = GetAng(ref, vec);
+
+                    /*
+                    std::cout << next.ind << ": " << (ang*180/pi) << std::endl;
+                    */
+
+                    if (ang < minAng) {
+                        minAng = ang;
+                        m = last;
+                    }
+
+                    last = next.succ;
+                }
+
+                /*
+                std::cout << (minAng*180/pi) << " -> " << m << ", " << _poly[m].ind << std::endl;
+                */
+
+                while (vp.size() > 1) {
+                    Vert &vA = _poly[*(vp.end()-2)],
+                        &vB = _poly[vA.succ];
+
+                    /*
+                    std::cout << "pop vert " << vp.back() << std::endl;
+                    */
+                    vp.pop_back();
+
+                    double k[2], q, r;
+                    if (Intersect(x, _poly[m].r, vA.pt, vB.pt, k, &q, &r) && q > tol) {
+                        int indK;
+
+                        if (r > tol) {
+                            Vert vK(x, k, m);
+                            _poly.push_back(std::move(vK));
+                            indK = _poly.size()-1;
+
+                            vA.succ = indK;
+                            vp.push_back(indK);
+
+                        } else {
+                            // k ist vA
+                            vA.succ = m;
+                            indK = vp.back();
+                        }
+
+                        vp.push_back(m);
+
+                        lBags.push(Bag(m, indK, _poly[m].phi));
+
+                        t = indK;
+
+                        break;
+                    }
+
+                }
+                
+            } else if (dU < tol) {
+                /*
+                std::cout << "Case 0(e)" << std::endl;
+                */
+                assert(true);
+
+            } else if (std::abs(cB) < tol) {
+                // lin. abh.
+                /*
+                std::cout << "Case 0(f)" << std::endl;
+                */
+
+                vp.push_back(v);
+                t = u;
+                
+            } else if (cB < 0) {
                 Bag *bag = NULL;
-                while (!rBags.empty() && rBags.top().phi < vVert.phi) {
+                while (!rBags.empty() && rBags.top().phi < _poly[v].phi) {
                     Bag &top = rBags.top();
                     if (bag == NULL) {
                         bag = new Bag(top);
@@ -340,7 +547,7 @@ namespace Decomposer {
                 }
 
                 double k[2];
-                if (bag != NULL && Intersect2(uPt, vPt, _poly[bag->f].pt, _poly[bag->g].pt, k)) {
+                if (bag != NULL && Intersect2(_poly[u].pt, _poly[v].pt, _poly[bag->f].pt, _poly[bag->g].pt, k)) {
                     /*
                     std::cout << "Case 1(a)" << std::endl;
                     */
@@ -360,7 +567,6 @@ namespace Decomposer {
                             _poly.push_back(std::move(vK));
                             int indK = _poly.size()-1;
 
-                            //uVert.succ = indK;
                             _poly[u].succ = indK;
 
                             vp.push_back(indK);
@@ -407,11 +613,14 @@ namespace Decomposer {
                     delete bag;
                 }
 
-            } else if ((cA > -tol && cB > tol) || dT < tol) {
+            } else if (cA > 0) {
                 /*
                 std::cout << "Case 2" << std::endl;
                 */
 
+                fct();
+
+#if 0
                 int w = v;
                 for (;;) {
                     Vert &vA = _poly[w],
@@ -422,13 +631,11 @@ namespace Decomposer {
                     */
 
                     double k[2], q;
-                    if (Intersect(x, uVert.r, vA.pt, vB.pt, k, &q) && q > tol) {
+                    if (Intersect(x, _poly[u].r, vA.pt, vB.pt, k, &q) && q > tol) {
                         Vert vK(x, k, vA.succ);
                         _poly.push_back(std::move(vK));
                         int indK = _poly.size()-1;
-
-                        //uVert.succ = indK;
-                        // durch push_back ist die ref. uVert nicht mehr gültig
+                        
                         _poly[u].succ = indK;
 
                         lBags.push(Bag(u, indK, _poly[u].phi));
@@ -445,19 +652,34 @@ namespace Decomposer {
                         t = u;
 
                         break;
+                        
+                    } else {
+                        // x, u, vA sind lin. abh.
+                        
+                        double l = x[0]*(vA.pt[1]-_poly[u].pt[1])-x[1]*(vA.pt[0]-_poly[u].pt[0])+(vA.pt[0]*_poly[u].pt[1]-_poly[u].pt[0]*vA.pt[1]);
+                        
+                        if (std::abs(l) < 1e-9) {
+                            _poly[u].succ = w;
+                            vp.push_back(w);
+                            t = u;
+                            
+                            break;
+                        }
+                        
                     }
 
                     w = vA.succ;
                     if (w == 0) {
                         // schnitt ist genau auf 0
-                        uVert.succ = 0;
+                        _poly[u].succ = 0;
                         break;
                     }
                 }
+#endif
 
-            } else if (cA < 0 && cB > tol) {
+            } else if (cA < 0) {
                 Bag *bag = NULL;
-                while (!lBags.empty() && lBags.top().phi > vVert.phi) {
+                while (!lBags.empty() && lBags.top().phi > _poly[v].phi) {
                     Bag &top = lBags.top();
                     if (bag == NULL) {
                         bag = new Bag(top);
@@ -472,7 +694,7 @@ namespace Decomposer {
                 }
 
                 double k[2];
-                if (bag != NULL && Intersect2(uPt, vPt, _poly[bag->f].pt, _poly[bag->g].pt, k)) {
+                if (bag != NULL && Intersect2(_poly[u].pt, _poly[v].pt, _poly[bag->f].pt, _poly[bag->g].pt, k)) {
                     /*
                     std::cout << "Case 3(a)" << std::endl;
                     */
@@ -542,7 +764,7 @@ namespace Decomposer {
                         vp.pop_back();
 
                         double k[2], q, r;
-                        if (Intersect(x, vVert.r, vA.pt, vB.pt, k, &q, &r) && q > tol) {
+                        if (Intersect(x, _poly[v].r, vA.pt, vB.pt, k, &q, &r) && q > tol) {
                             int indK;
 
                             if (r > tol) {
@@ -571,16 +793,13 @@ namespace Decomposer {
 
                             // zweiter teil
 
-                            Vert &_vVert = _poly[v];
-                            Vert &wVert = _poly[_vVert.succ];
+                            int w = _poly[v].succ;
 
-                            double *wPt = wVert.pt;
-
-                            double cC = (vPt[1]-x[1])*(wPt[0]-x[0])-(vPt[0]-x[0])*(wPt[1]-x[1]),
-                                cD = (vPt[1]-uPt[1])*(wPt[0]-uPt[0])-(vPt[0]-uPt[0])*(wPt[1]-uPt[1]);
+                            double cC = (_poly[v].pt[1]-x[1])*(_poly[w].pt[0]-x[0])-(_poly[v].pt[0]-x[0])*(_poly[w].pt[1]-x[1]),
+                                cD = (_poly[v].pt[1]-_poly[u].pt[1])*(_poly[w].pt[0]-_poly[u].pt[0])-(_poly[v].pt[0]-_poly[u].pt[0])*(_poly[w].pt[1]-_poly[u].pt[1]);
 
                             /*
-                            std::cout << "cC=" << cC << " cD=" << cD << std::endl;
+                            std::cout << "cC=" << cC << ", cD=" << cD << std::endl;
                             */
 
                             if (cC > -tol) {
@@ -595,7 +814,7 @@ namespace Decomposer {
                                 */
 
                                 vp.push_back(v);
-                                lBags.push(Bag(v, indK, _vVert.phi));
+                                lBags.push(Bag(v, indK, _poly[v].phi));
 
                                 /*
                                 std::cout << "add M" << _poly[v].pt[0]
@@ -609,13 +828,13 @@ namespace Decomposer {
                                 std::cout << "Reg c" << std::endl;
                                 */
 
-                                int w = _vVert.succ;
+                                int w = _poly[v].succ;
                                 for (;;) {
                                     Vert &vA = _poly[w],
                                         &vB = _poly[vA.succ];
 
                                     double l[2];
-                                    if (Intersect2(k, vPt, vA.pt, vB.pt, l)) {
+                                    if (Intersect2(k, _poly[v].pt, vA.pt, vB.pt, l)) {
                                         Vert vL(x, l, vA.succ);
                                         _poly.push_back(std::move(vL));
                                         int indL = _poly.size()-1;
@@ -623,7 +842,7 @@ namespace Decomposer {
                                         (_poly.end()-2)->succ = indL;
 
                                         vp.push_back(indL);
-                                        rBags.push(Bag(v, indL, _vVert.phi));
+                                        rBags.push(Bag(v, indL, _poly[v].phi));
 
                                         /*
                                         std::cout << "add M" << _poly[v].pt[0]
@@ -663,120 +882,6 @@ namespace Decomposer {
                     delete bag;
                 }
 
-            } else {
-                // die sonderfälle
-
-                double dU = GetD(uPt, x),
-                    dV = GetD(vPt, x);
-
-                if (vVert.ind == ind) {
-                    /*
-                    std::cout << "Case 4(a)" << std::endl;
-                    */
-
-                    vp.push_back(v);
-                    t = u;
-
-                } else if (uVert.ind == ind) {
-                    /*
-                    std::cout << "Case 4(b)" << std::endl;
-                    */
-
-                    vp.push_back(v);
-                    t = u;
-
-                } else if (dV < tol) {
-                    /*
-                    std::cout << "Case 4(c)" << std::endl;
-                    */
-
-                    double ref[] = {uPt[0]-vPt[0], uPt[1]-vPt[1]};
-
-                    double minAng = DBL_MAX;
-
-                    int last = vVert.succ, m;
-
-                    for (;;) {
-                        Vert &next = _poly[last];
-
-                        if (next.ind == ind) {
-                            break;
-                        }
-
-                        assert(next.ind != -1);
-
-                        double vec[] = {next.pt[0]-vPt[0], next.pt[1]-vPt[1]},
-                            ang = GetAng(ref, vec);
-
-                        /*
-                        std::cout << next.ind << ": " << (ang*180/pi) << std::endl;
-                        */
-
-                        if (ang < minAng) {
-                            minAng = ang;
-                            m = last;
-                        }
-
-                        last = next.succ;
-                    }
-
-                    /*
-                    std::cout << (minAng*180/pi) << " -> " << m << ", " << _poly[m].ind << std::endl;
-                    */
-
-                    while (vp.size() > 1) {
-                        Vert &vA = _poly[*(vp.end()-2)],
-                            &vB = _poly[vA.succ];
-
-                        /*
-                        std::cout << "pop vert " << vp.back() << std::endl;
-                        */
-                        vp.pop_back();
-
-                        double k[2], q, r;
-                        if (Intersect(x, _poly[m].r, vA.pt, vB.pt, k, &q, &r) && q > tol) {
-                            int indK;
-
-                            if (r > tol) {
-                                Vert vK(x, k, m);
-                                _poly.push_back(std::move(vK));
-                                indK = _poly.size()-1;
-
-                                vA.succ = indK;
-                                vp.push_back(indK);
-
-                            } else {
-                                // k ist vA
-                                vA.succ = m;
-                                indK = vp.back();
-                            }
-
-                            vp.push_back(m);
-
-                            lBags.push(Bag(m, indK, _poly[m].phi));
-
-                            t = indK;
-
-                            break;
-                        }
-
-                    }
-
-                } else if (dU < tol) {
-                    /*
-                    std::cout << "Case 4(d)" << std::endl;
-                    */
-
-                    assert(true);
-                } else {
-                    // lin. abh.
-                    /*
-                    std::cout << "Case 4(e)" << std::endl;
-                    */
-
-                    vp.push_back(v);
-                    t = u;
-                }
             }
 
             /*
@@ -792,6 +897,16 @@ namespace Decomposer {
             Vert2 v(_poly[*itr2]);
             poly.push_back(std::move(v));
         }
+        
+        /*
+        std::cout << "vp=[";
+        for (itr2 = vp.begin(); itr2 != vp.end(); ++itr2) {
+            if (_poly[*itr2].ind != NOUSE) {
+                std::cout << _poly[*itr2].ind << ", ";
+            }
+        }
+        std::cout << "]" << std::endl;
+        */
 
     }
 
@@ -846,10 +961,14 @@ namespace Decomposer {
     }
 
     bool Decompose::IsReflex (int i, int j, int k) {
-        double vA[] = {pts[j][0]-pts[i][0], pts[j][1]-pts[i][1], 0},
-            vB[] = {pts[k][0]-pts[i][0], pts[k][1]-pts[i][1], 0};
+        if (GetD(pts[j], pts[k]) < 1e-9) {
+            return true;
+        }
 
-        return (vA[0]*vB[1]-vB[0]*vA[1] < -1e-6) || GetD(pts[j], pts[k]) < 1e-6;
+        double vA[] = {pts[j][0]-pts[i][0], pts[j][1]-pts[i][1]},
+            vB[] = {pts[k][0]-pts[i][0], pts[k][1]-pts[i][1]};
+
+        return vA[0]*vB[1]-vB[0]*vA[1] < 0;
     }
 
     void Decompose::TypeA (int i, int j, int k) {
@@ -892,6 +1011,8 @@ namespace Decomposer {
             if (j-i > 1) {
                 // wenn die ersten beiden keine reflexe sind,
                 // dann den letzten löschen und den anderen auf s lassen
+                
+                assert(!s.empty());
 
                 if (!IsReflex(j, k, s.getF().g)) {
                     while (s.size() > 1 && !IsReflex(j, k, s.getPreF().g)) {
@@ -970,6 +1091,8 @@ namespace Decomposer {
             if (k-j > 1) {
                 // wenn die ersten beiden keine reflexe sind,
                 // dann den letzten löschen und den anderen auf s lassen
+                
+                assert(!s.empty());
 
                 if (!IsReflex(j, s.getB().f, i)) {
                     while (s.size() > 1 && !IsReflex(j, s.getPreB().f, i)) {
@@ -1072,38 +1195,57 @@ namespace Decomposer {
                     */
                 }
             }
+            
+            /*
+            std::set<Pair>::const_iterator itr;
+            for (itr = visVerts.begin(); itr != visVerts.end(); ++itr) {
+                std::cout << *itr << std::endl;
+            }
+            */
 
             /*
             std::cout << "init" << std::endl;
             */
+            
+            for (int i = 0; i < num; i++) {
+                if (refls[i]) {
+                    for (int j = -2; j < 3; j++) {
+                        int k = i+j;
+                        if (i != k && k > -1 && k < num) {
+                            Pair p(i, k);
+                            
+                            if (i > k) {
+                                p.f = k;
+                                p.g = i;
+                            }
+                            
+                            // w ist auf 9999 gesetzt
 
-            std::set<Pair>::iterator itr2;
-            for (itr2 = visVerts.begin(); itr2 != visVerts.end(); ++itr2) {
-                /*
-                std::cout << *itr2 << std::endl;
-                */
-
-                if (!refls[itr2->f]) {
-                    assert(refls[itr2->g]);
+                            SubD &sd = problems[p];
+                            
+                            /*
+                            std::cout << "Pair" << p;
+                            */
+                            
+                            if ((p.g-p.f) == 1) {
+                                /*
+                                std::cout << "->edge" << std::endl;
+                                */
+                                
+                                sd.w = 0;
+                            } else {
+                                /*
+                                std::cout << "->triangle" << std::endl;
+                                */
+                                
+                                sd.w = 0;
+                                sd.S.push(Pair(p.f+1, p.f+1));
+                            }
+                            
+                            
+                        }
+                    }
                 }
-
-                // w ist auf 9999 gesetzt
-
-                SubD &sd = problems[*itr2];
-
-                if (itr2->f == itr2->g-1) {
-                    /*
-                    std::cout << "edge" << std::endl;
-                    */
-                    sd.w = 0;
-                } else if (itr2->f == itr2->g-2) {
-                    sd.w = 0;
-                    /*
-                    std::cout << "triangle" << std::endl;
-                    */
-                    sd.S.push(Pair(itr2->f+1, itr2->f+1));
-                }
-
             }
 
             /*
@@ -1379,7 +1521,7 @@ namespace Decomposer {
         IdsType::const_iterator itr4;
         for (itr3 = dec.begin(); itr3 != dec.end(); ++itr3) {
             std::cout << "[";
-            for (itr4 = itr3->begin(); itr4 != itr->end(); ++itr4) {
+            for (itr4 = itr3->begin(); itr4 != itr3->end(); ++itr4) {
                 std::cout << *itr4 << ", ";
             }
             std::cout << "]" << std::endl;
