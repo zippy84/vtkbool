@@ -1303,12 +1303,6 @@ void vtkPolyDataBooleanFilter::RestoreOrigPoints (vtkPolyData *pd, PolyStripsTyp
 
         for (itr2 = pStrips.pts.begin(); itr2 != pStrips.pts.end(); ++itr2) {
             StripPt &sp = itr2->second;
-            /*
-            if (sp.capt == CAPT_A) {
-                ends.push_back(sp);
-            }
-            */
-
             ends.push_back(sp);
         }
     }

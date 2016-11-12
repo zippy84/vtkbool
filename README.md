@@ -48,7 +48,7 @@ This is an extension of the graphics library VTK. The goal of the extension is t
 
 ## ParaView Plugin
 
-To build the plugin you have to compile ParaView from source. Download the current version from <http://www.paraView.org> and follow the compilation instructions. As soon as ParaView is compiled, it may take a while, you can build the plugin with the following commands:
+To build the plugin you have to compile ParaView from source. Download the current version from <http://www.paraview.org> and follow the compilation instructions. As soon as ParaView is compiled, it may take a while, you can build the plugin with the following commands:
 
 	git clone git://github.com/zippy84/vtkbool.git vtkbool
 	cd vtkbool
@@ -59,7 +59,7 @@ To build the plugin you have to compile ParaView from source. Download the curre
 
 Once you have called CMake and typed c for the first time, you will get an error. The error says, that CMake could not found ParaView. You have to specify the directory in which ParaView has been built. Leave the output with e and navigate to the line with **ParaView\_DIR**, hit Return and point to that directory. A second Return will leave the input. Press c to configure the build process. When no further error occurs, generate the Makefile with g.
 
-When everything has been compiled successfully, you can install the plugin. For that purpose I made screenshots from the necessary steps. You can find them under *paraView\_plugin/install/*. There is also a screenshot of how to use it.
+When everything has been compiled successfully, you can install the plugin. For that purpose I made screenshots from the necessary steps. You can find them under *paraview\_plugin/install/*. There is also a screenshot of how to use it.
 
 ## Library
 
@@ -114,7 +114,7 @@ writer.Update()
 
 ## Examples
 
-For demonstration there are examples for the use in ParaView. They can be found in *paraView\_plugin/demos*. To open a pvsm-file, select **Load State...** in the file-menu of ParaView.
+For demonstration there are examples for the use in ParaView. They can be found in *paraview\_plugin/demos*. To open a pvsm-file, select **Load State...** in the file-menu of ParaView.
 
 ![](https://raw.github.com/zippy84/vtkbool/master/examples.png)
 
