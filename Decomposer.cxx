@@ -389,7 +389,9 @@ namespace Decomposer {
 
                             if (_t > 1) {
                                 _poly[u].succ = w;
+                                lBags.push(Bag(u, w, _poly[u].phi));
                                 vp.push_back(w);
+                                
                                 t = u;
                                 
                                 break;
@@ -612,6 +614,13 @@ namespace Decomposer {
                 if (bag != NULL) {
                     delete bag;
                 }
+            } else if (std::abs(cA) < tol) {
+                /*
+                std::cout << "Case 0(g)" << std::endl;
+                */
+
+                vp.push_back(v);
+                t = u;
 
             } else if (cA > 0) {
                 /*
