@@ -19,6 +19,8 @@ if(BUILD_AS_DEBUG)
     add_definitions(-DDEBUG)
 endif()
 
+#add_definitions(-D_DEBUG)
+
 if(BUILD_PARAVIEW_PLUGIN)
     set(BUILD_TESTING Off CACHE BOOL "" FORCE)
 

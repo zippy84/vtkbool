@@ -53,13 +53,16 @@ using Decomposer::DecType;
 using Decomposer::Decompose;
 
 #ifdef DEBUG
-#include <vtkPolyDataWriter.h>
-#include <vtkExtractCells.h>
-#include <vtkGeometryFilter.h>
 #include <ctime>
 #define DIFF(s, e) float(e-s)/CLOCKS_PER_SEC
 #include <numeric>
 #include <iterator>
+#endif
+
+#ifdef _DEBUG
+#include <vtkPolyDataWriter.h>
+#include <vtkExtractCells.h>
+#include <vtkGeometryFilter.h>
 #endif
 
 vtkStandardNewMacro(vtkPolyDataBooleanFilter);
