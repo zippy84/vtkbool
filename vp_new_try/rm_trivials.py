@@ -374,4 +374,4 @@ def rm_trivials (pts, ind):
 
     assert res[0]['idx'] == ind
 
-    return [ p['pt'] for p in res ]
+    return [ { 'pt': p['pt'], 'idx': p['idx'] } for p in res ]

@@ -397,7 +397,7 @@ void Merger::Merge (PolysType &group, PolyType &merged) {
     }
 
     for (Point &p : group[num-1]) {
-        if (oldPtIds.count(p.id) != 0) {
+        if (oldPtIds.count(p.id) == 0) {
             merged.push_back({p.pt});
         } else {
             merged.push_back({p.pt, oldPtIds[p.id]});

@@ -131,9 +131,9 @@ def vis_poly (pts, ind=0):
 
     num = len(pts)
 
-    pt_x = pts[ind]
+    pt_x = pts[ind]['pt']
 
-    print 'M' + ' L'.join([ ','.join(map(str, p)) for p in pts ]) + 'Z'
+    print 'M' + ' L'.join([ ','.join(map(str, p['pt'])) for p in pts ]) + 'Z'
 
     class Vert (object):
         def __init__(self, pt, ind = None, nxt = None):
@@ -153,7 +153,7 @@ def vis_poly (pts, ind=0):
 
     for i in range(num-1):
         _i = (ind+i+1)%num
-        verts.append(Vert(pts[_i], ind=_i))
+        verts.append(Vert(pts[_i]['pt'], ind=_i))
 
     ref = [verts[0].pt[0]-pt_x[0], verts[0].pt[1]-pt_x[1]]
     normalize(ref)
@@ -433,7 +433,17 @@ def vis_poly (pts, ind=0):
 
     #return 'M' + ' L'.join([ ','.join(map(str, verts[v_].pt)) for v_ in vp ]) + 'Z'
 
-    pts_ = [pt_x] + [ verts[v_].pt for v_ in vp ]
+    #pts_ = [pt_x] + [ verts[v_].pt for v_ in vp ]
+
+    pts_ = [pts[ind]]
+
+    for v_ in vp:
+        ind_ = verts[v_].ind
+
+        if ind_ is None:
+            pts_.append({ 'pt': verts[v_].pt, 'idx': None })
+        else:
+            pts_.append(pts[ind_])
 
     return pts_
 
