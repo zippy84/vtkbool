@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # *-* coding: UTF-8 *-*
 
-from vis_poly import vis_poly, to_abs_path, cross
+from vis_poly import vis_poly, to_abs_path, cross, is_near
 from rm_trivials import rm_trivials
 import json
 from copy import deepcopy
@@ -11,12 +11,15 @@ E = 1e-5
 def is_on_seg (a, b, pt):
     global E
 
-    if (pt[0] < a[0]+E and pt[0] < b[0]) \
-        or (pt[0] > a[0] and pt[0] > b[0]-E):
+    if is_near(a, pt) or is_near(b, pt):
         return False
 
-    if (pt[1] < a[1]+E and pt[1] < b[1]) \
-        or (pt[1] > a[1] and pt[1] > b[1]-E):
+    if (pt[0] < a[0] and pt[0] < b[0]) \
+        or (pt[0] > a[0] and pt[0] > b[0]):
+        return False
+
+    if (pt[1] < a[1] and pt[1] < b[1]) \
+        or (pt[1] > a[1] and pt[1] > b[1]):
         return False
 
     return abs(cross(a, b, pt)) < E
