@@ -61,7 +61,7 @@ def align_pts (pts, ind):
                 pts[v['i']] = [pt_x[0]+r[0], pt_x[1]+r[1]]
 
 
-def rm_internals (pts, skip):
+def rm_internals (pts, skip=None):
     print 'pts', pts
     num = len(pts)
 
