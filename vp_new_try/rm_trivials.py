@@ -5,11 +5,10 @@ from itertools import tee, izip, groupby, cycle
 from operator import itemgetter
 from collections import deque
 from enum import Enum
-import math
 import json
 from collections import defaultdict
 
-from vis_poly import ld, intersect, normalize, get_t, is_near, get_angle, from_path, to_abs_path
+from tools import *
 
 class Dir(Enum):
     FORWARD = 1
@@ -375,3 +374,21 @@ def rm_trivials (pts, ind):
     assert res[0]['idx'] == ind
 
     return [ { 'pt': p['pt'], 'idx': p['idx'] } for p in res ]
+
+
+def add_internals (pts, poly):
+    num = len(poly)
+
+    res = []
+
+    for i in range(num):
+        p_a = poly[i]
+        p_b = poly[(i+1)%num]
+
+        res.append(p_a)
+
+        for j, pt in enumerate(pts):
+            if is_on_seg(p_a['pt'], p_b['pt'], pt):
+                res.append({ 'pt': pt, 'idx': j })
+
+    return res
