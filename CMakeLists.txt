@@ -1,17 +1,27 @@
 cmake_minimum_required(VERSION 2.8)
 project(vtkbool)
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+	set(CMAKE_CXX_FLAGS "-std=c++11 /EHsc")
+else()
+	set(CMAKE_CXX_FLAGS "-std=c++11 -Wno-deprecated -fPIC")
+endif()
 
-set(CMAKE_CXX_FLAGS "-std=c++11 -Wno-deprecated -fPIC")
 
 option(BUILD_PARAVIEW_PLUGIN "" On)
 option(BUILD_AS_DEBUG "" Off)
 option(BUILD_TESTING "" Off)
+option(BUILD_STATIC "Build static library" Off)
 
 set(srcs
     vtkPolyDataBooleanFilter.cxx
     vtkPolyDataContactFilter.cxx
     Utilities.cxx
-    Decomposer.cxx)
+    Decomposer.cxx
+	
+	Decomposer.h
+	Utilities.h
+	vtkPolyDataBooleanFilter.h
+	vtkPolyDataContactFilter.h)
 
 include_directories(".")
 
@@ -34,8 +44,12 @@ else()
 
     if(VTK_FOUND)
         include(${VTK_USE_FILE})
-
-        add_library(${PROJECT_NAME} SHARED ${srcs})
+		if (BUILD_STATIC)
+			add_library(${PROJECT_NAME} STATIC ${srcs})
+		else()
+			add_library(${PROJECT_NAME} SHARED ${srcs})
+		endif()
+		
         target_link_libraries(${PROJECT_NAME} ${VTK_LIBRARIES})
 
         if(BUILD_TESTING)

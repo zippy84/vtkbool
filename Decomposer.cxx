@@ -25,6 +25,7 @@
 #include <deque>
 #include <map>
 #include <cassert>
+#include <array>
 
 #include "Utilities.h"
 using Utilities::GetD;
@@ -37,7 +38,7 @@ using Utilities::Pair;
 
 namespace Decomposer {
 
-    Base::Base (double pts[][3], const int num) {
+    Base::Base (std::vector<std::array<double, 3> > &pts, const int num) {
         GetNormal(pts, n, num);
 
         ei[0] = pts[1][0]-pts[0][0];
@@ -64,9 +65,9 @@ namespace Decomposer {
         out[1] = y;
     }
 
-    void Transform (double in[][3], double out[][2], const int num, Base &base) {
+    void Transform (std::vector<std::array<double, 3> > &in, std::vector<std::array<double, 2> > &out, const int num, Base &base) {
         for (int i = 0; i < num; i++) {
-            Transform(in[i], out[i], base);
+            Transform(in[i].data(), out[i].data(), base);
         }
     }
 
@@ -144,7 +145,7 @@ namespace Decomposer {
         return ang;
     }
 
-    void GetVisiblePoly (double pts[][2], const int num, std::vector<Vert2> &poly, int ind) {
+    void GetVisiblePoly (std::vector<std::array<double, 2> > &pts, const int num, std::vector<Vert2> &poly, int ind) {
         // pts ist ccw
 
         poly.clear();
@@ -159,8 +160,8 @@ namespace Decomposer {
         for (int i = 0; i < num; i++) {
             int j = (i+1)%num;
             
-            double *ptI = pts[i],
-                *ptJ = pts[j];
+            double *ptI = pts[i].data(),
+                *ptJ = pts[j].data();
 
             if (i == ind) {
                 cuts.push_back(Cut(ind, x, 0, 0));
@@ -245,8 +246,8 @@ namespace Decomposer {
 
         assert(cuts2[0].i == ind);
 
-        double *xA = pts[(ind+1)%num],
-            *xB = pts[(ind+num-1)%num];
+        double *xA = pts[(ind+1)%num].data(),
+            *xB = pts[(ind+num-1)%num].data();
 
         double a[] = {xA[0]-x[0], xA[1]-x[1]},
             b[] = {xB[0]-x[0], xB[1]-x[1]};
@@ -273,7 +274,7 @@ namespace Decomposer {
 
         for (int i = 0; i < num; i++) {
             int k = (cutA.i+o+i)%num;
-            Vert vert(x, pts[k], (i+o+1)%(num+o), k);
+            Vert vert(x, pts[k].data(), (i+o+1)%(num+o), k);
 
             /*
             std::cout << i << ": " << vert.ind << ", " << (vert.phi*180/pi) << ", r=["
@@ -919,10 +920,10 @@ namespace Decomposer {
 
     }
 
-    bool check (double pts[][2], int num) {
+    bool check (std::vector<std::array<double, 2> > &pts, int num) {
         int i = 0;
         while (i < num) {
-            if (GetD(pts[i], pts[(i+1)%num]) < 1e-6) {
+            if (GetD(pts[i].data(), pts[(i+1)%num].data()) < 1e-6) {
                 break;
             }
             i++;
@@ -970,7 +971,7 @@ namespace Decomposer {
     }
 
     bool Decompose::IsReflex (int i, int j, int k) {
-        if (GetD(pts[j], pts[k]) < 1e-9) {
+        if (GetD(pts[j].data(), pts[k].data()) < 1e-9) {
             return true;
         }
 

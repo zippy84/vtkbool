@@ -18,6 +18,7 @@
 
 #include <vector>
 #include <algorithm>
+#include <array>
 
 #include <vtkPoints.h>
 #include <vtkIdList.h>
@@ -145,13 +146,13 @@ namespace Utilities {
         return n;
     }
 
-    void GetNormal (double pts[][3], double *n, const int num) {
+    void GetNormal (std::vector<std::array<double, 3> > &pts, double *n, const int num) {
         n[0] = 0; n[1] = 0, n[2] = 0;
-        double *p0 = pts[0],
+        double *p0 = pts[0].data(),
             *p1;
 
         for (int i = 0; i < num; i++) {
-            p1 = pts[(i+1)%num];
+            p1 = pts[(i+1)%num].data();
 
             n[0] += (p0[1]-p1[1])*(p0[2]+p1[2]);
             n[1] += (p0[2]-p1[2])*(p0[0]+p1[0]);
