@@ -38,12 +38,12 @@ namespace Decomposer {
 
     class Base {
     public:
-        Base (double pts[][3], const int num);
+        Base(std::vector<std::array<double, 3> > &pts, const int num);
         double n[3], ei[3], ej[3], d;
     };
 
     void Transform (double *in, double *out, Base &base);
-    void Transform (double in[][3], double out[][2], const int num, Base &base);
+    void Transform(std::vector<std::array<double, 3> > &in, std::vector<std::array<double, 2> > &out, const int num, Base &base);
 
     bool Intersect (double *o, double *r, double *pA, double *pB, double *s, double *t = NULL, double *u = NULL);
     bool Intersect2 (double *oA, double *oB, double *pA, double *pB, double *s);
@@ -188,7 +188,7 @@ namespace Decomposer {
 
         PType problems;
 
-        double (*pts)[2];
+		std::vector<std::array<double, 2> > pts;
         int num;
 
         bool isConcave;
@@ -205,7 +205,7 @@ namespace Decomposer {
         void run ();
 
     public:
-        Decompose (double _pts[][2], int _num) : pts(_pts), num(_num) {}
+        Decompose (std::vector<std::array<double, 2> > &_pts, int _num) : pts(_pts), num(_num) {}
         void collect (DecType &dec);
 
     };

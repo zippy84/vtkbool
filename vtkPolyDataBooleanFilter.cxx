@@ -22,6 +22,7 @@
 #include <cmath>
 #include <functional>
 #include <queue>
+#include <array>
 
 #include <vtkInformation.h>
 #include <vtkInformationVector.h>
@@ -625,12 +626,13 @@ void vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIntArray *cont
         pd->GetCellPoints(itr->first, polyPts);
 
         int numPts = polyPts->GetNumberOfIds();
+		std::vector<std::array<double, 3> > pts_(numPts);
 
-        double pts_[numPts][3];
+        //double pts_[numPts][3];	
 
         for (int i = 0; i < numPts; i++) {
             pStrips.poly.push_back(polyPts->GetId(i));
-            pd->GetPoint(pStrips.poly.back(), pts_[i]);
+            pd->GetPoint(pStrips.poly.back(), pts_[i].data());
         }
 
         GetNormal(pts_, pStrips.n, numPts);
@@ -960,8 +962,8 @@ void vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
                             }
 
                             int num = poly_.size();
-                            double pts_[num][3];
-
+                            //double pts_[num][3];
+							std::vector<std::array<double, 3> > pts_(num);
                             for (itr7 = poly_.begin(); itr7 != poly_.end(); ++itr7) {
                                 StripPtR &sp = *itr7;
                                 int i = itr7-poly_.begin();
@@ -990,7 +992,8 @@ void vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
                             RefsType poly_(strip.begin(), strip.end()-1);
 
                             int num = poly_.size();
-                            double pts_[num][3];
+                            //double pts_[num][3];
+							std::vector<std::array<double, 3> > pts_(num);
 
                             for (itr7 = poly_.begin(); itr7 != poly_.end(); ++itr7) {
                                 StripPtR &sp = *itr7;
@@ -1993,11 +1996,14 @@ void vtkPolyDataBooleanFilter::DecomposePolys () {
 
         int numPts = poly->GetNumberOfIds();
 
-        double pts[numPts][3],
-            pts2[numPts][2];
+        /*double pts[numPts][3],
+            pts2[numPts][2];*/
+
+		std::vector<std::array<double, 3> > pts(numPts);
+		std::vector<std::array<double, 2> > pts2(numPts);
 
         for (int j = 0; j < numPts; j++) {
-            pd->GetPoint(poly->GetId(j), pts[j]);
+            pd->GetPoint(poly->GetId(j), pts[j].data());
         }
 
         // transformiert in 2d

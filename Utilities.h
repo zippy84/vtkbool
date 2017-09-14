@@ -58,7 +58,7 @@ namespace Utilities {
     double GetD (double *ptA, double *ptB);
     double GetD3 (double *ptA, double *ptB);
     double Normalize (double *p);
-    void GetNormal (double pts[][3], double *n, const int num);
+	void GetNormal(std::vector<std::array<double, 3> > &pts, double *n, const int num);
 
 }
 
