@@ -137,3 +137,15 @@ def is_on_seg (a, b, pt):
         return False
 
     return abs(cross(a, b, pt)) < E
+
+def is_cw (poly):
+    # http://mathworld.wolfram.com/PolygonArea.html
+    num = len(poly)
+    s = 0
+
+    for i in range(num):
+        a = poly[i]
+        b = poly[(i+1)%num]
+        s += a[0]*b[1]-b[0]*a[1]
+
+    return s < 0
