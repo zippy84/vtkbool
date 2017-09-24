@@ -10,7 +10,9 @@ sys.path.append('../vp_new_try')
 
 from vis_poly import vis_poly_wrapper
 from rm_trivials import rm_internals
-from tools import cross, to_abs_path, is_cw, from_path
+from tools import cross, is_cw, to_abs_path, to_path
+
+from jinja2 import Environment, Template
 
 class SubP:
     def __init__ (self):
@@ -214,23 +216,158 @@ def decompose (pts):
                                 backw(i, j, k)
 
 
-    print subs[(0, num-1)].w
+    def recover (i, k):
+        if k-i < 2:
+            return
 
-with open('../vp_new_try/complex.json', 'r') as f:
-    polys = json.load(f)['polys']
+        s_a = subs[(i, k)]
 
-    for i, poly in enumerate(polys):
-        if i != 1:
-            continue
+        if poly[i]['refl']:
+            j = s_a.S[-1][1]
 
-        num = len(poly)
+            recover(j, k)
 
-        for j in range(1, num):
-            poly[j][0] += poly[j-1][0]
-            poly[j][1] += poly[j-1][1]
+            if j-i > 1:
+                if s_a.S[-1][0] != s_a.S[-1][1]:
+                    s_b = subs[(i, j)]
+                    s_b.restore_S()
 
-        assert(is_cw(poly))
+                    while s_b.S and s_a.S[-1][0] != s_b.S[-1][0]:
+                        del s_b.S[-1]
 
-        decompose(poly)
+                recover(i, j)
 
-        #print to_abs_path(poly)
+        else:
+            j = s_a.S[0][0]
+
+            recover(i, j)
+
+            if k-j > 1:
+                if s_a.S[0][0] != s_a.S[0][1]:
+                    s_b = subs[(j, k)]
+                    s_b.restore_S()
+
+                    while s_b.S and s_a.S[0][1] != s_b.S[0][1]:
+                        del s_b.S[0]
+
+                recover(j, k)
+
+    recover(0, num-1)
+
+    diags = []
+
+    def collect (i, k):
+        if k-i < 2:
+            return
+
+        s = subs[(i, k)].S
+
+        if poly[i]['refl']:
+            j = s[-1][1]
+            a = j == s[-1][0]
+            b = True
+        else:
+            j = s[0][0]
+            b = j == s[0][1]
+            a = True
+
+        if a and j-i > 1:
+            diags.append((i, j))
+
+        if b and k-j > 1:
+            diags.append((j, k))
+
+        collect(i, j)
+        collect(j, k)
+
+    collect(0, num-1)
+
+    diags.sort(key=lambda v: (v[0], -v[1]))
+
+    i = 0
+    p = 0
+    q = 0
+
+    ps = []
+    rs = []
+
+    decs = [[]]
+
+    while i < num:
+        new_p = decs[p]
+
+        if not new_p or new_p[-1] != i:
+            new_p.append(i)
+
+        if rs and i == diags[rs[-1]][1]:
+            if new_p[0] != diags[rs[-1]][0]:
+                new_p.append(diags[rs[-1]][0])
+
+            del rs[-1]
+
+            p = ps[-1]
+            del ps[-1]
+
+        elif q < len(diags) and i == diags[q][0]:
+            if new_p[0] != diags[q][1]:
+                new_p.append(diags[q][1])
+
+            decs.append([])
+
+            rs.append(q)
+            ps.append(p)
+
+            q += 1
+            p = q
+
+        else:
+            i += 1
+
+    print diags
+
+    return [ [ poly[d] for d in dec ] for dec in decs ]
+
+if __name__ == '__main__':
+
+    env = Environment()
+    env.filters['to_path'] = to_path
+
+    tmpl = env.from_string('''<?xml version="1.0" standalone="no"?>
+        <svg xmlns="http://www.w3.org/2000/svg"
+            version="1.1"
+            height="{{ size[1] }}"
+            width="{{ size[0] }}">
+                <path d="{{ poly|to_path(-pos[0], -pos[1]) }}z" style="stroke:black; fill:none;"/>
+                <g>
+                    {% for d in decs %}
+                    <path d="{{ d|map(attribute="pt")|list|to_path(-pos[0], -pos[1]) }}z" style="stroke:black; fill:#faa; stroke-width:1;"/>
+                    {% endfor %}
+                </g>
+        </svg>
+        ''')
+
+    with open('../vp_new_try/complex.json', 'r') as f:
+        polys = json.load(f)['polys']
+
+        for i, poly in enumerate(polys):
+            num = len(poly)
+
+            for j in range(1, num):
+                poly[j][0] += poly[j-1][0]
+                poly[j][1] += poly[j-1][1]
+
+            assert is_cw(poly)
+
+            decs = decompose(poly)
+
+            xs = [ pt[0] for pt in poly ]
+            ys = [ pt[1] for pt in poly ]
+
+            min_x = min(xs)
+            min_y = min(ys)
+
+            max_x = max(xs)
+            max_y = max(ys)
+
+            with open('res/dec_%i.svg' % i, 'w') as out:
+                out.write(tmpl.render({ 'poly': poly, 'decs': decs, 'pos': (min_x, min_y), 'size': (max_x-min_x, max_y-min_y) }))
