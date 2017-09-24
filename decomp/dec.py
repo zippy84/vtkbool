@@ -16,6 +16,9 @@ class SubP:
     def __init__ (self):
         self.w = 99999
         self.S = []
+
+        self.S_head = []
+        self.S_tail = []
     def add_pair (self, pair, w):
         # bei gleichem w nur die narrowest pairs beibehalten
 
@@ -24,19 +27,26 @@ class SubP:
 
         if w < self.w:
             del self.S[:]
+            del self.S_tail[:]
 
-        if not self.S:
-            self.S.append(pair)
-            self.w = w
-        else:
+        if self.S:
             if pair[0] > self.S[0][0]:
                 while self.S and self.S[0][1] >= pair[1]:
                     # das neue pair ist im intervall S[0] enthalten
                     del self.S[0]
 
-                # durch einfügen an erster stelle ist S cw-ordered (gegenüber dem polygon)
-                self.S.insert(0, pair)
-                self.w = w
+        # durch einfügen an erster stelle ist S cw-ordered (gegenüber dem polygon)
+        self.S.insert(0, pair)
+        self.w = w
+
+        del self.S_head[:]
+
+    def restore_S (self):
+        self.S[:0] = self.S_head
+        self.S.extend(reversed(self.S_tail))
+
+        del self.S_head[:]
+        del self.S_tail[:]
 
 def decompose (pts):
     poly = deque([ { 'pt': pt, 'idx': i } for i, pt in enumerate(pts) ])
@@ -124,6 +134,7 @@ def decompose (pts):
                 try:
                     while not is_refl(j, k, p.S[-2][1]):
                         print 'pop'
+                        p.S_tail.append(p.S[-1])
                         del p.S[-1]
                 except IndexError:
                     pass
@@ -157,6 +168,7 @@ def decompose (pts):
                 try:
                     while not is_refl(j, p.S[1][0], i):
                         print 'pop'
+                        p.S_head.append(p.S[0])
                         del p.S[0]
                 except IndexError:
                     pass
