@@ -10,7 +10,7 @@ sys.path.append('../vp_new_try')
 
 from vis_poly import vis_poly_wrapper
 from rm_trivials import rm_internals
-from tools import cross, is_cw, to_abs_path, to_path
+from tools import cross, ld, is_cw, to_abs_path, to_path
 
 from jinja2 import Environment, Template
 
@@ -58,7 +58,8 @@ def decompose (pts):
     num = len(poly)
 
     def is_refl (a, b, c):
-        return cross(poly[a]['pt'], poly[b]['pt'], poly[c]['pt']) < 0
+        return not ld(poly[a]['pt'], poly[b]['pt'], poly[c]['pt']) < 1e-2 \
+            and cross(poly[a]['pt'], poly[b]['pt'], poly[c]['pt']) < 0
 
     for i in range(num):
         j = (i+1)%num
