@@ -21,9 +21,11 @@ int main (int argc, char *argv[]) {
         int i = 0;
 
         for (const Json::Value& p : polys) {
-            /*if (i++ != 1) {
+            /*
+            if (i++ != 1) {
                 continue;
-            }*/
+            }
+            */
 
             PolyType poly;
 
@@ -43,12 +45,12 @@ int main (int argc, char *argv[]) {
             }
 
             assert(TestCW(poly));
-            
+
             Decomposer d(poly);
-            
+
             DecResType decs;
             d.GetDecomposed(decs);
-            
+
             for (auto& dec : decs) {
                 PolyType p;
 
@@ -57,6 +59,8 @@ int main (int argc, char *argv[]) {
                 }
 
                 std::cout << GetAbsolutePath(p) << std::endl;
+
+                assert(TestCW(p));
             }
 
         }

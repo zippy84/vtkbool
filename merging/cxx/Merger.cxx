@@ -14,29 +14,6 @@
 #include <vtkKdTree.h>
 #include <vtkMath.h>
 
-bool _ (const PolyType &poly, const Point &pt) {
-    int num = poly.size();
-
-    bool in = false;
-
-    for (int i = 0; i < num; i++) {
-        const Point &a = poly[i],
-            &b = poly[(i+1)%num];
-
-        if ((a.x <= pt.x || b.x <= pt.x)
-            && (a.y < pt.y && b.y >= pt.y
-                || b.y < pt.y && a.y >= pt.y)) {
-
-            // schnittpunkt mit bounding box und strahlensatz
-            if (a.x+(pt.y-a.y)*(b.x-a.x)/(b.y-a.y) < pt.x) {
-                in = !in;
-            }
-        }
-    }
-
-    return in;
-}
-
 void Merger::AddPoly (PolyType &poly) {
     polys.push_back(poly);
 }
@@ -52,7 +29,7 @@ void Merger::GetMerged (PolysType &res) {
 
         for (int j = 0; j < numPolys; j++) {
             if (i != j) {
-                if (_(polys[j], polys[i][0])) {
+                if (TestPIP(polys[j], polys[i][0])) {
                     outer.push_back(j);
                 }
             }

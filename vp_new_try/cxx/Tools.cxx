@@ -150,3 +150,28 @@ std::string GetAbsolutePath (const PolyType &poly) {
 
     return svg;
 }
+
+bool TestPIP (const PolyType &poly, const Point &pt) {
+    // Point-In-Polygon
+
+    int num = poly.size();
+
+    bool in = false;
+
+    for (int i = 0; i < num; i++) {
+        const Point &a = poly[i],
+            &b = poly[(i+1)%num];
+
+        if ((a.x <= pt.x || b.x <= pt.x)
+            && (a.y < pt.y && b.y >= pt.y
+                || b.y < pt.y && a.y >= pt.y)) {
+
+            // schnittpunkt mit bounding box und strahlensatz
+            if (a.x+(pt.y-a.y)*(b.x-a.x)/(b.y-a.y) < pt.x) {
+                in = !in;
+            }
+        }
+    }
+
+    return in;
+}

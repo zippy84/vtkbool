@@ -23,6 +23,11 @@ int main (int argc, char *argv[]) {
         int i = 0;
 
         for (const Json::Value& p : polys) {
+            /*
+            if (i++ != 1) {
+                continue;
+            }
+            */
 
             PolyType poly;
 
