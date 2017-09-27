@@ -4,6 +4,7 @@
 
 #include "Tools.h"
 #include "VisPoly.h"
+#include "RmTrivials.h"
 
 void GetVisPoly (PolyType &poly, PolyType &res, int ind) {
     double x[] = {poly[ind].x, poly[ind].y};
@@ -347,4 +348,16 @@ void GetVisPoly (PolyType &poly, PolyType &res, int ind) {
         res.push_back({verts[_v].pt, id != NO_USE ? poly[id].id : id});
     }
 
+}
+
+void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
+    PolyType poly2(poly);
+
+    PolyType poly3;
+    RemoveTrivials(poly2, poly3, ind);
+
+    PolyType poly4;
+    GetVisPoly(poly3, poly4);
+
+    AddInternals(poly2, poly4, res);
 }

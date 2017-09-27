@@ -6,41 +6,6 @@
 
 #include "Tools.h"
 
-class Point {
-public:
-    Point (double _x, double _y, int _id = NO_USE) : id(_id) {
-        pt[0] = _x;
-        pt[1] = _y;
-    }
-    Point (double *_pt, int _id = NO_USE) : Point(_pt[0], _pt[1], _id) {}
-
-    Point (const Point& p) : id(p.id) {
-        pt[0] = p.pt[0];
-        pt[1] = p.pt[1];
-    }
-
-    Point& operator= (const Point &p) {
-        pt[0] = p.pt[0];
-        pt[1] = p.pt[1];
-        id = p.id;
-
-        return *this;
-    }
-
-    double pt[2];
-
-    const double &x = pt[0],
-        &y = pt[1];
-    int id;
-
-    friend std::ostream& operator<< (std::ostream &out, const Point &p) {
-        out << "id: " << p.id << ", pt: [" << p.x << "," << p.y << "]";
-        return out;
-    }
-};
-
-typedef std::vector<Point> PolyType;
-
 class Vert {
 public:
     double pt[2], r[2], phi;
@@ -81,6 +46,9 @@ public:
     }
 };
 
+// diese darf nicht direkt verwendet werden
 void GetVisPoly (PolyType &poly, PolyType &res, int ind = 0);
+
+void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind);
 
 #endif

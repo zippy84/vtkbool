@@ -37,25 +37,12 @@ bool _ (const PolyType &poly, const Point &pt) {
     return in;
 }
 
-std::string GetAbsolutePath (const PolyType &poly) {
-    std::stringstream path;
-
-    for (const Point& p : poly) {
-        path << "L" << p.x << "," << p.y << " ";
-    }
-
-    std::string svg = "M" + path.str().substr(1) + "Z";
-
-    return svg;
-}
-
-
 void Merger::AddPoly (PolyType &poly) {
     polys.push_back(poly);
 }
 
 void Merger::GetMerged (PolysType &res) {
-    
+
     int numPolys = polys.size();
 
     std::vector<IdsType> all(numPolys);
@@ -105,7 +92,7 @@ void Merger::GetMerged (PolysType &res) {
             for (int id : ids) {
                 group.push_back(polys[id]);
             }
-            
+
             PolyType merged;
             Merge(group, merged);
 
@@ -125,7 +112,7 @@ void Merger::GetMerged (PolysType &res) {
 
 void Merger::Merge (PolysType &group, PolyType &merged) {
     int numPolys = group.size();
-    
+
     int a = 0,
         b = 0;
 
@@ -179,7 +166,7 @@ void Merger::Merge (PolysType &group, PolyType &merged) {
     int curr = 1;
 
     ResType res;
-    
+
     std::vector<Pair> cons;
 
     while (!_ids.empty()) {
@@ -267,46 +254,46 @@ void Merger::Merge (PolysType &group, PolyType &merged) {
         for (const auto& r : res) {
             std::cout << r.first << std::endl;
         }
-        
+
         cons.clear();
-        
+
         // sucht an bereits besuchten polygonen nach verbindungen zu anderen polygonen
         // es wird das polygon in viewed aufgenommen, dass die kürzeste distanz hat
-        
+
         // stellt sicher, dass alle polygone zusammenhängen
-        
+
         std::set<int> viewed = {0};
-        
+
         while (viewed.size() < numPolys) {
-        
+
             std::shared_ptr<G> g;
-            
+
             for (int v : viewed) {
                 for (auto& r : res[v]) {
                     if (viewed.count(src[r.first.g]) == 0) {
                         // das poly wurde noch nicht besucht
-                        
+
                         if (!g || r.second < g->d) {
                             g = std::make_shared<G>(r.second, r.first);
                         }
                     }
                 }
-                
+
             }
-            
+
             if (g) {
                 viewed.insert(src[g->con.g]);
                 cons.push_back(g->con);
-                
+
             } else {
-                
+
                 std::cout << "not viewed: [";
                 int i = 0;
 
                 for (auto& poly : group) {
                     if (viewed.count(i) == 0) {
                         std::cout << i << ", ";
-                        
+
                         for (Point& p : poly) {
                             _ids.push_back(p.id);
                         }
@@ -315,9 +302,9 @@ void Merger::Merge (PolysType &group, PolyType &merged) {
                     i++;
                 }
                 std::cout << "]" << std::endl;
-                
+
                 curr++;
-                
+
                 break;
             }
         }

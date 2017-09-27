@@ -7,24 +7,9 @@
 #include <json/json.h>
 #include <json/reader.h>
 
+#include "Tools.h"
 #include "VisPoly.h"
 #include "Merger.h"
-
-bool TestCW (const PolyType &poly) {
-    // http://mathworld.wolfram.com/PolygonArea.html
-
-    int num = poly.size();
-
-    double sum = 0;
-
-    for (int i = 0; i < num; i++) {
-        const Point &a = poly[i],
-            &b = poly[(i+1)%num];
-        sum += a.x*b.y-b.x*a.y;
-    }
-
-    return sum < 0;
-}
 
 void ToPoly (const Json::Value& pts, PolyType &poly) {
 

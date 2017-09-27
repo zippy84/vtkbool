@@ -9,7 +9,6 @@ from collections import deque, defaultdict
 sys.path.append('../vp_new_try')
 
 from vis_poly import vis_poly_wrapper
-from rm_trivials import rm_internals
 from tools import cross, ld, is_cw, to_abs_path, to_path
 
 from jinja2 import Environment, Template
@@ -52,8 +51,8 @@ class SubP:
 
 def decompose (pts):
     poly = deque([ { 'pt': pt, 'idx': i } for i, pt in enumerate(pts) ])
-
-    rm_internals(poly)
+    
+    # TODO: rm_internals fehlt
 
     num = len(poly)
 
@@ -108,14 +107,14 @@ def decompose (pts):
 
                     if b-a == 1:
                         print 'edge'
-                        subs[(a, b)] = _
 
                     else:
                         c = a+1
                         print 'wedge', c, (a, b) in pairs
 
                         _.S.append((c, c))
-                        subs[(a, b)] = _
+
+                    subs[(a, b)] = _
 
     def forw (i, j, k):
         if (i, j) not in pairs:
@@ -325,6 +324,8 @@ def decompose (pts):
             i += 1
 
     print diags
+    
+    # TODO: rm_internals fehlt
 
     return [ [ poly[d] for d in dec ] for dec in decs ]
 
@@ -351,6 +352,9 @@ if __name__ == '__main__':
         polys = json.load(f)['polys']
 
         for i, poly in enumerate(polys):
+            #if i != 2:
+            #    continue
+
             num = len(poly)
 
             for j in range(1, num):

@@ -522,3 +522,21 @@ void RemoveTrivials (PolyType &poly, PolyType &res, int ind) {
     assert(res.front().id == ind);
 
 }
+
+void AddInternals (PolyType &orig, PolyType &poly, PolyType &res) {
+    int num = poly.size();
+
+    for (int i = 0; i < num; i++) {
+        Point &a = poly[i],
+            &b = poly[(i+1)%num];
+
+        res.push_back(a);
+
+        for (int j = 0; j < orig.size(); j++) {
+            if (IsOnSeg(a.pt, b.pt, orig[j].pt)) {
+                res.push_back({orig[j].pt, j});
+            }
+        }
+
+    }
+}

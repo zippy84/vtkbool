@@ -104,3 +104,49 @@ double GetT (double *a, double *b, double *c) {
 
     return (m11*v2-v1*m21)/det;
 }
+
+bool IsOnSeg (double *a, double *b, double *c) {
+    if (IsNear(a, c) || IsNear(b, c)) {
+        return false;
+    }
+
+    if ((c[0] < a[0] && c[0] < b[0])
+        || (c[0] > a[0] && c[0] > b[0])) {
+        return false;
+    }
+
+    if ((c[1] < a[1] && c[1] < b[1])
+        || (c[1] > a[1] && c[1] > b[1])) {
+        return false;
+    }
+
+    return std::abs(Cross(a, b, c)) < E;
+}
+
+bool TestCW (const PolyType &poly) {
+    // http://mathworld.wolfram.com/PolygonArea.html
+
+    int num = poly.size();
+
+    double sum = 0;
+
+    for (int i = 0; i < num; i++) {
+        const Point &a = poly[i],
+            &b = poly[(i+1)%num];
+        sum += a.x*b.y-b.x*a.y;
+    }
+
+    return sum < 0;
+}
+
+std::string GetAbsolutePath (const PolyType &poly) {
+    std::stringstream path;
+
+    for (const Point& p : poly) {
+        path << "L" << p.x << "," << p.y << " ";
+    }
+
+    std::string svg = "M" + path.str().substr(1) + "Z";
+
+    return svg;
+}

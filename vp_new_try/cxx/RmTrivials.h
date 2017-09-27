@@ -101,4 +101,6 @@ void RemovePockets (VertsType3 &verts, VertsType3 &good, double *rot, double d);
 // nur diese funktion sollte verwendet werden
 void RemoveTrivials (PolyType &poly, PolyType &res, int ind = 0);
 
+void AddInternals (PolyType &orig, PolyType &poly, PolyType &res);
+
 #endif

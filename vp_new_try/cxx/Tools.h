@@ -5,6 +5,8 @@
 #include <cmath>
 #include <memory>
 #include <iostream>
+#include <string>
+#include <sstream>
 
 #define NO_USE -1
 #define PI std::acos(-1)
@@ -19,6 +21,9 @@ public:
     bool operator< (const Pair &other) const {
         return std::tie(f, g) < std::tie(other.f, other.g);
     }
+    bool operator== (const Pair &other) const {
+        return f == other.f && g == other.g;
+    }
     friend std::ostream& operator<< (std::ostream &out, const Pair &p) {
         out << "(" << p.f << ", " << p.g << ")";
         return out;
@@ -26,6 +31,41 @@ public:
 };
 
 typedef std::vector<int> IdsType;
+
+class Point {
+public:
+    Point (double _x, double _y, int _id = NO_USE) : id(_id) {
+        pt[0] = _x;
+        pt[1] = _y;
+    }
+    Point (double *_pt, int _id = NO_USE) : Point(_pt[0], _pt[1], _id) {}
+
+    Point (const Point& p) : id(p.id) {
+        pt[0] = p.pt[0];
+        pt[1] = p.pt[1];
+    }
+
+    Point& operator= (const Point &p) {
+        pt[0] = p.pt[0];
+        pt[1] = p.pt[1];
+        id = p.id;
+
+        return *this;
+    }
+
+    double pt[2];
+
+    const double &x = pt[0],
+        &y = pt[1];
+    int id;
+
+    friend std::ostream& operator<< (std::ostream &out, const Point &p) {
+        out << "id: " << p.id << ", pt: [" << p.x << "," << p.y << "]";
+        return out;
+    }
+};
+
+typedef std::vector<Point> PolyType;
 
 double Normalize (double *v);
 double GetAngle (double *vA, double *vB);
@@ -51,5 +91,11 @@ std::shared_ptr<D> Intersect2 (double *oA, double *oB, double *pA, double *pB);
 bool IsFrontfaced (double *r, double *a, double *b);
 bool IsNear (double *a, double *b);
 double GetT (double *a, double *b, double *c);
+
+bool IsOnSeg (double *a, double *b, double *c);
+
+bool TestCW (const PolyType &poly);
+
+std::string GetAbsolutePath (const PolyType &poly);
 
 #endif
