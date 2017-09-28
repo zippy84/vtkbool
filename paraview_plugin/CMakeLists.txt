@@ -7,12 +7,20 @@ if(ParaView_FOUND)
 
     include_directories("..")
 
+    set(srcs
+        ../vtkPolyDataBooleanFilter.cxx
+        ../vtkPolyDataContactFilter.cxx
+        ../Utilities.cxx
+        ../Decomposer.cxx
+        ../Merger.cxx
+        ../VisiblePoly.cxx)
+
     add_paraview_plugin(
         PolyDataBooleanFilter
         "1.5"
         SERVER_MANAGER_XML vtkPolyDataBooleanFilter.xml
         SERVER_MANAGER_SOURCES ../vtkPolyDataBooleanFilter.cxx
-        SERVER_SOURCES ../vtkPolyDataContactFilter.cxx ../Decomposer.cxx ../Utilities.cxx
+        SERVER_SOURCES ${srcs}
         #GUI_RESOURCE_FILES vtkPolyDataBooleanFilterGUI.xml
     )
 
