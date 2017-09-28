@@ -120,7 +120,7 @@ For demonstration there are examples for the use in ParaView. They can be found 
 
 ## Copyright
 
-2012-2016 Ronald Römer
+2012-2017 Ronald Römer
 
 ## License
 

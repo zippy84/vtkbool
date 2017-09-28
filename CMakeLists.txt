@@ -1,25 +1,22 @@
 cmake_minimum_required(VERSION 2.8)
 project(vtkbool)
 
-set(CMAKE_CXX_FLAGS "-std=c++11 -Wno-deprecated -fPIC")
+set(CMAKE_CXX_FLAGS "-std=c++11 -Wno-deprecated -fPIC -Wunused")
 
-option(BUILD_PARAVIEW_PLUGIN "" On)
+option(BUILD_PARAVIEW_PLUGIN "" Off)
 option(BUILD_AS_DEBUG "" Off)
 option(BUILD_TESTING "" Off)
 
 set(srcs
     vtkPolyDataBooleanFilter.cxx
     vtkPolyDataContactFilter.cxx
-    Utilities.cxx
-    Decomposer.cxx)
+    Utilities.cxx)
 
 include_directories(".")
 
 if(BUILD_AS_DEBUG)
     add_definitions(-DDEBUG)
 endif()
-
-#add_definitions(-D_DEBUG)
 
 if(BUILD_PARAVIEW_PLUGIN)
     set(BUILD_TESTING Off CACHE BOOL "" FORCE)

@@ -1,5 +1,5 @@
 /*
-   Copyright 2012-2016 Ronald Römer
+   Copyright 2012-2018 Ronald Römer
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -14,10 +14,13 @@
    limitations under the License.
 */
 
+#include "Utilities.h"
+
 #include <cmath>
 
 #include <vector>
 #include <algorithm>
+#include <iterator>
 
 #include <vtkPoints.h>
 #include <vtkIdList.h>
@@ -25,142 +28,137 @@
 #include <vtkPolyData.h>
 #include <vtkDataWriter.h>
 
-#include "Utilities.h"
+double Normalize (double *v) {
+    double n = std::sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+    v[0] /= n;
+    v[1] /= n;
+    v[2] /= n;
 
-namespace Utilities {
+    return n;
+}
 
-    void ComputeNormal (vtkPoints *pts, vtkIdList *poly, double* n) {
-        n[0] = 0; n[1] = 0; n[2] = 0;
-        double p0[3], p1[3];
+void ComputeNormal (vtkPoints *pts, vtkIdList *poly, double* n) {
+    n[0] = 0; n[1] = 0; n[2] = 0;
+    double p0[3], p1[3];
 
-        pts->GetPoint(poly->GetId(0), p0);
+    pts->GetPoint(poly->GetId(0), p0);
 
-        int numPts = poly->GetNumberOfIds();
+    int numPts = poly->GetNumberOfIds();
 
-        for (int i = 0; i < numPts; i++) {
-            pts->GetPoint(poly->GetId((i+1)%numPts), p1);
+    for (int i = 0; i < numPts; i++) {
+        pts->GetPoint(poly->GetId((i+1)%numPts), p1);
 
-            n[0] += (p0[1]-p1[1])*(p0[2]+p1[2]);
-            n[1] += (p0[2]-p1[2])*(p0[0]+p1[0]);
-            n[2] += (p0[0]-p1[0])*(p0[1]+p1[1]);
+        n[0] += (p0[1]-p1[1])*(p0[2]+p1[2]);
+        n[1] += (p0[2]-p1[2])*(p0[0]+p1[0]);
+        n[2] += (p0[0]-p1[0])*(p0[1]+p1[1]);
 
-            CPY(p0, p1)
+        CPY(p0, p1)
+    }
+
+    vtkMath::Normalize(n);
+}
+
+void FindPoints (vtkKdTreePointLocator *pl, const double *pt, vtkIdList *pts, double tol) {
+    pts->Reset();
+
+    vtkPolyData *pd = vtkPolyData::SafeDownCast(pl->GetDataSet());
+
+    vtkIdList *closest = vtkIdList::New();
+
+    // vtkKdTree.cxx#L2529
+    // arbeitet mit single-precision
+    pl->FindPointsWithinRadius(std::max(1e-5, tol), pt, closest);
+
+    int numPts = closest->GetNumberOfIds();
+
+    double c[3], v[3];
+
+    for (int i = 0; i < numPts; i++) {
+        pd->GetPoint(closest->GetId(i), c);
+        vtkMath::Subtract(pt, c, v);
+
+        if (vtkMath::Norm(v) < tol) {
+            pts->InsertNextId(closest->GetId(i));
         }
-
-        vtkMath::Normalize(n);
     }
 
-    double GetAngle (double *vA, double *vB, double *n) {
-        double _vA[3];
+    closest->Delete();
+}
 
-        vtkMath::Cross(n, vA, _vA);
-        double ang = std::atan2(vtkMath::Dot(_vA, vB), vtkMath::Dot(vA, vB));
+void WriteVTK (const char *name, vtkPolyData *pd) {
+    vtkDataWriter *w = vtkDataWriter::New();
 
-        if (ang < 0) {
-            ang += 2*pi;
-        }
-        return ang;
+    vtkPoints *pts = pd->GetPoints();
+
+    int numPts = pts->GetNumberOfPoints();
+
+    std::ofstream f(name);
+    f << "# vtk DataFile Version 3.0\n"
+      << "vtk output\n"
+      << "ASCII\n"
+      << "DATASET POLYDATA\n"
+      << "POINTS " << numPts << " double\n";
+
+    f << std::setprecision(12);
+
+    double pt[3];
+    for (int i = 0; i < numPts; i++) {
+        pts->GetPoint(i, pt);
+        f << pt[0] << " " << pt[1] << " " << pt[2] << "\n";
     }
 
-    void FindPoints (vtkKdTreePointLocator *pl, const double *pt, vtkIdList *pts, double tol) {
-        pts->Reset();
+    w->WriteCells(&f, pd->GetLines(), "LINES");
+    w->WriteCells(&f, pd->GetPolys(), "POLYGONS");
+    w->WriteCells(&f, pd->GetStrips(), "TRIANGLE_STRIPS");
+    w->WriteCellData(&f, pd);
+    w->WritePointData(&f, pd);
 
-        vtkPolyData *pd = vtkPolyData::SafeDownCast(pl->GetDataSet());
+    f.close();
 
-        vtkIdList *closest = vtkIdList::New();
+    w->Delete();
+}
 
-        // vtkKdTree.cxx#L2529
-        // arbeitet mit single-precision
-        pl->FindPointsWithinRadius(std::max(1e-5, tol), pt, closest);
+double GetAngle (double *vA, double *vB, double *n) {
+    double _vA[3];
 
-        int numPts = closest->GetNumberOfIds();
+    vtkMath::Cross(n, vA, _vA);
+    double ang = std::atan2(vtkMath::Dot(_vA, vB), vtkMath::Dot(vA, vB));
 
-        double c[3], v[3];
-
-        for (int i = 0; i < numPts; i++) {
-            pd->GetPoint(closest->GetId(i), c);
-            vtkMath::Subtract(pt, c, v);
-
-            if (vtkMath::Norm(v) < tol) {
-                pts->InsertNextId(closest->GetId(i));
-            }
-        }
-
-        closest->Delete();
+    if (ang < 0) {
+        ang += 2*PI;
     }
 
-    void WriteVTK (const char *name, vtkPolyData *pd) {
-        vtkDataWriter *w = vtkDataWriter::New();
-
-        vtkPoints *pts = pd->GetPoints();
-
-        int numPts = pts->GetNumberOfPoints();
-
-        std::ofstream f(name);
-        f << "# vtk DataFile Version 3.0\n"
-          << "vtk output\n"
-          << "ASCII\n"
-          << "DATASET POLYDATA\n"
-          << "POINTS " << numPts << " double\n";
-
-        f << std::setprecision(12);
-
-        double pt[3];
-        for (int i = 0; i < numPts; i++) {
-            pts->GetPoint(i, pt);
-            f << pt[0] << " " << pt[1] << " " << pt[2] << "\n";
-        }
-
-        w->WriteCells(&f, pd->GetLines(), "LINES");
-        w->WriteCells(&f, pd->GetPolys(), "POLYGONS");
-        w->WriteCells(&f, pd->GetStrips(), "TRIANGLE_STRIPS");
-        w->WriteCellData(&f, pd);
-
-        f.close();
-
-        w->Delete();
+    if (ang > 2*PI-1e-6) {
+        ang = 0;
     }
 
-    // ermöglicht mod mit neg. int
-    double Mod (int a, int b) {
-        return (double) (((a%b)+b)%b);
+    return ang;
+}
+
+void GetNormal (double pts[][3], double *n, const int num) {
+    n[0] = 0; n[1] = 0, n[2] = 0;
+    double *p0 = pts[0],
+        *p1;
+
+    for (int i = 0; i < num; i++) {
+        p1 = pts[(i+1)%num];
+
+        n[0] += (p0[1]-p1[1])*(p0[2]+p1[2]);
+        n[1] += (p0[2]-p1[2])*(p0[0]+p1[0]);
+        n[2] += (p0[0]-p1[0])*(p0[1]+p1[1]);
+
+        p0 = p1;
     }
 
-    double GetD (double *ptA, double *ptB) {
-        double v[] = {ptA[0]-ptB[0], ptA[1]-ptB[1]};
-        return sqrt(v[0]*v[0]+v[1]*v[1]);
-    }
+    Normalize(n);
+}
 
-    double GetD3 (double *ptA, double *ptB) {
-        double v[] = {ptA[0]-ptB[0], ptA[1]-ptB[1], ptA[2]-ptB[2]};
-        return sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
-    }
+// ermöglicht mod mit neg. int
+double Mod (int a, int b) {
+    return (double) (((a%b)+b)%b);
+}
 
-    double Normalize (double *p) {
-        double n = sqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]);
-        p[0] /= n;
-        p[1] /= n;
-        p[2] /= n;
-
-        return n;
-    }
-
-    void GetNormal (double pts[][3], double *n, const int num) {
-        n[0] = 0; n[1] = 0, n[2] = 0;
-        double *p0 = pts[0],
-            *p1;
-
-        for (int i = 0; i < num; i++) {
-            p1 = pts[(i+1)%num];
-
-            n[0] += (p0[1]-p1[1])*(p0[2]+p1[2]);
-            n[1] += (p0[2]-p1[2])*(p0[0]+p1[0]);
-            n[2] += (p0[0]-p1[0])*(p0[1]+p1[1]);
-
-            p0 = p1;
-        }
-
-        Normalize(n);
-    }
-
+double GetD (double *ptA, double *ptB) {
+    double v[] = {ptA[0]-ptB[0], ptA[1]-ptB[1], ptA[2]-ptB[2]};
+    return sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
 }

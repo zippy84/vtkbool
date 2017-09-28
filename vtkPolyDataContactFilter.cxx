@@ -1,5 +1,5 @@
 /*
-   Copyright 2012-2016 Ronald Römer
+   Copyright 2012-2018 Ronald Römer
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -370,7 +370,7 @@ InterPtsType vtkPolyDataContactFilter::InterPolyLine (vtkPoints *pts, vtkIdList 
     if (interPts.size() > 1) {
 
         double n[3];
-        Utilities::ComputeNormal(pts, poly, n);
+        ComputeNormal(pts, poly, n);
 
         double p[3], d;
 
@@ -597,8 +597,8 @@ void vtkPolyDataContactFilter::InterPolys (vtkIdType idA, vtkIdType idB) {
 
     double nA[3], nB[3], ptA[3], ptB[3], dA, dB;
 
-    Utilities::ComputeNormal(pdA->GetPoints(), polyA, nA);
-    Utilities::ComputeNormal(pdB->GetPoints(), polyB, nB);
+    ComputeNormal(pdA->GetPoints(), polyA, nA);
+    ComputeNormal(pdB->GetPoints(), polyB, nB);
 
     pdA->GetPoint(polyA->GetId(0), ptA);
     pdB->GetPoint(polyB->GetId(0), ptB);
