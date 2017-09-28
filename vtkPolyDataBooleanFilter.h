@@ -1,5 +1,5 @@
 /*
-   Copyright 2012-2016 Ronald Römer
+   Copyright 2012-2018 Ronald Römer
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -28,7 +28,6 @@
 #include <vtkKdTreePointLocator.h>
 
 #include "Utilities.h"
-using Utilities::IdsType;
 
 #define LOC_NONE 0
 #define LOC_INSIDE 1
@@ -50,8 +49,8 @@ using Utilities::IdsType;
 class StripPt {
 public:
     StripPt () : t(0), capt(CAPT_NOT) {
-        edge[0] = NOUSE;
-        edge[1] = NOUSE;
+        edge[0] = NO_USE;
+        edge[1] = NO_USE;
     }
 
     double t;
@@ -75,9 +74,9 @@ public:
 class StripPtR {
 public:
     StripPtR (int _ind) : ind(_ind) {
-        strip = NOUSE;
-        side = NOUSE;
-        ref = NOUSE;
+        strip = NO_USE;
+        side = NO_USE;
+        ref = NO_USE;
     }
 
     int ind;
@@ -151,7 +150,7 @@ public:
 
 class StripPtL3 {
 public:
-    StripPtL3 (const double *_pt, double _t, int _ind = NOUSE) : t(_t), ind(_ind) {
+    StripPtL3 (const double *_pt, double _t, int _ind = NO_USE) : t(_t), ind(_ind) {
         CPY(pt, _pt)
     }
     int ind;
@@ -203,12 +202,11 @@ class VTK_EXPORT vtkPolyDataBooleanFilter : public vtkPolyDataAlgorithm {
     void ResolveOverlaps (vtkPolyData *pd, vtkIntArray *conts, PolyStripsType &polyStrips);
     void AddAdjacentPoints (vtkPolyData *pd, vtkIntArray *conts, PolyStripsType &polyStrips);
     void MergePoints (vtkPolyData *pd, PolyStripsType &polyStrips);
-    void DecomposePolys ();
     void CombineRegions ();
     void MergeRegions ();
 
     int OperMode;
-    bool MergeAll, DecPolys;
+    bool MergeAll;
 
 public:
     vtkTypeMacro(vtkPolyDataBooleanFilter, vtkPolyDataAlgorithm);
@@ -225,10 +223,6 @@ public:
     vtkSetMacro(MergeAll, bool);
     vtkGetMacro(MergeAll, bool);
     vtkBooleanMacro(MergeAll, bool);
-
-    vtkSetMacro(DecPolys, bool);
-    vtkGetMacro(DecPolys, bool);
-    vtkBooleanMacro(DecPolys, bool);
 
 protected:
     vtkPolyDataBooleanFilter ();

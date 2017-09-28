@@ -1,5 +1,5 @@
 /*
-   Copyright 2012-2016 Ronald Römer
+   Copyright 2012-2018 Ronald Römer
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -42,7 +42,6 @@
 #include "vtkPolyDataBooleanFilter.h"
 
 #include "Utilities.h"
-using Utilities::IdsType;
 
 //#define DD
 
@@ -82,7 +81,7 @@ public:
     int run () {
 
 #ifdef DEBUG
-        Utilities::WriteVTK("merged.vtk", pd);
+        WriteVTK("merged.vtk", pd);
 #endif
 
         vtkIntArray *origCellIdsA = vtkIntArray::SafeDownCast(pd->GetCellData()->GetArray("OrigCellIdsA"));
@@ -127,7 +126,7 @@ private:
                 lines->GetPoint(line->GetId(0), ptA);
                 lines->GetPoint(line->GetId(1), ptB);
 
-                Utilities::FindPoints(loc, ptA, pts);
+                FindPoints(loc, ptA, pts);
 
                 LinksType links;
 
@@ -145,7 +144,7 @@ private:
                     }
                 }
 
-                Utilities::FindPoints(loc, ptB, pts);
+                FindPoints(loc, ptB, pts);
 
                 for (int j = 0; j < pts->GetNumberOfIds(); j++) {
                     pd->GetPointCells(pts->GetId(j), cells);
@@ -174,7 +173,7 @@ private:
                             pd->GetPoint(poly->GetId(j), a);
                             pd->GetPoint(poly->GetId((j+1)%numPts), b);
 
-                            if (Utilities::GetD3(a, b) < 1e-6) {
+                            if (GetD(a, b) < 1e-6) {
                                 std::cout << "poly " << itr->first << " has duplicated points" << std::endl;
 
                                 err++;
@@ -250,7 +249,7 @@ private:
 
                     IdsType ids;
 
-                    Utilities::FindPoints(loc, pt, pts);
+                    FindPoints(loc, pt, pts);
                     int numPts = pts->GetNumberOfIds();
 
                     for (int k = 0; k < numPts; k++) {
@@ -296,7 +295,7 @@ private:
                             pd->GetPoint(*itr2, a);
                             pd->GetPoint(*itr3, b);
 
-                            if (Utilities::GetD3(a, b) < 1e-6) {
+                            if (GetD(a, b) < 1e-6) {
                                 c++;
                             }
                         }
@@ -354,7 +353,7 @@ int main (int argc, char *argv[]) {
         int ok = test.run();
 #else
         int ok = 0;
-        Utilities::WriteVTK("test0.vtk", bf->GetOutput(0));
+        WriteVTK("test0.vtk", bf->GetOutput(0));
 #endif
 
         bf->Delete();
@@ -389,7 +388,7 @@ int main (int argc, char *argv[]) {
         int ok = test.run();
 #else
         int ok = 0;
-        Utilities::WriteVTK("test1.vtk", bf->GetOutput(0));
+        WriteVTK("test1.vtk", bf->GetOutput(0));
 #endif
 
         bf->Delete();
@@ -423,7 +422,7 @@ int main (int argc, char *argv[]) {
         int ok = test.run();
 #else
         int ok = 0;
-        Utilities::WriteVTK("test2.vtk", bf->GetOutput(0));
+        WriteVTK("test2.vtk", bf->GetOutput(0));
 #endif
 
         bf->Delete();
@@ -457,7 +456,7 @@ int main (int argc, char *argv[]) {
         int ok = test.run();
 #else
         int ok = 0;
-        Utilities::WriteVTK("test3.vtk", bf->GetOutput(0));
+        WriteVTK("test3.vtk", bf->GetOutput(0));
 #endif
 
         bf->Delete();
@@ -489,7 +488,7 @@ int main (int argc, char *argv[]) {
         int ok = test.run();
 #else
         int ok = 0;
-        Utilities::WriteVTK("test4.vtk", bf->GetOutput(0));
+        WriteVTK("test4.vtk", bf->GetOutput(0));
 #endif
 
         bf->Delete();
@@ -500,7 +499,7 @@ int main (int argc, char *argv[]) {
 
     } else if (t == 5) {
         // mehrer punkte in einem strip ohne fläche
-         
+
         vtkCubeSource *cu = vtkCubeSource::New();
 
         vtkPolyData *cyl = vtkPolyData::New();
@@ -521,11 +520,11 @@ int main (int argc, char *argv[]) {
         int ind = 0;
 
         for (int i = 0; i < 32; i++) {
-            double x0 = .5*std::cos(i*2*pi/32);
-            double z0 = .5*std::sin(i*2*pi/32);
+            double x0 = .5*std::cos(i*2*PI/32);
+            double z0 = .5*std::sin(i*2*PI/32);
 
-            double x1 = .5*std::cos((i+1)*2*pi/32);
-            double z1 = .5*std::sin((i+1)*2*pi/32);
+            double x1 = .5*std::cos((i+1)*2*PI/32);
+            double z1 = .5*std::sin((i+1)*2*PI/32);
 
             pts->SetPoint(ind, x0, .75, z0);
             top->SetId(i, ind++);
@@ -576,12 +575,12 @@ int main (int argc, char *argv[]) {
         int ok = test.run();
 #else
         int ok = 0;
-        Utilities::WriteVTK("test5.vtk", bf->GetOutput(0));
+        WriteVTK("test5.vtk", bf->GetOutput(0));
 #endif
 
         bf->Delete();
         prod->Delete();
-        
+
         pts->Delete();
         cyl->Delete();
         cu->Delete();
@@ -614,7 +613,7 @@ int main (int argc, char *argv[]) {
         int ok = test.run();
 #else
         int ok = 0;
-        Utilities::WriteVTK("test6.vtk", bf->GetOutput(0));
+        WriteVTK("test6.vtk", bf->GetOutput(0));
 #endif
 
         bf->Delete();
@@ -630,7 +629,7 @@ int main (int argc, char *argv[]) {
         spA->SetRadius(50);
         spA->SetPhiResolution(6);
         spA->SetThetaResolution(6);
-        
+
 
         vtkSphereSource *spB = vtkSphereSource::New();
         spB->SetRadius(50);
@@ -655,7 +654,7 @@ int main (int argc, char *argv[]) {
         int ok = test.run();
 #else
         int ok = 0;
-        Utilities::WriteVTK("test7.vtk", bf->GetOutput(0));
+        WriteVTK("test7.vtk", bf->GetOutput(0));
 #endif
 
         bf->Delete();
@@ -693,7 +692,7 @@ int main (int argc, char *argv[]) {
         int ok = test.run();
 #else
         int ok = 0;
-        Utilities::WriteVTK("test8.vtk", bf->GetOutput(0));
+        WriteVTK("test8.vtk", bf->GetOutput(0));
 #endif
 
         bf->Delete();
@@ -733,7 +732,7 @@ int main (int argc, char *argv[]) {
         int ok = test.run();
 #else
         int ok = 0;
-        Utilities::WriteVTK("test9.vtk", bf->GetOutput(0));
+        WriteVTK("test9.vtk", bf->GetOutput(0));
 #endif
 
         bf->Delete();
@@ -769,7 +768,7 @@ int main (int argc, char *argv[]) {
         int ok = test.run();
 #else
         int ok = 0;
-        Utilities::WriteVTK("test10.vtk", bf->GetOutput(0));
+        WriteVTK("test10.vtk", bf->GetOutput(0));
 #endif
 
         bf->Delete();
@@ -810,7 +809,7 @@ int main (int argc, char *argv[]) {
         int ok = test.run();
 #else
         int ok = 0;
-        Utilities::WriteVTK("test11.vtk", bf->GetOutput(0));
+        WriteVTK("test11.vtk", bf->GetOutput(0));
 #endif
 
         bf->Delete();
@@ -874,7 +873,7 @@ int main (int argc, char *argv[]) {
         int ok = test.run();
 #else
         int ok = 0;
-        Utilities::WriteVTK("test12.vtk", bf->GetOutput(0));
+        WriteVTK("test12.vtk", bf->GetOutput(0));
 #endif
 
         bf->Delete();
@@ -913,7 +912,7 @@ int main (int argc, char *argv[]) {
         int ok = test.run();
 #else
         int ok = 0;
-        Utilities::WriteVTK("test13.vtk", bf->GetOutput(0));
+        WriteVTK("test13.vtk", bf->GetOutput(0));
 #endif
 
         bf->Delete();
