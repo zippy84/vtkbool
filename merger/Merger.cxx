@@ -14,6 +14,8 @@
 #include <vtkKdTree.h>
 #include <vtkMath.h>
 
+#include "Tools.h"
+
 void Merger::AddPoly (PolyType &poly) {
     polys.push_back(poly);
 }

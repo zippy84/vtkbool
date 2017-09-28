@@ -28,7 +28,7 @@ int main (int argc, char *argv[]) {
 
     Json::Reader reader;
 
-    std::ifstream jn("../../holes2.json");
+    std::ifstream jn("../dev/holes2.json");
 
     if (reader.parse(jn, doc)) {
         const Json::Value holes = doc["holes"];

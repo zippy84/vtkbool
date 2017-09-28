@@ -6,7 +6,7 @@ import json
 
 from collections import deque, defaultdict
 
-sys.path.append('../vp_new_try')
+sys.path.append('../../vp_new_try/dev')
 
 from vis_poly import vis_poly_wrapper
 from tools import cross, ld, is_cw, to_abs_path, to_path
@@ -51,7 +51,7 @@ class SubP:
 
 def decompose (pts):
     poly = deque([ { 'pt': pt, 'idx': i } for i, pt in enumerate(pts) ])
-    
+
     # TODO: rm_internals fehlt
 
     num = len(poly)
@@ -324,7 +324,7 @@ def decompose (pts):
             i += 1
 
     print diags
-    
+
     # TODO: rm_internals fehlt
 
     return [ [ poly[d] for d in dec ] for dec in decs ]
@@ -348,7 +348,7 @@ if __name__ == '__main__':
         </svg>
         ''')
 
-    with open('../vp_new_try/complex.json', 'r') as f:
+    with open('../../vp_new_try/dev/complex.json', 'r') as f:
         polys = json.load(f)['polys']
 
         for i, poly in enumerate(polys):

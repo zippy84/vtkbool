@@ -13,7 +13,7 @@ int main (int argc, char *argv[]) {
 
     Json::Reader reader;
 
-    std::ifstream jn("../../../vp_new_try/complex.json");
+    std::ifstream jn("../../vp_new_try/dev/complex.json");
 
     if (reader.parse(jn, doc)) {
         const Json::Value polys = doc["polys"];
