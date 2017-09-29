@@ -2555,6 +2555,8 @@ void _Wrapper::MergeAll () {
 
     // descendants in holes einfügen
 
+    std::set<int> test;
+
     for (auto& id : descIds) {
         pd->GetCellPoints(id, cell);
         IdsType hole;
@@ -2562,6 +2564,8 @@ void _Wrapper::MergeAll () {
         for (int i = 0; i < cell->GetNumberOfIds(); i++) {
             hole.push_back(cell->GetId(i));
         }
+
+        test.insert(hole.begin(), hole.end());
 
         holes.push_back(std::move(hole));
 
@@ -2607,20 +2611,26 @@ void _Wrapper::MergeAll () {
 
         // poly ist immer ccw
 
+        std::map<int, int> r;
+
         for (auto& p : poly) {
-            if (usedIds.count(p.id) == 0) {
-                cell->InsertNextId(p.id);
-
-                usedIds.insert(p.id);
-
+            if (test.count(p.id) == 1 || usedIds.count(p.id) == 0) {
+                r[p.id] = p.id;
             } else {
-                // neuen erzeugen
                 double _pt[3];
                 BackTransform(p.pt, _pt, base);
 
-                cell->InsertNextId(pdPts->InsertNextPoint(_pt));
+                // pd->GetPoint(p.id, _pt);
+
+                r[p.id] = pdPts->InsertNextPoint(_pt);
 
             }
+        }
+
+
+        for (auto& p : poly) {
+            cell->InsertNextId(r[p.id]);
+            usedIds.insert(p.id);
 
         }
 
