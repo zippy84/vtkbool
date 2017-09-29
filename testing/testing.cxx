@@ -29,6 +29,7 @@
 #include <vtkPolyDataNormals.h>
 #include <vtkLinearExtrusionFilter.h>
 #include <vtkPlaneSource.h>
+#include <vtkAppendPolyData.h>
 
 #include <map>
 #include <vector>
@@ -43,7 +44,7 @@
 
 #include "Utilities.h"
 
-//#define DD
+#define DD
 
 typedef std::map<int, IdsType> LinksType;
 
@@ -858,6 +859,10 @@ int main (int argc, char *argv[]) {
 
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, nf->GetOutputPort());
+
+        // ginge mit dem merger
+        //bf->SetInputConnection(1, cube->GetOutputPort());
+
         bf->SetInputConnection(1, sf->GetOutputPort());
 
 #ifndef DD
@@ -920,6 +925,132 @@ int main (int argc, char *argv[]) {
         sp->Delete();
 
         return ok;
+
+    } else if (t == 14) {
+        // testet den merger
+
+        vtkCubeSource *cuA = vtkCubeSource::New();
+
+        vtkCubeSource *cuB = vtkCubeSource::New();
+        cuB->SetXLength(.5);
+        cuB->SetYLength(.5);
+
+        vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
+        bf->SetInputConnection(0, cuA->GetOutputPort());
+        bf->SetInputConnection(1, cuB->GetOutputPort());
+
+#ifndef DD
+        bf->MergeAllOn();
+#else
+        bf->SetOperModeToDifference();
+#endif
+
+        bf->Update();
+
+#ifndef DD
+        Test test(bf->GetOutput(0), bf->GetOutput(1));
+        int ok = test.run();
+#else
+        int ok = 0;
+        WriteVTK("test14.vtk", bf->GetOutput(0));
+#endif
+
+        bf->Delete();
+        cuB->Delete();
+        cuA->Delete();
+
+        return ok;
+
+    } else if (t == 15) {
+        vtkCubeSource *cuA = vtkCubeSource::New();
+
+        vtkCubeSource *cuB = vtkCubeSource::New();
+        cuB->SetXLength(.25);
+        cuB->SetYLength(.25);
+        cuB->SetCenter(.25, 0, 0);
+
+        vtkCubeSource *cuC = vtkCubeSource::New();
+        cuC->SetXLength(.25);
+        cuC->SetYLength(.25);
+        cuC->SetCenter(-.25, 0, 0);
+
+        vtkAppendPolyData *app = vtkAppendPolyData::New();
+        app->AddInputConnection(cuB->GetOutputPort());
+        app->AddInputConnection(cuC->GetOutputPort());
+
+        vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
+        bf->SetInputConnection(0, cuA->GetOutputPort());
+        bf->SetInputConnection(1, app->GetOutputPort());
+
+#ifndef DD
+        bf->MergeAllOn();
+#else
+        bf->SetOperModeToDifference();
+#endif
+
+        bf->Update();
+
+#ifndef DD
+        Test test(bf->GetOutput(0), bf->GetOutput(1));
+        int ok = test.run();
+#else
+        int ok = 0;
+        WriteVTK("test15.vtk", bf->GetOutput(0));
+#endif
+
+        bf->Delete();
+        app->Delete();
+        cuC->Delete();
+        cuB->Delete();
+        cuA->Delete();
+
+        return ok;
+
+    } else if (t == 16) {
+
+        vtkCubeSource *cu = vtkCubeSource::New();
+
+        vtkCylinderSource *cylA = vtkCylinderSource::New();
+        cylA->SetResolution(10);
+        cylA->SetRadius(.4);
+
+        vtkCylinderSource *cylB = vtkCylinderSource::New();
+        cylB->SetResolution(10);
+        cylB->SetRadius(.3);
+
+        vtkPolyDataBooleanFilter *bfA = vtkPolyDataBooleanFilter::New();
+        bfA->SetInputConnection(0, cylA->GetOutputPort());
+        bfA->SetInputConnection(1, cylB->GetOutputPort());
+        bfA->SetOperModeToDifference();
+
+        vtkPolyDataBooleanFilter *bfB = vtkPolyDataBooleanFilter::New();
+        bfB->SetInputConnection(0, cu->GetOutputPort());
+        bfB->SetInputConnection(1, bfA->GetOutputPort());
+
+#ifndef DD
+        bfB->MergeAllOn();
+#else
+        bfB->SetOperModeToDifference();
+#endif
+
+        bfB->Update();
+
+#ifndef DD
+        Test test(bfB->GetOutput(0), bfB->GetOutput(1));
+        int ok = test.run();
+#else
+        int ok = 0;
+        WriteVTK("test16.vtk", bfB->GetOutput(0));
+#endif
+
+        bfB->Delete();
+        bfA->Delete();
+        cylB->Delete();
+        cylA->Delete();
+        cu->Delete();
+
+        return ok;
+
     }
 
 }

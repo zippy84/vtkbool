@@ -43,6 +43,8 @@
 
 #include "Utilities.h"
 
+#include "Merger.h"
+
 #ifdef DEBUG
 #include <ctime>
 #define DIFF(s, e) float(e-s)/CLOCKS_PER_SEC
@@ -456,7 +458,7 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, PStrips &pStrips
                 double pt[3];
                 contLines->GetPoint(realInd, pt);
 
-                CPY(pts[realInd].pt, pt)
+                Cpy(pts[realInd].pt, pt);
 
                 double lastD = DBL_MAX;
 
@@ -504,13 +506,13 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, PStrips &pStrips
                         pts[realInd].t = std::min(1., std::max(0., t));
 
                         if (vtkMath::Norm(sA) < tol) {
-                            CPY(pts[realInd].captPt, a)
+                            Cpy(pts[realInd].captPt, a);
                             pts[realInd].capt = CAPT_A;
 
                             break;
 
                         } else if (vtkMath::Norm(sB) < tol) {
-                            CPY(pts[realInd].captPt, b)
+                            Cpy(pts[realInd].captPt, b);
                             pts[realInd].capt = CAPT_B;
 
                             break;
@@ -523,7 +525,7 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, PStrips &pStrips
                             vtkMath::Add(a, u, x);
 
                             // projektion
-                            CPY(pts[realInd].captPt, x)
+                            Cpy(pts[realInd].captPt, x);
 
                             pts[realInd].capt = CAPT_EDGE;
 
@@ -560,10 +562,10 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, PStrips &pStrips
 
             // für den schnitt werden die eingerasteten koordinaten verwendet
 
-            CPY(sp.cutPt, sp.captPt)
+            Cpy(sp.cutPt, sp.captPt);
         } else {
 
-            CPY(sp.cutPt, sp.pt)
+            Cpy(sp.cutPt, sp.pt);
         }
 
     }
@@ -806,6 +808,27 @@ void vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
         StripsType::iterator itr2;
         StripType::iterator itr3;
 
+        // holes sammeln
+
+        HolesType holes;
+
+        for (itr2 = strips.begin(); itr2 != strips.end(); ++itr2) {
+            StripType &s = *itr2;
+            if (pts[s.front().ind].capt == CAPT_NOT && pts[s.back().ind].capt == CAPT_NOT) {
+                IdsType hole;
+
+                for (auto& sp : s) {
+                    hole.push_back(pdPts->InsertNextPoint(pts[sp.ind].pt));
+                }
+
+                // anfang und ende sind ja gleich
+                hole.pop_back();
+
+                holes.push_back(std::move(hole));
+
+            }
+        }
+
         // holes löschen
         strips.erase(std::remove_if(strips.begin(), strips.end(), [&](const StripType &s) {
             return pts[s.front().ind].capt == CAPT_NOT && pts[s.back().ind].capt == CAPT_NOT; }), strips.end());
@@ -946,7 +969,7 @@ void vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
                                 StripPtR &sp = *itr7;
                                 int i = itr7-poly_.begin();
 
-                                CPY(pts_[i], pts[sp.ind].cutPt)
+                                Cpy(pts_[i], pts[sp.ind].cutPt);
                             }
 
                             double n[3];
@@ -976,7 +999,7 @@ void vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
                                 StripPtR &sp = *itr7;
                                 int i = itr7-poly_.begin();
 
-                                CPY(pts_[i], pts[sp.ind].cutPt)
+                                Cpy(pts_[i], pts[sp.ind].cutPt);
                             }
 
                             double n[3];
@@ -1242,7 +1265,7 @@ void vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
 
         // erzeugte polys hinzufügen
 
-        IdsType polyIds;
+        IdsType descIds;
 
         for (itr9 = polys.begin(); itr9 != polys.end(); ++itr9) {
             IdsType &p = *itr9;
@@ -1256,11 +1279,23 @@ void vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
                 cell->SetId(i, p[i]);
             }
 
-            polyIds.push_back(pd->InsertNextCell(VTK_POLYGON, cell));
+            descIds.push_back(pd->InsertNextCell(VTK_POLYGON, cell));
 
             origCellIds->InsertNextValue(origId);
 
             cell->Delete();
+        }
+
+        // holes verarbeiten
+
+        if (!holes.empty()) {
+            _Wrapper w(pd, descIds, origId);
+
+            for (auto& hole : holes) {
+                w.Add(hole);
+            }
+
+            w.MergeAll();
         }
 
         pd->DeleteCell(polyInd);
@@ -2508,5 +2543,92 @@ void vtkPolyDataBooleanFilter::MergeRegions () {
 
     pdB->Delete();
     pdA->Delete();
+
+}
+
+void _Wrapper::MergeAll () {
+    vtkPoints *pdPts = pd->GetPoints();
+
+    vtkIntArray *origCellIds = vtkIntArray::SafeDownCast(pd->GetCellData()->GetScalars("OrigCellIds"));
+
+    vtkIdList *cell = vtkIdList::New();
+
+    // descendants in holes einfügen
+
+    for (auto& id : descIds) {
+        pd->GetCellPoints(id, cell);
+        IdsType hole;
+
+        for (int i = 0; i < cell->GetNumberOfIds(); i++) {
+            hole.push_back(cell->GetId(i));
+        }
+
+        holes.push_back(std::move(hole));
+
+        // löscht
+        pd->DeleteCell(id);
+    }
+
+    base = Base(pdPts, cell);
+
+    std::cout << "holes (1) >> " << holes.size() << std::endl;
+
+    Merger m;
+
+    for (auto& hole : holes) {
+        PolyType casted;
+
+        for (int id : hole) {
+            double pt[3];
+            pd->GetPoint(id, pt);
+
+            double _pt[2];
+            Transform(pt, _pt, base);
+
+            casted.push_back({_pt, id});
+        }
+
+        if (TestCW(casted)) {
+            std::reverse(casted.begin(), casted.end());
+        }
+
+        m.AddPoly(casted);
+    }
+
+    PolysType merged;
+    m.GetMerged(merged);
+
+    std::cout << "holes (2) >> " << merged.size() << std::endl;
+
+    std::set<int> usedIds;
+
+    for (auto& poly : merged) {
+        cell->Reset();
+
+        // poly ist immer ccw
+
+        for (auto& p : poly) {
+            if (usedIds.count(p.id) == 0) {
+                cell->InsertNextId(p.id);
+
+                usedIds.insert(p.id);
+
+            } else {
+                // neuen erzeugen
+                double _pt[3];
+                BackTransform(p.pt, _pt, base);
+
+                cell->InsertNextId(pdPts->InsertNextPoint(_pt));
+
+            }
+
+        }
+
+        pd->InsertNextCell(VTK_POLYGON, cell);
+        origCellIds->InsertNextValue(origId);
+
+    }
+
+    cell->Delete();
 
 }

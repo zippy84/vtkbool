@@ -28,15 +28,6 @@
 #include <vtkPolyData.h>
 #include <vtkDataWriter.h>
 
-double Normalize (double *v) {
-    double n = std::sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
-    v[0] /= n;
-    v[1] /= n;
-    v[2] /= n;
-
-    return n;
-}
-
 void ComputeNormal (vtkPoints *pts, vtkIdList *poly, double* n) {
     n[0] = 0; n[1] = 0; n[2] = 0;
     double p0[3], p1[3];
@@ -52,7 +43,7 @@ void ComputeNormal (vtkPoints *pts, vtkIdList *poly, double* n) {
         n[1] += (p0[2]-p1[2])*(p0[0]+p1[0]);
         n[2] += (p0[0]-p1[0])*(p0[1]+p1[1]);
 
-        CPY(p0, p1)
+        Cpy(p0, p1);
     }
 
     vtkMath::Normalize(n);
@@ -119,6 +110,8 @@ void WriteVTK (const char *name, vtkPolyData *pd) {
 }
 
 double GetAngle (double *vA, double *vB, double *n) {
+    // http://math.stackexchange.com/questions/878785/how-to-find-an-angle-in-range0-360-between-2-vectors
+
     double _vA[3];
 
     vtkMath::Cross(n, vA, _vA);
@@ -126,10 +119,6 @@ double GetAngle (double *vA, double *vB, double *n) {
 
     if (ang < 0) {
         ang += 2*PI;
-    }
-
-    if (ang > 2*PI-1e-6) {
-        ang = 0;
     }
 
     return ang;
@@ -150,7 +139,12 @@ void GetNormal (double pts[][3], double *n, const int num) {
         p0 = p1;
     }
 
-    Normalize(n);
+    Normalize(n, 3);
+}
+
+double GetD (double *ptA, double *ptB) {
+    double v[] = {ptA[0]-ptB[0], ptA[1]-ptB[1], ptA[2]-ptB[2]};
+    return sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
 }
 
 // ermöglicht mod mit neg. int
@@ -158,7 +152,44 @@ double Mod (int a, int b) {
     return (double) (((a%b)+b)%b);
 }
 
-double GetD (double *ptA, double *ptB) {
-    double v[] = {ptA[0]-ptB[0], ptA[1]-ptB[1], ptA[2]-ptB[2]};
-    return sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+Base::Base (vtkPoints *pts, vtkIdList *poly) {
+    ComputeNormal(pts, poly, n);
+
+    double ptA[3],
+        ptB[3];
+
+    pts->GetPoint(poly->GetId(0), ptA);
+    pts->GetPoint(poly->GetId(1), ptB);
+
+    ei[0] = ptB[0]-ptA[0];
+    ei[1] = ptB[1]-ptA[1];
+    ei[2] = ptB[2]-ptA[2];
+
+    Normalize(ei, 3);
+
+    ej[0] = n[1]*ei[2]-n[2]*ei[1];
+    ej[1] = -n[0]*ei[2]+n[2]*ei[0];
+    ej[2] = n[0]*ei[1]-n[1]*ei[0];
+
+    Normalize(ej, 3);
+
+    d = n[0]*ptA[0]+n[1]*ptA[1]+n[2]*ptA[2];
+}
+
+void Transform (double *in, double *out, Base &base) {
+    double x = base.ei[0]*in[0]+base.ei[1]*in[1]+base.ei[2]*in[2],
+        y = base.ej[0]*in[0]+base.ej[1]*in[1]+base.ej[2]*in[2];
+
+    out[0] = x;
+    out[1] = y;
+}
+
+void BackTransform (double *in, double *out, Base &base) {
+    double x = in[0]*base.ei[0]+in[1]*base.ej[0]+base.d*base.n[0],
+        y = in[0]*base.ei[1]+in[1]*base.ej[1]+base.d*base.n[1],
+        z = in[0]*base.ei[2]+in[1]*base.ej[2]+base.d*base.n[2];
+
+    out[0] = x;
+    out[1] = y;
+    out[2] = z;
 }

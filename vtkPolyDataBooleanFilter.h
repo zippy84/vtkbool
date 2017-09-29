@@ -117,8 +117,8 @@ typedef std::vector<std::reference_wrapper<StripPtR>> RefsType;
 class StripPtL {
 public:
     StripPtL (const StripPt &sp) : ind(sp.ind) {
-        CPY(pt, sp.pt)
-        CPY(cutPt, sp.cutPt)
+        Cpy(pt, sp.pt);
+        Cpy(cutPt, sp.cutPt);
     }
 
     int ind;
@@ -133,7 +133,7 @@ public:
 class StripPtL2 {
 public:
     StripPtL2 (const StripPt &sp) : ind(sp.ind), t(sp.t) {
-        CPY(pt, sp.pt)
+        Cpy(pt, sp.pt);
         edge[0] = sp.edge[0];
         edge[1] = sp.edge[1];
     }
@@ -151,7 +151,7 @@ public:
 class StripPtL3 {
 public:
     StripPtL3 (const double *_pt, double _t, int _ind = NO_USE) : t(_t), ind(_ind) {
-        CPY(pt, _pt)
+        Cpy(pt, _pt);
     }
     int ind;
     double pt[3];
@@ -172,11 +172,30 @@ public:
 class MergePt {
 public:
     MergePt (int _polyInd, int _ind, double *_pt) : polyInd(_polyInd), ind(_ind) {
-        CPY(pt, _pt)
+        Cpy(pt, _pt);
     }
     int polyInd;
     int ind;
     double pt[3];
+};
+
+typedef std::vector<IdsType> HolesType;
+
+class _Wrapper {
+    vtkPolyData *pd;
+    int origId;
+    IdsType descIds;
+
+    Base base;
+    HolesType holes;
+public:
+    _Wrapper (vtkPolyData* _pd, IdsType& _descIds, int _origId)
+        : pd(_pd), descIds(_descIds), origId(_origId) {}
+
+    void MergeAll ();
+    void Add (IdsType &hole) {
+        holes.push_back(hole);
+    }
 };
 
 
