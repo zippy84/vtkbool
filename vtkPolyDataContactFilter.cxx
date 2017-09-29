@@ -464,7 +464,7 @@ InterPtsType vtkPolyDataContactFilter::InterPolyLine (vtkPoints *pts, vtkIdList 
                     inter.t = vtkMath::Dot(v, r);
 
                     double w[3];
-                    CPY(w, r)
+                    Cpy(w, r);
 
                     vtkMath::MultiplyScalar(w, inter.t);
 
