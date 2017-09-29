@@ -44,7 +44,7 @@
 
 #include "Utilities.h"
 
-#define DD
+//#define DD
 
 typedef std::map<int, IdsType> LinksType;
 
@@ -98,6 +98,9 @@ public:
 private:
     int checkConnectivity (int input, vtkIntArray *origIds) {
         std::cout << "Checking input " << input << std::endl;
+
+        WriteVTK("abc.vtk", pd);
+        WriteVTK("abc_lines.vtk", lines);
 
         int err = 0;
 
@@ -253,24 +256,44 @@ private:
                     FindPoints(loc, pt, pts);
                     int numPts = pts->GetNumberOfIds();
 
+                    std::map<int, int> masked;
+
                     for (int k = 0; k < numPts; k++) {
+
                         pd->GetPointCells(pts->GetId(k), cells);
                         int numCells = cells->GetNumberOfIds();
 
                         for (int l = 0; l < numCells; l++) {
-                            if (origIds->GetValue(cells->GetId(l)) > -1) {
+                            int cellId = cells->GetId(l);
+
+                            if (origIds->GetValue(cellId) > -1) {
 
                                 pd->GetCellPoints(cells->GetId(l), poly);
                                 int numPts_ = poly->GetNumberOfIds();
 
                                 for (int m = 0; m < numPts_; m++) {
-                                    if (poly->GetId(m) == pts->GetId(k)) {
+                                    int ptId = poly->GetId(m);
+
+                                    /* wenn ein polygon mehrfach die gleiche ptId verwendet,
+                                       dann erscheint die cellId auch mehrfach in cells
+                                       => es sind dann auch 4 kanten zu verarbeiten
+                                       => der betrachtete relative index wird dann zusammen mit der cellId in masked gespeichert */
+
+                                    if (masked.count(cellId) == 1 && masked[cellId] == m) {
+                                        continue;
+                                    }
+
+                                    if (ptId == pts->GetId(k)) {
+
                                         ids.push_back(poly->GetId((m+1)%numPts_));
                                         ids.push_back(poly->GetId((m+numPts_-1)%numPts_));
+
+                                        masked[cellId] = m;
 
                                         break;
                                     }
                                 }
+
                             }
                         }
 
@@ -1038,12 +1061,15 @@ int main (int argc, char *argv[]) {
 #ifndef DD
         Test test(bfB->GetOutput(0), bfB->GetOutput(1));
         int ok = test.run();
+
+        WriteVTK("test16.vtk", bfB->GetOutput(0));
 #else
         int ok = 0;
         WriteVTK("test16.vtk", bfB->GetOutput(0));
 #endif
 
         bfB->Delete();
+
         bfA->Delete();
         cylB->Delete();
         cylA->Delete();
