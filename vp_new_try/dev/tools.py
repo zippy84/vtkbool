@@ -149,3 +149,21 @@ def is_cw (poly):
         s += a[0]*b[1]-b[0]*a[1]
 
     return s < 0
+
+def is_pip (poly, pt):
+    num = len(poly)
+    in_ = False
+
+    for i in range(num):
+        a = poly[i]
+        b = poly[(i+1)%num]
+
+        if (a[0] <= pt[0] or b[0] <= pt[0]) \
+            and (a[1] < pt[1] and b[1] >= pt[1] \
+                or b[1] < pt[1] and a[1] >= pt[1]):
+
+            # schnittpunkt mit bounding box und strahlensatz
+            if a[0]+(pt[1]-a[1])*(b[0]-a[0])/(b[1]-a[1]) < pt[0]:
+                in_ = not(in_)
+
+    return in_

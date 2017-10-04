@@ -48,5 +48,11 @@ int main (int argc, char *argv[]) {
 
         m.GetMerged(merged);
 
+        for (auto& p : merged) {
+            assert(!TestCW(p));
+
+            std::cout << GetAbsolutePath(p) << std::endl;
+        }
+
     }
 }

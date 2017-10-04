@@ -75,7 +75,7 @@ void Merger::GetMerged (PolysType &res) {
             PolyType merged;
             Merge(group, merged);
 
-            std::cout << GetAbsolutePath(merged) << std::endl;
+            std::reverse(merged.begin(), merged.end());
 
             res.push_back(merged);
 

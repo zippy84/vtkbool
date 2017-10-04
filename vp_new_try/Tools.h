@@ -67,7 +67,7 @@ public:
 
 typedef std::vector<Point> PolyType;
 
-double Normalize (double *v);
+double Normalize (double *v, const int n = 2);
 double GetAngle (double *vA, double *vB);
 double Ld (double *a, double *b, double *c);
 double Cross (double *a, double *b, double *c);

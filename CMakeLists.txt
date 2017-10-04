@@ -3,5 +3,5 @@ project(decomp)
 
 set(CMAKE_CXX_FLAGS "-std=c++11 -Wno-deprecated -fPIC")
 
-add_subdirectory(decomp/cxx decomp_build)
-add_subdirectory(merger/cxx merger_build)
+add_subdirectory(decomp decomp_build)
+add_subdirectory(merger merger_build)

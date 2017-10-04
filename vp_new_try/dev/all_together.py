@@ -10,6 +10,9 @@ with open('complex.json', 'r') as f:
     polys = json.load(f)['polys']
 
     for i, poly in enumerate(polys):
+        if i != 2:
+            continue
+
         num = len(poly)
 
         for j in range(1, num):
@@ -19,6 +22,8 @@ with open('complex.json', 'r') as f:
         all_res = {}
 
         for j in range(num):
+            if j != 6:
+                pass#continue
             all_res[j] = to_abs_path([ p['pt'] for p in vis_poly_wrapper(poly, j) ])
 
         with open('data_files/data_%i.js' % i, 'w') as out:

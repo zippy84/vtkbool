@@ -333,8 +333,8 @@ def vis_poly (pts, ind=0):
 
 
 def vis_poly_wrapper (poly, idx):
-    pts = deepcopy(poly)
-    res = rm_trivials(pts, idx)
+    poly_ = deepcopy(poly)
+    res, pts = rm_trivials(poly_, idx)
     p = vis_poly(res)
 
     return add_internals(pts, p)
@@ -379,10 +379,14 @@ if __name__ == '__main__':
                 pts[j][0] += pts[j-1][0]
                 pts[j][1] += pts[j-1][1]
 
-            vp = vis_poly(pts)
+            pts_ = [ { 'pt': pt } for pt in pts ]
+
+            vp = vis_poly(pts_)
+
+            vp_ = [ p['pt'] for p in vp ]
 
             data.append({ 'pts': pts,
-                'vp': vp,
+                'vp': vp_,
                 'x': col*size[0],
                 'y': row*size[1] })
 

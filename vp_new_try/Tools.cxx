@@ -2,10 +2,20 @@
 
 #include "Tools.h"
 
-double Normalize (double *v) {
-    double l = std::pow(v[0]*v[0]+v[1]*v[1], -.5);
-    v[0] *= l;
-    v[1] *= l;
+double Normalize (double *v, const int n) {
+    double l;
+
+    if (n == 3) {
+        l = std::pow(v[0]*v[0]+v[1]*v[1]+v[2]*v[2], -.5);
+        v[0] *= l;
+        v[1] *= l;
+        v[2] *= l;
+
+    } else {
+        l = std::pow(v[0]*v[0]+v[1]*v[1], -.5);
+        v[0] *= l;
+        v[1] *= l;
+    }
 
     return 1/l;
 }
