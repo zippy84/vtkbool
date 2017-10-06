@@ -11,7 +11,7 @@ with open('complex.json', 'r') as f:
 
     for i, poly in enumerate(polys):
         if i != 2:
-            continue
+            pass#continue
 
         num = len(poly)
 
@@ -22,9 +22,7 @@ with open('complex.json', 'r') as f:
         all_res = {}
 
         for j in range(num):
-            if j != 6:
-                pass#continue
             all_res[j] = to_abs_path([ p['pt'] for p in vis_poly_wrapper(poly, j) ])
 
         with open('data_files/data_%i.js' % i, 'w') as out:
-            out.write('var polys = %s;' % json.dumps(all_res))
+            out.write('var pts = {!r}; var polys = {!s};'.format(to_abs_path(poly), json.dumps(all_res)))

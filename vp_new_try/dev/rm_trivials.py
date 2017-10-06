@@ -7,6 +7,7 @@ from collections import deque
 from enum import Enum
 import json
 from collections import defaultdict
+from copy import deepcopy
 
 import os
 
@@ -43,7 +44,7 @@ def align_pts (poly, ind):
     phis = defaultdict(list)
 
     for i, v in enumerate(verts):
-        phis['%.4f' % v['phi']].append(i)
+        phis['%.3f' % v['phi']].append(i)
 
     print 'phis', phis
 
@@ -149,7 +150,7 @@ def rm_trivials (pts, ind):
     rm_internals(_pts, ind)
     align_pts(_pts, ind)
 
-    _poly = [ p for p in _pts if 'int' not in p ]
+    _poly = [ deepcopy(p) for p in _pts if 'int' not in p ]
 
     # cleanup
     for p in _pts:
@@ -288,36 +289,46 @@ def rm_trivials (pts, ind):
 
     num_ = len(poly)
 
+    def get_pocket (pair):
+        id_ = pair['i']
+
+        pocket = [id_]
+
+        while id_ != pair['j']:
+            id_ = (id_+1)%num_
+            pocket.append(id_)
+
+        print 'pocket', pocket, \
+            [ poly[id_]['idx'] for id_ in pocket ]
+
+        return pocket
+
+    def assign_side (pair, src):
+        pair['pocket'] = get_pocket(pair)
+
+        if 'side' in pair:
+            return
+
+        if len(pair['pocket']) > 2:
+            if src == 'B':
+                pair['pocket'].reverse()
+
+            p_poly = [ poly[id_]['pt'] for id_ in pair['pocket'] ]
+
+            pair['side'] = Side.IN if not is_cw(p_poly) else Side.OUT
+
+    def has_area (pocket):
+        area = True
+        l = len(pocket)
+
+        if l%2 == 1:
+            for i in range((l-1)/2):
+                area = not(is_near(poly[pocket[i]]['pt'], poly[pocket[l-i-1]]['pt']))
+
+        return area
+
     def remove_pockets (_good, rot, d, src):
         print rot, d
-
-        def add_pocket (pair):
-
-            id_c = pair['i']
-
-            pocket = []
-
-            while id_c != pair['j']:
-                id_c = (id_c+1)%num_
-                pocket.append(id_c)
-
-            pocket.insert(0, pair['i'])
-
-            pair['pocket'] = pocket[:]
-
-            print 'pocket', pocket
-
-            print [ poly[id_]['idx'] for id_ in pocket ]
-
-            if len(pocket) > 2:
-                if src == 'B':
-                    pocket.reverse()
-
-                p_poly = [ poly[id_]['pt'] for id_ in pocket ]
-
-                pair['side'] = Side.IN if not is_cw(p_poly) else Side.OUT
-
-                print pair, '>>>', pair['side']
 
         pairs = []
 
@@ -339,60 +350,39 @@ def rm_trivials (pts, ind):
 
         if pairs:
             for i, p in enumerate(pairs):
-
-                id_c = p['i']
-
-                pocket = [id_c]
-
-                while id_c != p['j']:
-                    id_c = (id_c+1)%num_
-                    pocket.append(id_c)
+                pocket = get_pocket(p)
 
                 p_poly = [ poly[id_]['pt'] for id_ in pocket ]
 
                 if len(set([ is_near(pX['pt'], pt) for pt in p_poly ])) == 1 \
                     and is_pip(p_poly, pX['pt']):
 
-                    # es muss gewährleistet sein, dass pt nicht auf p_poly liegt
-
                     del pairs[i:]
-
                     print 'del..'
-                    print [ poly[id_]['idx'] for id_ in pocket ]
-
                     break
-
 
             for p in pairs:
                 if p['dir'] == Dir.UNDEFINED:
-                    id_c = p['i']
-
-                    pocket = []
-
-                    while id_c != p['j']:
-                        id_c = (id_c+1)%num_
-                        pocket.append(id_c)
-
-                    del pocket[-1]
+                    pocket = get_pocket(p)
 
                     ss = set()
 
-                    for id_ in pocket:
+                    for id_ in pocket[1:-1]:
                         e = (poly[id_]['pt'][0]*rot[0]+poly[id_]['pt'][1]*rot[1])-d
                         if abs(e) > E:
+                            print e
                             ss.add(int(e/abs(e)))
 
                     assert len(ss) == 1
 
-                    if len(pocket) > 1:
+                    if has_area(pocket):
 
-                        p_poly = [poly[p['i']]['pt']] + [ poly[id_]['pt'] for id_ in pocket ]
+                        p_poly = [ poly[id_]['pt'] for id_ in pocket ]
 
                         if src == 'B':
                             p_poly.reverse()
 
                         #print ss.pop() == 1, is_cw(p_poly),
-                        #print [ poly[id_]['idx'] for id_ in pocket ],
 
                         is_backw = (ss.pop() == 1)^is_cw(p_poly)
 
@@ -401,7 +391,13 @@ def rm_trivials (pts, ind):
                         else:
                             p['dir'] = Dir.FORWARD
                     else:
-                        pass
+                        # das kann gar nicht anders sein
+
+                        if ss.pop() == 1:
+                            p['dir'] = Dir.BACKWARD
+                        else:
+                            p['dir'] = Dir.FORWARD
+                            p['side'] = Side.IN
 
         assert len([ p for p in pairs if p['dir'] == Dir.UNDEFINED ]) == 0
 
@@ -430,7 +426,7 @@ def rm_trivials (pts, ind):
 
             for p in pairs:
                 if p['dir'] == Dir.FORWARD:
-                    add_pocket(p)
+                    assign_side(p, src)
 
             if len(grps) > 0:
                 while True:
@@ -470,7 +466,7 @@ def rm_trivials (pts, ind):
 
                                 del grps[i-1][1][-j-1:]
                                 grps[i-1][1].append(add_pair({ 'i': p_['i'], 'j': last_pair['j'] }))
-                                add_pocket(pairs[grps[i-1][1][-1]])
+                                assign_side(pairs[grps[i-1][1][-1]], src)
 
                                 _c = False
 
@@ -485,7 +481,7 @@ def rm_trivials (pts, ind):
 
                             grps[i-1][1].append(add_pair({ 'i': pairs[grps[i-1][1][-1]]['j'], 'j': pairs[grps[i+1][1][0]]['j'] }))
 
-                            add_pocket(pairs[grps[i-1][1][-1]])
+                            assign_side(pairs[grps[i-1][1][-1]], src)
 
                             del grps[i+1][1][0]
 
@@ -578,16 +574,23 @@ def rm_trivials (pts, ind):
 def add_internals (pts, poly):
     num = len(poly)
 
-    res = []
+    _pts = deque(pts)
+    _pts.reverse()
 
-    for i in range(num):
-        p_a = poly[i]
-        p_b = poly[(i+1)%num]
+    first = next(( i for i, p in enumerate(_pts) if p['idx'] == poly[0]['idx'] ))
 
-        res.append(p_a)
+    _pts.rotate(-first)
 
-        for p in pts:
-            if is_on_seg(p_a['pt'], p_b['pt'], p['pt']):
-                res.append({ 'pt': p['pt'], 'idx': p['idx'] })
+    _pts = list(_pts)
+    _num = len(_pts)
 
-    return res
+    for i, p in enumerate(poly):
+        found = []
+
+        for j, _p in enumerate(_pts):
+            if is_near(_p['pt'], p['pt']):
+                found.append(j)
+
+        print i, found
+
+    return poly

@@ -10,7 +10,7 @@ with open('special.json', 'r') as f:
     polys = json.load(f)['polys']
 
     for i, poly in enumerate(polys):
-        if i != 1:
+        if i != 2:
             continue
 
         num = len(poly)
@@ -24,20 +24,17 @@ with open('special.json', 'r') as f:
         all_ = {}
 
         for j in range(num):
-            # dimlose taschen
-            #if j in [3, 9]:#
-            if j in [2, 3, 9, 10]:
-                pass#continue
-
-            if j != 5:
-                pass#continue
+            if j not in [6]:
+                continue
 
             poly_ = deepcopy(poly)
             res, pts = rm_trivials(poly_, j)
 
-            all_[j] = to_abs_path([ r['pt'] for r in res ])
+            res2 = add_internals(pts, res)
+
+            all_[j] = to_abs_path([ r['pt'] for r in res2 ])
 
             with open('data_files/special_%i.js' % i, 'w') as out:
-                out.write('var polys = %s;' % json.dumps(all_))
+                out.write('var pts = {!r}; var polys = {!s};'.format(to_abs_path(poly), json.dumps(all_)))
 
         print to_abs_path(poly)
