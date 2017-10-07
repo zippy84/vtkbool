@@ -10,7 +10,7 @@ with open('complex.json', 'r') as f:
     polys = json.load(f)['polys']
 
     for i, poly in enumerate(polys):
-        if i != 2:
+        if i != 0:
             pass#continue
 
         num = len(poly)

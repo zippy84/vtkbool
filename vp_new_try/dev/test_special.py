@@ -10,8 +10,8 @@ with open('special.json', 'r') as f:
     polys = json.load(f)['polys']
 
     for i, poly in enumerate(polys):
-        if i != 2:
-            continue
+        if i != 0:
+            pass#continue
 
         num = len(poly)
 
@@ -24,9 +24,6 @@ with open('special.json', 'r') as f:
         all_ = {}
 
         for j in range(num):
-            if j not in [6]:
-                continue
-
             poly_ = deepcopy(poly)
             res, pts = rm_trivials(poly_, j)
 
@@ -36,5 +33,3 @@ with open('special.json', 'r') as f:
 
             with open('data_files/special_%i.js' % i, 'w') as out:
                 out.write('var pts = {!r}; var polys = {!s};'.format(to_abs_path(poly), json.dumps(all_)))
-
-        print to_abs_path(poly)

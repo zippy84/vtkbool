@@ -31,8 +31,7 @@ def align_pts (poly, ind):
 
     for i, p in enumerate(poly):
         if i != ind \
-            and not is_near(p['pt'], pt_x) \
-            and 'int' not in p:
+            and not is_near(p['pt'], pt_x):
 
             r = [p['pt'][0]-pt_x[0], p['pt'][1]-pt_x[1]]
 
@@ -62,7 +61,7 @@ def align_pts (poly, ind):
                 w = [v['d']*v['r'][0], v['d']*v['r'][1]]
                 r = [w[0]-w[1]*phi_, w[0]*phi_+w[1]]
 
-                poly[v['i']]['pt'] = [pt_x[0]+r[0], pt_x[1]+r[1]]
+                poly[v['i']].update({ 'pt': [pt_x[0]+r[0], pt_x[1]+r[1]], 'r': r })
 
 
     for p in poly:
@@ -72,12 +71,25 @@ def align_pts (poly, ind):
             pt_a = poly[id_a]['pt']
             pt_b = poly[id_b]['pt']
 
-            v = [pt_b[0]-pt_a[0], pt_b[1]-pt_a[1]]
+            if 'r' in p:
+                normalize(p['r'])
 
-            new_pt = [pt_a[0]+p['int']['t']*v[0],
-                pt_a[1]+p['int']['t']*v[1]]
+                try:
+                    d = intersect(pt_x, p['r'], pt_a, pt_b)
+                    p['pt'] = d['s']
+                except:
+                    pass
 
-            p['pt'] = new_pt
+            else:
+                v = [pt_b[0]-pt_a[0], pt_b[1]-pt_a[1]]
+
+                new_pt = [pt_a[0]+p['int']['t']*v[0],
+                    pt_a[1]+p['int']['t']*v[1]]
+
+                p['pt'] = new_pt
+
+        if 'r' in p:
+            del p['r']
 
 
 def rm_internals (poly, skip):
@@ -92,6 +104,15 @@ def rm_internals (poly, skip):
             and ld(poly[i]['pt'], poly[j]['pt'], poly[k]['pt']) < 1e-2:
 
             poly[j]['int'] = {}
+
+    for i, p in enumerate(poly):
+        if 'int' in p:
+            for j, q in enumerate(poly):
+                if i == j or 'int' in q:
+                    continue
+
+                if is_near(p['pt'], q['pt']):
+                    del p['int']
 
     ids = [ i for i, p in enumerate(poly) if 'int' not in p ]
     #print ids
@@ -132,15 +153,6 @@ def rm_internals (poly, skip):
                 print id_, l_/l
 
                 poly[id_]['int'].update({ 't': l_/l, 'edge': (id_a, id_b) })
-
-    for i, p in enumerate(poly):
-        if 'int' in p:
-            for j, q in enumerate(poly):
-                if i == j:
-                    continue
-
-                if is_near(p['pt'], q['pt']):
-                    del p['int']
 
 def rm_trivials (pts, ind):
     global E
@@ -418,7 +430,6 @@ def rm_trivials (pts, ind):
 
             print ind, grps
 
-            # TODO: kann sowas noch vorkommen?
             if grps[0][0] == Dir.BACKWARD:
                 if len(grps) > 1:
                     pairs[grps[1][1][0]]['i'] = pairs[grps[0][1][0]]['i']
