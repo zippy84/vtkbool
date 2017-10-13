@@ -41,7 +41,7 @@ else()
 
     #unset(VTK_DIR CACHE)
 
-    find_package(VTK REQUIRED COMPONENTS vtkFiltersSources vtkIOLegacy vtkFiltersExtraction vtkFiltersGeometry vtkFiltersModeling vtkRenderingFreeType NO_MODULE)
+    find_package(VTK REQUIRED COMPONENTS vtkFiltersSources vtkIOLegacy vtkFiltersExtraction vtkFiltersGeometry vtkFiltersModeling vtkRenderingFreeType vtkWrappingPythonCore NO_MODULE)
 
     if(VTK_FOUND)
         include(${VTK_USE_FILE})
@@ -77,10 +77,9 @@ else()
                 vtk_wrap_python3(${PROJECT_NAME}Python ${PROJECT_NAME}Python_srcs vtkPolyDataBooleanFilter.cxx)
 
                 add_library(${PROJECT_NAME}PythonD ${${PROJECT_NAME}Python_srcs})
-                target_link_libraries(${PROJECT_NAME}PythonD ${PROJECT_NAME})
+                target_link_libraries(${PROJECT_NAME}PythonD ${PROJECT_NAME} vtkWrappingPythonCore vtkCommonExecutionModelPythonD)
 
-                add_library(${PROJECT_NAME}Python MODULE ${PROJECT_NAME}PythonInit.cxx)
-                target_link_libraries(${PROJECT_NAME}Python ${PROJECT_NAME}PythonD)
+                python_add_module(${PROJECT_NAME}Python ${PROJECT_NAME}PythonInit.cxx)
 
             endif()
         endif()

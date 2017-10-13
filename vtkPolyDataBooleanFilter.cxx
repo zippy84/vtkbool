@@ -1286,6 +1286,8 @@ void vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
             cell->Delete();
         }
 
+        pd->DeleteCell(polyInd);
+
         // holes verarbeiten
 
         if (!holes.empty()) {
@@ -1297,8 +1299,6 @@ void vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
 
             w.MergeAll();
         }
-
-        pd->DeleteCell(polyInd);
 
     }
 
