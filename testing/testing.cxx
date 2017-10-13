@@ -44,7 +44,7 @@
 
 #include "Utilities.h"
 
-//#define DD
+#define DD
 
 typedef std::map<int, IdsType> LinksType;
 
@@ -98,9 +98,6 @@ public:
 private:
     int checkConnectivity (int input, vtkIntArray *origIds) {
         std::cout << "Checking input " << input << std::endl;
-
-        WriteVTK("abc.vtk", pd);
-        WriteVTK("abc_lines.vtk", lines);
 
         int err = 0;
 
@@ -1061,8 +1058,6 @@ int main (int argc, char *argv[]) {
 #ifndef DD
         Test test(bfB->GetOutput(0), bfB->GetOutput(1));
         int ok = test.run();
-
-        WriteVTK("test16.vtk", bfB->GetOutput(0));
 #else
         int ok = 0;
         WriteVTK("test16.vtk", bfB->GetOutput(0));

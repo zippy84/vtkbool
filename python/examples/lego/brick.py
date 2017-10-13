@@ -1,10 +1,11 @@
-#/usr/bin/env python
+#!/usr/bin/env python
 # *-* coding: UTF-8 *-*
 
 # export LD_LIBRARY_PATH=/home/zippy/VTK6/lib
 
 import sys
-sys.path.extend(['/home/zippy/VTK6/lib/python2.7/site-packages', '/home/zippy/vtkbool_light/build'])
+sys.path.extend(['/home/zippy/VTK6/lib/python2.7/site-packages',
+    '/home/zippy/vtkbool_light/build'])
 
 import vtk
 import libvtkboolPython as vtkbool
