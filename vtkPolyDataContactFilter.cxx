@@ -370,7 +370,7 @@ InterPtsType vtkPolyDataContactFilter::InterPolyLine (vtkPoints *pts, vtkIdList 
     if (interPts.size() > 1) {
 
         double n[3];
-        ComputeNormal(pts, poly, n);
+        ComputeNormal(pts, n, poly);
 
         double p[3], d;
 
@@ -597,8 +597,8 @@ void vtkPolyDataContactFilter::InterPolys (vtkIdType idA, vtkIdType idB) {
 
     double nA[3], nB[3], ptA[3], ptB[3], dA, dB;
 
-    ComputeNormal(pdA->GetPoints(), polyA, nA);
-    ComputeNormal(pdB->GetPoints(), polyB, nB);
+    ComputeNormal(pdA->GetPoints(), nA, polyA);
+    ComputeNormal(pdB->GetPoints(), nB, polyB);
 
     pdA->GetPoint(polyA->GetId(0), ptA);
     pdB->GetPoint(polyB->GetId(0), ptB);
