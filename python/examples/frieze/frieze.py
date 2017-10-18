@@ -7,7 +7,7 @@ import sys
 sys.path.extend(['/home/zippy/VTK6/lib/python2.7/site-packages',
     '/home/zippy/vtkbool_light/build2'])
 
-import libvtkboolPython as vtkbool
+import vtkboolPython
 import vtk
 
 import math
@@ -196,12 +196,12 @@ class Frieze:
         extr4 = extrude(self.draw_zz_bricks(), -self.cfg['q']/2, self.cfg['q'])
 
         # extr + extr1
-        bf = vtkbool.vtkPolyDataBooleanFilter()
+        bf = vtkboolPython.vtkPolyDataBooleanFilter()
         bf.SetInputConnection(extr.GetOutputPort())
         bf.SetInputConnection(1, extr1.GetOutputPort())
 
         # extr2 + extr3
-        bf1 = vtkbool.vtkPolyDataBooleanFilter()
+        bf1 = vtkboolPython.vtkPolyDataBooleanFilter()
         bf1.SetInputConnection(extr2.GetOutputPort())
         bf1.SetInputConnection(1, extr3.GetOutputPort())
 
@@ -209,7 +209,7 @@ class Frieze:
         app.AddInputConnection(bf.GetOutputPort())
         app.AddInputConnection(bf1.GetOutputPort())
 
-        bf2 = vtkbool.vtkPolyDataBooleanFilter()
+        bf2 = vtkboolPython.vtkPolyDataBooleanFilter()
         bf2.SetInputConnection(app.GetOutputPort())
         bf2.SetInputConnection(1, extr4.GetOutputPort())
 
@@ -226,7 +226,7 @@ class Frieze:
         plane.SetPoint2(_v[0], _v[1], 0)
         plane.SetCenter(0, 0 , 0)
 
-        bf3 = vtkbool.vtkPolyDataBooleanFilter()
+        bf3 = vtkboolPython.vtkPolyDataBooleanFilter()
         bf3.SetInputConnection(bf2.GetOutputPort())
         bf3.SetInputConnection(1, plane.GetOutputPort())
         bf3.SetOperModeToDifference()
@@ -244,7 +244,7 @@ class Frieze:
             plane1.SetPoint1(_v[0], _v[1], 0)
             plane1.SetCenter(-self.cfg['w'], 0 , 0)
 
-            bf4 = vtkbool.vtkPolyDataBooleanFilter()
+            bf4 = vtkboolPython.vtkPolyDataBooleanFilter()
             bf4.SetInputConnection(result.GetOutputPort())
             bf4.SetInputConnection(1, plane1.GetOutputPort())
             bf4.SetOperModeToDifference()
@@ -258,7 +258,7 @@ class Frieze:
             plane2.SetPoint2(v[0], v[1], 0)
             plane2.SetCenter(-self.cfg['clip'], 0 , 0)
 
-            bf5 = vtkbool.vtkPolyDataBooleanFilter()
+            bf5 = vtkboolPython.vtkPolyDataBooleanFilter()
             bf5.SetInputConnection(result.GetOutputPort())
             bf5.SetInputConnection(1, plane2.GetOutputPort())
             bf5.SetOperModeToDifference()
@@ -268,9 +268,10 @@ class Frieze:
         if 'pins' in self.cfg:
             app1 = vtk.vtkAppendPolyData()
 
-            t = self.cfg['clip'] if 'clip' in self.cfg else 0
+            t = self.cfg.get('clip', 0)
+            fake_w = self.cfg.get('fake_w', self.cfg['w'])
 
-            u = (self.cfg['w']-t)/self.cfg['pins']/2
+            u = (fake_w-t)/self.cfg['pins']/2
 
             for i in range(self.cfg['pins']):
                 mid = t+u*(1+i*2)
@@ -280,7 +281,7 @@ class Frieze:
 
                 app1.AddInputConnection(pin.GetOutputPort())
 
-            bf6 = vtkbool.vtkPolyDataBooleanFilter()
+            bf6 = vtkboolPython.vtkPolyDataBooleanFilter()
             bf6.SetInputConnection(result.GetOutputPort())
             bf6.SetInputConnection(1, app1.GetOutputPort())
 
@@ -315,7 +316,7 @@ class Frieze:
 
 
 cfgs = [
-    { 'seqs': [(2, 2), (2, 1, 2)], 'w': 39., 'pins': 2 },
+    { 'seqs': [(2, 2), (2, 1, 2)], 'w': 39., 'pins': 2, 'fake_w': 40*3.25/3 },
     { 'seqs': [(1, 1), (1, 1)], 'w': 3.25, 'end': 'B', 'flip': True },
     { 'seqs': [(2, 2), (2, 1, 2)], 'w': 40*3.25/3, 'pins': 2 },
     { 'seqs': [(1, 1), (1, 1)], 'w': 11.375, 'end': 'C', 'flip': True  },

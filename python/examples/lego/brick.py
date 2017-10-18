@@ -8,7 +8,7 @@ sys.path.extend(['/home/zippy/VTK6/lib/python2.7/site-packages',
     '/home/zippy/vtkbool_light/build'])
 
 import vtk
-import libvtkboolPython as vtkbool
+import vtkboolPython
 
 import math
 
@@ -75,14 +75,14 @@ def add_tube(prev, x, y):
     cube.SetZLength(13.6)
     cube.SetCenter(0, 1, 0)
 
-    bA = vtkbool.vtkPolyDataBooleanFilter()
+    bA = vtkboolPython.vtkPolyDataBooleanFilter()
     bA.SetInputConnection(cylA.GetOutputPort())
     bA.SetInputConnection(1, cube.GetOutputPort())
     bA.SetOperModeToUnion()
 
     cylB = create_cylinder(r=2.405, h=8.6)
 
-    bB = vtkbool.vtkPolyDataBooleanFilter()
+    bB = vtkboolPython.vtkPolyDataBooleanFilter()
     bB.SetInputConnection(bA.GetOutputPort())
     bB.SetInputConnection(1, cylB.GetOutputPort())
     bB.SetOperModeToDifference()
@@ -95,7 +95,7 @@ def add_tube(prev, x, y):
     tf.SetTransform(tr)
     tf.SetInputConnection(bB.GetOutputPort())
 
-    bC = vtkbool.vtkPolyDataBooleanFilter()
+    bC = vtkboolPython.vtkPolyDataBooleanFilter()
     bC.SetInputConnection(prev.GetOutputPort())
     bC.SetInputConnection(1, tf.GetOutputPort())
     bC.SetOperModeToUnion()
@@ -113,7 +113,7 @@ def add_stud(prev, x, y):
     tfA.SetTransform(trA)
     tfA.SetInputConnection(cylA.GetOutputPort())
 
-    bA = vtkbool.vtkPolyDataBooleanFilter()
+    bA = vtkboolPython.vtkPolyDataBooleanFilter()
     bA.SetInputConnection(prev.GetOutputPort())
     bA.SetInputConnection(1, tfA.GetOutputPort())
     bA.SetOperModeToUnion()
@@ -128,7 +128,7 @@ def add_stud(prev, x, y):
     tfB.SetTransform(trB)
     tfB.SetInputConnection(cylB.GetOutputPort())
 
-    bB = vtkbool.vtkPolyDataBooleanFilter()
+    bB = vtkboolPython.vtkPolyDataBooleanFilter()
     bB.SetInputConnection(bA.GetOutputPort())
     bB.SetInputConnection(1, tfB.GetOutputPort())
     bB.SetOperModeToDifference()
@@ -151,7 +151,7 @@ def add_bound(prev, x, y, phi):
     tf.SetTransform(tr)
     tf.SetInputConnection(cube.GetOutputPort())
 
-    b = vtkbool.vtkPolyDataBooleanFilter()
+    b = vtkboolPython.vtkPolyDataBooleanFilter()
     b.SetInputConnection(prev.GetOutputPort())
     b.SetInputConnection(1, tf.GetOutputPort())
     b.SetOperModeToUnion()
@@ -179,7 +179,7 @@ subB = vtk.vtkLinearSubdivisionFilter()
 subB.SetInputConnection(triB.GetOutputPort())
 subB.SetNumberOfSubdivisions(4)
 
-boolA = vtkbool.vtkPolyDataBooleanFilter()
+boolA = vtkboolPython.vtkPolyDataBooleanFilter()
 boolA.SetInputConnection(subA.GetOutputPort())
 boolA.SetInputConnection(1, subB.GetOutputPort())
 boolA.SetOperModeToDifference()

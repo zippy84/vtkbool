@@ -44,7 +44,7 @@
 
 #include "Utilities.h"
 
-#define DD
+//#define DD
 
 typedef std::map<int, IdsType> LinksType;
 

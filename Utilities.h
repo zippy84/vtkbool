@@ -28,11 +28,10 @@
 #include "Tools.h"
 
 double GetAngle (double *vA, double *vB, double *n);
-void GetNormal (double pts[][3], double *n, const int num);
 double GetD (double *a, double *b);
 
 /* VTK */
-void ComputeNormal (vtkPoints *pts, vtkIdList *poly, double* n);
+void ComputeNormal (vtkPoints *pts, double *n, vtkIdList *poly = nullptr);
 void FindPoints (vtkKdTreePointLocator *pl, const double *pt, vtkIdList *pts, double tol = 1e-6);
 void WriteVTK (const char *name, vtkPolyData *pd);
 
