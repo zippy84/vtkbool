@@ -606,14 +606,11 @@ void vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIntArray *cont
 
         int numPts = polyPts->GetNumberOfIds();
 
-        double pts_[numPts][3];
-
         for (int i = 0; i < numPts; i++) {
             pStrips.poly.push_back(polyPts->GetId(i));
-            pd->GetPoint(pStrips.poly.back(), pts_[i]);
         }
 
-        GetNormal(pts_, pStrips.n, numPts);
+        ComputeNormal(pd->GetPoints(), pStrips.n, polyPts);
 
         GetStripPoints(pd, pStrips, lines);
 
@@ -963,17 +960,21 @@ void vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
                             }
 
                             int num = poly_.size();
-                            double pts_[num][3];
+
+                            vtkPoints *pts_ = vtkPoints::New();
+                            pts_->SetNumberOfPoints(num);
 
                             for (itr7 = poly_.begin(); itr7 != poly_.end(); ++itr7) {
                                 StripPtR &sp = *itr7;
                                 int i = itr7-poly_.begin();
 
-                                Cpy(pts_[i], pts[sp.ind].cutPt);
+                                pts_->SetPoint(i, pts[sp.ind].cutPt);
                             }
 
                             double n[3];
-                            GetNormal(pts_, n, num);
+                            ComputeNormal(pts_, n);
+
+                            pts_->Delete();
 
                             double ang = vtkMath::Dot(pStrips.n, n);
 
@@ -993,17 +994,21 @@ void vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
                             RefsType poly_(strip.begin(), strip.end()-1);
 
                             int num = poly_.size();
-                            double pts_[num][3];
+
+                            vtkPoints *pts_ = vtkPoints::New();
+                            pts_->SetNumberOfPoints(num);
 
                             for (itr7 = poly_.begin(); itr7 != poly_.end(); ++itr7) {
                                 StripPtR &sp = *itr7;
                                 int i = itr7-poly_.begin();
 
-                                Cpy(pts_[i], pts[sp.ind].cutPt);
+                                pts_->SetPoint(i, pts[sp.ind].cutPt);
                             }
 
                             double n[3];
-                            GetNormal(pts_, n, num);
+                            ComputeNormal(pts_, n);
+
+                            pts_->Delete();
 
                             double ang = vtkMath::Dot(pStrips.n, n);
 
@@ -1974,7 +1979,7 @@ public:
         vtkMath::Subtract(ptB, ptA, e);
         vtkMath::Normalize(e);
 
-        ComputeNormal(pd->GetPoints(), poly, n);
+        ComputeNormal(pd->GetPoints(), n, poly);
 
         vtkMath::Cross(e, n, r);
 
@@ -2618,9 +2623,9 @@ void _Wrapper::MergeAll () {
                 r[p.id] = p.id;
             } else {
                 double _pt[3];
-                BackTransform(p.pt, _pt, base);
+                //BackTransform(p.pt, _pt, base);
 
-                // pd->GetPoint(p.id, _pt);
+                pd->GetPoint(p.id, _pt);
 
                 r[p.id] = pdPts->InsertNextPoint(_pt);
 

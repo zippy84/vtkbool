@@ -28,16 +28,28 @@
 #include <vtkPolyData.h>
 #include <vtkDataWriter.h>
 
-void ComputeNormal (vtkPoints *pts, vtkIdList *poly, double* n) {
+void ComputeNormal (vtkPoints *pts, double *n, vtkIdList *poly) {
     n[0] = 0; n[1] = 0; n[2] = 0;
     double p0[3], p1[3];
 
-    pts->GetPoint(poly->GetId(0), p0);
+    int numPts = pts->GetNumberOfPoints();
 
-    int numPts = poly->GetNumberOfIds();
+    vtkIdList *_poly = poly;
+
+    if (poly == nullptr) {
+        _poly = vtkIdList::New();
+        _poly->SetNumberOfIds(numPts);
+        for (int i = 0; i < numPts; i++) {
+            _poly->SetId(i, i);
+        }
+    } else {
+        numPts = poly->GetNumberOfIds();
+    }
+
+    pts->GetPoint(_poly->GetId(0), p0);
 
     for (int i = 0; i < numPts; i++) {
-        pts->GetPoint(poly->GetId((i+1)%numPts), p1);
+        pts->GetPoint(_poly->GetId((i+1)%numPts), p1);
 
         n[0] += (p0[1]-p1[1])*(p0[2]+p1[2]);
         n[1] += (p0[2]-p1[2])*(p0[0]+p1[0]);
@@ -47,6 +59,10 @@ void ComputeNormal (vtkPoints *pts, vtkIdList *poly, double* n) {
     }
 
     vtkMath::Normalize(n);
+
+    if (poly == nullptr) {
+        _poly->Delete();
+    }
 }
 
 void FindPoints (vtkKdTreePointLocator *pl, const double *pt, vtkIdList *pts, double tol) {
@@ -56,9 +72,9 @@ void FindPoints (vtkKdTreePointLocator *pl, const double *pt, vtkIdList *pts, do
 
     vtkIdList *closest = vtkIdList::New();
 
-    // vtkKdTree.cxx#L2529
+    // vtkKdTree.cxx#L2505
     // arbeitet mit single-precision
-    pl->FindPointsWithinRadius(std::max(1e-5, tol), pt, closest);
+    pl->FindPointsWithinRadius(std::max(1e-3, tol), pt, closest);
 
     int numPts = closest->GetNumberOfIds();
 
@@ -124,24 +140,6 @@ double GetAngle (double *vA, double *vB, double *n) {
     return ang;
 }
 
-void GetNormal (double pts[][3], double *n, const int num) {
-    n[0] = 0; n[1] = 0, n[2] = 0;
-    double *p0 = pts[0],
-        *p1;
-
-    for (int i = 0; i < num; i++) {
-        p1 = pts[(i+1)%num];
-
-        n[0] += (p0[1]-p1[1])*(p0[2]+p1[2]);
-        n[1] += (p0[2]-p1[2])*(p0[0]+p1[0]);
-        n[2] += (p0[0]-p1[0])*(p0[1]+p1[1]);
-
-        p0 = p1;
-    }
-
-    Normalize(n, 3);
-}
-
 double GetD (double *ptA, double *ptB) {
     double v[] = {ptA[0]-ptB[0], ptA[1]-ptB[1], ptA[2]-ptB[2]};
     return sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
@@ -153,7 +151,7 @@ double Mod (int a, int b) {
 }
 
 Base::Base (vtkPoints *pts, vtkIdList *poly) {
-    ComputeNormal(pts, poly, n);
+    ComputeNormal(pts, n, poly);
 
     double ptA[3],
         ptB[3];
