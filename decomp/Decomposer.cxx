@@ -57,7 +57,7 @@ Decomposer::Decomposer (PolyType &_poly) : poly(_poly) {
         verts[i].refl = IsRefl(i, j, k);
     }
 
-    auto first = std::find_if(verts.begin(), verts.end(), [&](const Vert4 &v) {
+    auto first = std::find_if(verts.begin(), verts.end(), [&](const Vert5 &v) {
         return v.refl;
     });
 
@@ -329,12 +329,12 @@ void Decomposer::Collect (int i, int k) {
 void Decomposer::GetDecomposed (DecResType &res) {
     if (subs.empty()) {
         // keine refl vorhanden
-        
+
         IdsType ids(poly.size());
         std::iota(ids.begin(), ids.end(), 0);
-    
+
         res.push_back(ids);
-    
+
         return;
     }
 
@@ -393,7 +393,7 @@ void Decomposer::GetDecomposed (DecResType &res) {
 
     // diagonalen sammeln
     Collect(0, num-1);
-    
+
     std::sort(diags.begin(), diags.end(), [](const Pair &a, const Pair &b) {
         const int aG = -a.g,
             bG = -b.g;
@@ -403,9 +403,9 @@ void Decomposer::GetDecomposed (DecResType &res) {
     for (auto& d : diags) {
         std::cout << d << std::endl;
     }
-    
+
     // bildet polygone
-    
+
     res.push_back({});
 
     int i = 0,
@@ -446,14 +446,14 @@ void Decomposer::GetDecomposed (DecResType &res) {
             i++;
         }
     }
-    
+
     for (auto& dec : res) {
         for (int& id : dec) {
             id = verts[id].id;
         }
     }
-    
+
     // TODO: AddInternals auf die einzelnen polgone anwenden
-    
+
 }
 

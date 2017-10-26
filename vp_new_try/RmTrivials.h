@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <iostream>
+#include <memory>
 
 #include "Tools.h"
 #include "VisPoly.h"
@@ -18,9 +19,6 @@ public:
 };
 
 typedef std::vector<Vert2> VertsType2;
-
-void AlignPts (PolyType &poly, int ind);
-void RemoveInterals (PolyType &poly, int skip);
 
 enum class Src {
     NONE = 1,
@@ -58,13 +56,14 @@ enum class Dir {
 };
 
 enum class Side {
-    IN = 0,
-    OUT = 1
+    NONE = 1,
+    IN = 2,
+    OUT = 3
 };
 
 class Pair2 {
 public:
-    Pair2 (int _i, int _j, Dir _dir = Dir::FORWARD) : i(_i), j(_j), dir(_dir) {}
+    Pair2 (int _i, int _j, Dir _dir = Dir::FORWARD) : i(_i), j(_j), dir(_dir), side(Side::NONE) {}
 
     int i, j;
     IdsType pocket;
@@ -95,12 +94,76 @@ public:
     IdsType ids;
 };
 
-void AddPocket (Pair2 &pair, VertsType3 &verts, double *rot, double d);
-void RemovePockets (VertsType3 &verts, VertsType3 &good, double *rot, double d);
+// ...
 
-// nur diese funktion sollte verwendet werden
-void RemoveTrivials (PolyType &poly, PolyType &res, int ind = 0);
+class Marked {
+public:
+    Marked (int _a, int _b) : a(_a), b(_b) {}
 
-void AddInternals (PolyType &orig, PolyType &poly, PolyType &res);
+    int a, b;
+    double t;
+
+    friend std::ostream& operator<< (std::ostream &out, const Marked &m) {
+        out << "[" << m.a << ", " << m.b << "] -> " << m.t;
+        return out;
+    }
+
+};
+
+class Vert4 : public Point {
+public:
+    Vert4 (Point &p) : Point(p) {}
+    std::shared_ptr<Marked> marked;
+};
+
+typedef std::vector<Vert4> VertsType4;
+
+void MarkInternals (VertsType4 &verts, int skip);
+
+class Internal : public Point {
+public:
+    Internal (Point &p, double *_vec) : Point(p) {
+        Cpy(vec, _vec);
+    }
+
+    double vec[2];
+
+    friend std::ostream& operator<< (std::ostream &out, const Internal &il) {
+        out << dynamic_cast<const Point&>(il)
+            << ", vec: [" << il.vec[0] << ", " << il.vec[1] << "]";
+        return out;
+    }
+};
+
+typedef std::vector<Internal> InternalsType;
+
+void RemoveInternals (VertsType4 &verts, InternalsType &internals);
+
+void AlignPts (VertsType4 &verts, int ind);
+
+// ...
+
+class TrivialRm {
+    PolyType poly;
+    VertsType3 verts;
+
+    int ind;
+
+    Point x;
+
+    InternalsType internals;
+
+public:
+    TrivialRm (PolyType &_poly, int _ind) : poly(_poly), ind(_ind), x(_poly[_ind]) {}
+
+    void GetSimplified (PolyType &res);
+
+private:
+    void GetPocket (Pair2 &pair, IdsType &pocket);
+    void AssignSide (Pair2 &pair, Src src);
+    bool HasArea (IdsType &pocket);
+
+    void RemovePockets (VertsType3 &good, double *rot, double d, Src src);
+};
 
 #endif

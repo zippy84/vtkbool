@@ -6,12 +6,12 @@
 
 #include "Tools.h"
 
-class Vert4 : public Point {
+class Vert5 : public Point {
 public:
-    Vert4 (Point &_p) : Point(_p), refl(false) {}
+    Vert5 (Point &_p) : Point(_p), refl(false) {}
     bool refl;
 
-    friend std::ostream& operator<< (std::ostream &out, const Vert4 &v) {
+    friend std::ostream& operator<< (std::ostream &out, const Vert5 &v) {
         out << "id: " << v.id
             << ", pt: [" << v.x << "," << v.y << "]"
             << ", refl: " << v.refl;
@@ -19,7 +19,7 @@ public:
     }
 };
 
-typedef std::vector<Vert4> VertsType4;
+typedef std::vector<Vert5> VertsType5;
 
 class SubP {
 public:
@@ -36,8 +36,8 @@ typedef std::vector<IdsType> DecResType;
 
 class Decomposer {
     PolyType poly;
-    VertsType4 verts;
-    
+    VertsType5 verts;
+
     int num;
 
     std::set<Pair> pairs;
@@ -55,7 +55,7 @@ class Decomposer {
 
 public:
     Decomposer (PolyType &_poly);
-    
+
     void GetDecomposed (DecResType &res);
 
 };

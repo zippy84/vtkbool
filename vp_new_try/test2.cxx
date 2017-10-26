@@ -23,12 +23,6 @@ int main (int argc, char *argv[]) {
         int i = 0;
 
         for (const Json::Value& p : polys) {
-            /*
-            if (i++ != 1) {
-                continue;
-            }
-            */
-
             PolyType poly;
 
             int j = 0;
@@ -92,7 +86,9 @@ int main (int argc, char *argv[]) {
             name << "../data_files/data_" << i++ << ".js";
 
             std::ofstream f(name.str());
-            f << "var polys = " << writer.write(data) << ";";
+            f << "var pts = '" << GetAbsolutePath(poly)
+                << "'; var polys = " << writer.write(data)
+                << ";";
             f.close();
 
         }

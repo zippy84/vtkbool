@@ -7,11 +7,17 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <tuple>
+#include <algorithm>
 
 #define NO_USE -1
 #define PI std::acos(-1)
 
 #define E 1e-5
+
+inline void Cpy (double *a, const double *b, const int n = 2) {
+    std::copy_n(b, n, a);
+}
 
 class Pair {
 public:

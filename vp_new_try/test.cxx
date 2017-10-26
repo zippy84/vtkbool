@@ -4,7 +4,7 @@
 #include <json/json.h>
 #include <json/reader.h>
 
-#include <VisPoly.h>
+#include "VisPoly.h"
 
 int main (int argc, char *argv[]) {
     Json::Value doc;

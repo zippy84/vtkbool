@@ -354,10 +354,7 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
     PolyType poly2(poly);
 
     PolyType poly3;
-    RemoveTrivials(poly2, poly3, ind);
+    TrivialRm(poly2, ind).GetSimplified(res);
 
-    PolyType poly4;
-    GetVisPoly(poly3, poly4);
-
-    AddInternals(poly2, poly4, res);
+    //GetVisPoly(poly3, res);
 }

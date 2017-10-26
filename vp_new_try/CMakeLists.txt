@@ -1,7 +1,13 @@
 cmake_minimum_required(VERSION 2.8)
 project(vp)
 
-set(CMAKE_CXX_FLAGS "-std=c++11 -Wno-deprecated -fPIC")
+if (MSVC)
+    set(CMAKE_CXX_FLAGS "-std=c++11 /EHsc")
+    add_definitions(-D_SCL_SECURE_NO_WARNINGS)
+    set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+else ()
+    set(CMAKE_CXX_FLAGS "-std=c++11 -Wno-deprecated -fPIC -Wunused")
+endif ()
 
 add_compile_options()
 

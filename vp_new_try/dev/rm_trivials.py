@@ -596,12 +596,17 @@ def add_internals (pts, poly):
     _num = len(_pts)
 
     for i, p in enumerate(poly):
-        found = []
+        if p['idx'] is not None:
+            found = []
 
-        for j, _p in enumerate(_pts):
-            if is_near(_p['pt'], p['pt']):
-                found.append(j)
+            for j, _p in enumerate(_pts):
+                if _p['idx'] == p['idx']:
+                    found.append(j)
 
-        print i, found
+            print i, found
+
+        else:
+            pass
+
 
     return poly
