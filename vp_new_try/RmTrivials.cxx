@@ -1,3 +1,19 @@
+/*
+   Copyright 2012-2018 Ronald Römer
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*/
+
 #include <memory>
 #include <utility>
 #include <string>
@@ -82,24 +98,10 @@ void MarkInternals (VertsType4 &verts, int skip) {
     }
 }
 
-void RemoveInternals (VertsType4 &verts, InternalsType &internals) {
-    for (auto& vert : verts) {
-        auto &m = vert.marked;
-
-        if (m) {
-            double v[] = {verts[m->b].x-verts[m->a].x, verts[m->b].y-verts[m->a].y};
-            Normalize(v);
-            internals.push_back({vert, v});
-        }
-    }
-
+void RemoveInternals (VertsType4 &verts) {
     verts.erase(std::remove_if(verts.begin(), verts.end(), [](const Vert4 &vert) {
         return vert.marked;
     }), verts.end());
-
-    for (auto& il : internals) {
-        std::cout << il << std::endl;
-    }
 
 }
 
@@ -140,10 +142,6 @@ void AlignPts (VertsType4 &verts, int ind) {
     for (auto& itr : phis) {
         IdsType &ids = itr.second;
         if (ids.size() > 1) {
-            std::sort(ids.begin(), ids.end(), [&verts2](int &a, int &b) {
-                return verts2[b].d > verts2[a].d;
-            });
-
             for (int id : ids) {
                 Vert2 &v = verts2[id];
 
@@ -515,10 +513,12 @@ void TrivialRm::GetSimplified (PolyType &res) {
     VertsType4 poly_(poly.begin(), poly.end());
 
     MarkInternals(poly_, ind);
-
     AlignPts(poly_, ind);
 
-    RemoveInternals(poly_, internals);
+    poly.clear();
+    poly.insert(poly.end(), poly_.begin(), poly_.end());
+
+    RemoveInternals(poly_);
 
     int ind_ = (std::find_if(poly_.begin(), poly_.end(), [&](const Point &p) { return p.id == ind; }))-poly_.begin();
 
@@ -746,7 +746,7 @@ void TrivialRm::GetSimplified (PolyType &res) {
     VertsType4 verts_(verts.begin(), verts.end());
 
     MarkInternals(verts_, 0);
-    RemoveInternals(verts_, internals);
+    RemoveInternals(verts_);
 
     std::transform(verts_.begin(), verts_.end(), std::back_inserter(res), [](Vert4 &p) {
         return p;

@@ -1,3 +1,19 @@
+/*
+   Copyright 2012-2018 Ronald Römer
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*/
+
 #ifndef __RmTrivials_h
 #define __RmTrivials_h
 
@@ -28,7 +44,7 @@ enum class Src {
 
 class Vert3 : public Point {
 public:
-    Vert3 (Point &_p) : Point(_p), rm(false), src(Src::NONE), t(0) {}
+    Vert3 (Point &p) : Point(p), rm(false), src(Src::NONE), t(0) {}
     Vert3 (double *_s, Src _src, double _t) : Point(_s), rm(false), src(_src), t(_t) {}
 
     double t;
@@ -120,38 +136,19 @@ typedef std::vector<Vert4> VertsType4;
 
 void MarkInternals (VertsType4 &verts, int skip);
 
-class Internal : public Point {
-public:
-    Internal (Point &p, double *_vec) : Point(p) {
-        Cpy(vec, _vec);
-    }
-
-    double vec[2];
-
-    friend std::ostream& operator<< (std::ostream &out, const Internal &il) {
-        out << dynamic_cast<const Point&>(il)
-            << ", vec: [" << il.vec[0] << ", " << il.vec[1] << "]";
-        return out;
-    }
-};
-
-typedef std::vector<Internal> InternalsType;
-
-void RemoveInternals (VertsType4 &verts, InternalsType &internals);
+void RemoveInternals (VertsType4 &verts);
 
 void AlignPts (VertsType4 &verts, int ind);
 
 // ...
 
 class TrivialRm {
-    PolyType poly;
+    PolyType &poly;
     VertsType3 verts;
 
     int ind;
 
     Point x;
-
-    InternalsType internals;
 
 public:
     TrivialRm (PolyType &_poly, int _ind) : poly(_poly), ind(_ind), x(_poly[_ind]) {}

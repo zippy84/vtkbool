@@ -1,3 +1,19 @@
+/*
+   Copyright 2012-2018 Ronald Römer
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*/
+
 #include <vector>
 #include <iostream>
 #include <memory>
@@ -350,11 +366,78 @@ void GetVisPoly (PolyType &poly, PolyType &res, int ind) {
 
 }
 
+class _Q {
+public:
+    _Q (Point &_p, double _t) : p(_p), t(_t) {}
+    double t;
+    Point p;
+    bool operator< (const _Q &q) const {
+        return t < q.t;
+    }
+};
+
 void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
     PolyType poly2(poly);
 
     PolyType poly3;
-    TrivialRm(poly2, ind).GetSimplified(res);
+    TrivialRm(poly2, ind).GetSimplified(poly3);
 
-    //GetVisPoly(poly3, res);
+    GetVisPoly(poly3, res);
+
+    int num = res.size();
+    for (int i = 0; i < num; i++) {
+        int j = (i+1)%num;
+
+        Point &pA = res[i],
+            &pB = res[j];
+
+        std::vector<_Q> pts;
+
+        for (Point& p : poly2) {
+            if (IsOnSeg(pA.pt, pB.pt, p.pt)) {
+                double v[] = {p.x-pA.x, p.y, pA.y};
+                pts.push_back({p, Normalize(v)});
+            }
+        }
+
+        std::sort(pts.begin(), pts.end());
+
+        for (auto &p : pts) {
+            std::cout << p.t << std::endl;
+        }
+
+        std::vector<_Q>::iterator itr;
+
+        if (pts.size() > 1) {
+
+            for (itr = pts.begin(); itr != pts.end()-1; ++itr) {
+                if (((itr+1)->t-itr->t) < E) {
+                    std::cout << "hier " << ind << ", ("
+                        << (itr->p).id
+                        << "," << ((itr+1)->p).id
+                        << "), ";
+
+                    PolyType _p;
+
+                    int a = (itr->p).id,
+                        b = poly2.size();
+
+                    _p.push_back(poly2[a]);
+
+                    while (a != ((itr+1)->p).id) {
+                        a = (a+1)%b;
+                        _p.push_back(poly2[a]);
+                    }
+
+                    std::cout << _p.size() << ", "
+                        << TestCW(_p)
+                        << std::endl;
+
+                }
+            }
+        }
+
+    }
+
+
 }

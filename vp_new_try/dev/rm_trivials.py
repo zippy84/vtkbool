@@ -24,76 +24,10 @@ class Side(Enum):
 
 E = 1e-5
 
-def align_pts (poly, ind):
-    verts = []
-
-    pt_x = poly[ind]['pt']
-
-    for i, p in enumerate(poly):
-        if i != ind \
-            and not is_near(p['pt'], pt_x):
-
-            r = [p['pt'][0]-pt_x[0], p['pt'][1]-pt_x[1]]
-
-            d = normalize(r)
-            phi = get_angle([1, 0], r)
-
-            verts.append({ 'i': i, 'r': r, 'd': d, 'phi': phi })
-
-    phis = defaultdict(list)
-
-    for i, v in enumerate(verts):
-        phis['%.3f' % v['phi']].append(i)
-
-    print 'phis', phis
-
-    for phi, ids in phis.items():
-        if len(ids) > 1:
-            ids.sort(key=lambda id_: verts[id_]['d'])
-
-            for id_ in ids:
-                v = verts[id_]
-
-                phi_ = float(phi)-v['phi']
-
-                # dreht den ortsvektor um den kleinen winkel
-
-                w = [v['d']*v['r'][0], v['d']*v['r'][1]]
-                r = [w[0]-w[1]*phi_, w[0]*phi_+w[1]]
-
-                poly[v['i']].update({ 'pt': [pt_x[0]+r[0], pt_x[1]+r[1]], 'r': r })
-
-
-    for p in poly:
-        if 'int' in p:
-            id_a, id_b = p['int']['edge']
-
-            pt_a = poly[id_a]['pt']
-            pt_b = poly[id_b]['pt']
-
-            if 'r' in p:
-                normalize(p['r'])
-
-                try:
-                    d = intersect(pt_x, p['r'], pt_a, pt_b)
-                    p['pt'] = d['s']
-                except:
-                    pass
-
-            else:
-                v = [pt_b[0]-pt_a[0], pt_b[1]-pt_a[1]]
-
-                new_pt = [pt_a[0]+p['int']['t']*v[0],
-                    pt_a[1]+p['int']['t']*v[1]]
-
-                p['pt'] = new_pt
-
-        if 'r' in p:
-            del p['r']
-
-
-def rm_internals (poly, skip):
+def mark_internals (poly, skip):
     num = len(poly)
+
+    ids = set()
 
     for i in range(num):
         j = (i+1)%num
@@ -103,220 +37,325 @@ def rm_internals (poly, skip):
             and not is_near(poly[i]['pt'], poly[k]['pt']) \
             and ld(poly[i]['pt'], poly[j]['pt'], poly[k]['pt']) < 1e-2:
 
-            poly[j]['int'] = {}
+            poly[j]['marked'] = { 'a': i, 'b': k }
+            ids.add(j)
 
-    for i, p in enumerate(poly):
-        if 'int' in p:
-            for j, q in enumerate(poly):
-                if i == j or 'int' in q:
-                    continue
+    invalids = set()
 
-                if is_near(p['pt'], q['pt']):
-                    del p['int']
+    for id_ in ids:
+        for i in range(num):
+            if i not in ids \
+                and is_near(poly[id_]['pt'], poly[i]['pt']):
 
-    ids = [ i for i, p in enumerate(poly) if 'int' not in p ]
-    #print ids
+                invalids.add(id_)
 
-    num_ = len(ids)
+    for id_ in invalids:
+        ids.remove(id_)
+        del poly[id_]['marked']
 
-    for i in range(num_):
-        j = (i+1)%num_
+    for id_ in ids:
+        m = poly[id_]['marked']
 
-        id_a, id_b = ids[i], ids[j]
+        while m['a'] in ids:
+            m['a'] = poly[m['a']]['marked']['a']
 
-        pt_a = poly[id_a]['pt']
-        pt_b = poly[id_b]['pt']
+        while m['b'] in ids:
+            m['b'] = poly[m['b']]['marked']['b']
+
+        pt_a, pt_b = poly[m['a']]['pt'], \
+            poly[m['b']]['pt']
 
         v = [pt_b[0]-pt_a[0], pt_b[1]-pt_a[1]]
-        l = normalize(v)
+        w = [poly[id_]['pt'][0]-pt_a[0], poly[id_]['pt'][1]-pt_a[1]]
 
-        betw = []
+        m['t'] = normalize(w)/normalize(v)
 
-        id_c = id_a
+    for p in poly:
+        if 'marked' in p:
+            print p['marked']
 
-        while id_c != id_b:
-            id_c = (id_c+1)%num
-            betw.append(id_c)
+def align_pts (poly, ind):
+    verts = []
 
-        if len(betw) > 1:
-            del betw[-1]
-
-            #print id_a, id_b, betw
-
-            for id_ in betw:
-                pt_c = poly[id_]['pt']
-
-                v_ = [pt_c[0]-pt_a[0], pt_c[1]-pt_a[1]]
-
-                l_ = normalize(v_)
-
-                print id_, l_/l
-
-                poly[id_]['int'].update({ 't': l_/l, 'edge': (id_a, id_b) })
-
-def rm_trivials (pts, ind):
-    global E
-
-    _pts = [ { 'pt': pt, 'idx': i } for i, pt in enumerate(pts) ]
-
-    rm_internals(_pts, ind)
-    align_pts(_pts, ind)
-
-    _poly = [ deepcopy(p) for p in _pts if 'int' not in p ]
-
-    # cleanup
-    for p in _pts:
-        try:
-            del p['int']
-        except KeyError:
-            pass
-
-    _ind = next(( i for i, p in enumerate(_poly) if p['idx'] == ind ))
-
-    print '_ind', _ind
-
-    _num = len(_poly)
-
-    pA, pB = _poly[(_ind+1)%_num], \
-        _poly[(_ind+_num-1)%_num]
-
-    pX = _poly[_ind]
-
-    rA = [pA['pt'][0]-pX['pt'][0], pA['pt'][1]-pX['pt'][1]]
-    rB = [pB['pt'][0]-pX['pt'][0], pB['pt'][1]-pX['pt'][1]]
-
-    _test = defaultdict(list)
-
-    poly = []
-
-    for i in range(_num):
-        poly.append(_poly[i])
-
-        poly[-1].update({ 'src': None, 't': None })
-
-        if i == _ind:
-            continue
-
-        j = (i+1)%_num
-
-        new_pts = []
-        # entlang rA
-
-        if ld(pX['pt'], pA['pt'], _poly[i]['pt']) < 1e-2:
-            t = get_t(pX['pt'], pA['pt'], _poly[i]['pt'])
-
-            if t > E:
-                poly[-1].update({ 'src': 'A', 't': t })
-
-                _test[poly[-1]['idx']].append('A')
-        else:
-            try:
-                d = intersect(pX['pt'], rA, _poly[i]['pt'], _poly[j]['pt'])
-
-                if d['t1'] > E:
-                    new_pts.append((d['t2'], { 'pt': d['s'], 'idx': None, 'src': 'A', 't': d['t1'] }))
-            except:
-                pass
-
-        # und entlang rB
-
-        if ld(pX['pt'], pB['pt'], _poly[i]['pt']) < 1e-2:
-            t = get_t(pX['pt'], pB['pt'], _poly[i]['pt'])
-
-            if t > E:
-                poly[-1].update({ 'src': 'B', 't': t })
-
-                _test[poly[-1]['idx']].append('B')
-        else:
-            try:
-                d = intersect(pX['pt'], rB, _poly[i]['pt'], _poly[j]['pt'])
-
-                if d['t1'] > E:
-                    new_pts.append((d['t2'], { 'pt': d['s'], 'idx': None, 'src': 'B', 't': d['t1'] }))
-            except:
-                pass
-
-        new_pts.sort(key=itemgetter(0))
-
-        poly.extend([ p[1] for p in new_pts ])
-
-        print new_pts
+    pX = poly[ind]['pt']
 
     for i, p in enumerate(poly):
-        p['rm'] = False
+        if i != ind \
+            and 'marked' not in p \
+            and not is_near(p['pt'], pX):
 
-        print i, p
+            r = [p['pt'][0]-pX[0], p['pt'][1]-pX[1]]
 
-    print '_test', _test
+            d = normalize(r)
+            phi = get_angle([1, 0], r)
 
-    _num = len(poly)
-    _ind = next(( i for i, p in enumerate(poly) if p['idx'] == ind ))
+            verts.append({ 'i': i, 'r': r, 'd': d, 'phi': phi })
 
-    _nxt = poly[(_ind+1)%_num]
+    phis = defaultdict(list)
 
-    print poly[_ind]['idx'], _nxt['idx']
+    for i, p in enumerate(verts):
+        phis['%.3f' % p['phi']].append(i)
 
-    if _nxt['idx'] in _test \
-        and len(_test[_nxt['idx']]) == 2:
+    print 'phis', phis
 
-        _rA = [-rA[0], -rA[1]]
+    for phi, ids in phis.items():
+        if len(ids) > 1:
+            for id_ in ids:
+                p = verts[id_]
 
-        for i in range(_num):
-            j = (i+1)%_num
+                phi_ = float(phi)-p['phi']
 
-            try:
-                d = intersect(pX['pt'], _rA, poly[i]['pt'], poly[j]['pt'])
-                if d['t1'] > E:
-                    _bnd = i
+                # dreht den ortsvektor um den kleinen winkel
 
+                w = [p['d']*p['r'][0], p['d']*p['r'][1]]
+                r = [w[0]-w[1]*phi_, w[0]*phi_+w[1]]
+
+                poly[p['i']].update({ 'pt': [pX[0]+r[0], pX[1]+r[1]], 'r': r })
+
+    for p in poly:
+        if 'marked' in p:
+            m = p['marked']
+
+            pt_a, pt_b = poly[m['a']]['pt'], \
+                poly[m['b']]['pt']
+
+            v = [pt_b[0]-pt_a[0], pt_b[1]-pt_a[1]]
+
+            p['pt'][0] = pt_a[0]+m['t']*v[0]
+            p['pt'][1] = pt_a[1]+m['t']*v[1]
+
+def rm_internals (poly):
+    poly[:] = [ p for p in poly if 'marked' not in p ]
+
+class TrivialRm:
+    def __init__ (self, poly, ind):
+        self.poly = poly
+        self.verts = []
+        self.orig = ind
+
+        self.pX = poly[ind]
+
+    def get_simplified (self):
+        global E
+
+        mark_internals(self.poly, self.orig)
+        align_pts(self.poly, self.orig)
+
+        rm_internals(self.poly)
+
+        num = len(self.poly)
+        ind = next(( i for i, p in enumerate(self.poly) if p['idx'] == self.orig ))
+
+        pA, pB = self.poly[(ind+1)%num], \
+            self.poly[(ind+num-1)%num]
+
+        rA = [pA['pt'][0]-self.pX['pt'][0], pA['pt'][1]-self.pX['pt'][1]]
+        rB = [pB['pt'][0]-self.pX['pt'][0], pB['pt'][1]-self.pX['pt'][1]]
+
+        srcs = defaultdict(list)
+
+        for i, p in enumerate(self.poly):
+            j = (i+1)%num
+
+            self.verts.append(p)
+
+            self.verts[-1].update({ 'src': None, 't': None })
+
+            if i == ind:
+                continue
+
+            new_pts = []
+
+            # entlang rA
+
+            if ld(self.pX['pt'], pA['pt'], p['pt']) < 1e-2:
+                t = get_t(self.pX['pt'], pA['pt'], p['pt'])
+
+                if t > E:
+                    self.verts[-1].update({ 'src': 'A', 't': t })
+
+                    srcs[self.verts[-1]['idx']].append('A')
+            else:
+                try:
+                    d = intersect(self.pX['pt'], rA, p['pt'], self.poly[j]['pt'])
+
+                    if d['t1'] > E:
+                        new_pts.append((d['t2'], { 'pt': d['s'], 'idx': None, 'src': 'A', 't': d['t1'] }))
+                except:
+                    pass
+
+            # und entlang rB
+
+            if ld(self.pX['pt'], pB['pt'], p['pt']) < 1e-2:
+                t = get_t(self.pX['pt'], pB['pt'], p['pt'])
+
+                if t > E:
+                    self.verts[-1].update({ 'src': 'B', 't': t })
+
+                    srcs[self.verts[-1]['idx']].append('B')
+            else:
+                try:
+                    d = intersect(self.pX['pt'], rB, p['pt'], self.poly[j]['pt'])
+
+                    if d['t1'] > E:
+                        new_pts.append((d['t2'], { 'pt': d['s'], 'idx': None, 'src': 'B', 't': d['t1'] }))
+                except:
+                    pass
+
+            new_pts.sort(key=itemgetter(0))
+
+            self.verts.extend([ p[1] for p in new_pts ])
+
+            print new_pts
+
+        # ...
+
+        for i, p in enumerate(self.verts):
+            p['rm'] = False
+
+            print i, p
+
+        print 'srcs', srcs
+
+        num = len(self.verts)
+        ind = next(( i for i, p in enumerate(self.verts) if p['idx'] == self.orig ))
+
+        nxt = self.verts[(ind+1)%num]
+
+        print self.verts[ind]['idx'], nxt['idx']
+
+        if nxt['idx'] in srcs \
+            and len(srcs[nxt['idx']]) == 2:
+
+            _rA = [-rA[0], -rA[1]]
+
+            for i in range(num):
+                j = (i+1)%num
+
+                try:
+                    d = intersect(self.pX['pt'], _rA, self.verts[i]['pt'], self.verts[j]['pt'])
+                    if d['t1'] > E:
+                        bnd = i
+
+                        break
+                except:
+                    pass
+
+            assert 'bnd' in locals()
+
+            print bnd, self.verts[bnd]['idx']
+
+            for i in range(num):
+                j = (ind+i)%num
+                p = self.verts[j]
+
+                if p['src']:
+                    p['src'] = 'A'
+
+                if j == bnd:
                     break
-            except:
-                pass
 
-        assert '_bnd' in locals()
+            for i in range(num):
+                j = (bnd+i)%num
+                p = self.verts[j]
 
-        print _bnd, poly[_bnd]['idx']
+                if p['src'] and p['src'] == 'A':
+                    p['rm'] = True
 
-        for i in range(_num):
-            j = (_ind+i)%_num
-            p = poly[j]
+                if j == ind:
+                    break
 
-            if p['src']:
-                p['src'] = 'A'
+            self.verts[:] = [ p for p in self.verts if not p['rm'] ]
 
-            if j == _bnd:
-                break
+        def A():
+            print 'A()'
+            for i, p in enumerate(self.verts):
+                p['i'] = i
 
-        for i in range(_num):
-            j = (_bnd+i)%_num
-            p = poly[j]
+            #print 'M' + ' L'.join([ ','.join(map(str, p['pt'])) for p in self.verts ]) + 'Z'
 
-            if p['src'] and p['src'] == 'A':
-                p['rm'] = True
+            good = [ p for p in self.verts if p['src'] == 'A' ]
 
-            if j == _ind:
-                break
+            print 'good', good
 
-        poly = [ p for p in poly if not p['rm'] ]
+            first = next(( i for i, g in enumerate(good) if g['idx'] == pA['idx'] ))
+            _good = deque(good)
+            _good.rotate(-first)
 
-    num_ = len(poly)
+            print [ (g['i'], g['t']) for g in _good ]
 
-    def get_pocket (pair):
+            rot = [-rA[1], rA[0]]
+            normalize(rot)
+
+            d = rot[0]*self.pX['pt'][0]+rot[1]*self.pX['pt'][1]
+
+            self.rm_pockets(_good, rot, d, 'A')
+
+        A()
+
+        def B():
+            print 'B()'
+            self.verts.reverse()
+
+            for i, p in enumerate(self.verts):
+                p['i'] = i
+
+            #print 'M' + ' L'.join([ ','.join(map(str, p['pt'])) for p in self.verts ]) + 'Z'
+
+            good = [ p for p in self.verts if p['src'] == 'B' ]
+
+            print 'good', good
+
+            first = next(( i for i, g in enumerate(good) if g['idx'] == pB['idx'] ))
+            _good = deque(good)
+            _good.rotate(-first)
+
+            print [ (g['i'], g['t']) for g in _good ]
+
+            rot = [rB[1], -rB[0]]
+            normalize(rot)
+
+            d = rot[0]*self.pX['pt'][0]+rot[1]*self.pX['pt'][1]
+
+            self.rm_pockets(_good, rot, d, 'B')
+
+        B()
+
+        # ergebnis
+
+        res = deque([ p for p in self.verts if not p['rm'] ])
+
+        ni = next((i for i, p in enumerate(res) if p['idx'] == self.orig))
+
+        res.rotate(-ni)
+
+        res = [ { 'pt': p['pt'], 'idx': p['idx'] } for p in res ]
+
+        mark_internals(res, 0)
+        rm_internals(res)
+
+        assert res[0]['idx'] == self.orig
+
+        return res
+
+    def get_pocket (self, pair):
+        num = len(self.verts)
+
         id_ = pair['i']
 
         pocket = [id_]
 
         while id_ != pair['j']:
-            id_ = (id_+1)%num_
+            id_ = (id_+1)%num
             pocket.append(id_)
 
         print 'pocket', pocket, \
-            [ poly[id_]['idx'] for id_ in pocket ]
+            [ self.verts[id_]['idx'] for id_ in pocket ]
 
         return pocket
 
-    def assign_side (pair, src):
-        pair['pocket'] = get_pocket(pair)
+    def assign_side (self, pair, src):
+        pair['pocket'] = self.get_pocket(pair)
 
         if 'side' in pair:
             return
@@ -325,21 +364,21 @@ def rm_trivials (pts, ind):
             if src == 'B':
                 pair['pocket'].reverse()
 
-            p_poly = [ poly[id_]['pt'] for id_ in pair['pocket'] ]
+            p_poly = [ self.verts[id_]['pt'] for id_ in pair['pocket'] ]
 
             pair['side'] = Side.IN if not is_cw(p_poly) else Side.OUT
 
-    def has_area (pocket):
+    def has_area (self, pocket):
         area = True
         l = len(pocket)
 
         if l%2 == 1:
             for i in range((l-1)/2):
-                area = not(is_near(poly[pocket[i]]['pt'], poly[pocket[l-i-1]]['pt']))
+                area = not(is_near(self.verts[pocket[i]]['pt'], self.verts[pocket[l-i-1]]['pt']))
 
         return area
 
-    def remove_pockets (_good, rot, d, src):
+    def rm_pockets (self, _good, rot, d, src):
         print rot, d
 
         pairs = []
@@ -362,34 +401,33 @@ def rm_trivials (pts, ind):
 
         if pairs:
             for i, p in enumerate(pairs):
-                pocket = get_pocket(p)
+                pocket = self.get_pocket(p)
 
-                p_poly = [ poly[id_]['pt'] for id_ in pocket ]
+                p_poly = [ self.verts[id_]['pt'] for id_ in pocket ]
 
-                if len(set([ is_near(pX['pt'], pt) for pt in p_poly ])) == 1 \
-                    and is_pip(p_poly, pX['pt']):
+                if len(set([ is_near(self.pX['pt'], pt) for pt in p_poly ])) == 1 \
+                    and is_pip(p_poly, self.pX['pt']):
 
                     del pairs[i:]
-                    print 'del..'
+
                     break
 
             for p in pairs:
                 if p['dir'] == Dir.UNDEFINED:
-                    pocket = get_pocket(p)
+                    pocket = self.get_pocket(p)
 
                     ss = set()
 
                     for id_ in pocket[1:-1]:
-                        e = (poly[id_]['pt'][0]*rot[0]+poly[id_]['pt'][1]*rot[1])-d
+                        e = (self.verts[id_]['pt'][0]*rot[0]+self.verts[id_]['pt'][1]*rot[1])-d
                         if abs(e) > E:
-                            print e
                             ss.add(int(e/abs(e)))
 
                     assert len(ss) == 1
 
-                    if has_area(pocket):
+                    if self.has_area(pocket):
 
-                        p_poly = [ poly[id_]['pt'] for id_ in pocket ]
+                        p_poly = [ self.verts[id_]['pt'] for id_ in pocket ]
 
                         if src == 'B':
                             p_poly.reverse()
@@ -428,7 +466,7 @@ def rm_trivials (pts, ind):
 
                 o += n
 
-            print ind, grps
+            print grps
 
             if grps[0][0] == Dir.BACKWARD:
                 if len(grps) > 1:
@@ -437,7 +475,7 @@ def rm_trivials (pts, ind):
 
             for p in pairs:
                 if p['dir'] == Dir.FORWARD:
-                    assign_side(p, src)
+                    self.assign_side(p, src)
 
             if len(grps) > 0:
                 while True:
@@ -462,9 +500,9 @@ def rm_trivials (pts, ind):
                         for j, p in enumerate(grps[i-1][1][::-1]):
                             p_ = pairs[p]
 
-                            a, b, c = poly[p_['i']]['t'], \
-                                poly[p_['j']]['t'], \
-                                poly[last_pair['j']]['t']
+                            a, b, c = self.verts[p_['i']]['t'], \
+                                self.verts[p_['j']]['t'], \
+                                self.verts[last_pair['j']]['t']
 
                             # liegt c zw (a, b)?
 
@@ -477,7 +515,7 @@ def rm_trivials (pts, ind):
 
                                 del grps[i-1][1][-j-1:]
                                 grps[i-1][1].append(add_pair({ 'i': p_['i'], 'j': last_pair['j'] }))
-                                assign_side(pairs[grps[i-1][1][-1]], src)
+                                self.assign_side(pairs[grps[i-1][1][-1]], src)
 
                                 _c = False
 
@@ -492,7 +530,7 @@ def rm_trivials (pts, ind):
 
                             grps[i-1][1].append(add_pair({ 'i': pairs[grps[i-1][1][-1]]['j'], 'j': pairs[grps[i+1][1][0]]['j'] }))
 
-                            assign_side(pairs[grps[i-1][1][-1]], src)
+                            self.assign_side(pairs[grps[i-1][1][-1]], src)
 
                             del grps[i+1][1][0]
 
@@ -511,102 +549,4 @@ def rm_trivials (pts, ind):
 
                 if 'side' in p and p['side'] == Side.OUT:
                     for i in p['pocket'][1:-1]:
-                        poly[i]['rm'] = True
-
-    def A():
-        print 'A()'
-        for i, p in enumerate(poly):
-            p['i'] = i
-
-        #print 'M' + ' L'.join([ ','.join(map(str, p['pt'])) for p in poly ]) + 'Z'
-
-        good = [ p for p in poly if p['src'] == 'A' ]
-
-        print 'good', good
-
-        first = next(( i for i, g in enumerate(good) if g['idx'] == pA['idx'] ))
-        _good = deque(good)
-        _good.rotate(-first)
-
-        print [ (g['i'], g['t']) for g in _good ]
-
-        rot = [-rA[1], rA[0]]
-        normalize(rot)
-
-        d = rot[0]*pX['pt'][0]+rot[1]*pX['pt'][1]
-
-        remove_pockets(_good, rot, d, 'A')
-
-    A()
-
-    def B():
-        print 'B()'
-        poly.reverse()
-
-        for i, p in enumerate(poly):
-            p['i'] = i
-
-        #print 'M' + ' L'.join([ ','.join(map(str, p['pt'])) for p in poly ]) + 'Z'
-
-        good = [ p for p in poly if p['src'] == 'B' ]
-
-        print 'good', good
-
-        first = next(( i for i, g in enumerate(good) if g['idx'] == pB['idx'] ))
-        _good = deque(good)
-        _good.rotate(-first)
-
-        print [ (g['i'], g['t']) for g in _good ]
-
-        rot = [rB[1], -rB[0]]
-        normalize(rot)
-
-        d = rot[0]*pX['pt'][0]+rot[1]*pX['pt'][1]
-
-        remove_pockets(_good, rot, d, 'B')
-
-    B()
-
-    res = deque([ p for p in poly if not p['rm'] ])
-
-    ni = next((i for i, p in enumerate(res) if p['idx'] == ind))
-
-    res.rotate(-ni)
-
-    rm_internals(res, 0)
-
-    _res = [ p for p in res if 'int' not in p ]
-
-    assert _res[0]['idx'] == ind
-
-    return [ { 'pt': p['pt'], 'idx': p['idx'] } for p in _res ], _pts
-
-
-def add_internals (pts, poly):
-    num = len(poly)
-
-    _pts = deque(pts)
-    _pts.reverse()
-
-    first = next(( i for i, p in enumerate(_pts) if p['idx'] == poly[0]['idx'] ))
-
-    _pts.rotate(-first)
-
-    _pts = list(_pts)
-    _num = len(_pts)
-
-    for i, p in enumerate(poly):
-        if p['idx'] is not None:
-            found = []
-
-            for j, _p in enumerate(_pts):
-                if _p['idx'] == p['idx']:
-                    found.append(j)
-
-            print i, found
-
-        else:
-            pass
-
-
-    return poly
+                        self.verts[i]['rm'] = True
