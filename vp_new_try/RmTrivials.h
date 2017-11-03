@@ -140,6 +140,22 @@ void RemoveInternals (VertsType4 &verts);
 
 void AlignPts (VertsType4 &verts, int ind);
 
+class Vert5 : public Point {
+public:
+    Vert5 (Point &p, double _t) : Point(p), t(_t), valid(true) {}
+
+    double t;
+    bool valid;
+
+    bool operator< (const Vert5 &v) const {
+        return t < v.t;
+    }
+};
+
+typedef std::vector<Vert5> VertsType5;
+
+void AddInternals (PolyType &origin, PolyType &poly);
+
 // ...
 
 class TrivialRm {
@@ -158,7 +174,7 @@ public:
 private:
     void GetPocket (Pair2 &pair, IdsType &pocket);
     void AssignSide (Pair2 &pair, Src src);
-    bool HasArea (IdsType &pocket);
+    bool HasArea (const IdsType &pocket);
 
     void RemovePockets (VertsType3 &good, double *rot, double d, Src src);
 };

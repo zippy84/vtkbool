@@ -495,7 +495,7 @@ void TrivialRm::AssignSide (Pair2 &pair, Src src) {
 
 }
 
-bool TrivialRm::HasArea (IdsType &pocket) {
+bool TrivialRm::HasArea (const IdsType &pocket) {
     bool area = true;
 
     int num = pocket.size();
@@ -753,5 +753,91 @@ void TrivialRm::GetSimplified (PolyType &res) {
     });
 
     assert(res.front().id == ind);
+
+}
+
+void AddInternals (PolyType &origin, PolyType &poly) {
+    PolyType res;
+
+    int numA = poly.size(),
+        numB = origin.size();
+
+    for (int i = 0; i < numA; i++) {
+        int j = (i+1)%numA;
+
+        Point &pA = poly[i],
+            &pB = poly[j];
+
+        res.push_back(pA);
+
+        VertsType5 verts;
+
+        for (auto& p : origin) {
+            if (IsOnSeg(pA.pt, pB.pt, p.pt)) {
+                double v[] = {p.x-pA.x, p.y-pA.y},
+                    t = Normalize(v);
+                verts.push_back({p, t});
+            }
+        }
+
+        std::sort(verts.begin(), verts.end());
+
+        VertsType5::iterator itr;
+
+        if (verts.size() > 1) {
+            std::set<int> all;
+
+            all.insert(pA.id);
+            all.insert(pB.id);
+
+            for (auto& v : verts) {
+                all.insert(v.id);
+            }
+
+            for (itr = verts.begin(); itr != verts.end()-1; ++itr) {
+                if (((itr+1)->t-itr->t) < E) {
+                    int idA = itr->id,
+                        idB = (itr+1)->id;
+
+                    int cA, cB;
+
+                    {
+                        int a = (idA+1)%numB,
+                            b = (idA+numB-1)%numB;
+
+                        cA = all.count(a)+all.count(b);
+                    }
+
+                    {
+                        int a = (idB+1)%numB,
+                            b = (idB+numB-1)%numB;
+
+                        cB = all.count(a)+all.count(b);
+                    }
+
+                    std::cout << "(" << idA << "->" << cA << ", "
+                        << idB << "->" << cB << ") => " << poly.front().id << std::endl;
+
+                    assert(cA > 0 || cB > 0);
+
+                    if (cA > cB) {
+                        (itr+1)->valid = false;
+                    } else {
+                        itr->valid = false;
+                    }
+
+                }
+            }
+        }
+
+        for (auto& v : verts) {
+            if (v.valid) {
+                res.push_back(v);
+            }
+        }
+
+    }
+
+    poly.swap(res);
 
 }

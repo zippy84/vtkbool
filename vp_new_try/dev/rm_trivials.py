@@ -157,7 +157,7 @@ class TrivialRm:
         for i, p in enumerate(self.poly):
             j = (i+1)%num
 
-            self.verts.append(p)
+            self.verts.append(deepcopy(p))
 
             self.verts[-1].update({ 'src': None, 't': None })
 
@@ -550,3 +550,69 @@ class TrivialRm:
                 if 'side' in p and p['side'] == Side.OUT:
                     for i in p['pocket'][1:-1]:
                         self.verts[i]['rm'] = True
+
+def add_internals (orig, poly):
+    global E
+
+    num_a, num_b = len(poly), \
+        len(orig)
+
+    res = []
+
+    for i in range(num_a):
+        j = (i+1)%num_a
+
+        p_a, p_b = poly[i], \
+            poly[j]
+
+        res.append(p_a)
+
+        verts = []
+
+        for p in orig:
+            if is_on_seg(p_a['pt'], p_b['pt'], p['pt']):
+                v = [p['pt'][0]-p_a['pt'][0],
+                    p['pt'][1]-p_a['pt'][1]]
+                t = normalize(v)
+
+                _v = { 'valid': True, 't': t }
+                _v.update(p)
+
+                verts.append(_v)
+
+        verts.sort(key=itemgetter('t'))
+
+        if len(verts) > 1:
+            ids = [p_a['idx'], p_b['idx']]
+
+            for v in verts:
+                ids.append(v['idx'])
+
+            for k in range(len(verts)-1):
+                l = k+1
+                if verts[l]['t']-verts[k]['t'] < E:
+                    id_a, id_b = verts[k]['idx'], \
+                        verts[l]['idx']
+
+                    a = (id_a+1)%num_b
+                    b = (id_a+num_b-1)%num_b
+
+                    c_a = ids.count(a)+ids.count(b)
+
+                    a = (id_b+1)%num_b
+                    b = (id_b+num_b-1)%num_b
+
+                    c_b = ids.count(a)+ids.count(b)
+
+                    assert c_a > 0 or c_b > 0
+
+                    if c_a > c_b:
+                        verts[l]['valid'] = False
+                    else:
+                        verts[k]['valid'] = False
+
+        for v in verts:
+            if v['valid']:
+                res.append({ 'pt': v['pt'], 'idx': v['idx'] })
+
+    poly[:] = res

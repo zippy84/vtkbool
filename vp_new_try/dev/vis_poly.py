@@ -7,7 +7,7 @@ import json
 from jinja2 import Environment, Template
 
 from tools import *
-from rm_trivials import TrivialRm
+from rm_trivials import TrivialRm, add_internals
 
 E = 1e-5
 
@@ -334,9 +334,13 @@ def vis_poly (pts, ind=0):
 
 def vis_poly_wrapper (poly, idx):
     poly_ = [ { 'pt': pt[:], 'idx': i } for i, pt in enumerate(poly) ]
-    res = TrivialRm(poly_, idx).get_simplified()
 
+    # poly_ wird durch TrivialRm verändert
+
+    res = TrivialRm(poly_, idx).get_simplified()
     p = vis_poly(res)
+
+    add_internals(poly_, p)
 
     return p
 

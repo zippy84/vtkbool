@@ -291,8 +291,8 @@ void GetVisPoly (PolyType &poly, PolyType &res, int ind) {
 
                     std::cout << v << " -> " << p << std::endl;
 
-                    double *ptW = verts[w].pt,
-                        *ptP = verts[p].pt;
+                    double *ptW = verts[w].pt;
+                    //double *ptP = verts[p].pt;
 
                     double cC = Cross(x, ptV, ptW),
                         cD = Cross(ptV, ptU, ptW);
@@ -366,78 +366,18 @@ void GetVisPoly (PolyType &poly, PolyType &res, int ind) {
 
 }
 
-class _Q {
-public:
-    _Q (Point &_p, double _t) : p(_p), t(_t) {}
-    double t;
-    Point p;
-    bool operator< (const _Q &q) const {
-        return t < q.t;
-    }
-};
-
 void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
+    // ids in poly müssen fortlaufen sein, beginnend bei 0
+
     PolyType poly2(poly);
+
+    // poly2 wird verändert
 
     PolyType poly3;
     TrivialRm(poly2, ind).GetSimplified(poly3);
 
     GetVisPoly(poly3, res);
 
-    int num = res.size();
-    for (int i = 0; i < num; i++) {
-        int j = (i+1)%num;
-
-        Point &pA = res[i],
-            &pB = res[j];
-
-        std::vector<_Q> pts;
-
-        for (Point& p : poly2) {
-            if (IsOnSeg(pA.pt, pB.pt, p.pt)) {
-                double v[] = {p.x-pA.x, p.y, pA.y};
-                pts.push_back({p, Normalize(v)});
-            }
-        }
-
-        std::sort(pts.begin(), pts.end());
-
-        for (auto &p : pts) {
-            std::cout << p.t << std::endl;
-        }
-
-        std::vector<_Q>::iterator itr;
-
-        if (pts.size() > 1) {
-
-            for (itr = pts.begin(); itr != pts.end()-1; ++itr) {
-                if (((itr+1)->t-itr->t) < E) {
-                    std::cout << "hier " << ind << ", ("
-                        << (itr->p).id
-                        << "," << ((itr+1)->p).id
-                        << "), ";
-
-                    PolyType _p;
-
-                    int a = (itr->p).id,
-                        b = poly2.size();
-
-                    _p.push_back(poly2[a]);
-
-                    while (a != ((itr+1)->p).id) {
-                        a = (a+1)%b;
-                        _p.push_back(poly2[a]);
-                    }
-
-                    std::cout << _p.size() << ", "
-                        << TestCW(_p)
-                        << std::endl;
-
-                }
-            }
-        }
-
-    }
-
+    AddInternals(poly2, res);
 
 }

@@ -73,7 +73,7 @@ Decomposer::Decomposer (PolyType &_poly) : poly(_poly) {
         verts[i].refl = IsRefl(i, j, k);
     }
 
-    auto first = std::find_if(verts.begin(), verts.end(), [&](const Vert5 &v) {
+    auto first = std::find_if(verts.begin(), verts.end(), [&](const Vert6 &v) {
         return v.refl;
     });
 
