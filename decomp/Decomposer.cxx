@@ -60,9 +60,16 @@ void SubP::RestoreS () {
 }
 
 Decomposer::Decomposer (PolyType &_poly) : poly(_poly) {
+    {
+        int i = 0;
+        for(auto& p : poly) {
+            assert(p.id == i++);
+        }
+    }
+
     std::copy(poly.begin(), poly.end(), std::back_inserter(verts));
 
-    // TODO: RmInternals fehlt noch
+    RemoveInternals_(verts);
 
     num = verts.size();
 
@@ -81,9 +88,9 @@ Decomposer::Decomposer (PolyType &_poly) : poly(_poly) {
 
     PolyType poly_(verts.begin(), verts.end());
 
-    for (auto& p : poly_) {
+    /*for (auto& p : poly_) {
         std::cout << p << std::endl;
-    }
+    }*/
 
     for (int i = 0; i < num; i++) {
         if (verts[i].refl) {
@@ -99,6 +106,8 @@ Decomposer::Decomposer (PolyType &_poly) : poly(_poly) {
                 if (itr->id == NO_USE) {
                     continue;
                 }
+
+                // die ids sind rel. bzgl. verts
 
                 int a = vp[0].id,
                     b = itr->id;
@@ -467,9 +476,32 @@ void Decomposer::GetDecomposed (DecResType &res) {
         for (int& id : dec) {
             id = verts[id].id;
         }
-    }
 
-    // TODO: AddInternals auf die einzelnen polgone anwenden
+        PolyType doly;
+        for (int id : dec) {
+            doly.push_back(poly[id]);
+        }
+
+        AddInternals(poly, doly);
+
+        IdsType _dec;
+        for (auto& p : doly) {
+            _dec.push_back(p.id);
+        }
+
+        dec.swap(_dec);
+
+    }
 
 }
 
+void RemoveInternals_ (VertsType6 &verts) {
+    VertsType4 verts2(verts.begin(), verts.end());
+
+    MarkInternals(verts2, NO_USE);
+    RemoveInternals(verts2);
+
+    VertsType6 verts3(verts2.begin(), verts2.end());
+    verts.swap(verts3);
+
+}

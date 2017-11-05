@@ -79,4 +79,6 @@ public:
 
 };
 
+void RemoveInternals_ (VertsType6 &verts);
+
 #endif

@@ -367,9 +367,12 @@ void GetVisPoly (PolyType &poly, PolyType &res, int ind) {
 }
 
 void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
-    // ids in poly müssen fortlaufen sein, beginnend bei 0
-
     PolyType poly2(poly);
+
+    int i = 0;
+    for (auto& p : poly2) {
+        p.id = i++;
+    }
 
     // poly2 wird verändert
 
