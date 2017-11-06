@@ -96,7 +96,7 @@ def vis_poly (pts, ind=0):
 
             t = u
         else:
-            if c_b > 0:
+            if c_b > 0 or is_near(verts[t].pt, pt_v):
 
                 w = v
                 while 1:
@@ -268,7 +268,7 @@ def vis_poly (pts, ind=0):
 
                     if c_c < 0:
 
-                        if c_d < 0:
+                        if c_d < 0 or is_near(pt_u, pt_w):
                             verts[vp[-1]].nxt = pre_w
 
                             vp.append(pre_w)
@@ -287,7 +287,9 @@ def vis_poly (pts, ind=0):
 
                                 d = intersect(pt_x, verts[v].r, pt_a, pt_b)
 
-                                if d and not is_frontfaced(verts[v].r, pt_a, pt_b):
+                                if d \
+                                    and (not is_frontfaced(verts[v].r, pt_a, pt_b) \
+                                        or is_near(pt_a, pt_v)):
                                     print 'x'
 
                                     if d['t2'] < E:
@@ -336,7 +338,6 @@ def vis_poly_wrapper (poly, idx):
     poly_ = [ { 'pt': pt[:], 'idx': i } for i, pt in enumerate(poly) ]
 
     # poly_ wird durch TrivialRm verändert
-
     res = TrivialRm(poly_, idx).get_simplified()
     p = vis_poly(res)
 

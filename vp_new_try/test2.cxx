@@ -30,7 +30,7 @@ int main (int argc, char *argv[]) {
 
     Json::Reader reader;
 
-    std::ifstream jn("../dev/complex.json");
+    std::ifstream jn("../dev/special.json");
 
     if (reader.parse(jn, doc)) {
         const Json::Value polys = doc["polys"];
@@ -63,7 +63,7 @@ int main (int argc, char *argv[]) {
                     // das polygon ist in clockwise order
                     assert(TestCW(poly));
 
-                    //if (j != 6) { continue; }
+                    if (j != 0) { continue; }
 
                     GetVisPoly_wrapper(poly, all[j], j);
 
@@ -99,7 +99,7 @@ int main (int argc, char *argv[]) {
                 Json::FastWriter writer;
 
                 std::stringstream name;
-                name << "../data_files/data_" << i << ".js";
+                name << "../data_files/special_" << i << ".js";
 
                 std::ofstream f(name.str());
                 f << "var pts = '" << GetAbsolutePath(poly)

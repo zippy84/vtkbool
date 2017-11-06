@@ -79,6 +79,6 @@ public:
 
 };
 
-void RemoveInternals_ (VertsType6 &verts);
+void SimpleRmInternals (VertsType6 &verts);
 
 #endif

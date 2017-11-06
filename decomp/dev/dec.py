@@ -11,6 +11,8 @@ sys.path.append('../../vp_new_try/dev')
 from vis_poly import vis_poly_wrapper
 from tools import cross, ld, is_cw, to_abs_path, to_path
 
+from rm_trivials import mark_internals, rm_internals, add_internals
+
 from jinja2 import Environment, Template
 
 class SubP:
@@ -50,9 +52,11 @@ class SubP:
         del self.S_tail[:]
 
 def decompose (pts):
-    poly = deque([ { 'pt': pt, 'idx': i } for i, pt in enumerate(pts) ])
+    poly = [ { 'pt': pt, 'idx': i } for i, pt in enumerate(pts) ]
 
-    # TODO: rm_internals fehlt
+    simple_rm_internals(poly)
+
+    poly = deque(poly)
 
     num = len(poly)
 
@@ -325,9 +329,20 @@ def decompose (pts):
 
     print diags
 
-    # TODO: rm_internals fehlt
+    res = []
 
-    return [ [ poly[d] for d in dec ] for dec in decs ]
+    for dec in decs:
+        p = [ poly[d] for d in dec ]
+
+        add_internals(poly, p)
+
+        res.append(p)
+
+    return res
+
+def simple_rm_internals (poly):
+    mark_internals(poly, None)
+    rm_internals(poly)
 
 if __name__ == '__main__':
 

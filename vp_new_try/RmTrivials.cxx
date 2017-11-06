@@ -544,7 +544,7 @@ void TrivialRm::GetSimplified (PolyType &res) {
 
         int j = (i+1)%numPts;
 
-        std::map<double, Vert3> newVerts;
+        std::multimap<double, Vert3> newVerts;
 
         double t;
 
@@ -592,6 +592,11 @@ void TrivialRm::GetSimplified (PolyType &res) {
 
     }
 
+    int i = 0;
+    for (auto& v : verts) {
+        std::cout << i++ << " " << v << std::endl;
+    }
+
     auto nxt = std::find_if(verts.begin(), verts.end(), [&](const Vert3 &p) {
         return p.id == ind;
     });
@@ -620,6 +625,7 @@ void TrivialRm::GetSimplified (PolyType &res) {
 
             if (d && d->t1 > E) {
                 bnd = i;
+                break;
             }
 
         }
@@ -769,6 +775,23 @@ void AddInternals (PolyType &origin, PolyType &poly) {
             &pB = poly[j];
 
         res.push_back(pA);
+
+        if (IsNear(pA.pt, pB.pt)) {
+            // spezialfall (special:0, ind:13)
+
+            assert(pA.id != NO_USE && pB.id != NO_USE);
+
+            int k = pB.id;
+            while (k != pA.id) {
+                k = (k+1)%numB;
+
+                res.push_back(origin[k]);
+            }
+
+            res.pop_back();
+
+            continue;
+        }
 
         VertsType5 verts;
 

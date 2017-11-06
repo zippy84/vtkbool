@@ -129,7 +129,8 @@ def rm_internals (poly):
 
 class TrivialRm:
     def __init__ (self, poly, ind):
-        self.poly = poly
+        self._poly = poly
+        self.poly = deepcopy(poly)
         self.verts = []
         self.orig = ind
 
@@ -140,6 +141,8 @@ class TrivialRm:
 
         mark_internals(self.poly, self.orig)
         align_pts(self.poly, self.orig)
+
+        self._poly[:] = [ { 'pt': p['pt'], 'idx': p['idx'] } for p in self.poly ]
 
         rm_internals(self.poly)
 
@@ -566,6 +569,20 @@ def add_internals (orig, poly):
             poly[j]
 
         res.append(p_a)
+
+        if is_near(p_a['pt'], p_b['pt']):
+            assert p_a['idx'] is not None \
+                and p_b['idx'] is not None
+
+            k = p_b['idx']
+
+            while k != p_a['idx']:
+                k = (k+1)%num_b
+                res.append(orig[k])
+
+            del res[-1]
+
+            continue
 
         verts = []
 

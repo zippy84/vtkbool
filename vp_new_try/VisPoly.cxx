@@ -97,7 +97,7 @@ void GetVisPoly (PolyType &poly, PolyType &res, int ind) {
 
             t = u;
         } else {
-            if (cB > 0) {
+            if (cB > 0 || IsNear(verts[t].pt, ptV)) {
 
                 int w = v;
                 for (;;) {
@@ -302,7 +302,7 @@ void GetVisPoly (PolyType &poly, PolyType &res, int ind) {
 
                     if (cC < 0) {
 
-                        if (cD < 0) {
+                        if (cD < 0 || IsNear(ptU, ptW)) {
                             verts[vp.back()].nxt = p;
 
                             vp.push_back(p);
@@ -320,7 +320,9 @@ void GetVisPoly (PolyType &poly, PolyType &res, int ind) {
 
                                 std::shared_ptr<D> d(Intersect(x, verts[v].r, ptA, ptB));
 
-                                if (d && !IsFrontfaced(verts[v].r, ptA, ptB)) {
+                                if (d
+                                    && (!IsFrontfaced(verts[v].r, ptA, ptB)
+                                        || IsNear(ptA, ptV))) { // spezialfall (special:1, ind:1)
                                     std::cout << "x" << std::endl;
 
                                     if (d->t2 < E) {

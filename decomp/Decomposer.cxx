@@ -69,7 +69,7 @@ Decomposer::Decomposer (PolyType &_poly) : poly(_poly) {
 
     std::copy(poly.begin(), poly.end(), std::back_inserter(verts));
 
-    RemoveInternals_(verts);
+    SimpleRmInternals(verts);
 
     num = verts.size();
 
@@ -495,7 +495,7 @@ void Decomposer::GetDecomposed (DecResType &res) {
 
 }
 
-void RemoveInternals_ (VertsType6 &verts) {
+void SimpleRmInternals (VertsType6 &verts) {
     VertsType4 verts2(verts.begin(), verts.end());
 
     MarkInternals(verts2, NO_USE);
