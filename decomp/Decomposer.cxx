@@ -67,6 +67,8 @@ Decomposer::Decomposer (PolyType &_poly) : poly(_poly) {
         }
     }
 
+    Scale(poly);
+
     std::copy(poly.begin(), poly.end(), std::back_inserter(verts));
 
     SimpleRmInternals(verts);
@@ -148,7 +150,7 @@ Decomposer::Decomposer (PolyType &_poly) : poly(_poly) {
                         b = i;
                     }
 
-                    std::cout << "(" << a << ", " << b << ")" << std::endl;
+                    std::cout << "> (" << a << ", " << b << ")" << std::endl;
 
                     SubP s;
                     s.w = 0;
@@ -173,12 +175,14 @@ Decomposer::Decomposer (PolyType &_poly) : poly(_poly) {
 }
 
 bool Decomposer::IsRefl (int a, int b, int c) {
-    return !(Ld(verts[a].pt, verts[b].pt, verts[c].pt) < 1e-2)
-        && Cross(verts[a].pt, verts[b].pt, verts[c].pt) < 0;
+    //std::cout << "IsRefl " << a << ", " << b << ", " << c << std::endl;
+
+    return IsNear(verts[b].pt, verts[c].pt) || (!(Ld(verts[a].pt, verts[b].pt, verts[c].pt) < 1e-3)
+        && Cross(verts[a].pt, verts[b].pt, verts[c].pt) < 0);
 }
 
 void Decomposer::Forw (int i, int j, int k) {
-    //std::cout << "Forw " << i << " " << j << " " << k << std::endl;
+    std::cout << "Forw " << i << " " << j << " " << k << std::endl;
 
     Pair p(i, j);
 
@@ -199,6 +203,8 @@ void Decomposer::Forw (int i, int j, int k) {
     }
 
     if (j-i > 1) {
+        assert(!subs[p].S.empty());
+
         if (!IsRefl(j, k, (subs[p].S.end()-1)->g)) {
             while (subs[p].S.size() > 1
                 && !IsRefl(j, k, (subs[p].S.end()-2)->g)) {
@@ -223,7 +229,7 @@ void Decomposer::Forw (int i, int j, int k) {
 }
 
 void Decomposer::Backw (int i, int j, int k) {
-    //std::cout << "Back " << i << " " << j << " " << k << std::endl;
+    std::cout << "Back " << i << " " << j << " " << k << std::endl;
 
     Pair p(j, k);
 
@@ -244,6 +250,8 @@ void Decomposer::Backw (int i, int j, int k) {
     }
 
     if (k-j > 1) {
+
+
         if (!IsRefl(j, (subs[p].S.begin())->f, i)) {
             while (subs[p].S.size() > 1
                 && !IsRefl(j, (subs[p].S.begin()+1)->f, i)) {
@@ -503,5 +511,38 @@ void SimpleRmInternals (VertsType6 &verts) {
 
     VertsType6 verts3(verts2.begin(), verts2.end());
     verts.swap(verts3);
+
+}
+
+void Scale (PolyType &poly) {
+    // skaliert das poly so, dass die kürzeste kante 1 lang ist
+
+    int num = poly.size();
+
+    std::vector<double> ls;
+
+    for (int i = 0; i < num; i++) {
+        int j = (i+1)%num;
+
+        Point &pA = poly[i],
+            &pB = poly[j];
+
+        double v[] = {pB.x-pA.x, pB.y-pA.y},
+            l = Normalize(v);
+
+        ls.push_back(l);
+    }
+
+    double mn = *(std::min_element(ls.begin(), ls.end())),
+        f = 1/mn;
+
+    std::cout << "F " << f << std::endl;
+
+    if (f > 1) {
+        for (auto& p : poly) {
+            p.pt[0] *= f;
+            p.pt[1] *= f;
+        }
+    }
 
 }

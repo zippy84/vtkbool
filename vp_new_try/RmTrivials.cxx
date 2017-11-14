@@ -43,7 +43,7 @@ void MarkInternals (VertsType4 &verts, int skip) {
 
         if (j != skip
             && !IsNear(pA.pt, pC.pt)
-            && Ld(pA.pt, pB.pt, pC.pt) < 1e-2) {
+            && Ld(pA.pt, pB.pt, pC.pt) < 1e-3) {
 
             pB.marked = std::make_shared<Marked>(i, k);
 
@@ -67,6 +67,8 @@ void MarkInternals (VertsType4 &verts, int skip) {
         verts[id].marked.reset();
     }
 
+    std::map<Pair, IdsType> col;
+
     for (int id : ids) {
         auto &m = verts[id].marked;
 
@@ -89,6 +91,72 @@ void MarkInternals (VertsType4 &verts, int skip) {
 
         m->t = w_/v_;
 
+        col[{m->a, m->b}].push_back(id);
+
+    }
+
+    if (col.size() > 1) {
+        std::map<Pair, IdsType>::iterator itr;
+
+        for (itr = col.begin(); itr != col.end(); ++itr) {
+            const Pair &edge = itr->first;
+            IdsType nodes(itr->second);
+
+            if (nodes.size() > 1) {
+
+                std::sort(nodes.begin(), nodes.end(), [&verts](const int &a, const int &b) {
+                    return (verts[a].marked)->t < (verts[b].marked)->t;
+                });
+
+                nodes.insert(nodes.begin(), edge.f);
+                nodes.push_back(edge.g);
+
+                IdsType q = {0, nodes.size()-1};
+
+                int e;
+
+                do {
+                    e = 0;
+
+                    int l = q.size();
+                    for (int i = 0; i < l-1; i++) {
+                        int j = i+1;
+
+                        int a = q[i],
+                            b = q[j];
+
+                        if (b-a > 1) {
+                            int c = a+(b-a)/2;
+
+                            Vert4 &pA = verts[nodes[a]],
+                                &pB = verts[nodes[b]],
+                                &pC = verts[nodes[c]];
+
+                            if (!(Ld(pA.pt, pB.pt, pC.pt) < 1e-3)) {
+                                e++;
+
+                                q.insert(q.begin()+j, c);
+
+                                break;
+                            }
+
+                        }
+                    }
+
+                } while (e > 0);
+
+                if (q.size() > 2) {
+                    IdsType::iterator itr2;
+
+                    for (itr2 = q.begin()+1; itr2 != q.end()-1; ++itr2) {
+                        std::cout << "Rm " << *itr2 << std::endl;
+                        verts[nodes[*itr2]].marked.reset();
+                    }
+
+                }
+
+            }
+        }
     }
 
     for (auto& vert : verts) {
@@ -532,6 +600,8 @@ void TrivialRm::GetSimplified (PolyType &res) {
 
     int num = numPts;
 
+    std::cout << ind_ << "; " << iA << "; " << iB << std::endl;
+
     std::map<int, std::vector<Src>> srcs;
 
     for (int i = 0; i < numPts; i++) {
@@ -548,7 +618,7 @@ void TrivialRm::GetSimplified (PolyType &res) {
 
         double t;
 
-        if (Ld(poly_[ind_].pt, poly_[iA].pt, poly_[i].pt) < 1e-2) {
+        if (Ld(poly_[ind_].pt, poly_[iA].pt, poly_[i].pt) < 1e-3) {
             t = GetT(poly_[ind_].pt, poly_[iA].pt, poly_[i].pt);
 
             if (t > E) {
@@ -567,7 +637,7 @@ void TrivialRm::GetSimplified (PolyType &res) {
             }
         }
 
-        if (Ld(poly_[ind_].pt, poly_[iB].pt, poly_[i].pt) < 1e-2) {
+        if (Ld(poly_[ind_].pt, poly_[iB].pt, poly_[i].pt) < 1e-3) {
             t = GetT(poly_[ind_].pt, poly_[iB].pt, poly_[i].pt);
 
             if (t > E) {
@@ -774,6 +844,9 @@ void AddInternals (PolyType &origin, PolyType &poly) {
         Point &pA = poly[i],
             &pB = poly[j];
 
+        double u[] = {pB.x-pA.x, pB.y-pA.y},
+            r = Normalize(u);
+
         res.push_back(pA);
 
         if (IsNear(pA.pt, pB.pt)) {
@@ -798,7 +871,7 @@ void AddInternals (PolyType &origin, PolyType &poly) {
         for (auto& p : origin) {
             if (IsOnSeg(pA.pt, pB.pt, p.pt)) {
                 double v[] = {p.x-pA.x, p.y-pA.y},
-                    t = Normalize(v);
+                    t = Normalize(v)/r;
                 verts.push_back({p, t});
             }
         }
@@ -808,13 +881,13 @@ void AddInternals (PolyType &origin, PolyType &poly) {
         VertsType5::iterator itr;
 
         if (verts.size() > 1) {
-            std::set<int> all;
+            std::map<int, double> all;
 
-            all.insert(pA.id);
-            all.insert(pB.id);
+            all[pA.id] = 0;
+            all[pB.id] = 1;
 
             for (auto& v : verts) {
-                all.insert(v.id);
+                all[v.id] = v.t;
             }
 
             for (itr = verts.begin(); itr != verts.end()-1; ++itr) {
@@ -828,14 +901,18 @@ void AddInternals (PolyType &origin, PolyType &poly) {
                         int a = (idA+1)%numB,
                             b = (idA+numB-1)%numB;
 
-                        cA = all.count(a)+all.count(b);
+                        //cA = all.count(a)+all.count(b);
+                        cA = (all.count(a) == 1 && all[a] < all[idA])
+                            +(all.count(b) == 1 && all[b] > all[idA]);
                     }
 
                     {
                         int a = (idB+1)%numB,
                             b = (idB+numB-1)%numB;
 
-                        cB = all.count(a)+all.count(b);
+                        //cB = all.count(a)+all.count(b);
+                        cB = (all.count(a) == 1 && all[a] < all[idB])
+                            +(all.count(b) == 1 && all[b] > all[idB]);
                     }
 
                     std::cout << "(" << idA << "->" << cA << ", "

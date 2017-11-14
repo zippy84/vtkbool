@@ -9,7 +9,7 @@ from collections import deque, defaultdict
 sys.path.append('../../vp_new_try/dev')
 
 from vis_poly import vis_poly_wrapper
-from tools import cross, ld, is_cw, to_abs_path, to_path
+from tools import cross, ld, is_cw, to_abs_path, to_path, is_near
 
 from rm_trivials import mark_internals, rm_internals, add_internals
 
@@ -61,8 +61,9 @@ def decompose (pts):
     num = len(poly)
 
     def is_refl (a, b, c):
-        return not ld(poly[a]['pt'], poly[b]['pt'], poly[c]['pt']) < 1e-2 \
-            and cross(poly[a]['pt'], poly[b]['pt'], poly[c]['pt']) < 0
+        return is_near(poly[b]['pt'], poly[c]['pt']) \
+            or (not ld(poly[a]['pt'], poly[b]['pt'], poly[c]['pt']) < 1e-3 \
+                and cross(poly[a]['pt'], poly[b]['pt'], poly[c]['pt']) < 0)
 
     for i in range(num):
         j = (i+1)%num
@@ -350,20 +351,20 @@ if __name__ == '__main__':
     env.filters['to_path'] = to_path
 
     tmpl = env.from_string('''<?xml version="1.0" standalone="no"?>
-        <svg xmlns="http://www.w3.org/2000/svg"
-            version="1.1"
-            height="{{ size[1] }}"
-            width="{{ size[0] }}">
-                <path d="{{ poly|to_path(-pos[0], -pos[1]) }}z" style="stroke:black; fill:none;"/>
-                <g>
-                    {% for d in decs %}
-                    <path d="{{ d|map(attribute="pt")|list|to_path(-pos[0], -pos[1]) }}z" style="stroke:black; fill:#faa; stroke-width:1;"/>
-                    {% endfor %}
-                </g>
-        </svg>
+<svg xmlns="http://www.w3.org/2000/svg"
+    version="1.1"
+    height="{{ size[1] }}"
+    width="{{ size[0] }}">
+    <path d="{{ poly|to_path(-pos[0], -pos[1]) }}z" style="stroke:black; fill:none;"/>
+    <g>
+        {% for d in decs %}
+        <path d="{{ d|map(attribute="pt")|list|to_path(-pos[0], -pos[1]) }}z" style="stroke:black; fill:#faa; stroke-width:1;"/>
+        {% endfor %}
+    </g>
+</svg>
         ''')
 
-    with open('../../vp_new_try/dev/complex.json', 'r') as f:
+    with open('../../vp_new_try/dev/special.json', 'r') as f:
         polys = json.load(f)['polys']
 
         for i, poly in enumerate(polys):
@@ -389,5 +390,5 @@ if __name__ == '__main__':
             max_x = max(xs)
             max_y = max(ys)
 
-            with open('res/dec_%i.svg' % i, 'w') as out:
+            with open('res/special_%i.svg' % i, 'w') as out:
                 out.write(tmpl.render({ 'poly': poly, 'decs': decs, 'pos': (min_x, min_y), 'size': (max_x-min_x, max_y-min_y) }))

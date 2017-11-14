@@ -15,6 +15,7 @@
 */
 
 #include <cmath>
+#include <cassert>
 
 #include "Tools.h"
 
@@ -44,8 +45,44 @@ double GetAngle (double *vA, double *vB) {
     return ang;
 }
 
+void Move (double *a, double *b, double *c) {
+    // damit a, b oder c nicht der ursprung ist
+    // det(a,b,c) wäre dann auch 0
+
+    double z[2] = {0, 0};
+
+    if (IsNear(a, z) || IsNear(b, z) || IsNear(c, z)) {
+        double x = std::min({a[0], b[0], c[0]}),
+            y = std::min({a[1], b[1], c[1]});
+
+        double m[] = {1-x, 1-y};
+
+        a[0] += m[0]; a[1] += m[1];
+        b[0] += m[0]; b[1] += m[1];
+        c[0] += m[0]; c[1] += m[1];
+    }
+
+    assert(!(IsNear(a, z) || IsNear(b, z) || IsNear(c, z)));
+}
+
 double Ld (double *a, double *b, double *c) {
-    return std::abs(a[0]*(b[1]-c[1])-a[1]*(b[0]-c[0])+(b[0]*c[1]-c[0]*b[1]));
+    // muss unabh. von der skalierung sein
+
+    double vA[] = {b[0]-a[0], b[1]-a[1]},
+        vB[] = {c[0]-a[0], c[1]-a[1]};
+
+    double lA = Normalize(vA),
+        lB = Normalize(vB);
+
+    double f = 10/std::max(lA, lB);
+
+    double _a[] = {f*a[0], f*a[1]},
+        _b[] = {f*b[0], f*b[1]},
+        _c[] = {f*c[0], f*c[1]};
+
+    Move(_a, _b, _c);
+
+    return std::abs(_a[0]*(_b[1]-_c[1])-_a[1]*(_b[0]-_c[0])+(_b[0]*_c[1]-_c[0]*_b[1]));
 }
 
 double Cross (double *a, double *b, double *c) {
@@ -119,14 +156,27 @@ bool IsNear (double *a, double *b) {
 }
 
 double GetT (double *a, double *b, double *c) {
-    double m11 = a[0],
-        m12 = b[0]-a[0],
-        m21 = a[1],
-        m22 = b[1]-a[1],
-        v1 = c[0],
-        v2 = c[1];
+    if (IsNear(b, c)) {
+        return 1;
+    }
+
+    double _a[2], _b[2], _c[2];
+    Cpy(_a, a);
+    Cpy(_b, b);
+    Cpy(_c, c);
+
+    Move(_a, _b, _c);
+
+    double m11 = _a[0],
+        m12 = _b[0]-_a[0],
+        m21 = _a[1],
+        m22 = _b[1]-_a[1],
+        v1 = _c[0],
+        v2 = _c[1];
 
     double det = m11*m22-m12*m21;
+
+    assert(std::abs(det) > E);
 
     return (m11*v2-v1*m21)/det;
 }
@@ -146,7 +196,7 @@ bool IsOnSeg (double *a, double *b, double *c) {
         return false;
     }
 
-    return std::abs(Cross(a, b, c)) < E;
+    return Ld(a, b, c) < 1e-3;
 }
 
 bool TestCW (const PolyType &poly) {

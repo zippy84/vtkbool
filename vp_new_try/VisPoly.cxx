@@ -73,7 +73,7 @@ void GetVisPoly (PolyType &poly, PolyType &res, int ind) {
 
         std::cout << "orig " << verts[u].id << ", " << verts[v].id << std::endl;
 
-        if (Ld(x, ptU, ptV) < 1e-2) {
+        if (Ld(x, ptU, ptV) < 1e-3) {
             std::cout << "skipping" << std::endl;
 
             t = u;

@@ -37,7 +37,7 @@ int main (int argc, char *argv[]) {
         int i = 0;
 
         for (const Json::Value& p : polys) {
-            if (i == 0) {
+            if (i == 2) {
                 PolyType poly;
 
                 int j = 0;

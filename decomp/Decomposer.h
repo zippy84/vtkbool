@@ -80,5 +80,6 @@ public:
 };
 
 void SimpleRmInternals (VertsType6 &verts);
+void Scale (PolyType &poly);
 
 #endif

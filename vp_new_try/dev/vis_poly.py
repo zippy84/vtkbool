@@ -74,7 +74,7 @@ def vis_poly (pts, ind=0):
 
         print 'orig', verts[u].ind, verts[v].ind
 
-        if ld(pt_x, pt_u, pt_v) < 1e-2:
+        if ld(pt_x, pt_u, pt_v) < 1e-3:
             print 'skipping'
 
             t = u

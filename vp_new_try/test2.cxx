@@ -38,7 +38,7 @@ int main (int argc, char *argv[]) {
         int i = 0;
 
         for (const Json::Value& p : polys) {
-            if (i == 0) {
+            if (i == 1) {
                 PolyType poly;
 
                 int j = 0;
@@ -63,7 +63,7 @@ int main (int argc, char *argv[]) {
                     // das polygon ist in clockwise order
                     assert(TestCW(poly));
 
-                    if (j != 0) { continue; }
+                    //if (j != 3) { continue; }
 
                     GetVisPoly_wrapper(poly, all[j], j);
 

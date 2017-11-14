@@ -35,7 +35,7 @@ def mark_internals (poly, skip):
 
         if j != skip \
             and not is_near(poly[i]['pt'], poly[k]['pt']) \
-            and ld(poly[i]['pt'], poly[j]['pt'], poly[k]['pt']) < 1e-2:
+            and ld(poly[i]['pt'], poly[j]['pt'], poly[k]['pt']) < 1e-3:
 
             poly[j]['marked'] = { 'a': i, 'b': k }
             ids.add(j)
@@ -171,7 +171,7 @@ class TrivialRm:
 
             # entlang rA
 
-            if ld(self.pX['pt'], pA['pt'], p['pt']) < 1e-2:
+            if ld(self.pX['pt'], pA['pt'], p['pt']) < 1e-3:
                 t = get_t(self.pX['pt'], pA['pt'], p['pt'])
 
                 if t > E:
@@ -189,7 +189,7 @@ class TrivialRm:
 
             # und entlang rB
 
-            if ld(self.pX['pt'], pB['pt'], p['pt']) < 1e-2:
+            if ld(self.pX['pt'], pB['pt'], p['pt']) < 1e-3:
                 t = get_t(self.pX['pt'], pB['pt'], p['pt'])
 
                 if t > E:
