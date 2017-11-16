@@ -30,7 +30,7 @@ int main (int argc, char *argv[]) {
 
     Json::Reader reader;
 
-    std::ifstream jn("../dev/special.json");
+    std::ifstream jn("../dev/complex.json");
 
     if (reader.parse(jn, doc)) {
         const Json::Value polys = doc["polys"];
@@ -38,7 +38,7 @@ int main (int argc, char *argv[]) {
         int i = 0;
 
         for (const Json::Value& p : polys) {
-            if (i == 1) {
+            //if (i == 2) {
                 PolyType poly;
 
                 int j = 0;
@@ -99,14 +99,14 @@ int main (int argc, char *argv[]) {
                 Json::FastWriter writer;
 
                 std::stringstream name;
-                name << "../data_files/special_" << i << ".js";
+                name << "../data_files/data_" << i << ".js";
 
                 std::ofstream f(name.str());
                 f << "var pts = '" << GetAbsolutePath(poly)
                     << "'; var polys = " << writer.write(data)
                     << ";";
                 f.close();
-            }
+            //}
 
             i++;
 

@@ -26,12 +26,22 @@
 
 class Vert2 {
 public:
-    Vert2 (int _i, double *_r, double _d, double _phi) : i(_i), d(_d), phi(_phi) {
+    Vert2 (int _i, double *_r, double _d) : i(_i), d(_d) {
         r[0] = _r[0];
         r[1] = _r[1];
     }
     int i;
-    double r[2], d, phi;
+    double r[2], d;
+
+    friend std::ostream& operator<< (std::ostream &out, const Vert2 &v) {
+        out << "i: " << v.i
+            << ", d: " << v.d;
+        return out;
+    }
+
+    bool operator< (const Vert2 &v) {
+        return d < v.d;
+    }
 };
 
 typedef std::vector<Vert2> VertsType2;

@@ -22,6 +22,8 @@
 #include <set>
 #include <deque>
 #include <map>
+#include <unordered_set>
+#include <unordered_map>
 
 #include "Tools.h"
 
@@ -53,14 +55,20 @@ public:
 
 typedef std::vector<IdsType> DecResType;
 
+struct p_h {
+    std::size_t operator () (const Pair& p) const {
+        return std::hash<int>{}(p.f) ^ std::hash<int>{}(p.g);
+    }
+};
+
 class Decomposer {
     PolyType poly;
     VertsType6 verts;
 
     int num;
 
-    std::set<Pair> pairs;
-    std::map<Pair, SubP> subs;
+    std::unordered_set<Pair, p_h> pairs;
+    std::unordered_map<Pair, SubP, p_h> subs;
 
     bool IsRefl (int a, int b, int c);
 

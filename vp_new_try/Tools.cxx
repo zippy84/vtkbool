@@ -82,6 +82,18 @@ double Ld (double *a, double *b, double *c) {
 
     Move(_a, _b, _c);
 
+    double e = std::abs(vA[0]*vB[0]+vA[1]*vB[1]);
+
+    if (e > E) {
+        if (lA > lB) {
+            _c[0] = _a[0]+(5/e)*vB[0];
+            _c[1] = _a[1]+(5/e)*vB[1];
+        } else {
+            _b[0] = _a[0]+(5/e)*vA[0];
+            _b[1] = _a[1]+(5/e)*vA[1];
+        }
+    }
+
     return std::abs(_a[0]*(_b[1]-_c[1])-_a[1]*(_b[0]-_c[0])+(_b[0]*_c[1]-_c[0]*_b[1]));
 }
 
@@ -147,7 +159,11 @@ std::shared_ptr<D> Intersect2 (double *oA, double *oB, double *pA, double *pB) {
 bool IsFrontfaced (double *r, double *a, double *b) {
     double rAB[] = {a[1]-b[1], b[0]-a[0]}; // um pi/2 gedreht
     Normalize(rAB);
-    return std::acos(r[0]*rAB[0]+r[1]*rAB[1]) > PI/2;
+
+    double _x = r[0]*rAB[0]+r[1]*rAB[1];
+
+    //return std::acos(r[0]*rAB[0]+r[1]*rAB[1]) > PI/2;
+    return _x < 0;
 }
 
 bool IsNear (double *a, double *b) {
@@ -186,14 +202,26 @@ bool IsOnSeg (double *a, double *b, double *c) {
         return false;
     }
 
-    if ((c[0] < a[0] && c[0] < b[0])
-        || (c[0] > a[0] && c[0] > b[0])) {
-        return false;
+    if (std::abs(a[0]-b[0]) > E) {
+        if ((c[0] < a[0] && c[0] < b[0])
+            || (c[0] > a[0] && c[0] > b[0])) {
+            return false;
+        }
+    } else {
+        if (std::abs(a[0]-c[0]) > E) {
+            return false;
+        }
     }
 
-    if ((c[1] < a[1] && c[1] < b[1])
-        || (c[1] > a[1] && c[1] > b[1])) {
-        return false;
+    if (std::abs(a[1]-b[1]) > E) {
+        if ((c[1] < a[1] && c[1] < b[1])
+            || (c[1] > a[1] && c[1] > b[1])) {
+            return false;
+        }
+    } else {
+        if (std::abs(a[1]-c[1]) > E) {
+            return false;
+        }
     }
 
     return Ld(a, b, c) < 1e-3;

@@ -178,8 +178,6 @@ void AlignPts (VertsType4 &verts, int ind) {
 
     double x[] = {verts[ind].x, verts[ind].y};
 
-    double ei[] = {1, 0};
-
     VertsType2 verts2;
 
     for (int i = 0; i < num; i++) {
@@ -187,44 +185,40 @@ void AlignPts (VertsType4 &verts, int ind) {
             && !verts[i].marked
             && !IsNear(verts[i].pt, x)) {
 
-            double r[] = {verts[i].pt[0]-x[0], verts[i].pt[1]-x[1]};
+            double r[] = {verts[i].pt[0]-x[0], verts[i].pt[1]-x[1]},
+                d = Normalize(r);
 
-            double d = Normalize(r),
-                phi = GetAngle(ei, r);
-
-            verts2.push_back(Vert2(i, r, d, phi));
+            verts2.push_back(Vert2(i, r, d));
         }
     }
 
-    std::map<std::string, IdsType> phis;
+    std::sort(verts2.begin(), verts2.end());
 
-    for (int i = 0; i < verts2.size(); i++) {
-        std::ostringstream out;
-        out << std::fixed << std::setprecision(3) << verts2[i].phi;
-
-        phis[out.str()].push_back(i);
+    /*
+    for (auto& v : verts2) {
+        std::cout << v << std::endl;
     }
+    */
 
-    // verschiebt
+    for (auto& v : verts2) {
+        double _v[] = {-v.r[1], v.r[0]},
+            _d = _v[0]*x[0]+_v[1]*x[1];
 
-    for (auto& itr : phis) {
-        IdsType &ids = itr.second;
-        if (ids.size() > 1) {
-            for (int id : ids) {
-                Vert2 &v = verts2[id];
-
-                double phi_ = std::stod(itr.first)-v.phi;
-
-                // dreht den ortsvektor um den kleinen winkel
-
-                double w[] = {v.d*v.r[0], v.d*v.r[1]},
-                    r[] = {w[0]-w[1]*phi_, w[0]*phi_+w[1]};
-
-                verts[v.i].pt[0] = x[0]+r[0];
-                verts[v.i].pt[1] = x[1]+r[1];
-
+        for (auto& w : verts2) {
+            if (&v == &w) {
+                continue;
             }
 
+            double d = -(verts[w.i].x*_v[0]+verts[w.i].y*_v[1]-_d);
+
+            double _l = Ld(x, verts[v.i].pt, verts[w.i].pt);
+
+            //std::cout << verts[w.i].id << " -> " << _l << std::endl;
+
+            if (_l < 1e-3) {
+                verts[w.i].pt[0] += d*_v[0];
+                verts[w.i].pt[1] += d*_v[1];
+            }
         }
     }
 
@@ -877,6 +871,12 @@ void AddInternals (PolyType &origin, PolyType &poly) {
         }
 
         std::sort(verts.begin(), verts.end());
+
+        /*
+        for (auto& v : verts) {
+            std::cout << v << std::endl;
+        }
+        */
 
         VertsType5::iterator itr;
 

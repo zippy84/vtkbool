@@ -186,7 +186,8 @@ void Decomposer::Forw (int i, int j, int k) {
 
     Pair p(i, j);
 
-    if (std::find(pairs.begin(), pairs.end(), p) == pairs.end()) {
+    //if (std::find(pairs.begin(), pairs.end(), p) == pairs.end()) {
+    if (pairs.count(p) == 0) {
         return;
     }
 
@@ -195,7 +196,8 @@ void Decomposer::Forw (int i, int j, int k) {
 
     if (k-j > 1) {
         Pair p_(j, k);
-        if (std::find(pairs.begin(), pairs.end(), p_) == pairs.end()) {
+        //if (std::find(pairs.begin(), pairs.end(), p_) == pairs.end()) {
+        if (pairs.count(p_) == 0) {
             return;
         }
 
@@ -233,7 +235,8 @@ void Decomposer::Backw (int i, int j, int k) {
 
     Pair p(j, k);
 
-    if (std::find(pairs.begin(), pairs.end(), p) == pairs.end()) {
+    //if (std::find(pairs.begin(), pairs.end(), p) == pairs.end()) {
+    if (pairs.count(p) == 0) {
         return;
     }
 
@@ -242,7 +245,8 @@ void Decomposer::Backw (int i, int j, int k) {
 
     if (j-i > 1) {
         Pair p_(i, j);
-        if (std::find(pairs.begin(), pairs.end(), p_) == pairs.end()) {
+        //if (std::find(pairs.begin(), pairs.end(), p_) == pairs.end()) {
+        if (pairs.count(p_) == 0) {
             return;
         }
 
@@ -250,7 +254,7 @@ void Decomposer::Backw (int i, int j, int k) {
     }
 
     if (k-j > 1) {
-
+        assert(!subs[p].S.empty());
 
         if (!IsRefl(j, (subs[p].S.begin())->f, i)) {
             while (subs[p].S.size() > 1
@@ -380,7 +384,8 @@ void Decomposer::GetDecomposed (DecResType &res) {
 
                 Pair p(i, k);
 
-                if (std::find(pairs.begin(), pairs.end(), p) != pairs.end()) {
+                //if (std::find(pairs.begin(), pairs.end(), p) != pairs.end()) {
+                if (pairs.count(p) == 1) {
                     if (verts[k].refl) {
                         for (int j = i+1; j < k; j++) {
                             Forw(i, j, k);
@@ -405,7 +410,8 @@ void Decomposer::GetDecomposed (DecResType &res) {
 
                 Pair p(i, k);
 
-                if (std::find(pairs.begin(), pairs.end(), p) != pairs.end()) {
+                //if (std::find(pairs.begin(), pairs.end(), p) != pairs.end()) {
+                if (pairs.count(p) == 1) {
                     if (!verts[i].refl) {
                         Backw(i, i+1, k);
 
