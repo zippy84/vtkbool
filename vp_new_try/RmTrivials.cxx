@@ -594,8 +594,6 @@ void TrivialRm::GetSimplified (PolyType &res) {
 
     int num = numPts;
 
-    std::cout << ind_ << "; " << iA << "; " << iB << std::endl;
-
     std::map<int, std::vector<Src>> srcs;
 
     for (int i = 0; i < numPts; i++) {

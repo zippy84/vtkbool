@@ -22,6 +22,9 @@
 double Normalize (double *v, const int n) {
     double l;
 
+    // pow(0, -.5) liefert inf
+    // 1/inf -> 0
+
     if (n == 3) {
         l = std::pow(v[0]*v[0]+v[1]*v[1]+v[2]*v[2], -.5);
         v[0] *= l;

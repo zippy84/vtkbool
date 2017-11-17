@@ -3,21 +3,71 @@
 from copy import deepcopy
 import math
 
+E = 1e-5
+
+def move (a, b, c):
+    # damit a, b oder c nicht der ursprung ist
+    # det(a,b,c) wäre dann auch 0
+
+    z = [0, 0]
+
+    if is_near(a, z) or is_near(b, z) or is_near(c, z):
+        x = min(a[0], b[0], c[0])
+        y = min(a[1], b[1], c[1])
+
+        m = [1-x, 1-y]
+
+        a[0] += m[0]; a[1] += m[1]
+        b[0] += m[0]; b[1] += m[1]
+        c[0] += m[0]; c[1] += m[1]
+
+    assert not(is_near(a, z) or is_near(b, z) or is_near(c, z))
+
 def ld (a, b, c):
-    return abs(a[0]*(b[1]-c[1])-a[1]*(b[0]-c[0])+(b[0]*c[1]-c[0]*b[1]))
+    # muss unabh. von der skalierung sein
+
+    global E
+
+    v_a = [b[0]-a[0], b[1]-a[1]]
+    v_b = [c[0]-a[0], c[1]-a[1]]
+
+    l_a = normalize(v_a)
+    l_b = normalize(v_b)
+
+    f = 10/max(l_a, l_b);
+
+    _a = [f*a[0], f*a[1]]
+    _b = [f*b[0], f*b[1]]
+    _c = [f*c[0], f*c[1]]
+
+    move(_a, _b, _c)
+
+    e = abs(v_a[0]*v_b[0]+v_a[1]*v_b[1])
+
+    if e > E:
+        if l_a > l_b:
+            _c[0] = _a[0]+(5/e)*v_b[0]
+            _c[1] = _a[1]+(5/e)*v_b[1]
+        else:
+            _b[0] = _a[0]+(5/e)*v_a[0]
+            _b[1] = _a[1]+(5/e)*v_a[1]
+
+    return abs(_a[0]*(_b[1]-_c[1])-_a[1]*(_b[0]-_c[0])+(_b[0]*_c[1]-_c[0]*_b[1]))
 
 def cross (a, b, c):
     # kreuzprodukt der vektoren ab und ac
     return (b[1]-a[1])*(c[0]-a[0])-(b[0]-a[0])*(c[1]-a[1])
 
 def normalize (v):
-    l = (v[0]*v[0]+v[1]*v[1])**-.5
+    try:
+        l = (v[0]*v[0]+v[1]*v[1])**-.5
+    except ZeroDivisionError:
+        l = float('inf')
+
     v[0] *= l
     v[1] *= l
 
     return 1/l
-
-E = 1e-5
 
 def intersect (o, r, pA, pB):
     global E
@@ -70,7 +120,9 @@ def intersect2 (oA, oB, pA, pB):
 def is_frontfaced (r, a, b):
     r_ab = [a[1]-b[1], b[0]-a[0]] # um pi/2 gedreht
     normalize(r_ab)
-    return math.acos(r[0]*r_ab[0]+r[1]*r_ab[1]) > math.pi/2
+
+    _x = r[0]*r_ab[0]+r[1]*r_ab[1]
+    return _x < 0
 
 def get_angle (a, b):
     ang = math.atan2(a[0]*b[1]-b[0]*a[1], a[0]*b[0]+a[1]*b[1])
@@ -111,32 +163,53 @@ def to_abs_path (pts):
     return 'M' + ' L'.join([ ','.join(map(str, p)) for p in pts ]) + 'Z'
 
 def get_t (a, b, c):
-    m11 = a[0]
-    m12 = b[0]-a[0]
-    m21 = a[1]
-    m22 = b[1]-a[1]
-    v1 = c[0]
-    v2 = c[1]
+    global E
+
+    if is_near(b, c):
+        return 1
+
+    _a = a[:]
+    _b = b[:]
+    _c = c[:]
+
+    move(_a, _b, _c)
+
+    m11 = _a[0]
+    m12 = _b[0]-_a[0]
+    m21 = _a[1]
+    m22 = _b[1]-_a[1]
+    v1 = _c[0]
+    v2 = _c[1]
 
     det = m11*m22-m12*m21
 
+    assert abs(det) > E
+
     return (m11*v2-v1*m21)/det
 
-def is_on_seg (a, b, pt):
+def is_on_seg (a, b, c):
     global E
 
-    if is_near(a, pt) or is_near(b, pt):
+    if is_near(a, c) or is_near(b, c):
         return False
 
-    if (pt[0] < a[0] and pt[0] < b[0]) \
-        or (pt[0] > a[0] and pt[0] > b[0]):
-        return False
+    if abs(a[0]-b[0]) > E:
+        if (c[0] < a[0] and c[0] < b[0]) \
+            or (c[0] > a[0] and c[0] > b[0]):
+            return False
+    else:
+        if abs(a[0]-c[0]) > E:
+            return False
 
-    if (pt[1] < a[1] and pt[1] < b[1]) \
-        or (pt[1] > a[1] and pt[1] > b[1]):
-        return False
+    if abs(a[1]-b[1]) > E:
+        if (c[1] < a[1] and c[1] < b[1]) \
+            or (c[1] > a[1] and c[1] > b[1]):
+            return False
+    else:
+        if abs(a[1]-c[1]) > E:
+            return False
 
-    return abs(cross(a, b, pt)) < E
+    return ld(a, b, c) < 1e-3
 
 def is_cw (poly):
     # http://mathworld.wolfram.com/PolygonArea.html

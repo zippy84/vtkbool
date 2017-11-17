@@ -175,9 +175,9 @@ Decomposer::Decomposer (PolyType &_poly) : poly(_poly) {
 }
 
 bool Decomposer::IsRefl (int a, int b, int c) {
-    //std::cout << "IsRefl " << a << ", " << b << ", " << c << std::endl;
+    std::cout << "IsRefl " << a << ", " << b << ", " << c << std::endl;
 
-    return IsNear(verts[b].pt, verts[c].pt) || (!(Ld(verts[a].pt, verts[b].pt, verts[c].pt) < 1e-3)
+    return IsNear(verts[b].pt, verts[c].pt) || (!(Ld(verts[a].pt, verts[b].pt, verts[c].pt) < 1e-2)
         && Cross(verts[a].pt, verts[b].pt, verts[c].pt) < 0);
 }
 

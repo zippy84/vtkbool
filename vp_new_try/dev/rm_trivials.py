@@ -53,6 +53,8 @@ def mark_internals (poly, skip):
         ids.remove(id_)
         del poly[id_]['marked']
 
+    col = defaultdict(list)
+
     for id_ in ids:
         m = poly[id_]['marked']
 
@@ -69,6 +71,49 @@ def mark_internals (poly, skip):
         w = [poly[id_]['pt'][0]-pt_a[0], poly[id_]['pt'][1]-pt_a[1]]
 
         m['t'] = normalize(w)/normalize(v)
+
+        col[(m['a'], m['b'])].append(id_)
+
+    if len(col) > 1:
+        for edge, nodes in col.items():
+            if len(nodes) > 1:
+                nodes2 = sorted(nodes, key=lambda n: poly[n]['marked']['t'])
+
+                nodes2.insert(0, edge[0])
+                nodes2.append(edge[1])
+
+                q = [0, len(nodes2)-1]
+
+                e = 0
+
+                while True:
+                    e = 0
+
+                    l = len(q)
+                    for i in range(l-1):
+                        j = i+1
+
+                        a = q[i]
+                        b = q[j]
+
+                        if b-a > 1:
+                            c = a+(b-a)//2
+
+                            pt_a = poly[nodes2[a]]['pt']
+                            pt_b = poly[nodes2[b]]['pt']
+                            pt_c = poly[nodes2[c]]['pt']
+
+                            if not(ld(pt_a, pt_b, pt_c) < 1e-3):
+                                e += 1
+                                q.insert(j, c)
+                                break
+
+                    if e == 0:
+                        break
+
+                if len(q) > 2:
+                    for r in q[1:-1]:
+                        del poly[nodes2[r]]['marked']
 
     for p in poly:
         if 'marked' in p:
@@ -87,30 +132,26 @@ def align_pts (poly, ind):
             r = [p['pt'][0]-pX[0], p['pt'][1]-pX[1]]
 
             d = normalize(r)
-            phi = get_angle([1, 0], r)
 
-            verts.append({ 'i': i, 'r': r, 'd': d, 'phi': phi })
+            verts.append({ 'i': i, 'r': r, 'd': d })
 
-    phis = defaultdict(list)
+    verts.sort(key=itemgetter('d'))
 
-    for i, p in enumerate(verts):
-        phis['%.3f' % p['phi']].append(i)
+    for v in verts:
+        _v = [-v['r'][1], v['r'][0]]
+        _d = _v[0]*pX[0]+_v[1]*pX[1]
 
-    print 'phis', phis
+        for w in verts:
+            if v is w:
+                continue
 
-    for phi, ids in phis.items():
-        if len(ids) > 1:
-            for id_ in ids:
-                p = verts[id_]
+            d = -(poly[w['i']]['pt'][0]*_v[0]+poly[w['i']]['pt'][1]*_v[1]-_d)
 
-                phi_ = float(phi)-p['phi']
+            _l = ld(pX, poly[v['i']]['pt'], poly[w['i']]['pt'])
 
-                # dreht den ortsvektor um den kleinen winkel
-
-                w = [p['d']*p['r'][0], p['d']*p['r'][1]]
-                r = [w[0]-w[1]*phi_, w[0]*phi_+w[1]]
-
-                poly[p['i']].update({ 'pt': [pX[0]+r[0], pX[1]+r[1]], 'r': r })
+            if _l < 1e-3:
+                poly[w['i']]['pt'][0] += d*_v[0]
+                poly[w['i']]['pt'][1] += d*_v[1]
 
     for p in poly:
         if 'marked' in p:
@@ -209,7 +250,8 @@ class TrivialRm:
 
             self.verts.extend([ p[1] for p in new_pts ])
 
-            print new_pts
+            if new_pts:
+                print new_pts
 
         # ...
 
@@ -568,6 +610,9 @@ def add_internals (orig, poly):
         p_a, p_b = poly[i], \
             poly[j]
 
+        u = [p_b['pt'][0]-p_a['pt'][0], p_b['pt'][1]-p_a['pt'][1]]
+        r = normalize(u)
+
         res.append(p_a)
 
         if is_near(p_a['pt'], p_b['pt']):
@@ -590,20 +635,20 @@ def add_internals (orig, poly):
             if is_on_seg(p_a['pt'], p_b['pt'], p['pt']):
                 v = [p['pt'][0]-p_a['pt'][0],
                     p['pt'][1]-p_a['pt'][1]]
-                t = normalize(v)
+                t = normalize(v)/r
 
                 _v = { 'valid': True, 't': t }
-                _v.update(p)
+                _v.update(deepcopy(p))
 
                 verts.append(_v)
 
         verts.sort(key=itemgetter('t'))
 
         if len(verts) > 1:
-            ids = [p_a['idx'], p_b['idx']]
+            ids = { p_a['idx']: 0, p_b['idx']: 1 }
 
             for v in verts:
-                ids.append(v['idx'])
+                ids[v['idx']] = v['t']
 
             for k in range(len(verts)-1):
                 l = k+1
@@ -614,12 +659,14 @@ def add_internals (orig, poly):
                     a = (id_a+1)%num_b
                     b = (id_a+num_b-1)%num_b
 
-                    c_a = ids.count(a)+ids.count(b)
+                    c_a = (a in ids and ids[a] < ids[id_a]) \
+                        +(b in ids and ids[b] > ids[id_a])
 
                     a = (id_b+1)%num_b
                     b = (id_b+num_b-1)%num_b
 
-                    c_b = ids.count(a)+ids.count(b)
+                    c_b = (a in ids and ids[a] < ids[id_b]) \
+                        +(b in ids and ids[b] > ids[id_b])
 
                     assert c_a > 0 or c_b > 0
 

@@ -5,11 +5,12 @@ import sys
 import json
 
 from collections import deque, defaultdict
+from copy import deepcopy
 
 sys.path.append('../../vp_new_try/dev')
 
 from vis_poly import vis_poly_wrapper
-from tools import cross, ld, is_cw, to_abs_path, to_path, is_near
+from tools import cross, ld, is_cw, to_abs_path, to_path, is_near, normalize
 
 from rm_trivials import mark_internals, rm_internals, add_internals
 
@@ -54,6 +55,9 @@ class SubP:
 def decompose (pts):
     poly = [ { 'pt': pt, 'idx': i } for i, pt in enumerate(pts) ]
 
+    original = deepcopy(poly)
+
+    scale(poly)
     simple_rm_internals(poly)
 
     poly = deque(poly)
@@ -62,7 +66,7 @@ def decompose (pts):
 
     def is_refl (a, b, c):
         return is_near(poly[b]['pt'], poly[c]['pt']) \
-            or (not ld(poly[a]['pt'], poly[b]['pt'], poly[c]['pt']) < 1e-3 \
+            or (not ld(poly[a]['pt'], poly[b]['pt'], poly[c]['pt']) < 1e-2 \
                 and cross(poly[a]['pt'], poly[b]['pt'], poly[c]['pt']) < 0)
 
     for i in range(num):
@@ -137,6 +141,8 @@ def decompose (pts):
             w += subs[(j, k)].w+1
 
         if j-i > 1:
+            assert len(p.S) > 0
+
             if not is_refl(j, k, p.S[-1][1]):
                 try:
                     while not is_refl(j, k, p.S[-2][1]):
@@ -171,6 +177,8 @@ def decompose (pts):
             w += subs[(i, j)].w+1
 
         if k-j > 1:
+            assert len(p.S) > 0
+
             if not is_refl(j, p.S[0][0], i):
                 try:
                     while not is_refl(j, p.S[1][0], i):
@@ -333,9 +341,9 @@ def decompose (pts):
     res = []
 
     for dec in decs:
-        p = [ poly[d] for d in dec ]
+        p = [ original[poly[d]['idx']] for d in dec ]
 
-        add_internals(poly, p)
+        add_internals(original, p)
 
         res.append(p)
 
@@ -344,6 +352,31 @@ def decompose (pts):
 def simple_rm_internals (poly):
     mark_internals(poly, None)
     rm_internals(poly)
+
+def scale (poly):
+    num = len(poly)
+
+    ls = []
+
+    for i in range(num):
+        j = (i+1)%num
+
+        pA = poly[i]
+        pB = poly[j]
+
+        v = [pB['pt'][0]-pA['pt'][0], pB['pt'][1]-pA['pt'][1]]
+        l = normalize(v)
+
+        ls.append(l)
+
+    f = 1/min(ls)
+
+    print 'f', f
+
+    if f > 1:
+        for p in poly:
+            p['pt'][0] *= f
+            p['pt'][1] *= f
 
 if __name__ == '__main__':
 
@@ -364,12 +397,12 @@ if __name__ == '__main__':
 </svg>
         ''')
 
-    with open('../../vp_new_try/dev/special.json', 'r') as f:
+    with open('../../vp_new_try/dev/complex.json', 'r') as f:
         polys = json.load(f)['polys']
 
         for i, poly in enumerate(polys):
-            #if i != 2:
-            #    continue
+            if i != 2:
+                pass#continue
 
             num = len(poly)
 
@@ -390,5 +423,5 @@ if __name__ == '__main__':
             max_x = max(xs)
             max_y = max(ys)
 
-            with open('res/special_%i.svg' % i, 'w') as out:
+            with open('res/dec_%i.svg' % i, 'w') as out:
                 out.write(tmpl.render({ 'poly': poly, 'decs': decs, 'pos': (min_x, min_y), 'size': (max_x-min_x, max_y-min_y) }))
