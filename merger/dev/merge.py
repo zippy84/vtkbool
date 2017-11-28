@@ -7,35 +7,13 @@ import sys
 import json
 from collections import deque
 
-sys.path.extend(['/home/zippy/VTK7/lib/python2.7/site-packages'])
-
+sys.path.extend(['/home/zippy/VTK6/lib/python2.7/site-packages'])
 import vtk
 
+sys.path.append('../../vp_new_try/dev')
+from tools import intersect2, get_angle, is_cw
+
 E = 1e-5
-
-def intersect2 (oA, oB, pA, pB):
-    global E
-
-    m11 = oB[0]-oA[0]
-    m12 = pA[0]-pB[0]
-    m21 = oB[1]-oA[1]
-    m22 = pA[1]-pB[1]
-    v1 = pA[0]-oA[0]
-    v2 = pA[1]-oA[1]
-
-    det = m11*m22-m12*m21
-
-    if abs(det) < E:
-        return
-
-    t1 = (v1*m22-m12*v2)/det
-    t2 = (m11*v2-v1*m21)/det
-
-    if t1 > -E and t1 < 1+E:
-        if t2 > E and t2 < 1+E:
-            return {'s': [pA[0]+t2*(pB[0]-pA[0]), pA[1]+t2*(pB[1]-pA[1])],
-                't1': t1,
-                't2': t2}
 
 # funktioniert nicht mit holes.json, da die holes selber holes enthalten
 
@@ -48,6 +26,8 @@ with open('holes2.json', 'r') as f:
         for j in range(1, num):
             p[j][0] += p[j-1][0]
             p[j][1] += p[j-1][1]
+
+        assert not is_cw(p)
 
 
     pts = vtk.vtkPoints()
@@ -124,7 +104,7 @@ with open('holes2.json', 'r') as f:
                 # darf nicht zum gleichen poly gehören
                 if src[ind] != src[pt_id]:
                     valids.append(ind)
-            
+
 
             print 'valids', valids
 
@@ -163,7 +143,7 @@ with open('holes2.json', 'r') as f:
                 vtk.vtkMath.Subtract(pt_a, pt_b, vec)
 
                 d = vtk.vtkMath.Norm(vec)
-         
+
                 p_a = src[pt_id]
                 p_b = src[v]
 
@@ -208,6 +188,40 @@ with open('holes2.json', 'r') as f:
 
     print cons
 
+    def _fct (poly, a, b, s):
+        pt_b = pts.GetPoint(b)
+        num = len(poly)
+
+        for i, id_ in enumerate(poly):
+            if id_ == a:
+                pt_a = pts.GetPoint(id_)
+
+                v = [0, 0, 0]
+                vtk.vtkMath.Subtract(pt_b, pt_a, v)
+                vtk.vtkMath.Normalize(v)
+
+                i_a = poly[(i+1)%num]
+                i_b = poly[(i+num-1)%num]
+
+                p_a = pts.GetPoint(i_a)
+                p_b = pts.GetPoint(i_b)
+
+                w_a = [0, 0, 0]
+                vtk.vtkMath.Subtract(p_a, pt_a, w_a)
+                vtk.vtkMath.Normalize(w_a)
+
+                w_b = [0, 0, 0]
+                vtk.vtkMath.Subtract(p_b, pt_a, w_b)
+                vtk.vtkMath.Normalize(w_b)
+
+                ref = get_angle(w_a, w_b)
+                phi = get_angle(w_a, v)
+
+                if phi > ref or (s == 0 and phi < ref):
+                    break
+
+        return i
+
     repls = dict([ (i, i) for i in range(num_polys) ])
 
     print repls
@@ -225,8 +239,11 @@ with open('holes2.json', 'r') as f:
 
         print p_a, p_b
 
-        i_a = d_a.index(a)
-        i_b = d_b.index(b)
+        #i_a = d_a.index(a)
+        #i_b = d_b.index(b)
+
+        i_a = _fct(d_a, a, b, p_a)
+        i_b = _fct(d_b, b, a, p_b)
 
         q_a = deque(d_a)
         q_a.rotate(-i_a)
@@ -240,7 +257,24 @@ with open('holes2.json', 'r') as f:
         l_a = list(q_a)
         l_b = list(q_b)
 
-        m = l_a + [l_a[0]] + l_b + [l_b[0]]
+        assert l_a[0] == a
+        assert l_b[0] == b
+
+        m = []
+
+        if p_a == 0:
+            m.append(l_a[0])
+            m.extend(reversed(l_a))
+        else:
+            m.extend(l_a)
+            m.append(l_a[0])
+
+        if p_b == 0:
+            m.append(l_b[0])
+            m.extend(reversed(l_b))
+        else:
+            m.extend(l_b)
+            m.append(l_b[0])
 
         #print m
 

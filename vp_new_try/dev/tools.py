@@ -224,6 +224,10 @@ def is_cw (poly):
     return s < 0
 
 def is_pip (poly, pt):
+    for p in poly:
+        if is_near(p, pt):
+            return False
+
     num = len(poly)
     in_ = False
 

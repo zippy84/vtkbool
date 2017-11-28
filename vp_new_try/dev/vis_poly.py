@@ -110,7 +110,10 @@ def vis_poly (pts, ind=0):
 
                     d = intersect(pt_x, verts[u].r, pt_a, pt_b)
 
-                    if d and is_frontfaced(verts[u].r, pt_a, pt_b):
+                    if d \
+                        and d['t1'] > E \
+                        and is_frontfaced(verts[u].r, pt_a, pt_b):
+
                         print 'edge (%d, %d)' % (a.ind, b.ind)
 
                         print d
@@ -144,17 +147,20 @@ def vis_poly (pts, ind=0):
             elif c_b < 0:
                 # schnitt mit leftBags?
                 bag = None
-                while leftBags and (leftBags[-1]['phi']-verts[v].phi) > -E:
-                    bag = leftBags.pop()
-
                 d = None
 
-                if bag:
-                    print 'bag', bag, verts[v].phi
+                while leftBags and not d:
+                    bag = leftBags[-1]
 
-                    d = intersect2(verts[bag['f']].pt, verts[bag['g']].pt, pt_u, pt_v)
+                    if bag['phi'] > verts[v].phi or abs(bag['phi']-verts[v].phi) < E:
+                        d = intersect2(verts[bag['f']].pt, verts[bag['g']].pt, pt_u, pt_v)
+                        del leftBags[-1]
+                    else:
+                        break
 
                 if d:
+                    print 'bag', bag
+
                     while vp and vp[-1] != bag['f']:
                         print 'popping_1', vp[-1]
                         vp.pop()

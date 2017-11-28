@@ -37,7 +37,7 @@ int main (int argc, char *argv[]) {
         int i = 0;
 
         for (const Json::Value& p : polys) {
-            if (i == 2) {
+            //if (i == 2) {
                 PolyType poly;
 
                 int j = 0;
@@ -73,7 +73,7 @@ int main (int argc, char *argv[]) {
 
                     assert(TestCW(p));
                 }
-            }
+            //}
 
             i++;
 

@@ -91,8 +91,6 @@ void Merger::GetMerged (PolysType &res) {
             PolyType merged;
             Merge(group, merged);
 
-            std::reverse(merged.begin(), merged.end());
-
             res.push_back(merged);
 
         } else {
@@ -317,6 +315,50 @@ void Merger::Merge (PolysType &group, PolyType &merged) {
         std::cout << con << std::endl;
     }
 
+    typedef std::deque<Point> _PolyType;
+
+    auto _Fct = [&](_PolyType &poly, int id, int end, int s) -> _PolyType::iterator {
+        _PolyType::iterator itr;
+
+        double pt[3];
+        pts->GetPoint(end, pt);
+
+        int num = poly.size();
+
+        for (itr = poly.begin(); itr != poly.end(); ++itr) {
+            if (itr->id == id) {
+                int i = itr-poly.begin();
+
+                double v[] = {pt[0]-itr->x, pt[1]-itr->y};
+                Normalize(v);
+
+                int iA = (i+1)%num,
+                    iB = (i+num-1)%num;
+
+                Point &pA = poly[iA],
+                    &pB = poly[iB];
+
+                double wA[] = {pA.x-itr->x, pA.y-itr->y},
+                    wB[] = {pB.x-itr->x, pB.y-itr->y};
+
+                Normalize(wA);
+                Normalize(wB);
+
+                double ref = GetAngle(wA, wB),
+                    phi = GetAngle(wA, v);
+
+                if (phi > ref || (s == 0 && phi < ref)) {
+                    break;
+                }
+            }
+        }
+
+        assert(itr != poly.end());
+
+        return itr;
+    };
+
+
     // fügt die polygone zusammen
 
     int num = numPolys;
@@ -339,11 +381,16 @@ void Merger::Merge (PolysType &group, PolyType &merged) {
         PolyType &polyA = group[pA],
             &polyB = group[pB];
 
-        std::deque<Point> deqA(polyA.begin(), polyA.end()),
+        _PolyType deqA(polyA.begin(), polyA.end()),
             deqB(polyB.begin(), polyB.end());
 
+        /*
         auto itrA = std::find_if(deqA.begin(), deqA.end(), [&a](const Point& pt) { return pt.id == a; });
         auto itrB = std::find_if(deqB.begin(), deqB.end(), [&b](const Point& pt) { return pt.id == b; });
+        */
+
+        auto itrA = _Fct(deqA, a, b, pA);
+        auto itrB = _Fct(deqB, b, a, pB);
 
         std::rotate(deqA.begin(), itrA, deqA.end());
         std::rotate(deqB.begin(), itrB, deqB.end());
@@ -387,7 +434,12 @@ void Merger::Merge (PolysType &group, PolyType &merged) {
 
     }
 
+    std::reverse(merged.begin(), merged.end());
+
+    assert(!TestCW(merged));
+
     tree->Delete();
     pts->Delete();
 
 }
+

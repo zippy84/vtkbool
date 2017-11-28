@@ -258,15 +258,21 @@ std::string GetAbsolutePath (const PolyType &poly) {
     return svg;
 }
 
-bool TestPIP (const PolyType &poly, const Point &pt) {
+bool TestPIP (PolyType &poly, Point &pt) {
     // Point-In-Polygon
+
+    for (auto& p : poly) {
+        if (IsNear(p.pt, pt.pt)) {
+            return false;
+        }
+    }
 
     int num = poly.size();
 
     bool in = false;
 
     for (int i = 0; i < num; i++) {
-        const Point &a = poly[i],
+        Point &a = poly[i],
             &b = poly[(i+1)%num];
 
         if ((a.x <= pt.x || b.x <= pt.x)

@@ -112,6 +112,7 @@ void GetVisPoly (PolyType &poly, PolyType &res, int ind) {
                     std::shared_ptr<D> d(Intersect(x, verts[u].r, ptA, ptB));
 
                     if (d
+                        && d->t1 > E
                         && IsFrontfaced(verts[u].r, ptA, ptB)) {
 
                         std::cout << "edge (" << a.id << ", " << b.id << ")" << std::endl;
@@ -149,21 +150,24 @@ void GetVisPoly (PolyType &poly, PolyType &res, int ind) {
 
             } else if (cB < 0) {
                 // schnitt mit leftBags?
-                std::shared_ptr<Bag> bag;
-                while (leftBags.size() > 0 && (leftBags.back().phi-verts[v].phi) > -E) {
-                    bag = std::make_shared<Bag>(leftBags.back());
-                    leftBags.pop_back();
-                }
 
+                std::shared_ptr<Bag> bag;
                 std::shared_ptr<D> d;
 
-                if (bag) {
-                    std::cout << "bag " << *bag << std::endl;
+                while (leftBags.size() > 0 && !d) {
+                    bag = std::make_shared<Bag>(leftBags.back());
 
-                    d = Intersect2(verts[bag->f].pt, verts[bag->g].pt, ptU, ptV);
+                    if (bag->phi > verts[v].phi || std::abs(bag->phi-verts[v].phi) < E) {
+                        d = Intersect2(verts[bag->f].pt, verts[bag->g].pt, ptU, ptV);
+
+                        leftBags.pop_back();
+                    } else {
+                        break;
+                    }
                 }
 
                 if (d) {
+                    std::cout << "bag " << *bag << std::endl;
 
                     while (vp.size() > 0 && vp.back() != bag->f) {
                         std::cout << "popping_1 " << vp.back() << std::endl;

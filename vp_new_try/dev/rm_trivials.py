@@ -450,8 +450,14 @@ class TrivialRm:
 
                 p_poly = [ self.verts[id_]['pt'] for id_ in pocket ]
 
-                if len(set([ is_near(self.pX['pt'], pt) for pt in p_poly ])) == 1 \
-                    and is_pip(p_poly, self.pX['pt']):
+                if is_pip(p_poly, self.pX['pt']):
+
+                    if (src == 'A' and not is_cw(p_poly)) \
+                        or (src == 'B' and is_cw(p_poly)):
+
+                        break
+
+                    print 'erasing from', i
 
                     del pairs[i:]
 
@@ -566,18 +572,38 @@ class TrivialRm:
 
                                 break
 
-                        if _c and (i+1) in ids:
-                            # es gibt einen danach
+                        if _c:
+                            if (i+1) in ids:
+                                # es gibt einen danach
 
-                            print '(2) new pair', \
-                                pairs[grps[i-1][1][-1]]['j'], \
-                                pairs[grps[i+1][1][0]]['j']
+                                print '(2) new pair', \
+                                    pairs[grps[i-1][1][-1]]['j'], \
+                                    pairs[grps[i+1][1][0]]['j']
 
-                            grps[i-1][1].append(add_pair({ 'i': pairs[grps[i-1][1][-1]]['j'], 'j': pairs[grps[i+1][1][0]]['j'] }))
+                                grps[i-1][1].append(add_pair({ 'i': pairs[grps[i-1][1][-1]]['j'], 'j': pairs[grps[i+1][1][0]]['j'] }))
 
-                            self.assign_side(pairs[grps[i-1][1][-1]], src)
+                                self.assign_side(pairs[grps[i-1][1][-1]], src)
 
-                            del grps[i+1][1][0]
+                                del grps[i+1][1][0]
+
+                            else:
+                                for j, p in enumerate(grps[i-1][1][::-1]):
+                                    p_ = pairs[p]
+
+                                    a = self.verts[p_['j']]['t']
+                                    b = self.verts[last_pair['j']]['t']
+
+                                    if abs(a-b) < E:
+                                        print '(3) new pair', \
+                                            p_['i'], \
+                                            last_pair['j']
+
+                                        del grps[i-1][1][-j-1:]
+
+                                        grps[i-1][1].append(add_pair({ 'i': p_['i'], 'j': last_pair['j'] }))
+                                        self.assign_side(pairs[grps[i-1][1][-1]], src)
+
+                                        break
 
                         del grps[i]
 

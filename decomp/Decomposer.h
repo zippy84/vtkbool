@@ -55,9 +55,17 @@ public:
 
 typedef std::vector<IdsType> DecResType;
 
+// siehe boost
+template<typename T> void hash_combine (std::size_t &seed, T const &v) {
+    seed ^= std::hash<T>{}(v) + 0x9e3779b9 + (seed<<6) + (seed>>2);
+}
+
 struct p_h {
     std::size_t operator () (const Pair& p) const {
-        return std::hash<int>{}(p.f) ^ std::hash<int>{}(p.g);
+        std::size_t seed = 0;
+        hash_combine(seed, p.f);
+        hash_combine(seed, p.g);
+        return seed;
     }
 };
 

@@ -111,7 +111,7 @@ void MarkInternals (VertsType4 &verts, int skip) {
                 nodes.insert(nodes.begin(), edge.f);
                 nodes.push_back(edge.g);
 
-                IdsType q = {0, nodes.size()-1};
+                IdsType q = {0, static_cast<int>(nodes.size())-1};
 
                 int e;
 
@@ -257,6 +257,10 @@ void TrivialRm::RemovePockets (VertsType3 &good, double *rot, double d, Src src)
         }
     }
 
+    for (auto& p : pairs) {
+        std::cout << "pair " << p << std::endl;
+    }
+
     std::vector<Pair2>::iterator itr2, itr3;
 
     if (pairs.size() > 0) {
@@ -270,14 +274,16 @@ void TrivialRm::RemovePockets (VertsType3 &good, double *rot, double d, Src src)
                 _poly.push_back(verts[id].pt);
             }
 
-            std::set<bool> ns;
+            if (TestPIP(_poly, x)) {
 
-            for (auto& p : _poly) {
-                ns.insert(IsNear(p.pt, x.pt));
-            }
+                if ((src == Src::A && !TestCW(_poly))
+                    || (src == Src::B && TestCW(_poly))) {
+                    // siehe bspw. (complex:3, ind:0)
 
-            if (ns.size() == 1
-                && TestPIP(_poly, x)) {
+                    break;
+                }
+
+                std::cout << "erasing from " << (itr2-pairs.begin()) << std::endl;
 
                 pairs.erase(itr2, pairs.end());
                 break;
@@ -476,16 +482,42 @@ void TrivialRm::RemovePockets (VertsType3 &good, double *rot, double d, Src src)
 
                 }
 
-                if (_c && next+1 != grps.end()) {
-                    IdsType &_ids2 = (next+1)->ids;
+                if (_c) {
+                    if (next+1 != grps.end()) {
+                        IdsType &_ids2 = (next+1)->ids;
 
-                    std::cout << "(2) new pair (" << pairs[_ids.back()].j
-                              << ", " << pairs[_ids2.front()].j << ")" << std::endl;
+                        std::cout << "(2) new pair (" << pairs[_ids.back()].j
+                                  << ", " << pairs[_ids2.front()].j << ")" << std::endl;
 
-                    _ids.push_back(AddPair(pairs[_ids.back()].j, pairs[_ids2.front()].j));
-                    AssignSide(pairs[_ids.back()], src);
+                        _ids.push_back(AddPair(pairs[_ids.back()].j, pairs[_ids2.front()].j));
+                        AssignSide(pairs[_ids.back()], src);
 
-                    _ids2.erase(_ids2.begin());
+                        _ids2.erase(_ids2.begin());
+
+                    } else {
+                        // siehe bspw. (complex:3, ind:0)
+
+                        for (itr6 = _ids.rbegin(); itr6 != _ids.rend(); ++itr6) {
+                            Pair2 &p = pairs[*itr6];
+
+                            double tA = verts[p.j].t,
+                                tB = verts[last.j].t;
+
+                            if (std::abs(tA-tB) < E) {
+                                std::cout << "(3) new pair (" << p.i
+                                    << ", " << last.j << ")" << std::endl;
+
+                                _ids.erase(itr6.base()-1, _ids.end());
+
+                                _ids.push_back(AddPair(p.i, last.j));
+                                AssignSide(pairs[_ids.back()], src);
+
+                                break;
+                            }
+
+                        }
+
+                    }
                 }
 
                 grps.erase(next);

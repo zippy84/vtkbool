@@ -121,6 +121,6 @@ bool TestCW (const PolyType &poly);
 
 std::string GetAbsolutePath (const PolyType &poly);
 
-bool TestPIP (const PolyType &poly, const Point &pt);
+bool TestPIP (PolyType &poly, Point &pt);
 
 #endif
