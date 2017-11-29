@@ -23,9 +23,9 @@ else ()
     set(CMAKE_CXX_FLAGS "-std=c++11 -Wno-deprecated -fPIC -Wunused")
 endif ()
 
-add_subdirectory(../vp_new_try vp_build)
+add_subdirectory(../vp vp_build)
 
-include_directories(../vp_new_try)
+include_directories(../vp)
 add_library(decomp STATIC Decomposer.cxx)
 target_link_libraries(decomp vp)
 

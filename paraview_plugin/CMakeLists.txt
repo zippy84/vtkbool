@@ -27,9 +27,9 @@ if(ParaView_FOUND)
         ../vtkPolyDataBooleanFilter.cxx
         ../vtkPolyDataContactFilter.cxx
         ../Utilities.cxx)
-        
-    add_subdirectory(../dev dev_build)
-    include_directories(../dev/merger ../dev/decomp ../dev/vp_new_try)
+
+    add_subdirectory(../libs libs_build)
+    include_directories(../libs/merger ../libs/decomp ../libs/vp)
 
     add_paraview_plugin(
         PolyDataBooleanFilter
@@ -39,7 +39,7 @@ if(ParaView_FOUND)
         SERVER_SOURCES ${srcs}
         #GUI_RESOURCE_FILES vtkPolyDataBooleanFilterGUI.xml
     )
-    
+
     target_link_libraries(PolyDataBooleanFilter PRIVATE decomp merger)
 
 endif(ParaView_FOUND)

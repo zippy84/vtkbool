@@ -54,9 +54,9 @@ else()
     if(VTK_FOUND)
         include(${VTK_USE_FILE})
 
-        add_subdirectory(dev)
+        add_subdirectory(libs)
 
-        include_directories(dev/merger dev/decomp dev/vp_new_try)
+        include_directories(libs/merger libs/decomp libs/vp)
 
         add_library(${PROJECT_NAME} SHARED ${srcs})
         target_link_libraries(${PROJECT_NAME} ${VTK_LIBRARIES} decomp merger)
