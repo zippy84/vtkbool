@@ -1,0 +1,158 @@
+<!doctype html>
+<html>
+<head>
+    <title></title>
+    <meta charset="utf-8">
+    <style type="text/css">
+        html {
+            background-color: #fff;
+        }
+        #links a {
+            display: inline-block;
+            padding: 5px;
+        }
+        #links a:visited {
+            color: #00f;
+        }
+    </style>
+    <script type="text/javascript" src="data_files/data_3.js"></script>
+    <script type="text/javascript">
+        window.addEventListener('load', function () {
+            function toPoly (pts_) {
+                var pts2 = pts_.slice(1, -1).split(' L');
+                var poly = [];
+                for (var i = 0; i < pts2.length; i++) {
+                    poly.push(pts2[i].split(',').map(function (v) {
+                        return parseFloat(v);
+                    }));
+                }
+                return poly;
+            }
+
+            var poly = toPoly(pts);
+
+            console.log(poly);
+            var canvas = document.getElementsByTagName('canvas')[0];
+            var ctx = canvas.getContext('2d');
+
+            var x = [],
+                y = [];
+
+            for (var i = 0; i < poly.length; i++) {
+                x.push(poly[i][0]);
+                y.push(poly[i][1]);
+            }
+
+            var mnX = Math.min.apply(null, x),
+                mxX = Math.max.apply(null, x),
+                mnY = Math.min.apply(null, y),
+                mxY = Math.max.apply(null, y);
+
+            console.log(mnX, mxX, mnY, mxY);
+
+            var width = mxX-mnX,
+                height = mxY-mnY;
+
+            console.log(width, height);
+
+            canvas.height = height+40;
+            canvas.width = width+40;
+
+            console.log(mnX, mnY);
+
+            for (var i = 0; i < poly.length; i++) {
+                poly[i][0] += -mnX+20;
+                poly[i][1] += -mnY+20;
+            }
+
+            function drawPoly (color, poly_) {
+
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+
+                ctx.beginPath();
+
+                ctx.moveTo(poly_[0][0], poly_[0][1]);
+
+                for (var i = 1; i < poly_.length; i++) {
+                    ctx.lineTo(poly_[i][0], poly_[i][1]);
+                }
+
+                ctx.lineTo(poly_[0][0], poly_[0][1]);
+
+                ctx.stroke();
+            }
+
+            function drawResult (k) {
+                var p = toPoly(polys[k]);
+
+                for (var i = 0; i < p.length; i++) {
+                    p[i][0] += -mnX+20;
+                    p[i][1] += -mnY+20;
+                }
+
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                drawPoly('#000', poly);
+                drawPoly('#f00', p);
+
+                ctx.strokeStyle = '#00d4aa';
+
+                ctx.beginPath();
+                ctx.arc(poly[k][0], poly[k][1], 5, 0, 2*Math.PI);
+                ctx.stroke();
+
+                ctx.fillStyle = 'black';
+                ctx.font = '14px serif';
+
+                /*
+                for (var i = 0; i < poly.length; i++) {
+                    ctx.fillText(i.toString(), poly[i][0], poly[i][1]);
+                }
+                */
+
+                ///*
+                for (var i = 0; i < p.length; i++) {
+                    ctx.fillText(i.toString(), p[i][0], p[i][1]);
+                }
+                //*/
+
+                ctx.fillStyle = '#00f';
+
+                for (var i = 0; i < p.length; i++) {
+                    ctx.beginPath();
+                    ctx.arc(p[i][0], p[i][1], 3, 0, 2*Math.PI);
+                    ctx.fill();
+                }
+            }
+
+            var links = [];
+
+            for (let k of Object.keys(polys)) {
+                links.push('<a href="#' + k + '">' + k + '</a>');
+            }
+
+            var l = document.getElementById('links');
+            l.innerHTML = links.join('');
+
+            l.addEventListener('click', function (e) {
+                var i = e.target.getAttribute('href').slice(1);
+                drawResult(i);
+            });
+
+            if (window.location.hash != '') {
+                drawResult(window.location.hash.slice(1));
+            } else {
+                var keys = Object.keys(polys);
+                if (keys.length > 0) {
+                    drawResult(keys[0]);
+                }
+            }
+
+        });
+    </script>
+</head>
+<body>
+    <canvas></canvas>
+    <p id="links"></p>
+</body>
+</html>
