@@ -5,7 +5,7 @@
 
 import sys
 sys.path.extend(['/home/zippy/VTK6/lib/python2.7/site-packages',
-    '/home/zippy/vtkbool_light/build2'])
+    '/home/zippy/vtkbool_light/build'])
 
 import vtkboolPython
 import vtk
@@ -145,7 +145,7 @@ class Frieze:
         return pts
 
     def draw_zz_bricks (self):
-        j = [1, 0][int(self.cfg['shift']//self.cfg['c'])%2]
+        j = int(self.cfg['shift']//self.cfg['c'])+1
 
         self.cfg['shift'] = self.cfg['shift']%self.cfg['c']
 
@@ -169,7 +169,9 @@ class Frieze:
             [0, self.cfg['b']] ])
 
         if self.cfg['shift'] > 1e-5:
-            pts.append([0, self.cfg['c']-j*self.cfg['shift']])
+            y = self.cfg['c']-self.cfg['shift'] if j%2 == 0 else self.cfg['shift']
+
+            pts.append([0, y])
 
         return pts
 
