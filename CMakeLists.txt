@@ -56,7 +56,7 @@ else()
 
         add_subdirectory(dev)
 
-        include_directories(dev/merger dev/vp_new_try)
+        include_directories(dev/merger dev/decomp dev/vp_new_try)
 
         add_library(${PROJECT_NAME} SHARED ${srcs})
         target_link_libraries(${PROJECT_NAME} ${VTK_LIBRARIES} decomp merger)

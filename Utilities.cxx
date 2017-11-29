@@ -18,10 +18,6 @@
 
 #include <cmath>
 
-#include <vector>
-#include <algorithm>
-#include <iterator>
-
 #include <vtkPoints.h>
 #include <vtkIdList.h>
 #include <vtkMath.h>
@@ -55,7 +51,7 @@ void ComputeNormal (vtkPoints *pts, double *n, vtkIdList *poly) {
         n[1] += (p0[2]-p1[2])*(p0[0]+p1[0]);
         n[2] += (p0[0]-p1[0])*(p0[1]+p1[1]);
 
-        Cpy(p0, p1);
+        Cpy(p0, p1, 3);
     }
 
     vtkMath::Normalize(n);
@@ -142,7 +138,7 @@ double GetAngle (double *vA, double *vB, double *n) {
 
 double GetD (double *ptA, double *ptB) {
     double v[] = {ptA[0]-ptB[0], ptA[1]-ptB[1], ptA[2]-ptB[2]};
-    return sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+    return std::sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
 }
 
 // ermöglicht mod mit neg. int
