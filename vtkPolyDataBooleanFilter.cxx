@@ -44,6 +44,7 @@
 #include "Utilities.h"
 
 #include "Merger.h"
+#include "Decomposer.h"
 
 #ifdef DEBUG
 #include <ctime>
@@ -378,6 +379,25 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
                 involvedB.insert(contsB->GetValue(i));
             }
 
+#ifdef DEBUG
+            times.push_back(DIFF(start, std::clock()));
+#endif
+
+            DecPolys(modPdA, involvedA);
+            DecPolys(modPdB, involvedB);
+
+#ifdef DEBUG
+            times.push_back(DIFF(start, std::clock()));
+#endif
+
+#ifdef DEBUG
+            std::cout << "Exporting modPdA_8.vtk" << std::endl;
+            WriteVTK("modPdA_8.vtk", modPdA);
+
+            std::cout << "Exporting modPdB_8.vtk" << std::endl;
+            WriteVTK("modPdB_8.vtk", modPdB);
+#endif
+
             // aufräumen
 
             cl->Delete();
@@ -458,7 +478,7 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, PStrips &pStrips
                 double pt[3];
                 contLines->GetPoint(realInd, pt);
 
-                Cpy(pts[realInd].pt, pt);
+                Cpy(pts[realInd].pt, pt, 3);
 
                 double lastD = DBL_MAX;
 
@@ -506,13 +526,13 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, PStrips &pStrips
                         pts[realInd].t = std::min(1., std::max(0., t));
 
                         if (vtkMath::Norm(sA) < tol) {
-                            Cpy(pts[realInd].captPt, a);
+                            Cpy(pts[realInd].captPt, a, 3);
                             pts[realInd].capt = CAPT_A;
 
                             break;
 
                         } else if (vtkMath::Norm(sB) < tol) {
-                            Cpy(pts[realInd].captPt, b);
+                            Cpy(pts[realInd].captPt, b, 3);
                             pts[realInd].capt = CAPT_B;
 
                             break;
@@ -525,7 +545,7 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, PStrips &pStrips
                             vtkMath::Add(a, u, x);
 
                             // projektion
-                            Cpy(pts[realInd].captPt, x);
+                            Cpy(pts[realInd].captPt, x, 3);
 
                             pts[realInd].capt = CAPT_EDGE;
 
@@ -562,10 +582,10 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, PStrips &pStrips
 
             // für den schnitt werden die eingerasteten koordinaten verwendet
 
-            Cpy(sp.cutPt, sp.captPt);
+            Cpy(sp.cutPt, sp.captPt, 3);
         } else {
 
-            Cpy(sp.cutPt, sp.pt);
+            Cpy(sp.cutPt, sp.pt, 3);
         }
 
     }
@@ -2196,11 +2216,11 @@ void vtkPolyDataBooleanFilter::CombineRegions () {
     pdB->GetPoints()->SetData(pdB->GetPointData()->GetArray(0));
 
 #ifdef DEBUG
-    std::cout << "Exporting modPdA_8.vtk" << std::endl;
-    WriteVTK("modPdA_8.vtk", cfA->GetOutput());
+    std::cout << "Exporting modPdA_9.vtk" << std::endl;
+    WriteVTK("modPdA_9.vtk", cfA->GetOutput());
 
-    std::cout << "Exporting modPdB_8.vtk" << std::endl;
-    WriteVTK("modPdB_8.vtk", cfB->GetOutput());
+    std::cout << "Exporting modPdB_9.vtk" << std::endl;
+    WriteVTK("modPdB_9.vtk", cfB->GetOutput());
 #endif
 
     // locators erstellen
@@ -2645,5 +2665,96 @@ void _Wrapper::MergeAll () {
     }
 
     cell->Delete();
+
+}
+
+void vtkPolyDataBooleanFilter::DecPolys (vtkPolyData *pd, InvolvedType &involved) {
+
+    vtkPoints *pdPts = pd->GetPoints();
+
+    vtkIntArray *origCellIds = vtkIntArray::SafeDownCast(pd->GetCellData()->GetScalars("OrigCellIds"));
+
+    int numCells = pd->GetNumberOfCells();
+
+    vtkIdList *cells = vtkIdList::New();
+
+    for (int i = 0; i < numCells; i++) {
+        if (involved.count(origCellIds->GetTuple1(i)) == 1) {
+            cells->InsertNextId(i);
+        }
+    }
+
+    for (int i = 0; i < cells->GetNumberOfIds(); i++) {
+
+        int cellId = cells->GetId(i),
+            origId = origCellIds->GetValue(cellId);
+
+        if (cellId != 18604) {
+            //continue;
+        }
+
+        vtkIdList *cell = vtkIdList::New();
+
+        pd->GetCellPoints(cellId, cell);
+
+        Base base(pdPts, cell);
+
+        int numPts = cell->GetNumberOfIds();
+
+        IdsType ptIds;
+
+        for (int k = 0; k < numPts; k++) {
+            ptIds.push_back(cell->GetId(k));
+        }
+
+        std::reverse(ptIds.begin(), ptIds.end());
+
+        PolyType poly;
+
+        int j = 0;
+
+        for (int id : ptIds) {
+            double pt[3],
+                _pt[2];
+
+            pd->GetPoint(id, pt);
+            Transform(pt, _pt, base);
+
+            poly.push_back({_pt, j++});
+        }
+
+        assert(TestCW(poly));
+
+        Decomposer d(poly);
+
+        DecResType decs;
+        d.GetDecomposed(decs);
+
+        vtkIdList *newCell = vtkIdList::New();
+
+        for (auto& dec : decs) {
+            newCell->Reset();
+
+            std::reverse(dec.begin(), dec.end());
+
+            for (int id : dec) {
+                newCell->InsertNextId(ptIds[id]);
+            }
+
+            pd->InsertNextCell(VTK_POLYGON, newCell);
+            origCellIds->InsertNextValue(origId);
+
+        }
+
+        newCell->Delete();
+
+        pd->DeleteCell(cellId);
+
+        cell->Delete();
+    }
+
+    cells->Delete();
+
+    pd->RemoveDeletedCells();
 
 }

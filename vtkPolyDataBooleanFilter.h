@@ -117,8 +117,8 @@ typedef std::vector<std::reference_wrapper<StripPtR>> RefsType;
 class StripPtL {
 public:
     StripPtL (const StripPt &sp) : ind(sp.ind) {
-        Cpy(pt, sp.pt);
-        Cpy(cutPt, sp.cutPt);
+        Cpy(pt, sp.pt, 3);
+        Cpy(cutPt, sp.cutPt, 3);
     }
 
     int ind;
@@ -133,7 +133,7 @@ public:
 class StripPtL2 {
 public:
     StripPtL2 (const StripPt &sp) : ind(sp.ind), t(sp.t) {
-        Cpy(pt, sp.pt);
+        Cpy(pt, sp.pt, 3);
         edge[0] = sp.edge[0];
         edge[1] = sp.edge[1];
     }
@@ -151,7 +151,7 @@ public:
 class StripPtL3 {
 public:
     StripPtL3 (const double *_pt, double _t, int _ind = NO_USE) : t(_t), ind(_ind) {
-        Cpy(pt, _pt);
+        Cpy(pt, _pt, 3);
     }
     int ind;
     double pt[3];
@@ -172,7 +172,7 @@ public:
 class MergePt {
 public:
     MergePt (int _polyInd, int _ind, double *_pt) : polyInd(_polyInd), ind(_ind) {
-        Cpy(pt, _pt);
+        Cpy(pt, _pt, 3);
     }
     int polyInd;
     int ind;
@@ -198,6 +198,7 @@ public:
     }
 };
 
+typedef std::set<int> InvolvedType;
 
 class VTK_EXPORT vtkPolyDataBooleanFilter : public vtkPolyDataAlgorithm {
     vtkPolyData *resultA, *resultB, *contLines;
@@ -208,7 +209,7 @@ class VTK_EXPORT vtkPolyDataBooleanFilter : public vtkPolyDataAlgorithm {
 
     PolyStripsType polyStripsA, polyStripsB;
 
-    std::set<int> involvedA, involvedB;
+    InvolvedType involvedA, involvedB;
 
     void GetStripPoints (vtkPolyData *pd, PStrips &pStrips, IdsType &lines);
     void GetPolyStrips (vtkPolyData *pd, vtkIntArray *conts, PolyStripsType &polyStrips);
@@ -221,6 +222,7 @@ class VTK_EXPORT vtkPolyDataBooleanFilter : public vtkPolyDataAlgorithm {
     void ResolveOverlaps (vtkPolyData *pd, vtkIntArray *conts, PolyStripsType &polyStrips);
     void AddAdjacentPoints (vtkPolyData *pd, vtkIntArray *conts, PolyStripsType &polyStrips);
     void MergePoints (vtkPolyData *pd, PolyStripsType &polyStrips);
+    void DecPolys (vtkPolyData *pd, InvolvedType &involved);
     void CombineRegions ();
     void MergeRegions ();
 

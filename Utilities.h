@@ -18,7 +18,6 @@
 #define __Utilities_h
 
 #include <iostream>
-#include <algorithm>
 
 #include <vtkPolyData.h>
 #include <vtkKdTreePointLocator.h>
@@ -37,10 +36,6 @@ void WriteVTK (const char *name, vtkPolyData *pd);
 
 /* Misc */
 double Mod (int a, int b);
-
-inline void Cpy (double *a, const double *b) {
-    std::copy_n(b, 3, a);
-}
 
 class Base {
 public:

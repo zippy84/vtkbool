@@ -656,7 +656,7 @@ int main (int argc, char *argv[]) {
         spB->SetRadius(50);
         spB->SetCenter(0, 25, 0);
         spB->SetPhiResolution(10);
-        spB->SetThetaResolution(333);
+        spB->SetThetaResolution(600);
 
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, spA->GetOutputPort());
