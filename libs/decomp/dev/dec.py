@@ -7,7 +7,7 @@ import json
 from collections import deque, defaultdict
 from copy import deepcopy
 
-sys.path.append('../../vp_new_try/dev')
+sys.path.append('../../vp/dev')
 
 from vis_poly import vis_poly_wrapper
 from tools import cross, ld, is_cw, to_abs_path, to_path, is_near, normalize
@@ -397,7 +397,7 @@ if __name__ == '__main__':
 </svg>
         ''')
 
-    with open('../../vp_new_try/dev/complex.json', 'r') as f:
+    with open('../../vp/dev/complex.json', 'r') as f:
         polys = json.load(f)['polys']
 
         for i, poly in enumerate(polys):

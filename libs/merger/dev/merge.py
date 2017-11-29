@@ -10,7 +10,7 @@ from collections import deque
 sys.path.extend(['/home/zippy/VTK6/lib/python2.7/site-packages'])
 import vtk
 
-sys.path.append('../../vp_new_try/dev')
+sys.path.append('../../vp/dev')
 from tools import intersect2, get_angle, is_cw
 
 E = 1e-5
