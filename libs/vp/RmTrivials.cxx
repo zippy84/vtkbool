@@ -645,7 +645,7 @@ void TrivialRm::GetSimplified (PolyType &res) {
         if (Ld(poly_[ind_].pt, poly_[iA].pt, poly_[i].pt) < 1e-3) {
             t = GetT(poly_[ind_].pt, poly_[iA].pt, poly_[i].pt);
 
-            if (t > E) {
+            if (t > 1-E) {
                 last.src = Src::A;
                 last.t = t;
 
@@ -664,7 +664,7 @@ void TrivialRm::GetSimplified (PolyType &res) {
         if (Ld(poly_[ind_].pt, poly_[iB].pt, poly_[i].pt) < 1e-3) {
             t = GetT(poly_[ind_].pt, poly_[iB].pt, poly_[i].pt);
 
-            if (t > E) {
+            if (t > 1-E) {
                 last.src = Src::B;
                 last.t = t;
 

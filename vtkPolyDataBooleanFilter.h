@@ -200,6 +200,13 @@ public:
 
 typedef std::set<int> InvolvedType;
 
+enum class Rel {
+    ORIG = 1,
+    DEC = 2
+};
+
+typedef std::map<int, Rel> RelationsType;
+
 class VTK_EXPORT vtkPolyDataBooleanFilter : public vtkPolyDataAlgorithm {
     vtkPolyData *resultA, *resultB, *contLines;
     vtkPolyData *modPdA, *modPdB;
@@ -210,6 +217,8 @@ class VTK_EXPORT vtkPolyDataBooleanFilter : public vtkPolyDataAlgorithm {
     PolyStripsType polyStripsA, polyStripsB;
 
     InvolvedType involvedA, involvedB;
+
+    RelationsType relsA, relsB;
 
     void GetStripPoints (vtkPolyData *pd, PStrips &pStrips, IdsType &lines);
     void GetPolyStrips (vtkPolyData *pd, vtkIntArray *conts, PolyStripsType &polyStrips);
@@ -222,12 +231,12 @@ class VTK_EXPORT vtkPolyDataBooleanFilter : public vtkPolyDataAlgorithm {
     void ResolveOverlaps (vtkPolyData *pd, vtkIntArray *conts, PolyStripsType &polyStrips);
     void AddAdjacentPoints (vtkPolyData *pd, vtkIntArray *conts, PolyStripsType &polyStrips);
     void MergePoints (vtkPolyData *pd, PolyStripsType &polyStrips);
-    void DecPolys (vtkPolyData *pd, InvolvedType &involved);
+    void DecPolys (vtkPolyData *pd, InvolvedType &involved, RelationsType &rels);
     void CombineRegions ();
     void MergeRegions ();
 
     int OperMode;
-    bool MergeAll;
+    bool MergeRegs, DecNcPolys;
 
 public:
     vtkTypeMacro(vtkPolyDataBooleanFilter, vtkPolyDataAlgorithm);
@@ -241,9 +250,13 @@ public:
     void SetOperModeToDifference () { OperMode = OPER_DIFFERENCE; };
     void SetOperModeToDifference2 () { OperMode = OPER_DIFFERENCE2; };
 
-    vtkSetMacro(MergeAll, bool);
-    vtkGetMacro(MergeAll, bool);
-    vtkBooleanMacro(MergeAll, bool);
+    vtkSetMacro(MergeRegs, bool);
+    vtkGetMacro(MergeRegs, bool);
+    vtkBooleanMacro(MergeRegs, bool);
+
+    vtkSetMacro(DecNcPolys, bool);
+    vtkGetMacro(DecNcPolys, bool);
+    vtkBooleanMacro(DecNcPolys, bool);
 
 protected:
     vtkPolyDataBooleanFilter ();
