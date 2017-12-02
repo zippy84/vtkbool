@@ -362,7 +362,7 @@ int main (int argc, char *argv[]) {
         bf->SetInputConnection(1, cyl->GetOutputPort());
 
 #ifndef DD
-        bf->MergeAllOn();
+        bf->MergeRegsOn();
 #else
         bf->SetOperModeToDifference();
 #endif
@@ -397,7 +397,7 @@ int main (int argc, char *argv[]) {
         bf->SetInputConnection(1, cyl->GetOutputPort());
 
 #ifndef DD
-        bf->MergeAllOn();
+        bf->MergeRegsOn();
 #else
         bf->SetOperModeToDifference();
 #endif
@@ -431,7 +431,7 @@ int main (int argc, char *argv[]) {
         bf->SetInputConnection(1, cyl->GetOutputPort());
 
 #ifndef DD
-        bf->MergeAllOn();
+        bf->MergeRegsOn();
 #else
         bf->SetOperModeToDifference();
 #endif
@@ -465,7 +465,7 @@ int main (int argc, char *argv[]) {
         bf->SetInputConnection(1, cubeB->GetOutputPort());
 
 #ifndef DD
-        bf->MergeAllOn();
+        bf->MergeRegsOn();
 #else
         bf->SetOperModeToDifference();
 #endif
@@ -497,7 +497,7 @@ int main (int argc, char *argv[]) {
         bf->SetInputConnection(1, cubeB->GetOutputPort());
 
 #ifndef DD
-        bf->MergeAllOn();
+        bf->MergeRegsOn();
 #else
         bf->SetOperModeToDifference();
 #endif
@@ -584,7 +584,7 @@ int main (int argc, char *argv[]) {
         bf->SetInputConnection(1, prod->GetOutputPort());
 
 #ifndef DD
-        bf->MergeAllOn();
+        bf->MergeRegsOn();
 #else
         bf->SetOperModeToDifference();
 #endif
@@ -622,7 +622,7 @@ int main (int argc, char *argv[]) {
         bf->SetInputConnection(1, sp->GetOutputPort());
 
 #ifndef DD
-        bf->MergeAllOn();
+        bf->MergeRegsOn();
 #else
         bf->SetOperModeToDifference();
 #endif
@@ -663,7 +663,7 @@ int main (int argc, char *argv[]) {
         bf->SetInputConnection(1, spB->GetOutputPort());
 
 #ifndef DD
-        bf->MergeAllOn();
+        bf->MergeRegsOn();
 #else
         bf->SetOperModeToDifference();
 #endif
@@ -701,7 +701,7 @@ int main (int argc, char *argv[]) {
         bf->SetInputConnection(1, spB->GetOutputPort());
 
 #ifndef DD
-        bf->MergeAllOn();
+        bf->MergeRegsOn();
 #else
         bf->SetOperModeToDifference();
 #endif
@@ -741,7 +741,7 @@ int main (int argc, char *argv[]) {
         bf->SetInputConnection(1, spB->GetOutputPort());
 
 #ifndef DD
-        bf->MergeAllOn();
+        bf->MergeRegsOn();
 #else
         bf->SetOperModeToDifference();
 #endif
@@ -777,7 +777,7 @@ int main (int argc, char *argv[]) {
         bf->SetInputConnection(1, cyl->GetOutputPort());
 
 #ifndef DD
-        bf->MergeAllOn();
+        bf->MergeRegsOn();
 #else
         bf->SetOperModeToDifference();
 #endif
@@ -818,7 +818,7 @@ int main (int argc, char *argv[]) {
         bf->SetInputConnection(1, cubeB->GetOutputPort());
 
 #ifndef DD
-        bf->MergeAllOn();
+        bf->MergeRegsOn();
 #else
         bf->SetOperModeToDifference();
 #endif
@@ -886,7 +886,7 @@ int main (int argc, char *argv[]) {
         bf->SetInputConnection(1, sf->GetOutputPort());
 
 #ifndef DD
-        bf->MergeAllOn();
+        bf->MergeRegsOn();
 #else
         bf->SetOperModeToDifference2();
 #endif
@@ -925,7 +925,7 @@ int main (int argc, char *argv[]) {
         bf->SetInputConnection(1, pl->GetOutputPort());
 
 #ifndef DD
-        bf->MergeAllOn();
+        bf->MergeRegsOn();
 #else
         bf->SetOperModeToUnion();
 #endif
@@ -960,7 +960,7 @@ int main (int argc, char *argv[]) {
         bf->SetInputConnection(1, cuB->GetOutputPort());
 
 #ifndef DD
-        bf->MergeAllOn();
+        bf->MergeRegsOn();
 #else
         bf->SetOperModeToDifference();
 #endif
@@ -1003,7 +1003,7 @@ int main (int argc, char *argv[]) {
         bf->SetInputConnection(1, app->GetOutputPort());
 
 #ifndef DD
-        bf->MergeAllOn();
+        bf->MergeRegsOn();
 #else
         bf->SetOperModeToDifference();
 #endif
@@ -1048,7 +1048,7 @@ int main (int argc, char *argv[]) {
         bfB->SetInputConnection(1, bfA->GetOutputPort());
 
 #ifndef DD
-        bfB->MergeAllOn();
+        bfB->MergeRegsOn();
 #else
         bfB->SetOperModeToDifference();
 #endif

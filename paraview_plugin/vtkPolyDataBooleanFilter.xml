@@ -29,13 +29,6 @@
                 </Documentation>
             </InputProperty>
 
-            <IntVectorProperty name="Merge" command="SetMergeAll" number_of_elements="1" default_values="0">
-                <BooleanDomain name="bool"/>
-                <Documentation>
-                    Ignore operation mode and merge all divided regions into one output.
-                </Documentation>
-            </IntVectorProperty>
-
             <IntVectorProperty name="OperMode" command="SetOperMode" number_of_elements="1" default_values="0">
                 <EnumerationDomain name="enum">
                     <Entry value="0" text="Union"/>
@@ -45,6 +38,20 @@
                 </EnumerationDomain>
                 <Documentation>
                     Sets the operation mode.
+                </Documentation>
+            </IntVectorProperty>
+
+            <IntVectorProperty name="DecNcPolys" command="SetDecNcPolys" number_of_elements="1" default_values="1">
+                <BooleanDomain name="bool"/>
+                <Documentation>
+                    Decompose non-convex polygons.
+                </Documentation>
+            </IntVectorProperty>
+
+            <IntVectorProperty name="MergeRegs" command="SetMergeRegs" number_of_elements="1" default_values="0">
+                <BooleanDomain name="bool"/>
+                <Documentation>
+                    Ignore operation mode and merge all divided regions into one output.
                 </Documentation>
             </IntVectorProperty>
 
