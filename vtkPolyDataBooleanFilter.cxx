@@ -53,12 +53,6 @@
 #include <iterator>
 #endif
 
-#ifdef _DEBUG
-#include <vtkPolyDataWriter.h>
-#include <vtkExtractCells.h>
-#include <vtkGeometryFilter.h>
-#endif
-
 vtkStandardNewMacro(vtkPolyDataBooleanFilter);
 
 vtkPolyDataBooleanFilter::vtkPolyDataBooleanFilter () {
@@ -79,7 +73,8 @@ vtkPolyDataBooleanFilter::vtkPolyDataBooleanFilter () {
 
     OperMode = OPER_UNION;
 
-    MergeAll = false;
+    MergeRegs = false;
+    DecNcPolys = true;
 
 }
 
@@ -379,12 +374,15 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
                 involvedB.insert(contsB->GetValue(i));
             }
 
+            relsA.clear();
+            relsB.clear();
+
 #ifdef DEBUG
             times.push_back(DIFF(start, std::clock()));
 #endif
 
-            DecPolys(modPdA, involvedA);
-            DecPolys(modPdB, involvedB);
+            DecPolys(modPdA, involvedA, relsA);
+            DecPolys(modPdB, involvedB, relsB);
 
 #ifdef DEBUG
             times.push_back(DIFF(start, std::clock()));
@@ -413,7 +411,7 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
         start = std::clock();
 #endif
 
-        if (MergeAll) {
+        if (MergeRegs) {
             MergeRegions();
         } else {
             CombineRegions();
@@ -2181,18 +2179,38 @@ void vtkPolyDataBooleanFilter::CombineRegions () {
     std::cout << "CombineRegions()" << std::endl;
 #endif
 
+    vtkPolyData *filterdA = vtkPolyData::New();
+    filterdA->DeepCopy(modPdA);
+
+    vtkPolyData *filterdB = vtkPolyData::New();
+    filterdB->DeepCopy(modPdB);
+
+    auto FilterCells = [&](vtkPolyData *pd, RelationsType &rels) -> void {
+        RelationsType::const_iterator itr;
+        for (itr = rels.begin(); itr != rels.end(); ++itr) {
+            if (itr->second == (DecNcPolys ? Rel::ORIG : Rel::DEC)) {
+                pd->DeleteCell(itr->first);
+            }
+        }
+
+        pd->RemoveDeletedCells();
+    };
+
+    FilterCells(filterdA, relsA);
+    FilterCells(filterdB, relsB);
+
     // double-Koordinaten sichern
-    modPdA->GetPointData()->AddArray(modPdA->GetPoints()->GetData());
-    modPdB->GetPointData()->AddArray(modPdB->GetPoints()->GetData());
+    filterdA->GetPointData()->AddArray(filterdA->GetPoints()->GetData());
+    filterdB->GetPointData()->AddArray(filterdB->GetPoints()->GetData());
 
     // ungenutzte punkte löschen
     vtkCleanPolyData *cleanA = vtkCleanPolyData::New();
     cleanA->PointMergingOff();
-    cleanA->SetInputData(modPdA);
+    cleanA->SetInputData(filterdA);
 
     vtkCleanPolyData *cleanB = vtkCleanPolyData::New();
     cleanB->PointMergingOff();
-    cleanB->SetInputData(modPdB);
+    cleanB->SetInputData(filterdB);
 
     // regionen mit skalaren ausstatten
     vtkPolyDataConnectivityFilter *cfA = vtkPolyDataConnectivityFilter::New();
@@ -2490,6 +2508,9 @@ void vtkPolyDataBooleanFilter::CombineRegions () {
     cleanB->Delete();
     cleanA->Delete();
 
+    filterdB->Delete();
+    filterdA->Delete();
+
 }
 
 
@@ -2508,16 +2529,30 @@ void vtkPolyDataBooleanFilter::MergeRegions () {
     origCellIdsB->SetName("OrigCellIdsB");
 
     vtkPolyData *pdA = vtkPolyData::New();
-    pdA->CopyStructure(modPdA);
+    pdA->DeepCopy(modPdA);
 
     vtkPolyData *pdB = vtkPolyData::New();
-    pdB->CopyStructure(modPdB);
+    pdB->DeepCopy(modPdB);
 
     pdA->GetCellData()->AddArray(origCellIdsA);
     pdB->GetCellData()->AddArray(origCellIdsB);
 
     origCellIdsA->Delete();
     origCellIdsB->Delete();
+
+    auto FilterCells = [&](vtkPolyData *pd, RelationsType &rels) -> void {
+        RelationsType::const_iterator itr;
+        for (itr = rels.begin(); itr != rels.end(); ++itr) {
+            if (itr->second == (DecNcPolys ? Rel::ORIG : Rel::DEC)) {
+                pd->DeleteCell(itr->first);
+            }
+        }
+
+        pd->RemoveDeletedCells();
+    };
+
+    FilterCells(pdA, relsA);
+    FilterCells(pdB, relsB);
 
     vtkIntArray *padIdsA = vtkIntArray::New();
     vtkIntArray *padIdsB = vtkIntArray::New();
@@ -2668,7 +2703,7 @@ void _Wrapper::MergeAll () {
 
 }
 
-void vtkPolyDataBooleanFilter::DecPolys (vtkPolyData *pd, InvolvedType &involved) {
+void vtkPolyDataBooleanFilter::DecPolys (vtkPolyData *pd, InvolvedType &involved, RelationsType &rels) {
 
     vtkPoints *pdPts = pd->GetPoints();
 
@@ -2741,20 +2776,24 @@ void vtkPolyDataBooleanFilter::DecPolys (vtkPolyData *pd, InvolvedType &involved
                 newCell->InsertNextId(ptIds[id]);
             }
 
-            pd->InsertNextCell(VTK_POLYGON, newCell);
+            int newId = pd->InsertNextCell(VTK_POLYGON, newCell);
             origCellIds->InsertNextValue(origId);
+
+            rels[newId] = Rel::DEC;
 
         }
 
         newCell->Delete();
 
-        pd->DeleteCell(cellId);
+        //pd->DeleteCell(cellId);
+
+        rels[cellId] = Rel::ORIG;
 
         cell->Delete();
     }
 
     cells->Delete();
 
-    pd->RemoveDeletedCells();
+    //pd->RemoveDeletedCells();
 
 }

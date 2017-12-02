@@ -16,6 +16,7 @@
 
 #include <cmath>
 #include <cassert>
+#include <cfloat>
 
 #include "Tools.h"
 
@@ -52,6 +53,7 @@ void Move (double *a, double *b, double *c) {
     // damit a, b oder c nicht der ursprung ist
     // det(a,b,c) wäre dann auch 0
 
+    /*
     double z[2] = {0, 0};
 
     if (IsNear(a, z) || IsNear(b, z) || IsNear(c, z)) {
@@ -66,6 +68,16 @@ void Move (double *a, double *b, double *c) {
     }
 
     assert(!(IsNear(a, z) || IsNear(b, z) || IsNear(c, z)));
+    */
+
+    double x = std::min({a[0], b[0], c[0]}),
+        y = std::min({a[1], b[1], c[1]});
+
+    double m[] = {1-x, 1-y};
+
+    a[0] += m[0]; a[1] += m[1];
+    b[0] += m[0]; b[1] += m[1];
+    c[0] += m[0]; c[1] += m[1];
 }
 
 double Ld (double *a, double *b, double *c) {
@@ -95,6 +107,9 @@ double Ld (double *a, double *b, double *c) {
             _b[0] = _a[0]+(5/e)*vA[0];
             _b[1] = _a[1]+(5/e)*vA[1];
         }
+    } else {
+        // 90 deg
+        return DBL_MAX;
     }
 
     return std::abs(_a[0]*(_b[1]-_c[1])-_a[1]*(_b[0]-_c[0])+(_b[0]*_c[1]-_c[0]*_b[1]));
