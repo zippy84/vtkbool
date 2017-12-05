@@ -1,6 +1,6 @@
 <ServerManagerConfiguration>
     <ProxyGroup name="filters">
-        <SourceProxy name="PolyDataBooleanFilter" class="vtkPolyDataBooleanFilter" label="PolyDataBooleanFilter">
+        <SourceProxy name="PolyDataBooleanFilter" class="vtkPolyDataBooleanFilter" label="Boolean Filter">
             <Documentation short_help="A boolean filter for polydata inputs." long_help=""></Documentation>
 
             <InputProperty name="InputA" command="SetInputConnection" port_index="0">
@@ -41,7 +41,7 @@
                 </Documentation>
             </IntVectorProperty>
 
-            <IntVectorProperty name="DecNcPolys" command="SetDecNcPolys" number_of_elements="1" default_values="1">
+            <IntVectorProperty name="DecPolys" command="SetDecPolys" number_of_elements="1" default_values="1">
                 <BooleanDomain name="bool"/>
                 <Documentation>
                     Decompose non-convex polygons.

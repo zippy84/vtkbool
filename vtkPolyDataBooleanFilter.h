@@ -231,12 +231,12 @@ class VTK_EXPORT vtkPolyDataBooleanFilter : public vtkPolyDataAlgorithm {
     void ResolveOverlaps (vtkPolyData *pd, vtkIntArray *conts, PolyStripsType &polyStrips);
     void AddAdjacentPoints (vtkPolyData *pd, vtkIntArray *conts, PolyStripsType &polyStrips);
     void MergePoints (vtkPolyData *pd, PolyStripsType &polyStrips);
-    void DecPolys (vtkPolyData *pd, InvolvedType &involved, RelationsType &rels);
+    void DecPolys_ (vtkPolyData *pd, InvolvedType &involved, RelationsType &rels);
     void CombineRegions ();
     void MergeRegions ();
 
     int OperMode;
-    bool MergeRegs, DecNcPolys;
+    bool MergeRegs, DecPolys;
 
 public:
     vtkTypeMacro(vtkPolyDataBooleanFilter, vtkPolyDataAlgorithm);
@@ -254,9 +254,9 @@ public:
     vtkGetMacro(MergeRegs, bool);
     vtkBooleanMacro(MergeRegs, bool);
 
-    vtkSetMacro(DecNcPolys, bool);
-    vtkGetMacro(DecNcPolys, bool);
-    vtkBooleanMacro(DecNcPolys, bool);
+    vtkSetMacro(DecPolys, bool);
+    vtkGetMacro(DecPolys, bool);
+    vtkBooleanMacro(DecPolys, bool);
 
 protected:
     vtkPolyDataBooleanFilter ();

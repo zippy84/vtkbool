@@ -74,7 +74,7 @@ vtkPolyDataBooleanFilter::vtkPolyDataBooleanFilter () {
     OperMode = OPER_UNION;
 
     MergeRegs = false;
-    DecNcPolys = true;
+    DecPolys = true;
 
 }
 
@@ -381,8 +381,8 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
             times.push_back(DIFF(start, std::clock()));
 #endif
 
-            DecPolys(modPdA, involvedA, relsA);
-            DecPolys(modPdB, involvedB, relsB);
+            DecPolys_(modPdA, involvedA, relsA);
+            DecPolys_(modPdB, involvedB, relsB);
 
 #ifdef DEBUG
             times.push_back(DIFF(start, std::clock()));
@@ -2188,7 +2188,7 @@ void vtkPolyDataBooleanFilter::CombineRegions () {
     auto FilterCells = [&](vtkPolyData *pd, RelationsType &rels) -> void {
         RelationsType::const_iterator itr;
         for (itr = rels.begin(); itr != rels.end(); ++itr) {
-            if (itr->second == (DecNcPolys ? Rel::ORIG : Rel::DEC)) {
+            if (itr->second == (DecPolys ? Rel::ORIG : Rel::DEC)) {
                 pd->DeleteCell(itr->first);
             }
         }
@@ -2543,7 +2543,7 @@ void vtkPolyDataBooleanFilter::MergeRegions () {
     auto FilterCells = [&](vtkPolyData *pd, RelationsType &rels) -> void {
         RelationsType::const_iterator itr;
         for (itr = rels.begin(); itr != rels.end(); ++itr) {
-            if (itr->second == (DecNcPolys ? Rel::ORIG : Rel::DEC)) {
+            if (itr->second == (DecPolys ? Rel::ORIG : Rel::DEC)) {
                 pd->DeleteCell(itr->first);
             }
         }
@@ -2581,6 +2581,7 @@ void vtkPolyDataBooleanFilter::MergeRegions () {
     app->Update();
 
     vtkPolyData *appPd = app->GetOutput();
+    appPd->GetCellData()->RemoveArray("OrigCellIds");
 
     appPd->GetPointData()->AddArray(appPd->GetPoints()->GetData());
 
@@ -2615,7 +2616,7 @@ void _Wrapper::MergeAll () {
 
     // descendants in holes einfügen
 
-    std::set<int> test;
+    std::set<int> outerIds;
 
     for (auto& id : descIds) {
         pd->GetCellPoints(id, cell);
@@ -2625,7 +2626,7 @@ void _Wrapper::MergeAll () {
             hole.push_back(cell->GetId(i));
         }
 
-        test.insert(hole.begin(), hole.end());
+        outerIds.insert(hole.begin(), hole.end());
 
         holes.push_back(std::move(hole));
 
@@ -2634,8 +2635,6 @@ void _Wrapper::MergeAll () {
     }
 
     base = Base(pdPts, cell);
-
-    std::cout << "holes (1) >> " << holes.size() << std::endl;
 
     Merger m;
 
@@ -2662,8 +2661,6 @@ void _Wrapper::MergeAll () {
     PolysType merged;
     m.GetMerged(merged);
 
-    std::cout << "holes (2) >> " << merged.size() << std::endl;
-
     std::set<int> usedIds;
 
     for (auto& poly : merged) {
@@ -2671,25 +2668,25 @@ void _Wrapper::MergeAll () {
 
         // poly ist immer ccw
 
-        std::map<int, int> r;
+        std::map<int, int> repl;
 
         for (auto& p : poly) {
-            if (test.count(p.id) == 1 || usedIds.count(p.id) == 0) {
-                r[p.id] = p.id;
+            if (outerIds.count(p.id) == 1 || usedIds.count(p.id) == 0) {
+                repl[p.id] = p.id;
             } else {
                 double _pt[3];
                 //BackTransform(p.pt, _pt, base);
 
                 pd->GetPoint(p.id, _pt);
 
-                r[p.id] = pdPts->InsertNextPoint(_pt);
+                repl[p.id] = pdPts->InsertNextPoint(_pt);
 
             }
         }
 
 
         for (auto& p : poly) {
-            cell->InsertNextId(r[p.id]);
+            cell->InsertNextId(repl[p.id]);
             usedIds.insert(p.id);
 
         }
@@ -2703,7 +2700,7 @@ void _Wrapper::MergeAll () {
 
 }
 
-void vtkPolyDataBooleanFilter::DecPolys (vtkPolyData *pd, InvolvedType &involved, RelationsType &rels) {
+void vtkPolyDataBooleanFilter::DecPolys_ (vtkPolyData *pd, InvolvedType &involved, RelationsType &rels) {
 
     vtkPoints *pdPts = pd->GetPoints();
 
