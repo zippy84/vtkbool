@@ -315,10 +315,10 @@ void Merger::Merge (PolysType &group, PolyType &merged) {
         std::cout << con << std::endl;
     }
 
-    typedef std::deque<Point> _PolyType;
+    typedef std::deque<Point> PolyTypeD;
 
-    auto _Fct = [&](_PolyType &poly, int id, int end, int s) -> _PolyType::iterator {
-        _PolyType::iterator itr;
+    auto FindId = [&](PolyTypeD &poly, int id, int end, int s) -> PolyTypeD::iterator {
+        PolyTypeD::iterator itr;
 
         double pt[3];
         pts->GetPoint(end, pt);
@@ -381,7 +381,7 @@ void Merger::Merge (PolysType &group, PolyType &merged) {
         PolyType &polyA = group[pA],
             &polyB = group[pB];
 
-        _PolyType deqA(polyA.begin(), polyA.end()),
+        PolyTypeD deqA(polyA.begin(), polyA.end()),
             deqB(polyB.begin(), polyB.end());
 
         /*
@@ -389,8 +389,8 @@ void Merger::Merge (PolysType &group, PolyType &merged) {
         auto itrB = std::find_if(deqB.begin(), deqB.end(), [&b](const Point& pt) { return pt.id == b; });
         */
 
-        auto itrA = _Fct(deqA, a, b, pA);
-        auto itrB = _Fct(deqB, b, a, pB);
+        auto itrA = FindId(deqA, a, b, pA);
+        auto itrB = FindId(deqB, b, a, pB);
 
         std::rotate(deqA.begin(), itrA, deqA.end());
         std::rotate(deqB.begin(), itrB, deqB.end());

@@ -111,19 +111,19 @@ void MarkInternals (VertsType4 &verts, int skip) {
                 nodes.insert(nodes.begin(), edge.f);
                 nodes.push_back(edge.g);
 
-                IdsType q = {0, static_cast<int>(nodes.size())-1};
+                IdsType keep = {0, static_cast<int>(nodes.size())-1};
 
                 int e;
 
                 do {
                     e = 0;
 
-                    int l = q.size();
+                    int l = keep.size();
                     for (int i = 0; i < l-1; i++) {
                         int j = i+1;
 
-                        int a = q[i],
-                            b = q[j];
+                        int a = keep[i],
+                            b = keep[j];
 
                         if (b-a > 1) {
                             int c = a+(b-a)/2;
@@ -135,7 +135,7 @@ void MarkInternals (VertsType4 &verts, int skip) {
                             if (!(Ld(pA.pt, pB.pt, pC.pt) < 1e-3)) {
                                 e++;
 
-                                q.insert(q.begin()+j, c);
+                                keep.insert(keep.begin()+j, c);
 
                                 break;
                             }
@@ -145,10 +145,10 @@ void MarkInternals (VertsType4 &verts, int skip) {
 
                 } while (e > 0);
 
-                if (q.size() > 2) {
+                if (keep.size() > 2) {
                     IdsType::iterator itr2;
 
-                    for (itr2 = q.begin()+1; itr2 != q.end()-1; ++itr2) {
+                    for (itr2 = keep.begin()+1; itr2 != keep.end()-1; ++itr2) {
                         std::cout << "Rm " << *itr2 << std::endl;
                         verts[nodes[*itr2]].marked.reset();
                     }
