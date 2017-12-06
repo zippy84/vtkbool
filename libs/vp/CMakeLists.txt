@@ -23,8 +23,6 @@ else ()
     set(CMAKE_CXX_FLAGS "-std=c++11 -Wno-deprecated -fPIC -Wunused")
 endif ()
 
-add_compile_options()
-
 add_library(vp STATIC Tools.cxx RmTrivials.cxx VisPoly.cxx)
 
 if (${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
