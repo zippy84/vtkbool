@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# *-* coding: UTF-8 *-*
 
 # Copyright 2012-2018 Ronald Römer
 #
