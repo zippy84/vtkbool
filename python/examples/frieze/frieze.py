@@ -311,6 +311,12 @@ class Frieze:
         tf.SetTransform(tra)
 
         if self.cfg['flip']:
+            tf.Update()
+            pd = tf.GetOutput()
+
+            for i in range(pd.GetNumberOfCells()):
+                pd.ReverseCell(i)
+
             result = tf
 
         clean = vtk.vtkCleanPolyData()
