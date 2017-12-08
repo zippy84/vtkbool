@@ -26,10 +26,13 @@ import vtk
 
 import math
 import os
+import re
 
 def extrude (pts, z, h):
     cell = vtk.vtkIdList()
+
     vtk_pts = vtk.vtkPoints()
+    vtk_pts.SetDataTypeToDouble()
 
     [ (vtk_pts.InsertNextPoint(pt[0], pt[1], z), cell.InsertNextId(i)) for i, pt in enumerate(pts) ]
 
@@ -323,9 +326,21 @@ class Frieze:
         clean.SetInputConnection(result.GetOutputPort())
 
         writer = vtk.vtkPolyDataWriter()
-        writer.SetFileName(name)
         writer.SetInputConnection(clean.GetOutputPort())
+        writer.WriteToOutputStringOn()
         writer.Update()
+
+        dat = writer.GetOutputString()
+
+        pd = clean.GetOutput()
+        num = pd.GetNumberOfPoints()
+
+        pts = [ [ '%.8f' % x for x in pd.GetPoint(i) ] for i in range(num) ]
+
+        m = re.search('POINTS.*?\n(.*?)\nP', dat, re.S)
+
+        with open(name, 'w') as f:
+            f.write(dat[:m.start(1)] + ' '.join(sum(pts, [])) + dat[m.end(1):])
 
         if os.path.exists('stl'):
             tri = vtk.vtkTriangleFilter()
