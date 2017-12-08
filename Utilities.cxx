@@ -102,7 +102,7 @@ void WriteVTK (const char *name, vtkPolyData *pd) {
       << "DATASET POLYDATA\n"
       << "POINTS " << numPts << " double\n";
 
-    f << std::setprecision(12);
+    f << std::setprecision(8);
 
     double pt[3];
     for (int i = 0; i < numPts; i++) {

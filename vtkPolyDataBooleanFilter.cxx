@@ -116,12 +116,14 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
             // eventuell vorhandene regionen vereinen
 
             vtkCleanPolyData *cleanA = vtkCleanPolyData::New();
-            cleanA->SetTolerance(1e-9);
+            cleanA->SetOutputPointsPrecision(DOUBLE_PRECISION);
+            cleanA->SetTolerance(1e-6);
             cleanA->SetInputData(pdA);
             cleanA->Update();
 
             vtkCleanPolyData *cleanB = vtkCleanPolyData::New();
-            cleanB->SetTolerance(1e-9);
+            cleanB->SetOutputPointsPrecision(DOUBLE_PRECISION);
+            cleanB->SetTolerance(1e-6);
             cleanB->SetInputData(pdB);
             cleanB->Update();
 
@@ -2199,10 +2201,6 @@ void vtkPolyDataBooleanFilter::CombineRegions () {
     FilterCells(filterdA, relsA);
     FilterCells(filterdB, relsB);
 
-    // double-Koordinaten sichern
-    filterdA->GetPointData()->AddArray(filterdA->GetPoints()->GetData());
-    filterdB->GetPointData()->AddArray(filterdB->GetPoints()->GetData());
-
     // ungenutzte punkte löschen
     vtkCleanPolyData *cleanA = vtkCleanPolyData::New();
     cleanA->PointMergingOff();
@@ -2228,10 +2226,6 @@ void vtkPolyDataBooleanFilter::CombineRegions () {
 
     vtkPolyData *pdA = cfA->GetOutput();
     vtkPolyData *pdB = cfB->GetOutput();
-
-    // double-Pts wiederherstellen
-    pdA->GetPoints()->SetData(pdA->GetPointData()->GetArray(0));
-    pdB->GetPoints()->SetData(pdB->GetPointData()->GetArray(0));
 
 #ifdef DEBUG
     std::cout << "Exporting modPdA_9.vtk" << std::endl;
@@ -2476,12 +2470,6 @@ void vtkPolyDataBooleanFilter::CombineRegions () {
 
     vtkPolyData *cfPd = cfApp->GetOutput();
 
-    // double-Koordinaten wiederherstellen
-    if (cfPd->GetPoints() != NULL) {
-        cfPd->GetPoints()->SetData(cfPd->GetPointData()->GetArray(0));
-        cfPd->GetPointData()->RemoveArray(0);
-    }
-
     // resultA ist erster output des filters
     resultA->ShallowCopy(cfPd);
 
@@ -2583,8 +2571,6 @@ void vtkPolyDataBooleanFilter::MergeRegions () {
     vtkPolyData *appPd = app->GetOutput();
     appPd->GetCellData()->RemoveArray("OrigCellIds");
 
-    appPd->GetPointData()->AddArray(appPd->GetPoints()->GetData());
-
     vtkCleanPolyData *clean = vtkCleanPolyData::New();
     clean->PointMergingOff();
     clean->SetInputData(appPd);
@@ -2592,9 +2578,6 @@ void vtkPolyDataBooleanFilter::MergeRegions () {
     clean->Update();
 
     vtkPolyData *cleanPd = clean->GetOutput();
-
-    cleanPd->GetPoints()->SetData(cleanPd->GetPointData()->GetArray(0));
-    cleanPd->GetPointData()->RemoveArray(0);
 
     resultA->ShallowCopy(cleanPd);
     resultB->ShallowCopy(contLines);
