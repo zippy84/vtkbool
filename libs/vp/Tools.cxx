@@ -73,7 +73,7 @@ void Move (double *a, double *b, double *c) {
     double x = std::min({a[0], b[0], c[0]}),
         y = std::min({a[1], b[1], c[1]});
 
-    double m[] = {1-x, 1-y};
+    double m[] = {1-x, 2-y};
 
     a[0] += m[0]; a[1] += m[1];
     b[0] += m[0]; b[1] += m[1];

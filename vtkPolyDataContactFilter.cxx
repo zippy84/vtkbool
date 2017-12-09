@@ -233,12 +233,6 @@ void vtkPolyDataContactFilter::PreparePolyData (vtkPolyData *pd) {
     stripIds->Delete();
     cellIds->Delete();
 
-    vtkDoubleArray *doublePts = vtkDoubleArray::New();
-    doublePts->DeepCopy(pd->GetPoints()->GetData());
-
-    pd->GetPoints()->SetData(doublePts);
-    doublePts->Delete();
-
     pd->RemoveDeletedCells();
 
 }
