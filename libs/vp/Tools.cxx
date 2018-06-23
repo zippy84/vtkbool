@@ -220,24 +220,24 @@ bool IsOnSeg (double *a, double *b, double *c) {
         return false;
     }
 
-    if (std::abs(a[0]-b[0]) > E) {
+    if (std::abs(a[0]-b[0]) > 1e-4) {
         if ((c[0] < a[0] && c[0] < b[0])
             || (c[0] > a[0] && c[0] > b[0])) {
             return false;
         }
     } else {
-        if (std::abs(a[0]-c[0]) > E) {
+        if (std::abs(a[0]-c[0]) > 1e-4) {
             return false;
         }
     }
 
-    if (std::abs(a[1]-b[1]) > E) {
+    if (std::abs(a[1]-b[1]) > 1e-4) {
         if ((c[1] < a[1] && c[1] < b[1])
             || (c[1] > a[1] && c[1] > b[1])) {
             return false;
         }
     } else {
-        if (std::abs(a[1]-c[1]) > E) {
+        if (std::abs(a[1]-c[1]) > 1e-4) {
             return false;
         }
     }

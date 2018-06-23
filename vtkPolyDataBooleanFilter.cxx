@@ -785,6 +785,10 @@ bool vtkPolyDataBooleanFilter::HasArea (StripType &strip) {
 }
 
 void vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polyStrips) {
+#ifdef DEBUG
+    std::cout << "CutCells()" << std::endl;
+#endif
+
     vtkPoints *pdPts = pd->GetPoints();
 
     vtkIntArray *origCellIds = vtkIntArray::SafeDownCast(pd->GetCellData()->GetScalars("OrigCellIds"));
@@ -1561,11 +1565,22 @@ void vtkPolyDataBooleanFilter::AddAdjacentPoints (vtkPolyData *pd, vtkIntArray *
     std::cout << "AddAdjacentPoints()" << std::endl;
 #endif
 
+    vtkIntArray *origCellIds = vtkIntArray::SafeDownCast(pd->GetCellData()->GetScalars("OrigCellIds"));
+
+    struct Cmp {
+        bool operator() (const StripPtL3 &l, const StripPtL3 &r) const {
+            return l.ind < r.ind;
+        }
+    };
+
+    typedef std::set<StripPtL3, Cmp> AType;
+    typedef std::map<Pair, AType> BType;
+    typedef std::vector<StripPtL3> CType;
+
+    BType edges;
+
     PolyStripsType::iterator itr;
     StripPtsType::iterator itr2;
-
-    std::set<StripPtL2> ends;
-    std::set<StripPtL2>::const_iterator itr3;
 
     for (itr = polyStrips.begin(); itr != polyStrips.end(); ++itr) {
         PStrips &pStrips = itr->second;
@@ -1574,24 +1589,13 @@ void vtkPolyDataBooleanFilter::AddAdjacentPoints (vtkPolyData *pd, vtkIntArray *
             StripPt &sp = itr2->second;
 
             if (sp.capt == CAPT_EDGE) {
-                ends.insert(sp);
+                edges[Pair(sp.edge[0], sp.edge[1])].insert(StripPtL3(sp.pt, sp.t, sp.ind));
             }
         }
     }
 
-    vtkIntArray *origCellIds = vtkIntArray::SafeDownCast(pd->GetCellData()->GetScalars("OrigCellIds"));
-
-    typedef std::vector<StripPtL3> AType;
-    typedef std::map<Pair, AType> BType;
-
-    BType edges;
-
-    for (itr3 = ends.begin(); itr3 != ends.end(); ++itr3) {
-        edges[Pair(itr3->edge[0], itr3->edge[1])].push_back(StripPtL3(itr3->pt, itr3->t, itr3->ind));
-    }
-
-    AType::iterator itr4;
-    BType::iterator itr5;
+    BType::iterator itr4;
+    CType::iterator itr5;
 
     pd->BuildLinks();
 
@@ -1599,16 +1603,18 @@ void vtkPolyDataBooleanFilter::AddAdjacentPoints (vtkPolyData *pd, vtkIntArray *
     loc->SetDataSet(pd);
     loc->BuildLocator();
 
-    typedef std::vector<Pair> CType;
+    typedef std::vector<Pair> DType;
 
     IdsType::const_iterator itr6;
-    CType::const_iterator itr7, itr8;
+    DType::const_iterator itr7, itr8;
 
     vtkIdList *cells = vtkIdList::New();
 
-    for (itr5 = edges.begin(); itr5 != edges.end(); ++itr5) {
-        const Pair &pair = itr5->first;
-        AType &pts = itr5->second;
+    for (itr4 = edges.begin(); itr4 != edges.end(); ++itr4) {
+        const Pair &pair = itr4->first;
+        const AType &ends = itr4->second;
+
+        CType pts(ends.begin(), ends.end());
 
         double ptA[3], ptB[3];
 
@@ -1621,14 +1627,10 @@ void vtkPolyDataBooleanFilter::AddAdjacentPoints (vtkPolyData *pd, vtkIntArray *
         std::sort(pts.rbegin(), pts.rend());
 
 #ifdef DEBUG
-        if (std::find_if(pts.begin(), pts.end(), [](const StripPtL3 &s) {
-            return s.ind == 123;
-        }) == pts.end()) {
-            //continue;
-        }
+        std::cout << "edge=" << pair << std::endl;
 
-        for (itr4 = pts.begin(); itr4 != pts.end(); ++itr4) {
-            std::cout << *itr4 << std::endl;
+        for (itr5 = pts.begin(); itr5 != pts.end(); ++itr5) {
+            std::cout << *itr5 << std::endl;
         }
 #endif
 
@@ -1636,18 +1638,26 @@ void vtkPolyDataBooleanFilter::AddAdjacentPoints (vtkPolyData *pd, vtkIntArray *
 
         voids.push_back(0);
 
-        for (itr4 = pts.begin()+1; itr4 != pts.end()-1; ++itr4) {
-            contLines->GetPointCells(itr4->ind, cells);
+        for (itr5 = pts.begin()+1; itr5 != pts.end()-1; ++itr5) {
+            contLines->GetPointCells(itr5->ind, cells);
             int numCells = cells->GetNumberOfIds();
 
             std::set<int> seeds;
 
             for (int i = 0; i < numCells; i++) {
-                seeds.insert(cells->GetId(i));
+                seeds.insert(conts->GetValue(cells->GetId(i)));
             }
 
-            if (seeds.size() == 1) {
-                voids.push_back(itr4-pts.begin());
+#ifdef DEBUG
+            std::cout << itr5->ind << " -> seeds=[";
+            for (auto s : seeds) {
+                std::cout << s << ", ";
+            }
+            std::cout << "]" << std::endl;
+#endif
+
+            if (seeds.size() != 1) {
+                voids.push_back(itr5-pts.begin());
             }
         }
 
@@ -1662,7 +1672,7 @@ void vtkPolyDataBooleanFilter::AddAdjacentPoints (vtkPolyData *pd, vtkIntArray *
 #endif
 
         for (itr6 = voids.begin(); itr6 != voids.end()-1; ++itr6) {
-            AType pts_(pts.begin()+(*itr6), pts.begin()+(*(itr6+1))+1);
+            CType pts_(pts.begin()+(*itr6), pts.begin()+(*(itr6+1))+1);
 
             if (pts_.size() > 2) {
 
@@ -1675,7 +1685,7 @@ void vtkPolyDataBooleanFilter::AddAdjacentPoints (vtkPolyData *pd, vtkIntArray *
                 int numPtsA = ptsA->GetNumberOfIds(),
                     numPtsB = ptsB->GetNumberOfIds();
 
-                CType polysA, polysB;
+                DType polysA, polysB;
 
                 for (int j = 0; j < numPtsA; j++) {
                     pd->GetPointCells(ptsA->GetId(j), cells);
@@ -1714,8 +1724,8 @@ void vtkPolyDataBooleanFilter::AddAdjacentPoints (vtkPolyData *pd, vtkIntArray *
 
                                     // ursprüngliche kante
 
-                                    for (itr4 = pts_.begin()+1; itr4 != pts_.end()-1; ++itr4) {
-                                        poly_->InsertNextId(pd->InsertNextLinkedPoint(itr4->pt, 1));
+                                    for (itr5 = pts_.begin()+1; itr5 != pts_.end()-1; ++itr5) {
+                                        poly_->InsertNextId(pd->InsertNextLinkedPoint(itr5->pt, 1));
                                     }
 
                                 }
