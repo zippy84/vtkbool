@@ -205,10 +205,13 @@ void vtkPolyDataContactFilter::PreparePolyData (vtkPolyData *pd) {
         vtkTriangleStrip::DecomposeStrip(n, pts, cells);
 
         for (cells->InitTraversal(); cells->GetNextCell(n, pts);) {
-            pd->InsertNextCell(VTK_TRIANGLE, n, pts);
-            cellIds->InsertNextValue(stripIds->GetValue(i));
+            if (pts[0] != pts[1] && pts[1] != pts[2] && pts[2] != pts[0]) {
+                pd->InsertNextCell(VTK_TRIANGLE, n, pts);
+                cellIds->InsertNextValue(stripIds->GetValue(i));
 
-            numCells++;
+                numCells++;
+            }
+
         }
 
         i++;

@@ -71,6 +71,9 @@ vtkPolyDataBooleanFilter::vtkPolyDataBooleanFilter () {
     cellDataA = vtkCellData::New();
     cellDataB = vtkCellData::New();
 
+    cellIdsA = vtkIntArray::New();
+    cellIdsB = vtkIntArray::New();
+
     OperMode = OPER_UNION;
 
     MergeRegs = false;
@@ -79,6 +82,9 @@ vtkPolyDataBooleanFilter::vtkPolyDataBooleanFilter () {
 }
 
 vtkPolyDataBooleanFilter::~vtkPolyDataBooleanFilter () {
+
+    cellIdsA->Delete();
+    cellIdsB->Delete();
 
     cellDataB->Delete();
     cellDataA->Delete();
@@ -239,6 +245,23 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
                 return 1;
             }
+
+            // sichert die OrigCellIds
+
+            vtkIntArray *origCellIdsA = vtkIntArray::SafeDownCast(modPdA->GetCellData()->GetScalars("OrigCellIds"));
+            vtkIntArray *origCellIdsB = vtkIntArray::SafeDownCast(modPdB->GetCellData()->GetScalars("OrigCellIds"));
+
+            cellIdsA->DeepCopy(origCellIdsA);
+            cellIdsB->DeepCopy(origCellIdsB);
+
+            for (int i = 0; i < modPdA->GetNumberOfCells(); i++) {
+                origCellIdsA->SetValue(i, i);
+            }
+
+            for (int i = 0; i < modPdB->GetNumberOfCells(); i++) {
+                origCellIdsB->SetValue(i, i);
+            }
+
 
 #ifdef DEBUG
             start = std::clock();
@@ -763,9 +786,13 @@ void vtkPolyDataBooleanFilter::CompleteStrips (PStrips &pStrips) {
 
         if (start.ind != end.ind) {
             if (start.capt == CAPT_NOT) {
-                itr->insert(itr->begin(), itr->rbegin(), itr->rend()-1);
+                StripType s(itr->rbegin(), itr->rend()-1);
+                itr->insert(itr->begin(), s.begin(), s.end());
+
             } else if (end.capt == CAPT_NOT) {
-                itr->insert(itr->end(), itr->rbegin()+1, itr->rend());
+                StripType s(itr->rbegin()+1, itr->rend());
+                itr->insert(itr->end(), s.begin(), s.end());
+
             }
         }
     }
@@ -2436,17 +2463,21 @@ void vtkPolyDataBooleanFilter::CombineRegions () {
     newCellDataB->CopyAllocate(cellDataB);
 
     for (int i = 0; i < regsA->GetNumberOfCells(); i++) {
-        newOrigCellIdsA->InsertNextValue(origCellIdsA->GetValue(i));
+        int cellId = cellIdsA->GetValue(origCellIdsA->GetValue(i));
+
+        newOrigCellIdsA->InsertNextValue(cellId);
         newOrigCellIdsB->InsertNextValue(-1);
 
-        newCellDataA->CopyData(cellDataA, origCellIdsA->GetValue(i), i);
+        newCellDataA->CopyData(cellDataA, cellId, i);
     }
 
     for (int i = 0; i < regsB->GetNumberOfCells(); i++) {
-        newOrigCellIdsB->InsertNextValue(origCellIdsB->GetValue(i));
+        int cellId = cellIdsB->GetValue(origCellIdsB->GetValue(i));
+
+        newOrigCellIdsB->InsertNextValue(cellId);
         newOrigCellIdsA->InsertNextValue(-1);
 
-        newCellDataB->CopyData(cellDataB, origCellIdsB->GetValue(i), i);
+        newCellDataB->CopyData(cellDataB, cellId, i);
     }
 
     regsA->GetCellData()->Initialize();
@@ -2695,6 +2726,10 @@ void _Wrapper::MergeAll () {
 
 void vtkPolyDataBooleanFilter::DecPolys_ (vtkPolyData *pd, InvolvedType &involved, RelationsType &rels) {
 
+#ifdef DEBUG
+    std::cout << "DecPolys_()" << std::endl;
+#endif
+
     vtkPoints *pdPts = pd->GetPoints();
 
     vtkIntArray *origCellIds = vtkIntArray::SafeDownCast(pd->GetCellData()->GetScalars("OrigCellIds"));
@@ -2714,7 +2749,7 @@ void vtkPolyDataBooleanFilter::DecPolys_ (vtkPolyData *pd, InvolvedType &involve
         int cellId = cells->GetId(i),
             origId = origCellIds->GetValue(cellId);
 
-        if (cellId != 18604) {
+        if (origId != 233) {
             //continue;
         }
 

@@ -211,6 +211,7 @@ class VTK_EXPORT vtkPolyDataBooleanFilter : public vtkPolyDataAlgorithm {
     vtkPolyData *resultA, *resultB, *contLines;
     vtkPolyData *modPdA, *modPdB;
     vtkCellData *cellDataA, *cellDataB;
+    vtkIntArray *cellIdsA, *cellIdsB;
 
     unsigned long timePdA, timePdB;
 
