@@ -361,7 +361,7 @@ void TrivialRm::RemovePockets (VertsType3 &good, double *rot, double d, Src src)
 
             IdsType ids;
 
-            for (itr3 = itr2; itr3->dir == itr2->dir && itr3 != pairs.end(); ++itr3) {
+            for (itr3 = itr2; itr3 != pairs.end() && itr3->dir == itr2->dir; ++itr3) {
                 ids.push_back(i++);
             }
 
@@ -409,7 +409,7 @@ void TrivialRm::RemovePockets (VertsType3 &good, double *rot, double d, Src src)
                 while (itr4 != grps.end()) {
                     IdsType ids2;
 
-                    for (itr5 = itr4; itr5->dir == itr4->dir && itr5 != grps.end(); ++itr5) {
+                    for (itr5 = itr4; itr5 != grps.end() && itr5->dir == itr4->dir; ++itr5) {
                         IdsType &ids = itr5->ids;
                         ids2.insert(ids2.end(), ids.begin(), ids.end());
                     }
