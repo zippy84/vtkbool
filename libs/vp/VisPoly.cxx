@@ -68,8 +68,9 @@ void GetVisPoly (PolyType &poly, PolyType &res, int ind) {
 
         std::cout << "> " << u << ", " << v << std::endl;
 
-        double *ptU = verts[u].pt,
-            *ptV = verts[v].pt;
+        double ptU[2], ptV[2];
+        Cpy(ptU, verts[u].pt);
+        Cpy(ptV, verts[v].pt);
 
         std::cout << "orig " << verts[u].id << ", " << verts[v].id << std::endl;
 
