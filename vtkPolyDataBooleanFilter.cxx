@@ -726,6 +726,8 @@ void vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIntArray *cont
 
         }
 
+        polyPts->Delete();
+
         CompleteStrips(pStrips);
 
     }
@@ -2524,6 +2526,9 @@ void vtkPolyDataBooleanFilter::CombineRegions () {
     cfApp->Delete();
     cleanApp->Delete();
     app->Delete();
+
+    newOrigCellIdsB->Delete();
+    newOrigCellIdsA->Delete();
 
     plB->FreeSearchStructure();
     plB->Delete();
