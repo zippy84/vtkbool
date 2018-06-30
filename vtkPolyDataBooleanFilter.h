@@ -69,6 +69,8 @@ public:
             << ", capt=" << s.capt;
         return out;
     }
+
+    std::vector<Pair> history;
 };
 
 class StripPtR {
@@ -132,7 +134,7 @@ public:
 
 class StripPtL2 {
 public:
-    StripPtL2 (const StripPt &sp) : ind(sp.ind), t(sp.t) {
+    StripPtL2 (const StripPt &sp) : ind(sp.ind), t(sp.t), history(sp.history) {
         Cpy(pt, sp.pt, 3);
         edge[0] = sp.edge[0];
         edge[1] = sp.edge[1];
@@ -146,6 +148,8 @@ public:
     bool operator< (const StripPtL2 &other) const {
         return ind < other.ind;
     }
+
+    std::vector<Pair> history;
 };
 
 class StripPtL3 {
@@ -221,8 +225,8 @@ class VTK_EXPORT vtkPolyDataBooleanFilter : public vtkPolyDataAlgorithm {
 
     RelationsType relsA, relsB;
 
-    void GetStripPoints (vtkPolyData *pd, PStrips &pStrips, IdsType &lines);
-    void GetPolyStrips (vtkPolyData *pd, vtkIntArray *conts, PolyStripsType &polyStrips);
+    void GetStripPoints (vtkPolyData *pd, vtkIntArray *sources, PStrips &pStrips, IdsType &lines);
+    void GetPolyStrips (vtkPolyData *pd, vtkIntArray *conts, vtkIntArray *sources, PolyStripsType &polyStrips);
     void RemoveDuplicates (IdsType &lines);
     void CompleteStrips (PStrips &pStrips);
     bool HasArea (StripType &strip);
