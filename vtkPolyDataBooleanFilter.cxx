@@ -114,7 +114,7 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
 #ifdef DEBUG
         std::vector<float> times;
-        clock_t start;
+        std::clock_t start;
 #endif
 
         if (pdA->GetMTime() > timePdA || pdB->GetMTime() > timePdB) {
@@ -188,6 +188,9 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
             vtkIntArray *contsA = vtkIntArray::SafeDownCast(contLines->GetCellData()->GetScalars("cA"));
             vtkIntArray *contsB = vtkIntArray::SafeDownCast(contLines->GetCellData()->GetScalars("cB"));
+
+            vtkIntArray *sourcesA = vtkIntArray::SafeDownCast(contLines->GetCellData()->GetScalars("sourcesA"));
+            vtkIntArray *sourcesB = vtkIntArray::SafeDownCast(contLines->GetCellData()->GetScalars("sourcesB"));
 
             // gültigkeit des schnitts prüfen
 
@@ -267,8 +270,8 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
             start = std::clock();
 #endif
 
-            GetPolyStrips(modPdA, contsA, polyStripsA);
-            GetPolyStrips(modPdB, contsB, polyStripsB);
+            GetPolyStrips(modPdA, contsA, sourcesA, polyStripsA);
+            GetPolyStrips(modPdB, contsB, sourcesB, polyStripsB);
 
 #ifdef DEBUG
             times.push_back(DIFF(start, std::clock()));
@@ -453,8 +456,8 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
         float sum = std::accumulate(times.begin(), times.end(), 0.);
 
         std::vector<float>::const_iterator itr;
-        for (itr = times.cbegin(); itr != times.cend(); itr++) {
-            std::cout << "Time " << std::distance(times.cbegin(), itr)
+        for (itr = times.begin(); itr != times.end(); itr++) {
+            std::cout << "Time " << (itr-times.begin())
                 << ": " << *itr << " (" << (*itr/sum)*100 << "%)"
                 << std::endl;
         }
@@ -466,7 +469,7 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
 }
 
-void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, PStrips &pStrips, IdsType &lines) {
+void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, vtkIntArray *sources, PStrips &pStrips, IdsType &lines) {
 
 #ifdef DEBUG
     std::cout << "GetStripPoints()" << std::endl;
@@ -507,6 +510,12 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, PStrips &pStrips
 
                 // jetzt muss man die kanten durchlaufen
                 for (int j = 0; j < numPts; j++) {
+
+                    int src = sources->GetComponent(*itr, i);
+
+                    if (src > -1 && !(j == src || (j+1)%numPts == src)) {
+                        continue;
+                    }
 
                     int indA, indB;
                     double a[3], b[3];
@@ -577,6 +586,7 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, PStrips &pStrips
 
                     }
                 }
+
             }
         }
 
@@ -611,6 +621,8 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, PStrips &pStrips
             Cpy(sp.cutPt, sp.pt, 3);
         }
 
+        sp.history.push_back({sp.edge[0], sp.edge[1]});
+
     }
 
 #ifdef DEBUG
@@ -622,7 +634,7 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, PStrips &pStrips
 
 }
 
-void vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIntArray *conts, PolyStripsType &polyStrips) {
+void vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIntArray *conts, vtkIntArray *sources, PolyStripsType &polyStrips) {
 #ifdef DEBUG
     std::cout << "GetPolyStrips()" << std::endl;
 #endif
@@ -655,7 +667,7 @@ void vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIntArray *cont
 
         ComputeNormal(pd->GetPoints(), pStrips.n, polyPts);
 
-        GetStripPoints(pd, pStrips, lines);
+        GetStripPoints(pd, sources, pStrips, lines);
 
         StripsType &strips = pStrips.strips;
         StripType strip;
@@ -1227,11 +1239,57 @@ void vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
                                 } else {
                                     // gehört dem gleichen strip an
                                     sp.ref = pre.ref;
+
                                     break;
                                 }
                             }
 
+                        }
 
+                        // erstellt die history
+
+                        auto _s = std::find_if(edge.begin(), edge.end(), [&start](const StripPtR &r) {
+                            return &start == &r;
+                        });
+
+                        if (_s != edge.end()) {
+                            for (itr7 = edge.begin(); itr7 != edge.end(); ++itr7) {
+                                StripPtR &sp = *itr7;
+                                StripPt &_sp = pts[sp.ind];
+                                auto &history = _sp.history;
+
+                                if (&sp != &start) {
+                                    if (_sp.t < pts[start.ind].t) {
+                                        history.push_back({history.back().f, start.desc[0]});
+                                    } else {
+                                        history.push_back({start.desc[1], history.back().g});
+                                    }
+
+                                }
+
+                            }
+                        }
+
+                        auto _e = std::find_if(edge.begin(), edge.end(), [&end](const StripPtR &r) {
+                            return &end == &r;
+                        });
+
+                        if (_e != edge.end()) {
+                            for (itr7 = edge.begin(); itr7 != edge.end(); ++itr7) {
+                                StripPtR &sp = *itr7;
+                                StripPt &_sp = pts[sp.ind];
+                                auto &history = _sp.history;
+
+                                if (&sp != &end) {
+                                    if (_sp.t < pts[end.ind].t) {
+                                        history.push_back({history.back().f, end.desc[1]});
+                                    } else {
+                                        history.push_back({end.desc[0], history.back().g});
+                                    }
+
+                                }
+
+                            }
                         }
 
                         // sonderfall
@@ -1493,12 +1551,16 @@ void vtkPolyDataBooleanFilter::ResolveOverlaps (vtkPolyData *pd, vtkIntArray *co
         }
     }
 
+    vtkKdTreePointLocator *loc = vtkKdTreePointLocator::New();
+    loc->SetDataSet(pd);
+    loc->BuildLocator();
+
+    vtkIdList *ptsA = vtkIdList::New();
+    vtkIdList *ptsB = vtkIdList::New();
+
+    vtkIdList *cells = vtkIdList::New();
+
     vtkIdList *links = vtkIdList::New();
-
-    vtkIdList *cellsA = vtkIdList::New(),
-        *cellsB = vtkIdList::New();
-
-    int numCellsA, numCellsB;
 
     typedef std::map<int, int> CountsType;
     std::map<Pair, CountsType> skipped;
@@ -1513,37 +1575,87 @@ void vtkPolyDataBooleanFilter::ResolveOverlaps (vtkPolyData *pd, vtkIntArray *co
 
             // kein berührender schnitt
 
-            pd->GetPointCells(itr3->edge[0], cellsA);
-            pd->GetPointCells(itr3->edge[1], cellsB);
+            auto &history = itr3->history;
 
-            numCellsA = cellsA->GetNumberOfIds();
-            numCellsB = cellsB->GetNumberOfIds();
+#ifdef DEBUG
+            std::cout << "ind: " << itr3->ind << ", history=[";
 
-            for (int i = 0; i < numCellsA; i++) {
-                for (int j = 0; j < numCellsB; j++) {
-                    if (cellsA->GetId(i) == cellsB->GetId(j)) {
-                        // kante existiert noch
+            for (auto& h : history) {
+                std::cout << h << ", ";
+            }
 
-                        vtkIdList *poly = vtkIdList::New();
-                        pd->GetCellPoints(cellsA->GetId(i), poly);
+            std::cout << "]" << std::endl;
+#endif
 
-                        int numPts = poly->GetNumberOfIds();
+            std::vector<Pair>::const_reverse_iterator itr4;
 
-                        for (int k = 0; k < numPts; k++) {
-                            if (poly->GetId(k) == itr3->edge[1]
-                                && poly->GetId((k+1)%numPts) == itr3->edge[0]) {
+            for (itr4 = history.rbegin(); itr4 != history.rend(); ++itr4) {
 
-                                CountsType &c = skipped[Pair(itr3->ind, cellsA->GetId(i))];
+                double ptA[3], ptB[3];
+                pd->GetPoint(itr4->f, ptA);
+                pd->GetPoint(itr4->g, ptB);
 
-                                c[itr3->edge[0]]++;
-                                c[itr3->edge[1]]++;
-                            }
-                        }
+                FindPoints(loc, ptA, ptsA);
+                FindPoints(loc, ptB, ptsB);
 
-                        poly->Delete();
+                int numPtsA = ptsA->GetNumberOfIds();
+                int numPtsB = ptsB->GetNumberOfIds();
 
+                std::vector<Pair> cellsA, cellsB;
+
+                cells->Reset();
+
+                for (int i = 0; i < numPtsA; i++) {
+                    pd->GetPointCells(ptsA->GetId(i), cells);
+                    for (int j = 0; j < cells->GetNumberOfIds(); j++) {
+                        cellsA.push_back({static_cast<int>(ptsA->GetId(i)), static_cast<int>(cells->GetId(j))});
                     }
                 }
+
+                cells->Reset();
+
+                for (int i = 0; i < numPtsB; i++) {
+                    pd->GetPointCells(ptsB->GetId(i), cells);
+                    for (int j = 0; j < cells->GetNumberOfIds(); j++) {
+                        cellsB.push_back({static_cast<int>(ptsB->GetId(i)), static_cast<int>(cells->GetId(j))});
+                    }
+                }
+
+                for (auto &a : cellsA) {
+                    for (auto &b : cellsB) {
+                        if (a.g == b.g) {
+                            // kante existiert noch
+
+#ifdef DEBUG
+                            std::cout << "poly: " << a.g
+                                << ", edge: (" << a.f << ", " << b.f << ")"
+                                << std::endl;
+#endif
+
+                            vtkIdList *poly = vtkIdList::New();
+                            pd->GetCellPoints(a.g, poly);
+
+                            int numPts = poly->GetNumberOfIds();
+
+                            for (int k = 0; k < numPts; k++) {
+                                if (poly->GetId(k) == b.f
+                                    && poly->GetId((k+1)%numPts) == a.f) {
+
+                                    CountsType &c = skipped[Pair(itr3->ind, a.g)];
+
+                                    c[b.f]++;
+                                    c[a.f]++;
+                                }
+                            }
+
+                            poly->Delete();
+
+                        }
+                    }
+                }
+
+
+
             }
 
         }
@@ -1551,10 +1663,14 @@ void vtkPolyDataBooleanFilter::ResolveOverlaps (vtkPolyData *pd, vtkIntArray *co
         links->Reset();
     }
 
-    cellsB->Delete();
-    cellsA->Delete();
-
     links->Delete();
+    cells->Delete();
+
+    ptsB->Delete();
+    ptsA->Delete();
+
+    loc->FreeSearchStructure();
+    loc->Delete();
 
     std::map<Pair, CountsType>::iterator itr4;
     CountsType::iterator itr5;
