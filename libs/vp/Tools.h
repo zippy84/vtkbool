@@ -85,6 +85,15 @@ public:
         out << "id: " << p.id << ", pt: [" << p.x << "," << p.y << "]";
         return out;
     }
+
+    bool operator< (const Point &other) const {
+        const int x1 = static_cast<int>(x*1e6),
+            y1 = static_cast<int>(y*1e6),
+            x2 = static_cast<int>(other.x*1e6),
+            y2 = static_cast<int>(other.y*1e6);
+
+        return std::tie(x1, y1) < std::tie(x2, y2);
+    }
 };
 
 typedef std::vector<Point> PolyType;
@@ -92,7 +101,7 @@ typedef std::vector<Point> PolyType;
 double Normalize (double *v, const int n = 2);
 double GetAngle (double *vA, double *vB);
 void Move (double *a, double *b, double *c);
-double Ld (double *a, double *b, double *c);
+bool Ld (double *a, double *b, double *c);
 double Cross (double *a, double *b, double *c);
 
 class D {
@@ -114,8 +123,6 @@ std::shared_ptr<D> Intersect2 (double *oA, double *oB, double *pA, double *pB);
 bool IsFrontfaced (double *r, double *a, double *b);
 bool IsNear (double *a, double *b);
 double GetT (double *a, double *b, double *c);
-
-bool IsOnSeg (double *a, double *b, double *c);
 
 bool TestCW (const PolyType &poly);
 

@@ -24,28 +24,6 @@ limitations under the License.
 #include "Tools.h"
 #include "VisPoly.h"
 
-class Vert2 {
-public:
-    Vert2 (int _i, double *_r, double _d) : i(_i), d(_d) {
-        r[0] = _r[0];
-        r[1] = _r[1];
-    }
-    int i;
-    double r[2], d;
-
-    friend std::ostream& operator<< (std::ostream &out, const Vert2 &v) {
-        out << "i: " << v.i
-            << ", d: " << v.d;
-        return out;
-    }
-
-    bool operator< (const Vert2 &v) {
-        return d < v.d;
-    }
-};
-
-typedef std::vector<Vert2> VertsType2;
-
 enum class Src {
     NONE = 1,
     A = 2,
@@ -122,49 +100,12 @@ public:
 
 // ...
 
-class Marked {
-public:
-    Marked (int _a, int _b) : a(_a), b(_b) {}
-
-    int a, b;
-    double t;
-
-    friend std::ostream& operator<< (std::ostream &out, const Marked &m) {
-        out << "[" << m.a << ", " << m.b << "] -> " << m.t;
-        return out;
-    }
-
-};
-
 class Vert4 : public Point {
 public:
     Vert4 (Point &p) : Point(p) {}
-    std::shared_ptr<Marked> marked;
 };
 
 typedef std::vector<Vert4> VertsType4;
-
-void MarkInternals (VertsType4 &verts, int skip);
-
-void RemoveInternals (VertsType4 &verts);
-
-void AlignPts (VertsType4 &verts, int ind);
-
-class Vert5 : public Point {
-public:
-    Vert5 (Point &p, double _t) : Point(p), t(_t), valid(true) {}
-
-    double t;
-    bool valid;
-
-    bool operator< (const Vert5 &v) const {
-        return t < v.t;
-    }
-};
-
-typedef std::vector<Vert5> VertsType5;
-
-void AddInternals (PolyType &origin, PolyType &poly);
 
 // ...
 
@@ -177,7 +118,7 @@ class TrivialRm {
     Point x;
 
 public:
-    TrivialRm (PolyType &_poly, int _ind) : poly(_poly), ind(_ind), x(_poly[_ind]) {}
+    TrivialRm (PolyType &_poly, int _ind, Point &_x) : poly(_poly), ind(_ind), x(_x) {}
 
     void GetSimplified (PolyType &res);
 

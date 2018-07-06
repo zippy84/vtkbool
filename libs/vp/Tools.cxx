@@ -53,23 +53,6 @@ void Move (double *a, double *b, double *c) {
     // damit a, b oder c nicht der ursprung ist
     // det(a,b,c) wäre dann auch 0
 
-    /*
-    double z[2] = {0, 0};
-
-    if (IsNear(a, z) || IsNear(b, z) || IsNear(c, z)) {
-        double x = std::min({a[0], b[0], c[0]}),
-            y = std::min({a[1], b[1], c[1]});
-
-        double m[] = {1-x, 1-y};
-
-        a[0] += m[0]; a[1] += m[1];
-        b[0] += m[0]; b[1] += m[1];
-        c[0] += m[0]; c[1] += m[1];
-    }
-
-    assert(!(IsNear(a, z) || IsNear(b, z) || IsNear(c, z)));
-    */
-
     double x = std::min({a[0], b[0], c[0]}),
         y = std::min({a[1], b[1], c[1]});
 
@@ -80,39 +63,11 @@ void Move (double *a, double *b, double *c) {
     c[0] += m[0]; c[1] += m[1];
 }
 
-double Ld (double *a, double *b, double *c) {
-    // muss unabh. von der skalierung sein
-
+bool Ld (double *a, double *b, double *c) {
     double vA[] = {b[0]-a[0], b[1]-a[1]},
         vB[] = {c[0]-a[0], c[1]-a[1]};
 
-    double lA = Normalize(vA),
-        lB = Normalize(vB);
-
-    double f = 10/std::max(lA, lB);
-
-    double _a[] = {f*a[0], f*a[1]},
-        _b[] = {f*b[0], f*b[1]},
-        _c[] = {f*c[0], f*c[1]};
-
-    Move(_a, _b, _c);
-
-    double e = std::abs(vA[0]*vB[0]+vA[1]*vB[1]);
-
-    if (e > E) {
-        if (lA > lB) {
-            _c[0] = _a[0]+(5/e)*vB[0];
-            _c[1] = _a[1]+(5/e)*vB[1];
-        } else {
-            _b[0] = _a[0]+(5/e)*vA[0];
-            _b[1] = _a[1]+(5/e)*vA[1];
-        }
-    } else {
-        // 90 deg
-        return DBL_MAX;
-    }
-
-    return std::abs(_a[0]*(_b[1]-_c[1])-_a[1]*(_b[0]-_c[0])+(_b[0]*_c[1]-_c[0]*_b[1]));
+    return std::abs(vA[0]*vB[1]-vA[1]*vB[0]) < E;
 }
 
 double Cross (double *a, double *b, double *c) {
@@ -213,36 +168,6 @@ double GetT (double *a, double *b, double *c) {
     assert(std::abs(det) > E);
 
     return (m11*v2-v1*m21)/det;
-}
-
-bool IsOnSeg (double *a, double *b, double *c) {
-    if (IsNear(a, c) || IsNear(b, c)) {
-        return false;
-    }
-
-    if (std::abs(a[0]-b[0]) > 1e-4) {
-        if ((c[0] < a[0] && c[0] < b[0])
-            || (c[0] > a[0] && c[0] > b[0])) {
-            return false;
-        }
-    } else {
-        if (std::abs(a[0]-c[0]) > 1e-4) {
-            return false;
-        }
-    }
-
-    if (std::abs(a[1]-b[1]) > 1e-4) {
-        if ((c[1] < a[1] && c[1] < b[1])
-            || (c[1] > a[1] && c[1] > b[1])) {
-            return false;
-        }
-    } else {
-        if (std::abs(a[1]-c[1]) > 1e-4) {
-            return false;
-        }
-    }
-
-    return Ld(a, b, c) < 1e-3;
 }
 
 bool TestCW (const PolyType &poly) {

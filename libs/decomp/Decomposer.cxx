@@ -71,6 +71,8 @@ Decomposer::Decomposer (PolyType &_poly) : poly(_poly) {
 
     std::copy(poly.begin(), poly.end(), std::back_inserter(verts));
 
+    std::cout << "XX " << GetAbsolutePath(poly) << std::endl;
+
     SimpleRmInternals(verts);
 
     num = verts.size();

@@ -17,6 +17,8 @@ limitations under the License.
 #include <vector>
 #include <iostream>
 #include <memory>
+#include <set>
+#include <map>
 
 #include "Tools.h"
 #include "VisPoly.h"
@@ -74,7 +76,7 @@ void GetVisPoly (PolyType &poly, PolyType &res, int ind) {
 
         std::cout << "orig " << verts[u].id << ", " << verts[v].id << std::endl;
 
-        if (Ld(x, ptU, ptV) < 1e-3) {
+        if (Ld(x, ptU, ptV)) {
             std::cout << "skipping" << std::endl;
 
             t = u;
@@ -258,7 +260,7 @@ void GetVisPoly (PolyType &poly, PolyType &res, int ind) {
                             if (d->t2 < E) {
                                 int c = vp.end()[-2];
 
-                                if (Ld(x, verts[a].pt, verts[c].pt) < 1e-3) {
+                                if (Ld(x, verts[a].pt, verts[c].pt)) {
                                     vp.pop_back();
                                     t = vp.back();
                                 } else {
@@ -289,7 +291,7 @@ void GetVisPoly (PolyType &poly, PolyType &res, int ind) {
 
                     int w = verts[v].nxt;
 
-                    if (Ld(x, ptV, verts[w].pt) < 1e-3) {
+                    if (Ld(x, ptV, verts[w].pt)) {
                         p = w;
                         w = verts[w].nxt;
                     }
@@ -373,21 +375,91 @@ void GetVisPoly (PolyType &poly, PolyType &res, int ind) {
 
 }
 
-void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
-    PolyType poly2(poly);
+double GetArea (const PolyType &poly) {
+    int num = poly.size();
 
+    double sum = 0;
+
+    for (int i = 0; i < num; i++) {
+        const Point &a = poly[i],
+            &b = poly[(i+1)%num];
+        sum += a.x*b.y-b.x*a.y;
+    }
+
+    return sum;
+}
+
+/*
+list([ list(map(float, p.split(','))) for p in 'm 26.402829,29.895027 -2.132521,24.374833 -3.073759,35.133226 22.541594,1.972134 76.814397,6.720388 1.86346,-21.299507 3.34282,-38.208551 -31.800976,-2.782225 -0.800142,-0.07 -7.246298,-0.633968 -2.155836,24.641314 -6.148254,-0.537902 -8.586643,-0.751234 -4.925747,-0.430947 1.112312,-12.713787 0.198,-2.263145 0.192176,-2.196583 0.326117,-3.727536 0.327231,-3.740264 z'[2:-2].split(' ') ])
+*/
+
+void Magic (const PolyType &poly, PolyType &res, int omit) {
+
+    double area = GetArea(poly);
+
+    std::set<int> found;
+
+    int num = poly.size();
+
+    std::map<Point, int> counts;
+
+    for (auto &p : poly) {
+        counts[p]++;
+    }
+
+    for (auto &f : counts) {
+        std::cout << "XX " << f.first << " -> " << f.second << std::endl;
+    }
+
+    std::cout << "XX ids'=[";
+
+    for (int i = 0; i < num; i++) {
+        if (i == omit) {
+            continue;
+        }
+
+        PolyType _poly;
+
+        std::copy_if(poly.begin(), poly.end(), std::back_inserter(_poly), [&i, &found](const Point &p) {
+            return p.id != i && found.count(p.id) == 0;
+        });
+
+        double _area = GetArea(_poly);
+
+        double per = std::abs(1-_area/area);
+
+        if (per < 1e-4 && counts[poly[i]] == 1) {
+            area = _area;
+            found.insert(i);
+
+            std::cout << i << ", ";
+        }
+
+        //std::cout << "(" << i << ", " << per << "), ";
+    }
+
+    std::cout << "]" << std::endl;
+
+    std::copy_if(poly.begin(), poly.end(), std::back_inserter(res), [&found](const Point &p) {
+        return found.count(p.id) == 0;
+    });
+
+}
+
+void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
     int i = 0;
-    for (auto& p : poly2) {
+    for (auto& p : poly) {
         p.id = i++;
     }
 
-    // poly2 wird verändert
+    PolyType poly2, poly3;
 
-    PolyType poly3;
-    TrivialRm(poly2, ind).GetSimplified(poly3);
+    Point x(poly[ind]);
+
+    Magic(poly, poly2, ind);
+
+    TrivialRm(poly2, ind, x).GetSimplified(poly3);
 
     GetVisPoly(poly3, res);
-
-    AddInternals(poly2, res);
 
 }
