@@ -19,6 +19,7 @@ limitations under the License.
 #include <fstream>
 #include <iostream>
 #include <cassert>
+#include <string>
 
 #include <json/json.h>
 #include <json/reader.h>
@@ -28,17 +29,19 @@ limitations under the License.
 int main (int argc, char *argv[]) {
     Json::Value doc;
 
-    Json::Reader reader;
+    Json::CharReaderBuilder reader;
 
-    std::ifstream jn("../dev/complex.json");
+    std::ifstream jn("../complex.json");
 
-    if (reader.parse(jn, doc)) {
+    std::string err;
+
+    if (Json::parseFromStream(reader, jn, &doc, &err)) {
         const Json::Value polys = doc["polys"];
 
         int i = 0;
 
         for (const Json::Value& p : polys) {
-            //if (i == 3) {
+            if (i == 0) {
                 PolyType poly;
 
                 int j = 0;
@@ -62,7 +65,7 @@ int main (int argc, char *argv[]) {
                     // das polygon ist in clockwise order
                     assert(TestCW(poly));
 
-                    //if (j != 0) { continue; }
+                    //if (j != 78) { continue; }
 
                     GetVisPoly_wrapper(poly, all[j], j);
 
@@ -95,17 +98,17 @@ int main (int argc, char *argv[]) {
                     data[std::to_string(itr.first)] = GetAbsolutePath(itr.second);
                 }
 
-                Json::FastWriter writer;
+                Json::StreamWriterBuilder writer;
 
                 std::stringstream name;
-                name << "../data_files/data_" << i << ".js";
+                name << "../../data_files/data_" << i << ".js";
 
                 std::ofstream f(name.str());
                 f << "var pts = '" << GetAbsolutePath(poly)
-                    << "'; var polys = " << writer.write(data)
+                    << "'; var polys = " << Json::writeString(writer, data)
                     << ";";
                 f.close();
-            //}
+            }
 
             i++;
 
