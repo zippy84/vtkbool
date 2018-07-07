@@ -414,14 +414,16 @@ void Magic (const PolyType &poly, PolyType &res, int omit) {
     std::cout << "XX ids'=[";
 
     for (int i = 0; i < num; i++) {
-        if (i == omit) {
+        const Point &pt = poly[i];
+
+        if (pt.id == omit) {
             continue;
         }
 
         PolyType _poly;
 
-        std::copy_if(poly.begin(), poly.end(), std::back_inserter(_poly), [&i, &found](const Point &p) {
-            return p.id != i && found.count(p.id) == 0;
+        std::copy_if(poly.begin(), poly.end(), std::back_inserter(_poly), [&pt, &found](const Point &p) {
+            return p.id != pt.id && found.count(p.id) == 0;
         });
 
         double _area = GetArea(_poly);
@@ -430,7 +432,7 @@ void Magic (const PolyType &poly, PolyType &res, int omit) {
 
         if (per < 1e-4 && counts[poly[i]] == 1) {
             area = _area;
-            found.insert(i);
+            found.insert(pt.id);
 
             std::cout << i << ", ";
         }
@@ -452,7 +454,7 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
         p.id = i++;
     }
 
-    PolyType poly2, poly3;
+    PolyType poly2, poly3, poly4;
 
     Point x(poly[ind]);
 
@@ -460,6 +462,8 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
 
     TrivialRm(poly2, ind, x).GetSimplified(poly3);
 
-    GetVisPoly(poly3, res);
+    Magic(poly3, res, ind);
+
+    //GetVisPoly(poly3, res);
 
 }
