@@ -27,6 +27,11 @@ limitations under the License.
 #include "VisPoly.h"
 
 int main (int argc, char *argv[]) {
+    std::istringstream stream(argv[1]);
+    int t;
+
+    stream >> t;
+
     Json::Value doc;
 
     Json::CharReaderBuilder reader;
@@ -41,7 +46,7 @@ int main (int argc, char *argv[]) {
         int i = 0;
 
         for (const Json::Value& p : polys) {
-            if (i == 0) {
+            if (i == t) {
                 PolyType poly;
 
                 int j = 0;
@@ -65,7 +70,7 @@ int main (int argc, char *argv[]) {
                     // das polygon ist in clockwise order
                     assert(TestCW(poly));
 
-                    //if (j != 78) { continue; }
+                    //if (j == 0) { continue; }
 
                     GetVisPoly_wrapper(poly, all[j], j);
 
