@@ -19,6 +19,7 @@ limitations under the License.
 #include <memory>
 #include <set>
 #include <map>
+#include <cassert>
 
 #include "Tools.h"
 #include "VisPoly.h"
@@ -177,6 +178,10 @@ void GetVisPoly (PolyType &poly, PolyType &res, int ind) {
                         vp.pop_back();
                     }
 
+                    if (vp.size() < 2) {
+                        throw vp_error();
+                    }
+
                     int _x = v;
 
                     int i = 0;
@@ -253,6 +258,10 @@ void GetVisPoly (PolyType &poly, PolyType &res, int ind) {
                         std::cout << "popping_2 " << vp.back() << std::endl;
 
                         vp.pop_back();
+
+                        if (vp.size() < 2) {
+                            throw vp_error();
+                        }
 
                         std::shared_ptr<D> d(Intersect(x, verts[v].r, verts[a].pt, verts[b].pt));
 
@@ -457,7 +466,7 @@ public:
 
 typedef std::vector<Vert2> VertsType2;
 
-void Align (PolyType &poly, Point &p) {
+void Align (PolyType &poly, const Point &p) {
     VertsType2 verts;
 
     PolyType::iterator itr;
@@ -494,7 +503,7 @@ void Align (PolyType &poly, Point &p) {
     }
 }
 
-void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
+bool GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
     int i = 0;
     for (auto& p : poly) {
         p.id = i++;
@@ -512,6 +521,14 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
 
     Magic(poly3, poly4, ind);
 
-    GetVisPoly(poly4, res);
+    try {
+        GetVisPoly(poly4, res);
+    } catch (const vp_error &e) {
+        std::cout << "Error: " << e.what() << std::endl;
+
+        return false;
+    }
+
+    return true;
 
 }
