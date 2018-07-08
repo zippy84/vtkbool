@@ -19,6 +19,7 @@ limitations under the License.
 
 #include <vector>
 #include <ostream>
+#include <exception>
 
 #include "Tools.h"
 
@@ -62,9 +63,16 @@ public:
     }
 };
 
+class vp_error : public std::exception {
+public:
+    const char* what() const throw() {
+        return "Too many pop's.";
+    }
+};
+
 // diese darf nicht direkt verwendet werden
 void GetVisPoly (PolyType &poly, PolyType &res, int ind = 0);
 
-void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind);
+bool GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind);
 
 #endif
