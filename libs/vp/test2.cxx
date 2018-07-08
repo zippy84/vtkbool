@@ -28,7 +28,12 @@ limitations under the License.
 
 int main (int argc, char *argv[]) {
     std::istringstream stream(argv[1]);
-    int t;
+    int s, t;
+
+    stream >> s;
+
+    stream.clear();
+    stream.str(argv[2]);
 
     stream >> t;
 
@@ -46,7 +51,7 @@ int main (int argc, char *argv[]) {
         int i = 0;
 
         for (const Json::Value& p : polys) {
-            if (i == t) {
+            if (i == s) {
                 PolyType poly;
 
                 int j = 0;
@@ -70,16 +75,20 @@ int main (int argc, char *argv[]) {
                     // das polygon ist in clockwise order
                     assert(TestCW(poly));
 
-                    //if (j == 0) { continue; }
+                    if (j != t) { continue; }
 
-                    GetVisPoly_wrapper(poly, all[j], j);
+                    PolyType res;
 
-                    for (auto& p : all[j]) {
-                        std::cout << p << std::endl;
+                    if (GetVisPoly_wrapper(poly, res, j)) {
+                        for (auto& p : res) {
+                            std::cout << p << std::endl;
+                        }
+
+                        // das ergebnis ist in counterclockwise order
+                        assert(!TestCW(res));
+
+                        all[j] = std::move(res);
                     }
-
-                    // das ergebnis ist in counterclockwise order
-                    assert(!TestCW(all[j]));
 
                 }
 

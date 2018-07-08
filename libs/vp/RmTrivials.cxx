@@ -164,7 +164,7 @@ void TrivialRm::RemovePockets (VertsType3 &good, double *rot, double d, Src src)
             // Ausgabe
 
             for (itr4 = grps.begin(); itr4 != grps.end(); ++itr4) {
-                std::cout << "(" << static_cast<int>(itr4->dir) << ", [";
+                std::cout << "(" << itr4->dir << ", [";
                 for (auto id : itr4->ids) {
                     std::cout << id << ", ";
                 }
@@ -215,7 +215,7 @@ void TrivialRm::RemovePockets (VertsType3 &good, double *rot, double d, Src src)
                     std::cout << ">> ";
 
                     for (itr4 = grps.begin(); itr4 != grps.end(); ++itr4) {
-                        std::cout << "(" << static_cast<int>(itr4->dir) << ", [";
+                        std::cout << "(" << itr4->dir << ", [";
                         for (auto id : itr4->ids) {
                             std::cout << id << ", ";
                         }
