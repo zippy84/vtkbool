@@ -75,7 +75,7 @@ int main (int argc, char *argv[]) {
                     // das polygon ist in clockwise order
                     assert(TestCW(poly));
 
-                    if (j != t) { continue; }
+                    //if (j != t) { continue; }
 
                     PolyType res;
 
