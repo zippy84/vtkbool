@@ -448,6 +448,52 @@ void Magic (const PolyType &poly, PolyType &res, int omit) {
 
 }
 
+class Vert2 {
+public:
+    Vert2 (int _i, double _l) : i(_i), l(_l) {}
+    double l;
+    int i;
+};
+
+typedef std::vector<Vert2> VertsType2;
+
+void Align (PolyType &poly, Point &p) {
+    VertsType2 verts;
+
+    PolyType::iterator itr;
+
+    for (itr = poly.begin(); itr != poly.end(); ++itr) {
+        if (itr->id != p.id) {
+            double v[] = {itr->x-p.x, itr->y-p.y};
+            verts.push_back({static_cast<int>(itr-poly.begin()), Normalize(v)});
+        }
+    }
+
+    std::sort(verts.begin(), verts.end(), [](const Vert2 &a, const Vert2 &b) {
+        return b.l < a.l;
+    });
+
+    VertsType2::iterator itr2, itr3;
+
+    for (itr2 = verts.begin(); itr2 != verts.end()-1; ++itr2) {
+        double n[] = {p.y-poly[itr2->i].y, poly[itr2->i].x-p.x};
+        Normalize(n);
+        double d = n[0]*p.x+n[1]*p.y;
+
+        for (itr3 = itr2+1; itr3 != verts.end(); ++itr3) {
+            Point &q = poly[itr3->i];
+
+            double e = d-n[0]*q.x-n[1]*q.y;
+
+            if (std::abs(e) < 1e-3) {
+                q.pt[0] += n[0]*e;
+                q.pt[1] += n[1]*e;
+            }
+
+        }
+    }
+}
+
 void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
     int i = 0;
     for (auto& p : poly) {
@@ -460,10 +506,12 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
 
     Magic(poly, poly2, ind);
 
+    Align(poly2, x);
+
     TrivialRm(poly2, ind, x).GetSimplified(poly3);
 
-    Magic(poly3, res, ind);
+    Magic(poly3, poly4, ind);
 
-    //GetVisPoly(poly3, res);
+    GetVisPoly(poly4, res);
 
 }
