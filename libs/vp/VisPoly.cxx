@@ -259,7 +259,7 @@ void GetVisPoly (PolyType &poly, PolyType &res, int ind) {
 
                         vp.pop_back();
 
-                        if (vp.size() < 2) {
+                        if (vp.size() < 1) {
                             throw vp_error();
                         }
 
