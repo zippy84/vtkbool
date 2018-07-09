@@ -35,10 +35,10 @@ if (${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(JSONCPP jsoncpp)
 
-    include_directories(${JSONCPP_INCLUDE_DIRS})
+    include_directories(${JSONCPP_INCLUDE_DIRS} ../third/inja)
 
-    #add_executable(test test.cxx)
-    add_executable(test test2.cxx)
+    add_executable(test test.cxx)
+    #add_executable(test test2.cxx)
     target_link_libraries(test ${JSONCPP_LIBRARIES} vp)
 
 endif ()

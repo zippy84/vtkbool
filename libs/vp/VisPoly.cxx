@@ -269,7 +269,7 @@ void GetVisPoly (PolyType &poly, PolyType &res, int ind) {
                             if (d->t2 < E) {
                                 int c = vp.end()[-2];
 
-                                if (Ld(x, verts[a].pt, verts[c].pt)) {
+                                if (Ld(x, verts[a].pt, verts[c].pt) || IsNear(verts[a].pt, ptV)) {
                                     vp.pop_back();
                                     t = vp.back();
                                 } else {

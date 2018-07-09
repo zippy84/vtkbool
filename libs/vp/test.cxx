@@ -16,21 +16,34 @@ limitations under the License.
 
 #include <fstream>
 #include <iostream>
+#include <cassert>
 
 #include <json/json.h>
 #include <json/reader.h>
+
+#include "inja.hpp"
+#include "nlohmann/json.hpp"
 
 #include "VisPoly.h"
 
 int main (int argc, char *argv[]) {
     Json::Value doc;
 
-    Json::Reader reader;
+    Json::CharReaderBuilder reader;
 
     std::ifstream jn("../dev/polys.json");
 
-    if (reader.parse(jn, doc)) {
+    std::string err;
+
+    if (Json::parseFromStream(reader, jn, &doc, &err)) {
         const Json::Value polys = doc["polys"];
+
+        inja::Environment env;
+        env.set_element_notation(inja::ElementNotation::Dot);
+
+        nlohmann::json data;
+
+        int idx = 0;
 
         for (const Json::Value& p : polys) {
             PolyType poly;
@@ -48,9 +61,28 @@ int main (int argc, char *argv[]) {
                 poly[j].pt[1] += poly[j-1].pt[1];
             }
 
-            GetVisPoly(poly);
+            std::reverse(poly.begin(), poly.end());
+
+            std::rotate(poly.begin(), poly.end()-1, poly.end());
+
+            assert(TestCW(poly));
+
+            PolyType res;
+
+            GetVisPoly_wrapper(poly, res, 0);
+
+            //std::cout << "Res " << GetAbsolutePath(res) << std::endl;
+
+            int row = static_cast<int>(idx/4),
+                col = static_cast<int>(idx%4);
+
+            data["data"].push_back({{ "path", GetAbsolutePath(res) }, { "pts", GetAbsolutePath(poly) }, { "x", col*200 }, { "y", row*300 }});
+
+            idx++;
 
         }
+
+        env.write("../dev/template.svg", data, "../dev/output.svg");
 
     }
 
