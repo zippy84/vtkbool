@@ -439,7 +439,10 @@ void Magic (const PolyType &poly, PolyType &res, int omit) {
 
         double per = std::abs(1-_area/area);
 
-        if (per < 1e-4 && counts[poly[i]] == 1) {
+        int jA = (i+1)%num,
+            jB = (i+num-1)%num;
+
+        if (per < 1e-4 && counts[poly[i]] == 1 && counts.find(poly[jA]) != counts.find(poly[jB])) {
             area = _area;
             found.insert(pt.id);
 

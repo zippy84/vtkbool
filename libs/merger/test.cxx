@@ -17,14 +17,15 @@ limitations under the License.
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <sstream>
 #include <cassert>
 
 #include <json/json.h>
 #include <json/reader.h>
 
+#include "inja.hpp"
+#include "nlohmann/json.hpp"
+
 #include "Tools.h"
-#include "VisPoly.h"
 #include "Merger.h"
 
 void ToPoly (const Json::Value& pts, PolyType &poly) {
@@ -42,12 +43,19 @@ void ToPoly (const Json::Value& pts, PolyType &poly) {
 int main (int argc, char *argv[]) {
     Json::Value doc;
 
-    Json::Reader reader;
+    Json::CharReaderBuilder reader;
 
     std::ifstream jn("../dev/holes2.json");
 
-    if (reader.parse(jn, doc)) {
+    std::string err;
+
+    if (Json::parseFromStream(reader, jn, &doc, &err)) {
         const Json::Value holes = doc["holes"];
+
+        inja::Environment env;
+        env.set_element_notation(inja::ElementNotation::Dot);
+
+        nlohmann::json data;
 
         Merger m;
 
@@ -64,11 +72,32 @@ int main (int argc, char *argv[]) {
 
         m.GetMerged(merged);
 
+        std::vector<double> xs, ys;
+
         for (auto& p : merged) {
             assert(!TestCW(p));
 
-            std::cout << GetAbsolutePath(p) << std::endl;
+            data["data"].push_back({{ "path", GetAbsolutePath(p) }});
+
+            for (auto &pt : p) {
+                xs.push_back(pt.x);
+                ys.push_back(pt.y);
+            }
         }
+
+        double xMin = *std::min_element(xs.begin(), xs.end()),
+            xMax = *std::max_element(xs.begin(), xs.end());
+
+        double yMin = *std::min_element(ys.begin(), ys.end()),
+            yMax = *std::max_element(ys.begin(), ys.end());
+
+        data["width"] = std::abs(xMax-xMin);
+        data["height"] = std::abs(yMax-yMin);
+
+        data["x"] = -xMin;
+        data["y"] = -yMin;
+
+        env.write("../dev/template.svg", data, "../dev/output2.svg");
 
     }
 }
