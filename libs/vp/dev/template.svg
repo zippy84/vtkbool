@@ -2,7 +2,7 @@
 <svg xmlns="http://www.w3.org/2000/svg"
     version="1.1"
     width="800"
-    height="{# last(data).x #}">
+    height="1200{# last(data).x #}">
     <g>
         {% for d in data %}
         <g transform="translate({{ d.x }} {{ d.y }})">
