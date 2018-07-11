@@ -15,17 +15,17 @@
 cmake_minimum_required(VERSION 2.8)
 project(vp)
 
-if (MSVC)
+if(MSVC)
     set(CMAKE_CXX_FLAGS "-std=c++11 /EHsc")
     add_definitions(-D_SCL_SECURE_NO_WARNINGS)
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
-else ()
+else()
     set(CMAKE_CXX_FLAGS "-std=c++11 -Wno-deprecated -fPIC -Wunused")
-endif ()
+endif()
 
 add_library(vp STATIC Tools.cxx RmTrivials.cxx VisPoly.cxx)
 
-if (${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
+if(${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
 
     cmake_policy(SET CMP0037 OLD)
 
@@ -41,4 +41,4 @@ if (${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
     add_executable(test test2.cxx)
     target_link_libraries(test ${JSONCPP_LIBRARIES} vp)
 
-endif ()
+endif()

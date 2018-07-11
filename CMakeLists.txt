@@ -15,13 +15,13 @@
 cmake_minimum_required(VERSION 2.8)
 project(vtkbool)
 
-if (MSVC)
+if(MSVC)
     set(CMAKE_CXX_FLAGS "-std=c++11 /EHsc")
     add_definitions(-D_SCL_SECURE_NO_WARNINGS)
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
-else ()
+else()
     set(CMAKE_CXX_FLAGS "-std=c++11 -Wno-deprecated -fPIC -Wunused")
-endif ()
+endif()
 
 option(BUILD_PARAVIEW_PLUGIN "" OFF)
 option(BUILD_AS_DEBUG "" OFF)
@@ -72,9 +72,9 @@ else()
             foreach(i RANGE 16)
                 add_test(NAME Test_${i} COMMAND testing ${i})
 
-                if (WIN32)
+                if(WIN32)
                     set_property(TEST Test_${i} PROPERTY ENVIRONMENT "PATH=${vtk_lib}\\bin")
-                endif ()
+                endif()
 
             endforeach()
 
@@ -99,19 +99,19 @@ else()
 
                 find_package(PythonInterp 2.7 REQUIRED)
 
-                if (PYTHONINTERP_FOUND)
+                if(PYTHONINTERP_FOUND)
                     add_test(NAME Test_Py COMMAND ${PYTHON_EXECUTABLE}
                         ${CMAKE_SOURCE_DIR}/testing/test_py_module.py
                         ${VTK_INSTALL_PREFIX}/lib/python2.7/site-packages
                         ${CMAKE_BINARY_DIR}
                         $<CONFIG>)
 
-                    if (WIN32)
+                    if(WIN32)
                         set_property(TEST Test_Py PROPERTY ENVIRONMENT "PATH=${vtk_lib}\\bin")
-                    else ()
+                    else()
                         set_property(TEST Test_Py PROPERTY ENVIRONMENT "LD_LIBRARY_PATH=${VTK_INSTALL_PREFIX}/lib")
-                    endif ()
-                endif ()
+                    endif()
+                endif()
 
             endif()
         endif()
