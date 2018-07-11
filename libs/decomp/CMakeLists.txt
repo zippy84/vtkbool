@@ -15,13 +15,13 @@
 cmake_minimum_required(VERSION 2.8)
 project(decomp)
 
-if (MSVC)
+if(MSVC)
     set(CMAKE_CXX_FLAGS "-std=c++11 /EHsc")
     add_definitions(-D_SCL_SECURE_NO_WARNINGS)
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
-else ()
+else()
     set(CMAKE_CXX_FLAGS "-std=c++11 -Wno-deprecated -fPIC -Wunused")
-endif ()
+endif()
 
 add_subdirectory(../vp vp_build)
 
@@ -29,7 +29,7 @@ include_directories(../vp)
 add_library(decomp STATIC Decomposer.cxx)
 target_link_libraries(decomp vp)
 
-if (${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
+if(${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
     cmake_policy(SET CMP0037 OLD)
 
     # pkg-config --cflags --libs jsoncpp
@@ -41,4 +41,4 @@ if (${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
     add_executable(test test.cxx)
     target_link_libraries(test decomp ${JSONCPP_LIBRARIES})
 
-endif ()
+endif()
