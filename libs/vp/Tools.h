@@ -57,7 +57,7 @@ typedef std::vector<int> IdsType;
 class Point {
     static int _tag;
 public:
-    const int tag;
+    int tag;
 
     Point (double _x, double _y, int _id = NO_USE) : id(_id), tag(_tag++) {
         pt[0] = _x;
@@ -74,6 +74,7 @@ public:
         pt[0] = p.pt[0];
         pt[1] = p.pt[1];
         id = p.id;
+        tag = p.tag;
 
         return *this;
     }
