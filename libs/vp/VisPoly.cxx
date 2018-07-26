@@ -25,7 +25,7 @@ limitations under the License.
 #include "VisPoly.h"
 #include "RmTrivials.h"
 
-void GetVisPoly (PolyType &poly, PolyType &res, int ind) {
+void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
     double x[] = {poly[ind].x, poly[ind].y};
 
     VertsType verts;
@@ -34,8 +34,7 @@ void GetVisPoly (PolyType &poly, PolyType &res, int ind) {
 
     for (int i = 0; i < num-1; i++) {
         int _i = (ind+i+1)%num;
-        double pt[] = {poly[_i].x, poly[_i].y};
-        verts.push_back(Vert(x, pt, _i));
+        verts.push_back(Vert(x, poly[_i]));
     }
 
     double ref[] = {verts[0].pt[0]-x[0], verts[0].pt[1]-x[1]};
@@ -129,7 +128,9 @@ void GetVisPoly (PolyType &poly, PolyType &res, int ind) {
 
                         } else {
 
-                            Vert _v(x, d->s, ref, a.nxt);
+                            Point _p(d->s);
+
+                            Vert _v(x, _p, ref, a.nxt);
                             verts.push_back(_v);
 
                             int k = verts.size()-1;
@@ -141,6 +142,8 @@ void GetVisPoly (PolyType &poly, PolyType &res, int ind) {
                             t = u;
 
                             leftBags.push_back(Bag(u, k, verts[u].phi));
+
+                            tr.Track(a, _v, d->t2);
 
                         }
 
@@ -222,7 +225,9 @@ void GetVisPoly (PolyType &poly, PolyType &res, int ind) {
 
                                 } else {
 
-                                    Vert _v(x, _d->s, ref, a.nxt);
+                                    Point _p(_d->s);
+
+                                    Vert _v(x, _p, ref, a.nxt);
                                     verts.push_back(_v);
 
                                     int k = verts.size()-1;
@@ -232,6 +237,8 @@ void GetVisPoly (PolyType &poly, PolyType &res, int ind) {
                                     vp.push_back(k);
 
                                     leftBags.push_back(Bag(bag->f, k, bag->phi));
+
+                                    tr.Track(b, _v, d->t2);
 
                                 }
 
@@ -277,7 +284,9 @@ void GetVisPoly (PolyType &poly, PolyType &res, int ind) {
                                 }
 
                             } else {
-                                Vert _v(x, d->s, ref);
+                                Point _p(d->s);
+
+                                Vert _v(x, _p, ref);
                                 verts.push_back(_v);
 
                                 int k = verts.size()-1;
@@ -287,6 +296,8 @@ void GetVisPoly (PolyType &poly, PolyType &res, int ind) {
                                 vp.push_back(k);
 
                                 t = k;
+
+                                tr.Track(verts[a], _v, d->t2);
 
                             }
 
@@ -346,13 +357,17 @@ void GetVisPoly (PolyType &poly, PolyType &res, int ind) {
                                         vp.push_back(_x);
 
                                     } else {
-                                        Vert _v(x, d->s, ref, a.nxt);
+                                        Point _p(d->s);
+
+                                        Vert _v(x, _p, ref, a.nxt);
                                         verts.push_back(_v);
                                         int k = verts.size()-1;
 
                                         verts[vp.back()].nxt = k;
 
                                         vp.push_back(k);
+
+                                        tr.Track(a, _v, d->t2);
 
                                     }
 
@@ -378,8 +393,7 @@ void GetVisPoly (PolyType &poly, PolyType &res, int ind) {
     res.push_back(poly[ind]);
 
     for (int _v : vp) {
-        int id = verts[_v].id;
-        res.push_back({verts[_v].pt, id != NO_USE ? poly[id].id : id});
+        res.push_back(verts[_v]);
     }
 
 }
@@ -520,16 +534,22 @@ bool GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
 
     Align(poly2, x);
 
-    TrivialRm(poly2, ind, x).GetSimplified(poly3);
+    Tracker tr(poly2);
+
+    TrivialRm(poly2, tr, ind, x).GetSimplified(poly3);
 
     Magic(poly3, poly4, ind);
 
     try {
-        GetVisPoly(poly4, res);
+        GetVisPoly(poly4, tr, res);
     } catch (const vp_error &e) {
         std::cout << "Error: " << e.what() << std::endl;
 
         return false;
+    }
+
+    for (auto &l : tr.locs) {
+        std::cout << l.first << " -> " << l.second.par << ", " << l.second.t << std::endl;
     }
 
     return true;
