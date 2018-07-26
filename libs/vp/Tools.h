@@ -55,14 +55,17 @@ public:
 typedef std::vector<int> IdsType;
 
 class Point {
+    static int _tag;
 public:
-    Point (double _x, double _y, int _id = NO_USE) : id(_id) {
+    const int tag;
+
+    Point (double _x, double _y, int _id = NO_USE) : id(_id), tag(_tag++) {
         pt[0] = _x;
         pt[1] = _y;
     }
     Point (double *_pt, int _id = NO_USE) : Point(_pt[0], _pt[1], _id) {}
 
-    Point (const Point& p) : id(p.id) {
+    Point (const Point& p) : id(p.id), tag(p.tag) {
         pt[0] = p.pt[0];
         pt[1] = p.pt[1];
     }
@@ -82,7 +85,7 @@ public:
     int id;
 
     friend std::ostream& operator<< (std::ostream &out, const Point &p) {
-        out << "id: " << p.id << ", pt: [" << p.x << "," << p.y << "]";
+        out << "id: " << p.id << ", pt: [" << p.x << "," << p.y << "], tag: " << p.tag;
         return out;
     }
 
@@ -94,6 +97,7 @@ public:
 
         return std::tie(x1, y1) < std::tie(x2, y2);
     }
+
 };
 
 typedef std::vector<Point> PolyType;

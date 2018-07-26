@@ -392,24 +392,22 @@ bool TrivialRm::HasArea (const IdsType &pocket) {
 }
 
 void TrivialRm::GetSimplified (PolyType &res) {
-    VertsType4 poly2(poly.begin(), poly.end());
+    int ind2 = (std::find_if(poly.begin(), poly.end(), [&](const Point &p) { return p.id == ind; }))-poly.begin();
 
-    int ind2 = (std::find_if(poly2.begin(), poly2.end(), [&](const Point &p) { return p.id == ind; }))-poly2.begin();
-
-    int numPts = poly2.size();
+    int numPts = poly.size();
 
     int iA = (ind2+1)%numPts,
         iB = (ind2+numPts-1)%numPts;
 
-    double rA[] = {poly2[iA].x-poly2[ind2].x, poly2[iA].y-poly2[ind2].y},
-        rB[] = {poly2[iB].x-poly2[ind2].x, poly2[iB].y-poly2[ind2].y};
+    double rA[] = {poly[iA].x-poly[ind2].x, poly[iA].y-poly[ind2].y},
+        rB[] = {poly[iB].x-poly[ind2].x, poly[iB].y-poly[ind2].y};
 
     int num = numPts;
 
     std::map<int, std::vector<Src>> srcs;
 
     for (int i = 0; i < numPts; i++) {
-        verts.push_back(poly2[i]);
+        verts.push_back(poly[i]);
         Vert3 &last = verts.back();
 
         if (i == ind2) {
@@ -422,8 +420,8 @@ void TrivialRm::GetSimplified (PolyType &res) {
 
         double t;
 
-        if (Ld(poly2[ind2].pt, poly2[iA].pt, poly2[i].pt)) {
-            t = GetT(poly2[ind2].pt, poly2[iA].pt, poly2[i].pt);
+        if (Ld(poly[ind2].pt, poly[iA].pt, poly[i].pt)) {
+            t = GetT(poly[ind2].pt, poly[iA].pt, poly[i].pt);
 
             if (t > 1-E) {
                 last.src = Src::A;
@@ -433,16 +431,19 @@ void TrivialRm::GetSimplified (PolyType &res) {
             }
 
         } else {
-            std::shared_ptr<D> d(Intersect(poly2[ind2].pt, rA, poly2[i].pt, poly2[j].pt));
+            std::shared_ptr<D> d(Intersect(poly[ind2].pt, rA, poly[i].pt, poly[j].pt));
 
             if (d && d->t1 > E) {
-                newVerts.emplace(d->t2, Vert3(d->s, Src::A, d->t1));
+                Vert3 _v(d->s, Src::A, d->t1);
+                newVerts.emplace(d->t2, _v);
                 num++;
+                
+                tr.Track(poly[i], _v, d->t2);
             }
         }
 
-        if (Ld(poly2[ind2].pt, poly2[iB].pt, poly2[i].pt)) {
-            t = GetT(poly2[ind2].pt, poly2[iB].pt, poly2[i].pt);
+        if (Ld(poly[ind2].pt, poly[iB].pt, poly[i].pt)) {
+            t = GetT(poly[ind2].pt, poly[iB].pt, poly[i].pt);
 
             if (t > 1-E) {
                 last.src = Src::B;
@@ -452,11 +453,14 @@ void TrivialRm::GetSimplified (PolyType &res) {
             }
 
         } else {
-            std::shared_ptr<D> d(Intersect(poly2[ind2].pt, rB, poly2[i].pt, poly2[j].pt));
+            std::shared_ptr<D> d(Intersect(poly[ind2].pt, rB, poly[i].pt, poly[j].pt));
 
             if (d && d->t1 > E) {
-                newVerts.emplace(d->t2, Vert3(d->s, Src::B, d->t1));
+                Vert3 _v(d->s, Src::B, d->t1);
+                newVerts.emplace(d->t2, _v);
                 num++;
+                
+                tr.Track(poly[i], _v, d->t2);
             }
         }
 
@@ -553,7 +557,7 @@ void TrivialRm::GetSimplified (PolyType &res) {
         });
 
         auto first = std::find_if(good.begin(), good.end(), [&](const Vert3 &p) {
-            return p.id == poly2[iA].id;
+            return p.id == poly[iA].id;
         });
 
         std::rotate(good.begin(), first, good.end());
@@ -589,7 +593,7 @@ void TrivialRm::GetSimplified (PolyType &res) {
         });
 
         auto first = std::find_if(good.begin(), good.end(), [&](const Vert3 &p) {
-            return p.id == poly2[iB].id;
+            return p.id == poly[iB].id;
         });
 
         std::rotate(good.begin(), first, good.end());
