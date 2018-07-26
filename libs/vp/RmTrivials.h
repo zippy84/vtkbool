@@ -45,7 +45,9 @@ public:
         out << "id: " << v.id
             << ", pt: [" << v.x << "," << v.y << "]"
             << ", t: " << v.t
-            << ", src: " << static_cast<int>(v.src);
+            << ", src: " << static_cast<int>(v.src)
+            << ", rm: " << v.rm
+            << ", tag: " << v.tag;
         return out;
     }
 
@@ -101,7 +103,7 @@ public:
 class TrivialRm {
     PolyType &poly;
     VertsType3 verts;
-    
+
     Tracker &tr;
 
     int ind;

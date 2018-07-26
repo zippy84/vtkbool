@@ -437,7 +437,7 @@ void TrivialRm::GetSimplified (PolyType &res) {
                 Vert3 _v(d->s, Src::A, d->t1);
                 newVerts.emplace(d->t2, _v);
                 num++;
-                
+
                 tr.Track(poly[i], _v, d->t2);
             }
         }
@@ -459,7 +459,7 @@ void TrivialRm::GetSimplified (PolyType &res) {
                 Vert3 _v(d->s, Src::B, d->t1);
                 newVerts.emplace(d->t2, _v);
                 num++;
-                
+
                 tr.Track(poly[i], _v, d->t2);
             }
         }
@@ -614,8 +614,6 @@ void TrivialRm::GetSimplified (PolyType &res) {
     }
 
     // abschluss
-
-    //std::reverse(verts.begin(), verts.end());
 
     verts.erase(std::remove_if(verts.begin(), verts.end(), [](const Vert3 &p) {
         return p.rm;
