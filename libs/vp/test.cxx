@@ -26,6 +26,8 @@ limitations under the License.
 
 #include "VisPoly.h"
 
+int Point::_tag = 0;
+
 int main (int argc, char *argv[]) {
     Json::Value doc;
 

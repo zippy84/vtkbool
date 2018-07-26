@@ -98,27 +98,18 @@ public:
     IdsType ids;
 };
 
-// ...
-
-class Vert4 : public Point {
-public:
-    Vert4 (Point &p) : Point(p) {}
-};
-
-typedef std::vector<Vert4> VertsType4;
-
-// ...
-
 class TrivialRm {
     PolyType &poly;
     VertsType3 verts;
+    
+    Tracker &tr;
 
     int ind;
 
     Point x;
 
 public:
-    TrivialRm (PolyType &_poly, int _ind, Point &_x) : poly(_poly), ind(_ind), x(_x) {}
+    TrivialRm (PolyType &_poly, Tracker &_tr, int _ind, Point &_x) : poly(_poly), tr(_tr), ind(_ind), x(_x) {}
 
     void GetSimplified (PolyType &res);
 
