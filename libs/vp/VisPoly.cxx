@@ -143,7 +143,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
 
                             leftBags.push_back(Bag(u, k, verts[u].phi));
 
-                            tr.Track(a, _v, d->t2);
+                            tr.Track(b, _v, 1-d->t2);
 
                         }
 
@@ -238,7 +238,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
 
                                     leftBags.push_back(Bag(bag->f, k, bag->phi));
 
-                                    tr.Track(b, _v, d->t2);
+                                    tr.Track(a, _v, 1-d->t2);
 
                                 }
 
@@ -297,7 +297,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
 
                                 t = k;
 
-                                tr.Track(verts[a], _v, d->t2);
+                                tr.Track(verts[b], _v, 1-d->t2);
 
                             }
 
@@ -367,7 +367,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
 
                                         vp.push_back(k);
 
-                                        tr.Track(a, _v, d->t2);
+                                        tr.Track(b, _v, 1-d->t2);
 
                                     }
 
@@ -420,7 +420,7 @@ void Magic (const PolyType &poly, PolyType &res, int omit) {
 
     double area = GetArea(poly);
 
-    std::set<int> found;
+    std::map<int, Pair> found;
 
     int num = poly.size();
 
@@ -430,11 +430,11 @@ void Magic (const PolyType &poly, PolyType &res, int omit) {
         counts[p]++;
     }
 
-    for (auto &f : counts) {
+    /*for (auto &f : counts) {
         std::cout << "XX " << f.first << " -> " << f.second << std::endl;
-    }
+    }*/
 
-    std::cout << "XX ids'=[";
+    //std::cout << "XX ids'=[";
 
     for (int i = 0; i < num; i++) {
         const Point &pt = poly[i];
@@ -446,7 +446,7 @@ void Magic (const PolyType &poly, PolyType &res, int omit) {
         PolyType _poly;
 
         std::copy_if(poly.begin(), poly.end(), std::back_inserter(_poly), [&pt, &found](const Point &p) {
-            return p.id != pt.id && found.count(p.id) == 0;
+            return p.tag != pt.tag && found.count(p.tag) == 0;
         });
 
         double _area = GetArea(_poly);
@@ -458,30 +458,75 @@ void Magic (const PolyType &poly, PolyType &res, int omit) {
 
         if (per < 1e-4 && counts[poly[i]] == 1 && counts.find(poly[jA]) != counts.find(poly[jB])) {
             area = _area;
-            found.insert(pt.id);
 
-            std::cout << i << ", ";
+            const Point &before = poly[(i+num-1)%num],
+                &after = poly[(i+1)%num];
+
+            found[pt.tag] = {before.tag, after.tag};
+
+            //std::cout << i << ", ";
         }
 
         //std::cout << "(" << i << ", " << per << "), ";
     }
 
-    std::cout << "]" << std::endl;
+    //std::cout << "]" << std::endl;
 
     std::copy_if(poly.begin(), poly.end(), std::back_inserter(res), [&found](const Point &p) {
-        return found.count(p.id) == 0;
+        return found.count(p.tag) == 0;
     });
 
+    std::map<Pair, IdsType> yz;
+
+    for (auto &p : found) {
+        while (found.count(p.second.f) == 1) {
+            p.second.f = found[p.second.f].f;
+        }
+
+        while (found.count(p.second.g) == 1) {
+            p.second.g = found[p.second.g].g;
+        }
+
+        yz[p.second].push_back(p.first);
+
+    }
+
+    std::map<int, Point> lookup;
+
+    for (const Point &p : poly) {
+        lookup.emplace(p.tag, p);
+    }
+
+    for (auto &p : yz) {
+        auto a = lookup.find(p.first.f),
+            b = lookup.find(p.first.g);
+
+        double n[] = {b->second.x-a->second.x, b->second.y-a->second.y},
+            l = Normalize(n);
+
+        double d = a->second.x*n[0]+a->second.y*n[1];
+
+        VertsType4 verts;
+
+        for (int tag : p.second) {
+            auto c = lookup.find(tag);
+
+            double t = c->second.x*n[0]+c->second.y*n[1]-d;
+
+            Vert4 v(c->second, t/l);
+
+            v.pt[0] = a->second.x+t*n[0];
+            v.pt[1] = a->second.y+t*n[1];
+
+            verts.push_back(std::move(v));
+
+        }
+
+        std::sort(verts.begin(), verts.end());
+
+    }
+
 }
-
-class Vert2 {
-public:
-    Vert2 (int _i, double _l) : i(_i), l(_l) {}
-    double l;
-    int i;
-};
-
-typedef std::vector<Vert2> VertsType2;
 
 void Align (PolyType &poly, const Point &p) {
     VertsType2 verts;
@@ -549,7 +594,12 @@ bool GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
     }
 
     for (auto &l : tr.locs) {
-        std::cout << l.first << " -> " << l.second.par << ", " << l.second.t << std::endl;
+        assert(l.second.t < 1);
+    }
+
+    i = 0;
+    for (auto &p : res) {
+        std::cout << i++ << ": " << p << " => " << tr.locs[p.tag] << std::endl;
     }
 
     return true;

@@ -82,11 +82,6 @@ int main (int argc, char *argv[]) {
                     PolyType res;
 
                     if (GetVisPoly_wrapper(poly, res, j)) {
-                        for (auto& p : res) {
-                            std::cout << p << std::endl;
-                        }
-
-                        // das ergebnis ist in counterclockwise order
                         assert(!TestCW(res));
 
                         all[j] = std::move(res);
