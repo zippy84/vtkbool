@@ -28,6 +28,8 @@ limitations under the License.
 #include "Tools.h"
 #include "Merger.h"
 
+int Point::_tag = 0;
+
 void ToPoly (const Json::Value& pts, PolyType &poly) {
 
     for (const Json::Value& pt : pts) {

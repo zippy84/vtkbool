@@ -20,6 +20,7 @@ limitations under the License.
 #include <vector>
 #include <map>
 #include <ostream>
+#include <cassert>
 #include <exception>
 
 #include "Tools.h"
@@ -68,12 +69,27 @@ public:
     }
 };
 
+class Vert2 {
+public:
+    Vert2 (int _i, double _l) : i(_i), l(_l) {}
+    double l;
+    int i;
+};
+
+typedef std::vector<Vert2> VertsType2;
+
 class Pos {
 public:
     int par;
     double t;
     Pos (int par, double t) : par(par), t(t) {}
     Pos () {}
+
+    friend std::ostream& operator<< (std::ostream &out, const Pos &p) {
+        out << "t: " << p.t
+            << ", par: " << p.par;
+        return out;
+    }
 };
 
 class Tracker {
@@ -86,9 +102,28 @@ public:
     }
     void Track (const Point &parent, const Point &child, double t) {
         assert(locs.find(parent.tag) != locs.end());
-        locs[child.tag] = { locs[parent.tag].par, locs[parent.tag].t+t };
+        double d = locs[parent.tag].t;
+        locs[child.tag] = { locs[parent.tag].par, d+(1-d)*t };
     }
 };
+
+class Vert4 : public Point {
+public:
+    double t;
+    Vert4 (Point &p, double t) : Point(p), t(t) {}
+
+    friend std::ostream& operator<< (std::ostream &out, const Vert4 &v) {
+        out << (Point) v
+            << ", t: " << v.t;
+        return out;
+    }
+
+    bool operator< (const Vert4 &other) const {
+        return t < other.t;
+    }
+};
+
+typedef std::vector<Vert4> VertsType4;
 
 // diese darf nicht direkt verwendet werden
 void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind = 0);
