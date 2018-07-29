@@ -3,12 +3,27 @@
     version="1.1"
     width="800"
     height="1200{# last(data).x #}">
+    <style type="text/css">
+        .path1 {
+            stroke: black;
+            stroke-width: 1;
+            fill: none;
+        }
+        .path2 {
+            fill: #b3b3b3;
+        }
+        .path3 {
+            stroke: black;
+            stroke-width: 1;
+            fill: none;
+        }
+    </style>
     <g>
         {% for d in data %}
         <g transform="translate({{ d.x }} {{ d.y }})">
-            <path d="{{ d.pts }}" style="stroke:black; stroke-width:1; fill:none;" />
-            <path d="{{ d.path }}" style="fill:#b3b3b3;"/>
-            <rect x="0" y="0" height="300" width="200" style="stroke:black; stroke-width:1; fill:none;"/>
+            <path d="{{ d.pts }}" class="path1"/>
+            <path d="{{ d.path }}" class="path2"/>
+            <rect x="0" y="0" height="300" width="200" class="path3"/>
         </g>
         {% endfor %}
     </g>
