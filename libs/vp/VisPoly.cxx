@@ -143,7 +143,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
 
                             leftBags.push_back(Bag(u, k, verts[u].phi));
 
-                            tr.Track(b, _v, 1-d->t2);
+                            tr.Track(b, a, _v, 1-d->t2);
 
                         }
 
@@ -238,7 +238,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
 
                                     leftBags.push_back(Bag(bag->f, k, bag->phi));
 
-                                    tr.Track(a, _v, 1-d->t2);
+                                    tr.Track(a, b, _v, 1-d->t2);
 
                                 }
 
@@ -297,7 +297,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
 
                                 t = k;
 
-                                tr.Track(verts[b], _v, 1-d->t2);
+                                tr.Track(verts[b], verts[a], _v, 1-d->t2);
 
                             }
 
@@ -367,7 +367,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
 
                                         vp.push_back(k);
 
-                                        tr.Track(b, _v, 1-d->t2);
+                                        tr.Track(b, a, _v, 1-d->t2);
 
                                     }
 

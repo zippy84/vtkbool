@@ -438,7 +438,7 @@ void TrivialRm::GetSimplified (PolyType &res) {
                 newVerts.emplace(d->t2, _v);
                 num++;
 
-                tr.Track(poly[i], _v, d->t2);
+                tr.Track(poly[i], poly[j], _v, d->t2);
             }
         }
 
@@ -460,7 +460,7 @@ void TrivialRm::GetSimplified (PolyType &res) {
                 newVerts.emplace(d->t2, _v);
                 num++;
 
-                tr.Track(poly[i], _v, d->t2);
+                tr.Track(poly[i], poly[j], _v, d->t2);
             }
         }
 
