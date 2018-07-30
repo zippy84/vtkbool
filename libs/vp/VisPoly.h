@@ -80,15 +80,20 @@ typedef std::vector<Vert2> VertsType2;
 
 class Pos {
 public:
-    int par;
+    int edA, edB;
     double t;
-    Pos (int par, double t) : par(par), t(t) {}
+    Pos (int edA, int edB, double t) : edA(edA), edB(edB), t(t) {}
     Pos () {}
 
     friend std::ostream& operator<< (std::ostream &out, const Pos &p) {
         out << "t: " << p.t
-            << ", par: " << p.par;
+            << ", edA: " << p.edA
+            << ", edB: " << p.edB;
         return out;
+    }
+
+    bool operator== (const Pos &other) const {
+        return edA == other.edA && edB == other.edB;
     }
 };
 
@@ -96,15 +101,20 @@ class Tracker {
 public:
     std::map<int, Pos> locs;
     Tracker (const PolyType &poly) {
-        for (const Point &p : poly) {
-            locs[p.tag] = {p.tag, 0};
+        PolyType::const_iterator itr;
+        for (itr = poly.begin(); itr != poly.end(); ++itr) {
+            locs[itr->tag] = { itr->tag, (itr+1 != poly.end() ? itr+1 : poly.begin())->tag, 0 };
         }
     }
-    void Track (const Point &parent, const Point &child, double t) {
-        assert(locs.find(parent.tag) != locs.end());
-        double d = locs[parent.tag].t;
-        locs[child.tag] = { locs[parent.tag].par, d+(1-d)*t };
+    void Track (const Point &before, const Point &after, const Point &p, double t) {
+        const Pos &posB = locs[before.tag],
+            &posA = locs[after.tag];
+
+        double tA = posB == posA ? posA.t : 1;
+
+        locs[p.tag] = { posB.edA, posB.edB, posB.t+(tA-posB.t)*t };
     }
+
 };
 
 class Vert4 : public Point {
