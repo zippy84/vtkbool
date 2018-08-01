@@ -101,9 +101,9 @@ class Tracker {
 public:
     std::map<int, Pos> locs;
     Tracker (const PolyType &poly) {
-        PolyType::const_iterator itr;
-        for (itr = poly.begin(); itr != poly.end(); ++itr) {
-            locs[itr->tag] = { itr->tag, (itr+1 != poly.end() ? itr+1 : poly.begin())->tag, 0 };
+        PolyType::const_reverse_iterator itr;
+        for (itr = poly.rbegin(); itr != poly.rend(); ++itr) {
+            locs[itr->tag] = { itr->tag, (itr+1 != poly.rend() ? itr+1 : poly.rbegin())->tag, 0 };
         }
     }
     void Track (const Point &before, const Point &after, const Point &p, double t) {
@@ -120,7 +120,7 @@ public:
 class Vert4 : public Point {
 public:
     double t;
-    Vert4 (Point &p, double t) : Point(p), t(t) {}
+    Vert4 (const Point &p, double t) : Point(p), t(t) {}
 
     friend std::ostream& operator<< (std::ostream &out, const Vert4 &v) {
         out << (Point) v
@@ -134,6 +134,8 @@ public:
 };
 
 typedef std::vector<Vert4> VertsType4;
+
+typedef std::map<Pair, VertsType4> ZZType;
 
 // diese darf nicht direkt verwendet werden
 void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind = 0);

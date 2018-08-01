@@ -143,7 +143,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
 
                             leftBags.push_back(Bag(u, k, verts[u].phi));
 
-                            tr.Track(b, a, _v, 1-d->t2);
+                            tr.Track(a, b, _v, d->t2);
 
                         }
 
@@ -238,7 +238,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
 
                                     leftBags.push_back(Bag(bag->f, k, bag->phi));
 
-                                    tr.Track(a, b, _v, 1-d->t2);
+                                    tr.Track(b, a, _v, d->t2);
 
                                 }
 
@@ -297,7 +297,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
 
                                 t = k;
 
-                                tr.Track(verts[b], verts[a], _v, 1-d->t2);
+                                tr.Track(verts[a], verts[b], _v, d->t2);
 
                             }
 
@@ -367,7 +367,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
 
                                         vp.push_back(k);
 
-                                        tr.Track(b, a, _v, 1-d->t2);
+                                        tr.Track(a, b, _v, d->t2);
 
                                     }
 
@@ -416,7 +416,7 @@ double GetArea (const PolyType &poly) {
 list([ list(map(float, p.split(','))) for p in 'm 26.402829,29.895027 -2.132521,24.374833 -3.073759,35.133226 22.541594,1.972134 76.814397,6.720388 1.86346,-21.299507 3.34282,-38.208551 -31.800976,-2.782225 -0.800142,-0.07 -7.246298,-0.633968 -2.155836,24.641314 -6.148254,-0.537902 -8.586643,-0.751234 -4.925747,-0.430947 1.112312,-12.713787 0.198,-2.263145 0.192176,-2.196583 0.326117,-3.727536 0.327231,-3.740264 z'[2:-2].split(' ') ])
 */
 
-void Magic (const PolyType &poly, PolyType &res, int omit) {
+void Magic (const PolyType &poly, ZZType &zz, PolyType &res, int omit, bool rev) {
 
     double area = GetArea(poly);
 
@@ -498,31 +498,41 @@ void Magic (const PolyType &poly, PolyType &res, int omit) {
     }
 
     for (auto &p : yz) {
-        auto a = lookup.find(p.first.f),
-            b = lookup.find(p.first.g);
+        const Point &a = lookup.at(p.first.f),
+            &b = lookup.at(p.first.g);
 
-        double n[] = {b->second.x-a->second.x, b->second.y-a->second.y},
+        double n[] = {b.x-a.x, b.y-a.y},
             l = Normalize(n);
 
-        double d = a->second.x*n[0]+a->second.y*n[1];
+        double d = a.x*n[0]+a.y*n[1];
 
         VertsType4 verts;
 
         for (int tag : p.second) {
-            auto c = lookup.find(tag);
+            const Point &c = lookup.at(tag);
 
-            double t = c->second.x*n[0]+c->second.y*n[1]-d;
+            double t = c.x*n[0]+c.y*n[1]-d;
 
-            Vert4 v(c->second, t/l);
+            Vert4 v(c, t/l);
 
-            v.pt[0] = a->second.x+t*n[0];
-            v.pt[1] = a->second.y+t*n[1];
+            v.pt[0] = a.x+t*n[0];
+            v.pt[1] = a.y+t*n[1];
+
+            if (rev) {
+                v.t = 1-v.t;
+            }
 
             verts.push_back(std::move(v));
 
         }
 
         std::sort(verts.begin(), verts.end());
+
+        if (rev) {
+            zz[{p.first.g, p.first.f}] = verts;
+        } else {
+            zz[p.first] = verts;
+        }
 
     }
 
@@ -565,17 +575,52 @@ void Align (PolyType &poly, const Point &p) {
     }
 }
 
+void Restore (const PolyType &poly, const Tracker &tr, const ZZType &zz, PolyType &res) {
+    PolyType::const_iterator itr, itr2;
+    for (itr = poly.begin(); itr != poly.end(); ++itr) {
+        res.push_back(*itr);
+
+        itr2 = itr+1;
+
+        if (itr2 == poly.end()) {
+            itr2 = poly.begin();
+        }
+
+        const Pos &posA = tr.locs.at(itr->tag),
+            &posB = tr.locs.at(itr2->tag);
+
+        if (zz.find({ posA.edA, posA.edB }) != zz.end()
+            && (posA == posB
+                || posA.edB == itr2->tag)) {
+
+            double t = posA == posB ? posB.t : 1;
+
+            auto &between = zz.at({ posA.edA, posA.edB });
+
+            for (auto &b : between) {
+                if (b.t > posA.t && b.t < t) {
+                    res.push_back(b);
+                }
+            }
+
+        }
+
+    }
+}
+
 bool GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
     int i = 0;
     for (auto& p : poly) {
         p.id = i++;
     }
 
-    PolyType poly2, poly3, poly4;
+    PolyType poly2, poly3, poly4, poly5;
 
     Point x(poly[ind]);
 
-    Magic(poly, poly2, ind);
+    ZZType zz;
+
+    Magic(poly, zz, poly2, ind, true);
 
     Align(poly2, x);
 
@@ -583,10 +628,10 @@ bool GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
 
     TrivialRm(poly2, tr, ind, x).GetSimplified(poly3);
 
-    Magic(poly3, poly4, ind);
+    Magic(poly3, zz, poly4, ind, false);
 
     try {
-        GetVisPoly(poly4, tr, res);
+        GetVisPoly(poly4, tr, poly5);
     } catch (const vp_error &e) {
         std::cout << "Error: " << e.what() << std::endl;
 
@@ -598,9 +643,11 @@ bool GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
     }
 
     i = 0;
-    for (auto &p : res) {
+    for (auto &p : poly5) {
         std::cout << i++ << ": " << p << " => " << tr.locs[p.tag] << std::endl;
     }
+
+    Restore(poly5, tr, zz, res);
 
     return true;
 
