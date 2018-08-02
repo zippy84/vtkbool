@@ -576,6 +576,8 @@ void Align (PolyType &poly, const Point &p) {
 }
 
 void Restore (const PolyType &poly, const Tracker &tr, const ZZType &zz, PolyType &res) {
+    std::map<int, Point> rr;
+
     PolyType::const_iterator itr, itr2;
     for (itr = poly.begin(); itr != poly.end(); ++itr) {
         res.push_back(*itr);
@@ -598,14 +600,25 @@ void Restore (const PolyType &poly, const Tracker &tr, const ZZType &zz, PolyTyp
             auto &between = zz.at({ posA.edA, posA.edB });
 
             for (auto &b : between) {
-                if (b.t > posA.t && b.t < t) {
+                if (b.t > posA.t+E && b.t < t-E) {
                     res.push_back(b);
+                } else if (IsNear(b.pt, itr->pt)) {
+                    res.back() = b;
+                } else if (IsNear(b.pt, itr2->pt)) {
+                    rr.emplace(itr2->tag, b);
                 }
             }
 
         }
 
     }
+
+    for (auto &p : res) {
+        if (rr.find(p.tag) != rr.end()) {
+            p = rr.at(p.tag);
+        }
+    }
+
 }
 
 bool GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
@@ -644,10 +657,15 @@ bool GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
 
     i = 0;
     for (auto &p : poly5) {
-        std::cout << i++ << ": " << p << " => " << tr.locs[p.tag] << std::endl;
+        std::cout << i++ << ". " << p << " => " << tr.locs[p.tag] << std::endl;
     }
 
     Restore(poly5, tr, zz, res);
+
+    i = 0;
+    for (auto &p : res) {
+        std::cout << i++ << ". " << p << std::endl;
+    }
 
     return true;
 
