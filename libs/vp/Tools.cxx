@@ -139,7 +139,7 @@ bool IsFrontfaced (double *r, double *a, double *b) {
     return _x < 0;
 }
 
-bool IsNear (double *a, double *b) {
+bool IsNear (const double *a, const double *b) {
     return std::abs(b[0]-a[0]) < E
         && std::abs(b[1]-a[1]) < E;
 }
