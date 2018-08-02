@@ -126,7 +126,7 @@ std::shared_ptr<D> Intersect (double *o, double *r, double *pA, double *pB);
 std::shared_ptr<D> Intersect2 (double *oA, double *oB, double *pA, double *pB);
 
 bool IsFrontfaced (double *r, double *a, double *b);
-bool IsNear (double *a, double *b);
+bool IsNear (const double *a, const double *b);
 double GetT (double *a, double *b, double *c);
 
 bool TestCW (const PolyType &poly);
