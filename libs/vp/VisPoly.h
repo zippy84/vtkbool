@@ -20,6 +20,7 @@ limitations under the License.
 #include <vector>
 #include <map>
 #include <set>
+#include <string>
 #include <ostream>
 #include <cassert>
 #include <exception>
@@ -64,9 +65,11 @@ public:
 };
 
 class vp_error : public std::exception {
+    std::string msg;
 public:
+    vp_error(const std::string &msg) : msg(msg) {}
     const char* what() const throw() {
-        return "Too many pop's.";
+        return msg.c_str();
     }
 };
 
