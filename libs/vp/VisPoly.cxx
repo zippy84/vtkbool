@@ -180,7 +180,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
                     }
 
                     if (vp.size() < 2) {
-                        throw vp_error();
+                        throw vp_error("Too many pop's.");
                     }
 
                     int _x = v;
@@ -265,7 +265,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
                         vp.pop_back();
 
                         if (vp.size() < 1) {
-                            throw vp_error();
+                            throw vp_error("Too many pop's.");
                         }
 
                         std::shared_ptr<D> d(Intersect(x, verts[v].r, verts[a].pt, verts[b].pt));
@@ -590,6 +590,10 @@ void Restore (const PolyType &poly, const Tracker &tr, const ZZType &zz, PolyTyp
             itr2 = poly.begin();
         }
 
+        if (itr == poly.begin() || itr2 == poly.begin()) {
+            continue;
+        }
+
         const Pos &posA = tr.locs.at(itr->tag),
             &posB = tr.locs.at(itr2->tag);
 
@@ -627,6 +631,62 @@ void Restore (const PolyType &poly, const Tracker &tr, const ZZType &zz, PolyTyp
 
 }
 
+void Restore2 (const PolyType &poly, PolyType &res) {
+    PolyType::const_iterator itr, itr2;
+
+    PolyType::const_reverse_iterator itr3;
+
+    std::map<int, Point> found;
+
+    for (itr = res.begin(); itr != res.end(); ++itr) {
+        itr2 = itr+1;
+
+        if (itr2 == res.end()) {
+            itr2 = res.begin();
+        }
+
+        if (IsNear(itr->pt, itr2->pt)) {
+            itr3 = std::find_if(poly.rbegin(), poly.rend(), [&itr](const Point &p) {
+                return p.tag == itr->tag;
+            });
+
+            std::map<Point, int> counts;
+
+            do {
+                counts[*itr3]++;
+
+                if (++itr3 == poly.rend()) {
+                    itr3 = poly.rbegin();
+                }
+            } while (itr3->tag != itr2->tag);
+
+            counts[*itr3]++;
+
+            PolyType single;
+
+            for (auto &c : counts) {
+                if (c.second == 1) {
+                    single.push_back(c.first);
+                }
+            }
+
+            if (single.size() != 1) {
+                throw vp_error("Too many points at the same place.");
+            }
+
+            found.emplace(itr2-res.begin(), single.front());
+
+        }
+    }
+
+    std::map<int, Point>::const_reverse_iterator itr4;
+
+    for (itr4 = found.rbegin(); itr4 != found.rend(); ++itr4) {
+        res.insert(res.begin()+itr4->first, itr4->second);
+    }
+    
+}
+
 bool GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
     int i = 0;
     for (auto& p : poly) {
@@ -652,34 +712,37 @@ bool GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
 
     try {
         GetVisPoly(poly4, tr, poly5);
+
+        for (auto &l : tr.locs) {
+            assert(l.second.t < 1);
+        }
+
+        i = 0;
+        for (auto &p : poly5) {
+            std::cout << i++ << ". " << p << " => " << tr.locs[p.tag] << std::endl;
+        }
+
+        if (yy.count(poly5[1].tag) == 1) {
+            poly5.erase(poly5.begin()+1);
+
+            if (yy.count(poly5[1].tag) == 1) {
+                poly5.erase(poly5.begin()+1);
+            }
+        }
+
+        Restore(poly5, tr, zz, res);
+
+        Restore2(poly, res);
+
+        i = 0;
+        for (auto &p : res) {
+            std::cout << i++ << ". " << p << std::endl;
+        }
+        
     } catch (const vp_error &e) {
         std::cout << "Error: " << e.what() << std::endl;
 
         return false;
-    }
-
-    for (auto &l : tr.locs) {
-        assert(l.second.t < 1);
-    }
-
-    i = 0;
-    for (auto &p : poly5) {
-        std::cout << i++ << ". " << p << " => " << tr.locs[p.tag] << std::endl;
-    }
-
-    if (yy.count(poly5[1].tag) == 1) {
-        poly5.erase(poly5.begin()+1);
-
-        if (yy.count(poly5[1].tag) == 1) {
-            poly5.erase(poly5.begin()+1);
-        }
-    }
-
-    Restore(poly5, tr, zz, res);
-
-    i = 0;
-    for (auto &p : res) {
-        std::cout << i++ << ". " << p << std::endl;
     }
 
     return true;

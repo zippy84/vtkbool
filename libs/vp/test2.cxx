@@ -43,7 +43,7 @@ int main (int argc, char *argv[]) {
 
     Json::CharReaderBuilder reader;
 
-    std::ifstream jn("../dev/special.json");
+    std::ifstream jn("../dev/complex.json");
 
     std::string err;
 
@@ -112,7 +112,7 @@ int main (int argc, char *argv[]) {
                 Json::StreamWriterBuilder writer;
 
                 std::stringstream name;
-                name << "../dev/data_files/special_" << i << ".js";
+                name << "../dev/data_files/data_" << i << ".js";
 
                 std::ofstream f(name.str());
                 f << "var pts = '" << GetAbsolutePath(poly)
