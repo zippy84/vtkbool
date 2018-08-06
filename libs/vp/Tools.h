@@ -91,10 +91,10 @@ public:
     }
 
     bool operator< (const Point &other) const {
-        const int x1 = static_cast<int>(x*1e6),
-            y1 = static_cast<int>(y*1e6),
-            x2 = static_cast<int>(other.x*1e6),
-            y2 = static_cast<int>(other.y*1e6);
+        const int x1 = static_cast<int>(x*E),
+            y1 = static_cast<int>(y*E),
+            x2 = static_cast<int>(other.x*E),
+            y2 = static_cast<int>(other.y*E);
 
         return std::tie(x1, y1) < std::tie(x2, y2);
     }
