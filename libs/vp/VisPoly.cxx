@@ -236,7 +236,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
 
                                     leftBags.push_back(Bag(bag->f, k, bag->phi));
 
-                                    tr.Track(b, a, _v, d->t2);
+                                    tr.Track(b, a, _v, _d->t2);
 
                                 }
 
