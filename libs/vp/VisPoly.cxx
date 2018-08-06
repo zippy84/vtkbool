@@ -51,7 +51,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
     }
 
     for (Vert& v : verts) {
-        std::cout << v.id << ", " << v.nxt << std::endl;
+        std::cout << v.tag << " -> " << verts[v.nxt].tag << std::endl;
     }
 
     IdsType vp = {0, 1};
@@ -74,7 +74,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
         Cpy(ptU, verts[u].pt);
         Cpy(ptV, verts[v].pt);
 
-        std::cout << "orig " << verts[u].id << ", " << verts[v].id << std::endl;
+        std::cout << "orig " << verts[u].tag << ", " << verts[v].tag << std::endl;
 
         if (Ld(x, ptU, ptV)) {
             std::cout << "skipping" << std::endl;
@@ -110,15 +110,13 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
                     double *ptA = a.pt,
                         *ptB = b.pt;
 
-                    std::cout << ">> " << a.id << ", " << b.id << std::endl;
+                    std::cout << ">> " << a.tag << ", " << b.tag << std::endl;
 
                     std::shared_ptr<D> d(Intersect(x, verts[u].r, ptA, ptB));
 
                     if (d
                         && d->t1 > E
                         && IsFrontfaced(verts[u].r, ptA, ptB)) {
-
-                        std::cout << "edge (" << a.id << ", " << b.id << ")" << std::endl;
 
                         if (d->t2 < E) {
                             verts[u].nxt = w;
@@ -196,7 +194,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
                         double *ptA = a.pt,
                             *ptB = b.pt;
 
-                        std::cout << ">>" << a.id << ", " << b.id << std::endl;
+                        std::cout << ">>" << a.tag << ", " << b.tag << std::endl;
 
                         std::shared_ptr<D> _d;
 
@@ -343,7 +341,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
                                 double *ptA = a.pt,
                                     *ptB = b.pt;
 
-                                std::cout << ">> " << a.id << ", " << b.id << std::endl;
+                                std::cout << ">> " << a.tag << ", " << b.tag << std::endl;
 
                                 std::shared_ptr<D> d(Intersect(x, verts[v].r, ptA, ptB));
 
@@ -416,7 +414,7 @@ double GetArea (const PolyType &poly) {
 list([ list(map(float, p.split(','))) for p in 'm 26.402829,29.895027 -2.132521,24.374833 -3.073759,35.133226 22.541594,1.972134 76.814397,6.720388 1.86346,-21.299507 3.34282,-38.208551 -31.800976,-2.782225 -0.800142,-0.07 -7.246298,-0.633968 -2.155836,24.641314 -6.148254,-0.537902 -8.586643,-0.751234 -4.925747,-0.430947 1.112312,-12.713787 0.198,-2.263145 0.192176,-2.196583 0.326117,-3.727536 0.327231,-3.740264 z'[2:-2].split(' ') ])
 */
 
-void Magic (const PolyType &poly, ZZType &zz, PolyType &res, int omit, bool rev) {
+void Magic (const PolyType &poly, YYType &yy, ZZType &zz, PolyType &res, int omit, bool rev) {
 
     double area = GetArea(poly);
 
@@ -456,15 +454,19 @@ void Magic (const PolyType &poly, ZZType &zz, PolyType &res, int omit, bool rev)
         int jA = (i+1)%num,
             jB = (i+num-1)%num;
 
-        if (per < 1e-4 && counts[poly[i]] == 1 && counts.find(poly[jA]) != counts.find(poly[jB])) {
-            area = _area;
+        if (per < 1e-4 && counts.find(poly[jA]) != counts.find(poly[jB])) {
+            if (counts[poly[i]] == 1) {
+                area = _area;
 
-            const Point &before = poly[(i+num-1)%num],
-                &after = poly[(i+1)%num];
+                const Point &before = poly[(i+num-1)%num],
+                    &after = poly[(i+1)%num];
 
-            found[pt.tag] = {before.tag, after.tag};
+                found[pt.tag] = {before.tag, after.tag};
 
-            //std::cout << i << ", ";
+                //std::cout << i << ", ";
+            } else {
+                yy.insert(pt.tag);
+            }
         }
 
         //std::cout << "(" << i << ", " << per << "), ";
@@ -614,9 +616,13 @@ void Restore (const PolyType &poly, const Tracker &tr, const ZZType &zz, PolyTyp
     }
 
     for (auto &p : res) {
-        if (rr.find(p.tag) != rr.end()) {
+        /*if (rr.find(p.tag) != rr.end()) {
             p = rr.at(p.tag);
-        }
+        }*/
+
+        try {
+            p = rr.at(p.tag);
+        } catch (...) {}
     }
 
 }
@@ -631,9 +637,10 @@ bool GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
 
     Point x(poly[ind]);
 
+    YYType yy;
     ZZType zz;
 
-    Magic(poly, zz, poly2, ind, true);
+    Magic(poly, yy, zz, poly2, ind, true);
 
     Align(poly2, x);
 
@@ -641,7 +648,7 @@ bool GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
 
     TrivialRm(poly2, tr, ind, x).GetSimplified(poly3);
 
-    Magic(poly3, zz, poly4, ind, false);
+    Magic(poly3, yy, zz, poly4, ind, false);
 
     try {
         GetVisPoly(poly4, tr, poly5);
@@ -658,6 +665,14 @@ bool GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
     i = 0;
     for (auto &p : poly5) {
         std::cout << i++ << ". " << p << " => " << tr.locs[p.tag] << std::endl;
+    }
+
+    if (yy.count(poly5[1].tag) == 1) {
+        poly5.erase(poly5.begin()+1);
+
+        if (yy.count(poly5[1].tag) == 1) {
+            poly5.erase(poly5.begin()+1);
+        }
     }
 
     Restore(poly5, tr, zz, res);

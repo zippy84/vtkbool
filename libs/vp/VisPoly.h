@@ -19,6 +19,7 @@ limitations under the License.
 
 #include <vector>
 #include <map>
+#include <set>
 #include <ostream>
 #include <cassert>
 #include <exception>
@@ -136,6 +137,8 @@ public:
 typedef std::vector<Vert4> VertsType4;
 
 typedef std::map<Pair, VertsType4> ZZType;
+
+typedef std::set<int> YYType;
 
 // diese darf nicht direkt verwendet werden
 void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind = 0);
