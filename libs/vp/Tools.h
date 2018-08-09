@@ -25,6 +25,7 @@ limitations under the License.
 #include <sstream>
 #include <tuple>
 #include <algorithm>
+#include <cfloat>
 
 #define NO_USE -1
 #define PI std::acos(-1)
@@ -91,10 +92,10 @@ public:
     }
 
     bool operator< (const Point &other) const {
-        const int x1 = static_cast<int>(x*1e6),
-            y1 = static_cast<int>(y*1e6),
-            x2 = static_cast<int>(other.x*1e6),
-            y2 = static_cast<int>(other.y*1e6);
+        const int x1 = static_cast<int>(x*1e5),
+            y1 = static_cast<int>(y*1e5),
+            x2 = static_cast<int>(other.x*1e5),
+            y2 = static_cast<int>(other.y*1e5);
 
         return std::tie(x1, y1) < std::tie(x2, y2);
     }
@@ -139,5 +140,21 @@ template<typename T>
 std::ostream& operator<< (typename std::enable_if<std::is_enum<T>::value, std::ostream>::type& stream, const T& e) {
     return stream << static_cast<typename std::underlying_type<T>::type>(e);
 }
+
+class Ext {
+public:
+    double minX, maxX, minY, maxY;
+    Ext () : minX(DBL_MAX), maxX(DBL_MIN), minY(DBL_MAX), maxY(DBL_MIN) {}
+
+    friend std::ostream& operator<< (std::ostream &out, const Ext &e) {
+        out << "(" << e.minX
+            << ", " << e.maxX
+            << ", " << e.minY
+            << ", " << e.maxY << ")";
+        return out;
+    }
+};
+
+void GetExt (const PolyType &poly, Ext &ext);
 
 #endif

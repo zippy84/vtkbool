@@ -31,9 +31,10 @@ limitations under the License.
 int Point::_tag = 0;
 
 void ToPoly (const Json::Value& pts, PolyType &poly) {
+    int i = 0;
 
     for (const Json::Value& pt : pts) {
-        poly.push_back(Point(pt[0].asDouble(), pt[1].asDouble()));
+        poly.push_back(Point(pt[0].asDouble(), pt[1].asDouble(), i++));
     }
 
     for (int j = 1; j < poly.size(); j++) {
@@ -47,7 +48,7 @@ int main (int argc, char *argv[]) {
 
     Json::CharReaderBuilder reader;
 
-    std::ifstream jn("../dev/holes2.json");
+    std::ifstream jn("../dev/holes.json");
 
     std::string err;
 
@@ -74,32 +75,21 @@ int main (int argc, char *argv[]) {
 
         m.GetMerged(merged);
 
-        std::vector<double> xs, ys;
+        Ext ext;
 
         for (auto& p : merged) {
-            assert(!TestCW(p));
-
+            GetExt(p, ext);
             data["data"].push_back({{ "path", GetAbsolutePath(p) }});
-
-            for (auto &pt : p) {
-                xs.push_back(pt.x);
-                ys.push_back(pt.y);
-            }
+            assert(!TestCW(p));
         }
 
-        double xMin = *std::min_element(xs.begin(), xs.end()),
-            xMax = *std::max_element(xs.begin(), xs.end());
+        data["width"] = std::abs(ext.maxX-ext.minX);
+        data["height"] = std::abs(ext.maxY-ext.minY);
 
-        double yMin = *std::min_element(ys.begin(), ys.end()),
-            yMax = *std::max_element(ys.begin(), ys.end());
+        data["x"] = -ext.minX;
+        data["y"] = -ext.minY;
 
-        data["width"] = std::abs(xMax-xMin);
-        data["height"] = std::abs(yMax-yMin);
-
-        data["x"] = -xMin;
-        data["y"] = -yMin;
-
-        env.write("../dev/template.svg", data, "../dev/output2.svg");
+        env.write("../dev/template.svg", data, "../dev/output.svg");
 
     }
 }
