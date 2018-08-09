@@ -143,6 +143,13 @@ typedef std::map<Pair, VertsType4> ZZType;
 
 typedef std::set<int> YYType;
 
+void Magic (const PolyType &poly, YYType &yy, ZZType &zz, PolyType &res, int omit, bool rev);
+
+void Align (PolyType &poly, const Point &p);
+
+void Restore (const PolyType &poly, const Tracker &tr, const ZZType &zz, PolyType &res);
+void Restore2 (const PolyType &poly, PolyType &res);
+
 // diese darf nicht direkt verwendet werden
 void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind = 0);
 

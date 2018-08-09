@@ -228,3 +228,20 @@ bool TestPIP (PolyType &poly, Point &pt) {
 
     return in;
 }
+
+void GetExt (const PolyType &poly, Ext &ext) {
+    for (auto &p : poly) {
+        if (p.x < ext.minX) {
+            ext.minX = p.x;
+        }
+        if (p.x > ext.maxX) {
+            ext.maxX = p.x;
+        }
+        if (p.y < ext.minY) {
+            ext.minY = p.y;
+        }
+        if (p.y > ext.maxY) {
+            ext.maxY = p.y;
+        }
+    }
+}

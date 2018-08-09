@@ -28,6 +28,19 @@ limitations under the License.
 
 int Point::_tag = 0;
 
+void ToPoly (const Json::Value& pts, PolyType &poly) {
+    int i = 0;
+
+    for (const Json::Value& pt : pts) {
+        poly.push_back(Point(pt[0].asDouble(), pt[1].asDouble(), i++));
+    }
+
+    for (int j = 1; j < poly.size(); j++) {
+        poly[j].pt[0] += poly[j-1].pt[0];
+        poly[j].pt[1] += poly[j-1].pt[1];
+    }
+}
+
 int main (int argc, char *argv[]) {
     std::istringstream stream(argv[1]);
     int s, t;
@@ -55,26 +68,13 @@ int main (int argc, char *argv[]) {
         for (const Json::Value& p : polys) {
             if (i == s) {
                 PolyType poly;
-
-                int j = 0;
-
-                for (const Json::Value& pt : p) {
-                    poly.push_back(Point(pt[0].asDouble(), pt[1].asDouble(), j++));
-                }
+                ToPoly(p, poly);
 
                 int num = poly.size();
-
-                std::cout << num << std::endl;
-
-                for (int j = 1; j < num; j++) {
-                    poly[j].pt[0] += poly[j-1].pt[0];
-                    poly[j].pt[1] += poly[j-1].pt[1];
-                }
 
                 std::map<int, PolyType> all;
 
                 for (int j = 0; j < num; j++) {
-                    // das polygon ist in clockwise order
                     assert(TestCW(poly));
 
                     //if (j != t) { continue; }
@@ -92,20 +92,6 @@ int main (int argc, char *argv[]) {
                 Json::Value data;
 
                 for (const auto& itr : all) {
-                    /*
-                    Json::Value pts(Json::arrayValue);
-                    for (const auto& pt : itr.second) {
-
-                        Json::Value _pt(Json::arrayValue);
-                        _pt.append(pt.x);
-                        _pt.append(pt.y);
-
-                        pts.append(_pt);
-                    }
-
-                    data[std::to_string(itr.first)] = pts;
-                    */
-
                     data[std::to_string(itr.first)] = GetAbsolutePath(itr.second);
                 }
 
