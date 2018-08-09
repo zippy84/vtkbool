@@ -33,8 +33,7 @@ public:
     bool refl;
 
     friend std::ostream& operator<< (std::ostream &out, const Vert6 &v) {
-        out << "id: " << v.id
-            << ", pt: [" << v.x << "," << v.y << "]"
+        out << (Point) v
             << ", refl: " << v.refl;
         return out;
     }
@@ -69,6 +68,15 @@ struct p_h {
     }
 };
 
+class d_error : public std::exception {
+    std::string msg;
+public:
+    d_error(const std::string &msg) : msg(msg) {}
+    const char* what() const throw() {
+        return msg.c_str();
+    }
+};
+
 class Decomposer {
     PolyType poly;
     VertsType6 verts;
@@ -94,8 +102,5 @@ public:
     void GetDecomposed (DecResType &res);
 
 };
-
-void SimpleRmInternals (VertsType6 &verts);
-void Scale (PolyType &poly);
 
 #endif

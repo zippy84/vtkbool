@@ -21,59 +21,85 @@ limitations under the License.
 #include <json/json.h>
 #include <json/reader.h>
 
+#include "inja.hpp"
+#include "nlohmann/json.hpp"
+
 #include "Decomposer.h"
 #include "Tools.h"
+
+int Point::_tag = 0;
+
+void ToPoly (const Json::Value& pts, PolyType &poly) {
+    int i = 0;
+
+    for (const Json::Value& pt : pts) {
+        poly.push_back(Point(pt[0].asDouble(), pt[1].asDouble(), i++));
+    }
+
+    for (int j = 1; j < poly.size(); j++) {
+        poly[j].pt[0] += poly[j-1].pt[0];
+        poly[j].pt[1] += poly[j-1].pt[1];
+    }
+}
 
 int main (int argc, char *argv[]) {
     Json::Value doc;
 
-    Json::Reader reader;
+    Json::CharReaderBuilder reader;
 
-    std::ifstream jn("../../vp/dev/complex.json");
+    std::ifstream jn("../../vp/dev/special.json");
 
-    if (reader.parse(jn, doc)) {
+    std::string err;
+
+    if (Json::parseFromStream(reader, jn, &doc, &err)) {
         const Json::Value polys = doc["polys"];
+
+        inja::Environment env;
+        env.set_element_notation(inja::ElementNotation::Dot);
 
         int i = 0;
 
         for (const Json::Value& p : polys) {
-            //if (i == 2) {
-                PolyType poly;
+            PolyType poly;
 
-                int j = 0;
+            ToPoly(p, poly);
 
-                for (const Json::Value& pt : p) {
-                    poly.push_back(Point(pt[0].asDouble(), pt[1].asDouble(), j++));
+            assert(TestCW(poly));
+
+            nlohmann::json data;
+
+            Ext ext;
+            GetExt(poly, ext);
+
+            data["width"] = std::abs(ext.maxX-ext.minX);
+            data["height"] = std::abs(ext.maxY-ext.minY);
+
+            data["x"] = -ext.minX;
+            data["y"] = -ext.minY;
+
+            data["poly"] = GetAbsolutePath(poly);
+
+            Decomposer d(poly);
+
+            DecResType decs;
+            d.GetDecomposed(decs);
+
+            for (auto& dec : decs) {
+                PolyType p;
+
+                for (int id : dec) {
+                    p.push_back(poly[id]);
                 }
 
-                int num = poly.size();
+                data["data"].push_back({{ "path", GetAbsolutePath(p) }});
 
-                std::cout << num << std::endl;
+                assert(TestCW(p));
+            }
 
-                for (int j = 1; j < num; j++) {
-                    poly[j].pt[0] += poly[j-1].pt[0];
-                    poly[j].pt[1] += poly[j-1].pt[1];
-                }
+            std::stringstream name;
+            name << "../dev/res/special_" << i << ".svg";
 
-                assert(TestCW(poly));
-
-                Decomposer d(poly);
-
-                DecResType decs;
-                d.GetDecomposed(decs);
-
-                for (auto& dec : decs) {
-                    PolyType p;
-
-                    for (int id : dec) {
-                        p.push_back(poly[id]);
-                    }
-
-                    std::cout << GetAbsolutePath(p) << std::endl;
-
-                    assert(TestCW(p));
-                }
-            //}
+            env.write("../dev/template.svg", data, name.str());
 
             i++;
 
@@ -82,4 +108,3 @@ int main (int argc, char *argv[]) {
     }
 
 }
-

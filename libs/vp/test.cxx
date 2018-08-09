@@ -28,6 +28,19 @@ limitations under the License.
 
 int Point::_tag = 0;
 
+void ToPoly (const Json::Value& pts, PolyType &poly) {
+    int i = 0;
+
+    for (const Json::Value& pt : pts) {
+        poly.push_back(Point(pt[0].asDouble(), pt[1].asDouble(), i++));
+    }
+
+    for (int j = 1; j < poly.size(); j++) {
+        poly[j].pt[0] += poly[j-1].pt[0];
+        poly[j].pt[1] += poly[j-1].pt[1];
+    }
+}
+
 int main (int argc, char *argv[]) {
     Json::Value doc;
 
@@ -49,19 +62,7 @@ int main (int argc, char *argv[]) {
 
         for (const Json::Value& p : polys) {
             PolyType poly;
-
-            int i = 0;
-
-            for (const Json::Value& pt : p) {
-                poly.push_back(Point(pt[0].asDouble(), pt[1].asDouble(), i++));
-            }
-
-            std::cout << poly.size() << std::endl;
-
-            for (int j = 1; j < poly.size(); j++) {
-                poly[j].pt[0] += poly[j-1].pt[0];
-                poly[j].pt[1] += poly[j-1].pt[1];
-            }
+            ToPoly(p, poly);
 
             std::reverse(poly.begin(), poly.end());
 
@@ -72,8 +73,6 @@ int main (int argc, char *argv[]) {
             PolyType res;
 
             GetVisPoly_wrapper(poly, res, 0);
-
-            //std::cout << "Res " << GetAbsolutePath(res) << std::endl;
 
             int row = static_cast<int>(idx/4),
                 col = static_cast<int>(idx%4);

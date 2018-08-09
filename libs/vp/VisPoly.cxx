@@ -455,7 +455,7 @@ void Magic (const PolyType &poly, YYType &yy, ZZType &zz, PolyType &res, int omi
             jB = (i+num-1)%num;
 
         if (per < 1e-4 && counts.find(poly[jA]) != counts.find(poly[jB])) {
-            if (counts[poly[i]] == 1) {
+            //if (counts[poly[i]] == 1) {
                 area = _area;
 
                 const Point &before = poly[(i+num-1)%num],
@@ -464,9 +464,9 @@ void Magic (const PolyType &poly, YYType &yy, ZZType &zz, PolyType &res, int omi
                 found[pt.tag] = {before.tag, after.tag};
 
                 //std::cout << i << ", ";
-            } else {
-                yy.insert(pt.tag);
-            }
+            //} else {
+            //    yy.insert(pt.tag);
+            //}
         }
 
         //std::cout << "(" << i << ", " << per << "), ";
@@ -561,16 +561,15 @@ void Align (PolyType &poly, const Point &p) {
     for (itr2 = verts.begin(); itr2 != verts.end()-1; ++itr2) {
         double n[] = {p.y-poly[itr2->i].y, poly[itr2->i].x-p.x};
         Normalize(n);
-        double d = n[0]*p.x+n[1]*p.y;
 
         for (itr3 = itr2+1; itr3 != verts.end(); ++itr3) {
             Point &q = poly[itr3->i];
 
-            double e = d-n[0]*q.x-n[1]*q.y;
+            double d = n[0]*(p.x-q.x)+n[1]*(p.y-q.y);
 
-            if (std::abs(e) < 1e-3) {
-                q.pt[0] += n[0]*e;
-                q.pt[1] += n[1]*e;
+            if (std::abs(d) < 1e-3) {
+                q.pt[0] += n[0]*d;
+                q.pt[1] += n[1]*d;
             }
 
         }
@@ -684,7 +683,39 @@ void Restore2 (const PolyType &poly, PolyType &res) {
     for (itr4 = found.rbegin(); itr4 != found.rend(); ++itr4) {
         res.insert(res.begin()+itr4->first, itr4->second);
     }
-    
+
+}
+
+void _Special (PolyType &poly, const Point &p) {
+    PolyType::iterator itr, itr2;
+
+    for (itr = poly.begin(); itr != poly.end()-1; ++itr) {
+        itr2 = itr+1;
+
+        const Point &pA = *itr,
+            &pB = *itr2;
+
+        double vA[] = {pA.x-p.x, pA.y-p.y},
+            vB[] = {pB.x-p.x, pB.y-p.y};
+
+        double lA = Normalize(vA),
+            lB = Normalize(vB);
+
+        double n[] = {p.y-pA.y, pA.x-p.x};
+        Normalize(n);
+
+        double d = n[0]*(p.x-pB.x)+n[1]*(p.y-pB.y);
+
+        if (std::abs(d) < E) {
+            if (lB > lA) {
+                itr2->id = NO_USE;
+            } else {
+                itr->id = NO_USE;
+            }
+        }
+
+    }
+
 }
 
 bool GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
@@ -734,11 +765,29 @@ bool GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
 
         Restore2(poly, res);
 
+        {
+            int num = poly.size();
+
+            const Point &pA = poly[(ind+1)%num],
+                &pB = poly[(ind+num-1)%num];
+
+            if ((res.begin()+1)->tag != pB.tag) {
+                res.insert(res.begin()+1, pB);
+            }
+
+            if ((res.end()-1)->tag != pA.tag) {
+                res.push_back(pA);
+            }
+
+        }
+
+        _Special(res, x);
+
         i = 0;
         for (auto &p : res) {
             std::cout << i++ << ". " << p << std::endl;
         }
-        
+
     } catch (const vp_error &e) {
         std::cout << "Error: " << e.what() << std::endl;
 
