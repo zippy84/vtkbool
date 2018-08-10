@@ -155,4 +155,6 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind = 0);
 
 bool GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind);
 
+void _Restore (const PolyType &poly, const ZZType &zz, PolyType &res);
+
 #endif

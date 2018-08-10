@@ -75,7 +75,6 @@ int main (int argc, char *argv[]) {
                 std::map<int, PolyType> all;
 
                 for (int j = 0; j < num; j++) {
-                    assert(TestCW(poly));
 
                     //if (j != t) { continue; }
 

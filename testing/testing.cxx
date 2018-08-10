@@ -46,6 +46,8 @@ limitations under the License.
 
 //#define DD
 
+int Point::_tag = 0;
+
 typedef std::map<int, IdsType> LinksType;
 
 class Test {

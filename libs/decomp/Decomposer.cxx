@@ -19,9 +19,6 @@ limitations under the License.
 #include <tuple>
 #include <numeric>
 
-#include "VisPoly.h"
-#include "RmTrivials.h"
-
 #include "Decomposer.h"
 
 void SubP::AddPair (Pair _p, int _w) {
@@ -59,7 +56,7 @@ void SubP::RestoreS () {
     S_tail.clear();
 }
 
-Decomposer::Decomposer (PolyType &_poly) {
+Decomposer::Decomposer (PolyType &_poly) : _orig(_poly) {
     {
         int i = 0;
         for(auto& p : poly) {
@@ -67,10 +64,7 @@ Decomposer::Decomposer (PolyType &_poly) {
         }
     }
 
-    YYType yy;
-    ZZType zz;
-
-    Magic(_poly, yy, zz, poly, NO_USE, false);
+    Magic(_poly, _yy, _zz, poly, NO_USE, false);
 
     std::copy(poly.begin(), poly.end(), std::back_inserter(verts));
 
@@ -387,7 +381,7 @@ void Decomposer::GetDecomposed (DecResType &res) {
     if (subs.empty()) {
         // keine refl vorhanden
 
-        IdsType ids(poly.size());
+        IdsType ids(_orig.size());
         std::iota(ids.begin(), ids.end(), 0);
 
         res.push_back(ids);
@@ -508,6 +502,30 @@ void Decomposer::GetDecomposed (DecResType &res) {
         for (int& id : dec) {
             id = verts[id].id;
         }
+
+        PolyType _poly;
+        for (int id : dec) {
+            _poly.push_back(_orig[id]);
+        }
+
+        /*
+        std::cout << "_poly=[";
+        for (auto &p : _poly) {
+            std::cout << p.tag << ", ";
+        }
+        std::cout << "]" << std::endl;
+        */
+
+        PolyType _res;
+
+        _Restore(_poly, _zz, _res);
+
+        IdsType _dec;
+        for (auto& p : _res) {
+            _dec.push_back(p.id);
+        }
+
+        dec.swap(_dec);
 
     }
 

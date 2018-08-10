@@ -23,11 +23,11 @@ else()
     set(CMAKE_CXX_FLAGS "-std=c++11 -Wno-deprecated -fPIC -Wunused")
 endif()
 
-find_package(VTK REQUIRED COMPONENTS vtkFiltersSources vtkIOLegacy vtkFiltersExtraction vtkFiltersGeometry vtkFiltersModeling NO_MODULE)
+#find_package(VTK REQUIRED COMPONENTS vtkFiltersSources vtkIOLegacy vtkFiltersExtraction vtkFiltersGeometry vtkFiltersModeling NO_MODULE)
 
-include(${VTK_USE_FILE})
+#include(${VTK_USE_FILE})
 
-if(VTK_FOUND)
+#if(VTK_FOUND)
     include_directories(../vp)
 
     add_library(merger STATIC Merger.cxx ../vp/Tools.cxx)
@@ -47,4 +47,4 @@ if(VTK_FOUND)
 
     endif()
 
-endif()
+#endif()
