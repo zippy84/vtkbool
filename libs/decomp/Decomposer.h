@@ -25,7 +25,7 @@ limitations under the License.
 #include <unordered_set>
 #include <unordered_map>
 
-#include "Tools.h"
+#include "VisPoly.h"
 
 class Vert6 : public Point {
 public:
@@ -78,7 +78,7 @@ public:
 };
 
 class Decomposer {
-    PolyType poly;
+    PolyType poly, _orig;
     VertsType6 verts;
 
     int num;
@@ -95,6 +95,11 @@ class Decomposer {
     void Collect (int i, int k);
 
     std::vector<Pair> diags;
+
+    // testweise
+
+    YYType _yy;
+    ZZType _zz;
 
 public:
     Decomposer (PolyType &_poly);

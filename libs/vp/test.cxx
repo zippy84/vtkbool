@@ -68,8 +68,6 @@ int main (int argc, char *argv[]) {
 
             std::rotate(poly.begin(), poly.end()-1, poly.end());
 
-            assert(TestCW(poly));
-
             PolyType res;
 
             GetVisPoly_wrapper(poly, res, 0);

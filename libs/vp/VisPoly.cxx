@@ -348,7 +348,6 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
                                 if (d
                                     && (!IsFrontfaced(verts[v].r, ptA, ptB)
                                         || IsNear(ptA, ptV))) { // spezialfall (special:1, ind:1)
-                                    std::cout << "x" << std::endl;
 
                                     if (d->t2 < E) {
                                         verts[vp.back()].nxt = _x;
@@ -454,7 +453,7 @@ void Magic (const PolyType &poly, YYType &yy, ZZType &zz, PolyType &res, int omi
         int jA = (i+1)%num,
             jB = (i+num-1)%num;
 
-        if (per < 1e-4 && counts.find(poly[jA]) != counts.find(poly[jB])) {
+        if (per < 1e-3 && counts.find(poly[jA]) != counts.find(poly[jB])) {
             //if (counts[poly[i]] == 1) {
                 area = _area;
 
@@ -602,15 +601,15 @@ void Restore (const PolyType &poly, const Tracker &tr, const ZZType &zz, PolyTyp
 
             double t = posA == posB ? posB.t : 1;
 
-            auto &between = zz.at({ posA.edA, posA.edB });
+            auto &pts = zz.at({ posA.edA, posA.edB });
 
-            for (auto &b : between) {
-                if (b.t > posA.t+E && b.t < t-E) {
-                    res.push_back(b);
-                } else if (IsNear(b.pt, itr->pt)) {
-                    res.back() = b;
-                } else if (IsNear(b.pt, itr2->pt)) {
-                    rr.emplace(itr2->tag, b);
+            for (auto &p : pts) {
+                if (p.t > posA.t+E && p.t < t-E) {
+                    res.push_back(p);
+                } else if (IsNear(p.pt, itr->pt)) {
+                    res.back() = p;
+                } else if (IsNear(p.pt, itr2->pt)) {
+                    rr.emplace(itr2->tag, p);
                 }
             }
 
@@ -706,7 +705,7 @@ void _Special (PolyType &poly, const Point &p) {
 
         double d = n[0]*(p.x-pB.x)+n[1]*(p.y-pB.y);
 
-        if (std::abs(d) < E) {
+        if (std::abs(d) < 1e-3) {
             if (lB > lA) {
                 itr2->id = NO_USE;
             } else {
@@ -722,6 +721,10 @@ bool GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
     int i = 0;
     for (auto& p : poly) {
         p.id = i++;
+    }
+
+    if (!TestCW(poly)) {
+        throw vp_error("Polygon is not clockwise.");
     }
 
     PolyType poly2, poly3, poly4, poly5;
@@ -794,6 +797,34 @@ bool GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
         return false;
     }
 
+    /*
+    PolyType res2;
+    std::copy_if(res.begin(), res.end(), std::back_inserter(res2), [](const Point &p) {
+        return p.id != NO_USE;
+    });
+
+    res.swap(res2);
+    */
+
     return true;
 
+}
+
+void _Restore (const PolyType &poly, const ZZType &zz, PolyType &res) {
+    PolyType::const_iterator itr, itr2;
+    for (itr = poly.begin(); itr != poly.end(); ++itr) {
+        res.push_back(*itr);
+
+        itr2 = itr+1;
+
+        if (itr2 == poly.end()) {
+            itr2 = poly.begin();
+        }
+
+        try {
+            const VertsType4 &pts = zz.at({ itr->tag, itr2->tag });
+            std::copy(pts.begin(), pts.end(), std::back_inserter(res));
+        } catch (...) {}
+
+    }
 }
