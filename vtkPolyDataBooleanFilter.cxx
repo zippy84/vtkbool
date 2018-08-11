@@ -2870,7 +2870,7 @@ void vtkPolyDataBooleanFilter::DecPolys_ (vtkPolyData *pd, InvolvedType &involve
         int cellId = cells->GetId(i),
             origId = origCellIds->GetValue(cellId);
 
-        if (origId != 233) {
+        if (origId != 1) {
             //continue;
         }
 

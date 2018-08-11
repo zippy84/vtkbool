@@ -102,7 +102,7 @@ class Decomposer {
     ZZType _zz;
 
 public:
-    Decomposer (PolyType &_poly);
+    Decomposer (const PolyType &_poly);
 
     void GetDecomposed (DecResType &res);
 

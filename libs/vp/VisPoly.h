@@ -131,10 +131,6 @@ public:
             << ", t: " << v.t;
         return out;
     }
-
-    bool operator< (const Vert4 &other) const {
-        return t < other.t;
-    }
 };
 
 typedef std::vector<Vert4> VertsType4;
@@ -156,5 +152,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind = 0);
 bool GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind);
 
 void _Restore (const PolyType &poly, const ZZType &zz, PolyType &res);
+
+double GetArea (const PolyType &poly);
 
 #endif
