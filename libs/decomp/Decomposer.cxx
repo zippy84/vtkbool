@@ -21,6 +21,17 @@ limitations under the License.
 
 #include "Decomposer.h"
 
+void _Scale (PolyType &poly) {
+    double area = GetArea(poly);
+    if (area < 10) {
+        double f = 10/area;
+        for (auto &p : poly) {
+            p.pt[0] *= f;
+            p.pt[1] *= f;
+        }
+    }
+}
+
 void SubP::AddPair (Pair _p, int _w) {
     if (_w > w) {
         return;
@@ -56,7 +67,7 @@ void SubP::RestoreS () {
     S_tail.clear();
 }
 
-Decomposer::Decomposer (PolyType &_poly) : _orig(_poly) {
+Decomposer::Decomposer (const PolyType &_poly) : _orig(_poly) {
     {
         int i = 0;
         for(auto& p : poly) {
@@ -64,7 +75,9 @@ Decomposer::Decomposer (PolyType &_poly) : _orig(_poly) {
         }
     }
 
-    Magic(_poly, _yy, _zz, poly, NO_USE, false);
+    _Scale(_orig);
+
+    Magic(_orig, _yy, _zz, poly, NO_USE, false);
 
     std::copy(poly.begin(), poly.end(), std::back_inserter(verts));
 

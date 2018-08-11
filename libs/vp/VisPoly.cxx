@@ -477,7 +477,7 @@ void Magic (const PolyType &poly, YYType &yy, ZZType &zz, PolyType &res, int omi
         return found.count(p.tag) == 0;
     });
 
-    std::map<Pair, IdsType> yz;
+    std::map<Pair, std::set<int>> yz;
 
     for (auto &p : found) {
         while (found.count(p.second.f) == 1) {
@@ -488,7 +488,7 @@ void Magic (const PolyType &poly, YYType &yy, ZZType &zz, PolyType &res, int omi
             p.second.g = found[p.second.g].g;
         }
 
-        yz[p.second].push_back(p.first);
+        yz[p.second].insert(p.first);
 
     }
 
@@ -507,14 +507,29 @@ void Magic (const PolyType &poly, YYType &yy, ZZType &zz, PolyType &res, int omi
 
         double d = a.x*n[0]+a.y*n[1];
 
+        // ermittelt die natürliche reihenfolge
+
+        PolyType sect;
+        for (auto &q : poly) {
+            if (q.tag == a.tag || p.second.count(q.tag) == 1) {
+                sect.push_back(q);
+            }
+        }
+
+        std::rotate(sect.begin(), std::find_if(sect.begin(), sect.end(), [&a](const Point &q) {
+            return q.tag == a.tag;
+        }), sect.end());
+
+        sect.erase(sect.begin());
+
         VertsType4 verts;
 
-        for (int tag : p.second) {
-            const Point &c = lookup.at(tag);
+        for (const Point &q : sect) {
+            double t = q.x*n[0]+q.y*n[1]-d;
 
-            double t = c.x*n[0]+c.y*n[1]-d;
+            //assert(t/l > 0 && t/l < 1);
 
-            Vert4 v(c, t/l);
+            Vert4 v(q, t/l);
 
             v.pt[0] = a.x+t*n[0];
             v.pt[1] = a.y+t*n[1];
@@ -526,8 +541,6 @@ void Magic (const PolyType &poly, YYType &yy, ZZType &zz, PolyType &res, int omi
             verts.push_back(std::move(v));
 
         }
-
-        std::sort(verts.begin(), verts.end());
 
         if (rev) {
             zz[{p.first.g, p.first.f}] = verts;
