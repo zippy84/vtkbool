@@ -80,11 +80,10 @@ int main (int argc, char *argv[]) {
 
                     PolyType res;
 
-                    if (GetVisPoly_wrapper(poly, res, j)) {
-                        assert(!TestCW(res));
+                    GetVisPoly_wrapper(poly, res, j);
+                    assert(!TestCW(res));
 
-                        all[j] = std::move(res);
-                    }
+                    all[j] = std::move(res);
 
                 }
 
