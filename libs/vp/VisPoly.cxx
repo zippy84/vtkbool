@@ -20,6 +20,7 @@ limitations under the License.
 #include <set>
 #include <map>
 #include <cassert>
+#include <deque>
 
 #include "Tools.h"
 #include "VisPoly.h"
@@ -180,7 +181,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
                     }
 
                     if (vp.size() < 2) {
-                        throw vp_error("Too many pop's.");
+                        vtkbool_throw("", "Too many pop's.");
                     }
 
                     int _x = v;
@@ -265,7 +266,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
                         vp.pop_back();
 
                         if (vp.size() < 1) {
-                            throw vp_error("Too many pop's.");
+                            vtkbool_throw("", "Too many pop's.");
                         }
 
                         std::shared_ptr<D> d(Intersect(x, verts[v].r, verts[a].pt, verts[b].pt));
@@ -395,159 +396,218 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
 
 }
 
-double GetArea (const PolyType &poly) {
-    int num = poly.size();
-
-    double sum = 0;
-
-    for (int i = 0; i < num; i++) {
-        const Point &a = poly[i],
-            &b = poly[(i+1)%num];
-        sum += a.x*b.y-b.x*a.y;
-    }
-
-    return sum;
-}
-
 /*
 list([ list(map(float, p.split(','))) for p in 'm 26.402829,29.895027 -2.132521,24.374833 -3.073759,35.133226 22.541594,1.972134 76.814397,6.720388 1.86346,-21.299507 3.34282,-38.208551 -31.800976,-2.782225 -0.800142,-0.07 -7.246298,-0.633968 -2.155836,24.641314 -6.148254,-0.537902 -8.586643,-0.751234 -4.925747,-0.430947 1.112312,-12.713787 0.198,-2.263145 0.192176,-2.196583 0.326117,-3.727536 0.327231,-3.740264 z'[2:-2].split(' ') ])
 */
 
-void Magic (const PolyType &poly, YYType &yy, ZZType &zz, PolyType &res, int omit, bool rev) {
+void Simplify (const PolyType &poly, YYType &yy, ZZType &zz, PolyType &res, int omit, bool rev) {
 
-    double area = GetArea(poly);
+    // der dritte anlauf um es in den griff zu bekommen
 
-    std::map<int, Pair> found;
+    std::cout << "POLY " << GetAbsolutePath(poly) << std::endl;
 
-    int num = poly.size();
+    // std::map<Point, int> counts;
 
-    std::map<Point, int> counts;
+    // for (auto &p : poly) {
+    //     counts[p]++;
+    // }
 
-    for (auto &p : poly) {
-        counts[p]++;
+    // std::map<int, Point> lookup;
+
+    // for (const Point &p : poly) {
+    //     lookup.emplace(p.tag, p);
+    // }
+
+    std::set<int> found;
+
+    std::vector<double> ls;
+
+    PolyType poly2{{poly.front()}};
+
+    PolyType::const_iterator itr;
+    for (itr = poly.begin()+1; itr != poly.end(); ++itr) {
+        double sq = GetSqDis(*itr, *poly2.rbegin());
+        if (sq > 1e-6) { // abstand muss größer 1e-3 sein
+            poly2.push_back(*itr);
+            ls.push_back(sq);
+        }
     }
 
-    /*for (auto &f : counts) {
-        std::cout << "XX " << f.first << " -> " << f.second << std::endl;
-    }*/
+    if (GetSqDis(poly2.front(), poly2.back()) < 1e-6) {
+        poly2.pop_back();
+    }
 
-    //std::cout << "XX ids'=[";
+    auto itr2 = std::max_element(ls.begin(), ls.end());
 
-    for (int i = 0; i < num; i++) {
-        const Point &pt = poly[i];
+    std::rotate(poly2.begin(), poly2.begin()+(itr2-ls.begin())+1, poly2.end());
 
-        if (pt.id == omit) {
+    std::cout << "POLY2 " << GetAbsolutePath(poly2) << std::endl;
+
+    auto GetMaxDis = [&poly2](int i, int k, int &id) {
+        double last = 0, _t;
+
+        for (int j = i+1; j < k; j++) {
+            double t,
+                d = GetDis(poly2[i], poly2[k], poly2[j], t);
+
+            double delt = std::abs(last-d);
+
+            if (i == 77 && k == 82) {
+                std::cout << "=> " << j << ", " << d << ", " << t;
+            }
+
+            if (id > 0 && delt < 1e-2) {
+               if (t < _t) {
+                    last = d;
+                    id = j;
+                    _t = t;
+
+                    if (i == 77 && k == 82) {
+                        std::cout << " -> I";
+                    }
+                }
+            } else if (d > last) {
+                last = d;
+                id = j;
+                _t = t;
+
+                if (i == 77 && k == 82) {
+                    std::cout << " -> II";
+                }
+            }
+
+            if (i == 77 && k == 82) {
+                std::cout << std::endl;
+            }
+
+        }
+        return last;
+    };
+
+    std::vector<PolyType> sects;
+
+    std::deque<Pair> test{{0, static_cast<int>(poly2.size()-1)}}, pairs;
+
+    // man muss sicherstellen, dass das erste paar in test keine internen enthält
+
+    Pair &first = test.back();
+
+    std::cout << first << " -> ";
+
+    double _t;
+    while (GetDis(poly2[first.g], poly2[first.f+1], poly2[first.f], _t) < 1e-2) {
+        found.insert(poly2[first.f].tag);
+        first.f += 1;
+    }
+
+    while (GetDis(poly2[first.f], poly2[first.g-1], poly2[first.g], _t) < 1e-2) {
+        found.insert(poly2[first.g].tag);
+        first.g -= 1;
+    }
+
+    std::cout << first << std::endl;
+
+    PolyType fSect(poly);
+    GetSect(poly2[first.g].tag, poly2[first.f].tag, fSect);
+
+    sects.push_back(std::move(fSect));
+
+    while (!test.empty()) {
+        Pair _p = test.front();
+        test.pop_front();
+
+        if (_p.g-_p.f == 1) {
+            pairs.push_back(_p); // es könnten sich interne punkt darin befinden
             continue;
         }
 
-        PolyType _poly;
+        int id = 0;
 
-        std::copy_if(poly.begin(), poly.end(), std::back_inserter(_poly), [&pt, &found](const Point &p) {
-            return p.tag != pt.tag && found.count(p.tag) == 0;
-        });
+        double d = GetMaxDis(_p.f, _p.g, id);
 
-        double _area = GetArea(_poly);
+        std::cout << "_" << _p << " -> " << id << ", " << d << std::endl;
 
-        double per = std::abs(1-_area/area);
+        if (d > 1e-2) {
+            test.push_back({_p.f, id});
+            test.push_back({id, _p.g});
 
-        int jA = (i+1)%num,
-            jB = (i+num-1)%num;
+        } else {
+            std::cout << _p << ", d=" << d << std::endl;
 
-        if (per < 1e-3 && counts.find(poly[jA]) != counts.find(poly[jB])) {
-            //if (counts[poly[i]] == 1) {
-                area = _area;
-
-                const Point &before = poly[(i+num-1)%num],
-                    &after = poly[(i+1)%num];
-
-                found[pt.tag] = {before.tag, after.tag};
-
-                //std::cout << i << ", ";
-            //} else {
-            //    yy.insert(pt.tag);
-            //}
+            pairs.push_back(_p);
         }
-
-        //std::cout << "(" << i << ", " << per << "), ";
     }
 
-    //std::cout << "]" << std::endl;
+    // hier bräuchte man den abschnitt aus poly zw. a.tag und b.tag
+    // um die am anfang entfernten mitzunehmen
+
+    for (auto &w : pairs) {
+        const Point &a = poly2[w.f],
+            &b = poly2[w.g];
+
+        PolyType sect(poly); // kopiert
+        GetSect(a.tag, b.tag, sect);
+
+        sects.push_back(std::move(sect));
+    }
+
+    for (auto &sect : sects) {
+        if (sect.size() > 2) {
+
+            const Point &a = *sect.begin(),
+                &b = *sect.rbegin();
+
+            double n[] = {b.x-a.x, b.y-a.y},
+                l = Normalize(n);
+
+            double d = a.x*n[0]+a.y*n[1];
+
+            VertsType4 verts;
+
+            for (itr = sect.begin()+1; itr != sect.end()-1; ++itr) {
+                const Point &_p = *itr;
+
+                double t = _p.x*n[0]+_p.y*n[1]-d;
+
+                //assert(t/l > 0 && t/l < 1);
+
+                Vert4 v(_p, t/l);
+
+                v.pt[0] = a.x+t*n[0];
+                v.pt[1] = a.y+t*n[1];
+
+                if (rev) {
+                    v.t = 1-v.t;
+                }
+
+                verts.push_back(std::move(v));
+            }
+
+            if (rev) {
+                zz[{b.tag, a.tag}] = verts;
+            } else {
+                zz[{a.tag, b.tag}] = verts;
+            }
+
+            for (auto &_v : verts) {
+                found.insert(_v.tag);
+            }
+        }
+    }
 
     std::copy_if(poly.begin(), poly.end(), std::back_inserter(res), [&found](const Point &p) {
         return found.count(p.tag) == 0;
     });
 
-    std::map<Pair, std::set<int>> yz;
+    std::cout << "POLY3 " << GetAbsolutePath(res) << std::endl;
 
-    for (auto &p : found) {
-        while (found.count(p.second.f) == 1) {
-            p.second.f = found[p.second.f].f;
+    int num = res.size();
+
+    for (int i = 0; i < num; i++) {
+        double d = GetDis(res[i], res[(i+2)%num], res[(i+1)%num], _t);
+        if (d < 1e-2) {
+            vtkbool_throw("", "Polygon was not completely simplified.");
         }
-
-        while (found.count(p.second.g) == 1) {
-            p.second.g = found[p.second.g].g;
-        }
-
-        yz[p.second].insert(p.first);
-
-    }
-
-    std::map<int, Point> lookup;
-
-    for (const Point &p : poly) {
-        lookup.emplace(p.tag, p);
-    }
-
-    for (auto &p : yz) {
-        const Point &a = lookup.at(p.first.f),
-            &b = lookup.at(p.first.g);
-
-        double n[] = {b.x-a.x, b.y-a.y},
-            l = Normalize(n);
-
-        double d = a.x*n[0]+a.y*n[1];
-
-        // ermittelt die natürliche reihenfolge
-
-        PolyType sect;
-        for (auto &q : poly) {
-            if (q.tag == a.tag || p.second.count(q.tag) == 1) {
-                sect.push_back(q);
-            }
-        }
-
-        std::rotate(sect.begin(), std::find_if(sect.begin(), sect.end(), [&a](const Point &q) {
-            return q.tag == a.tag;
-        }), sect.end());
-
-        sect.erase(sect.begin());
-
-        VertsType4 verts;
-
-        for (const Point &q : sect) {
-            double t = q.x*n[0]+q.y*n[1]-d;
-
-            //assert(t/l > 0 && t/l < 1);
-
-            Vert4 v(q, t/l);
-
-            v.pt[0] = a.x+t*n[0];
-            v.pt[1] = a.y+t*n[1];
-
-            if (rev) {
-                v.t = 1-v.t;
-            }
-
-            verts.push_back(std::move(v));
-
-        }
-
-        if (rev) {
-            zz[{p.first.g, p.first.f}] = verts;
-        } else {
-            zz[p.first] = verts;
-        }
-
     }
 
 }
@@ -571,20 +631,16 @@ void Align (PolyType &poly, const Point &p) {
     VertsType2::iterator itr2, itr3;
 
     for (itr2 = verts.begin(); itr2 != verts.end()-1; ++itr2) {
-        double n[] = {p.y-poly[itr2->i].y, poly[itr2->i].x-p.x};
-        Normalize(n);
-
         for (itr3 = itr2+1; itr3 != verts.end(); ++itr3) {
-            Point &q = poly[itr3->i];
+            double t,
+                pro[2],
+                d = GetDis(p, poly[itr2->i], poly[itr3->i], t, pro);
 
-            double d = n[0]*(p.x-q.x)+n[1]*(p.y-q.y);
-
-            if (std::abs(d) < 1e-3) {
-                q.pt[0] += n[0]*d;
-                q.pt[1] += n[1]*d;
+            if (d < 1e-3) {
+                Cpy(poly[itr3->i].pt, pro);
             }
-
         }
+
     }
 }
 
@@ -682,7 +738,7 @@ void Restore2 (const PolyType &poly, PolyType &res) {
             }
 
             if (single.size() != 1) {
-                throw vp_error("Too many points at the same place.");
+                vtkbool_throw("", "Too many points at the same place.");
             }
 
             found.emplace(itr2-res.begin(), single.front());
@@ -698,6 +754,25 @@ void Restore2 (const PolyType &poly, PolyType &res) {
 
 }
 
+void SimpleRestore (const PolyType &poly, const ZZType &zz, PolyType &res) {
+    PolyType::const_iterator itr, itr2;
+    for (itr = poly.begin(); itr != poly.end(); ++itr) {
+        res.push_back(*itr);
+
+        itr2 = itr+1;
+
+        if (itr2 == poly.end()) {
+            itr2 = poly.begin();
+        }
+
+        try {
+            const VertsType4 &pts = zz.at({ itr->tag, itr2->tag });
+            std::copy(pts.begin(), pts.end(), std::back_inserter(res));
+        } catch (...) {}
+
+    }
+}
+
 void _Special (PolyType &poly, const Point &p) {
     PolyType::iterator itr, itr2;
 
@@ -707,19 +782,11 @@ void _Special (PolyType &poly, const Point &p) {
         const Point &pA = *itr,
             &pB = *itr2;
 
-        double vA[] = {pA.x-p.x, pA.y-p.y},
-            vB[] = {pB.x-p.x, pB.y-p.y};
+        double t,
+            d = GetDis(p, pA, pB, t);
 
-        double lA = Normalize(vA),
-            lB = Normalize(vB);
-
-        double n[] = {p.y-pA.y, pA.x-p.x};
-        Normalize(n);
-
-        double d = n[0]*(p.x-pB.x)+n[1]*(p.y-pB.y);
-
-        if (std::abs(d) < 1e-3) {
-            if (lB > lA) {
+        if (d < 1e-3) {
+            if (t > 1) {
                 itr2->id = NO_USE;
             } else {
                 itr->id = NO_USE;
@@ -730,14 +797,14 @@ void _Special (PolyType &poly, const Point &p) {
 
 }
 
-bool GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
+void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
     int i = 0;
     for (auto& p : poly) {
         p.id = i++;
     }
 
     if (!TestCW(poly)) {
-        throw vp_error("Polygon is not clockwise.");
+        vtkbool_throw("", "Polygon is not clockwise.");
     }
 
     PolyType poly2, poly3, poly4, poly5;
@@ -747,7 +814,7 @@ bool GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
     YYType yy;
     ZZType zz;
 
-    Magic(poly, yy, zz, poly2, ind, true);
+    Simplify(poly, yy, zz, poly2, ind, true);
 
     Align(poly2, x);
 
@@ -755,7 +822,7 @@ bool GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
 
     TrivialRm(poly2, tr, ind, x).GetSimplified(poly3);
 
-    Magic(poly3, yy, zz, poly4, ind, false);
+    Simplify(poly3, yy, zz, poly4, ind, false);
 
     try {
         GetVisPoly(poly4, tr, poly5);
@@ -804,10 +871,8 @@ bool GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
             std::cout << i++ << ". " << p << std::endl;
         }
 
-    } catch (const vp_error &e) {
-        std::cout << "Error: " << e.what() << std::endl;
-
-        return false;
+    } catch (...) {
+        throw;
     }
 
     /*
@@ -819,25 +884,4 @@ bool GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
     res.swap(res2);
     */
 
-    return true;
-
-}
-
-void _Restore (const PolyType &poly, const ZZType &zz, PolyType &res) {
-    PolyType::const_iterator itr, itr2;
-    for (itr = poly.begin(); itr != poly.end(); ++itr) {
-        res.push_back(*itr);
-
-        itr2 = itr+1;
-
-        if (itr2 == poly.end()) {
-            itr2 = poly.begin();
-        }
-
-        try {
-            const VertsType4 &pts = zz.at({ itr->tag, itr2->tag });
-            std::copy(pts.begin(), pts.end(), std::back_inserter(res));
-        } catch (...) {}
-
-    }
 }

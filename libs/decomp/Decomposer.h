@@ -68,15 +68,6 @@ struct p_h {
     }
 };
 
-class d_error : public std::exception {
-    std::string msg;
-public:
-    d_error(const std::string &msg) : msg(msg) {}
-    const char* what() const throw() {
-        return msg.c_str();
-    }
-};
-
 class Decomposer {
     PolyType poly, _orig;
     VertsType6 verts;
