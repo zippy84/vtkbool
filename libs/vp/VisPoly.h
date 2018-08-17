@@ -64,15 +64,6 @@ public:
     }
 };
 
-class vp_error : public std::exception {
-    std::string msg;
-public:
-    vp_error(const std::string &msg) : msg(msg) {}
-    const char* what() const throw() {
-        return msg.c_str();
-    }
-};
-
 class Vert2 {
 public:
     Vert2 (int _i, double _l) : i(_i), l(_l) {}
@@ -139,20 +130,18 @@ typedef std::map<Pair, VertsType4> ZZType;
 
 typedef std::set<int> YYType;
 
-void Magic (const PolyType &poly, YYType &yy, ZZType &zz, PolyType &res, int omit, bool rev);
+void Simplify (const PolyType &poly, YYType &yy, ZZType &zz, PolyType &res, int omit, bool rev);
 
 void Align (PolyType &poly, const Point &p);
 
 void Restore (const PolyType &poly, const Tracker &tr, const ZZType &zz, PolyType &res);
 void Restore2 (const PolyType &poly, PolyType &res);
 
+void SimpleRestore (const PolyType &poly, const ZZType &zz, PolyType &res);
+
 // diese darf nicht direkt verwendet werden
 void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind = 0);
 
-bool GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind);
-
-void _Restore (const PolyType &poly, const ZZType &zz, PolyType &res);
-
-double GetArea (const PolyType &poly);
+void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind);
 
 #endif

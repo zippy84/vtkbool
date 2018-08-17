@@ -23,6 +23,7 @@ limitations under the License.
 
 void _Scale (PolyType &poly) {
     double area = GetArea(poly);
+
     if (area < 10) {
         double f = 10/area;
         for (auto &p : poly) {
@@ -77,7 +78,7 @@ Decomposer::Decomposer (const PolyType &_poly) : _orig(_poly) {
 
     _Scale(_orig);
 
-    Magic(_orig, _yy, _zz, poly, NO_USE, false);
+    Simplify(_orig, _yy, _zz, poly, NO_USE, false);
 
     std::copy(poly.begin(), poly.end(), std::back_inserter(verts));
 
@@ -136,9 +137,9 @@ Decomposer::Decomposer (const PolyType &_poly) : _orig(_poly) {
         std::cout << v << std::endl;
     }
 
-    for (auto& p : pairs) {
+    /*for (auto& p : pairs) {
         std::cout << "-> " << p << std::endl;
-    }
+    }*/
 
     // init um die reflexe
 
@@ -158,16 +159,16 @@ Decomposer::Decomposer (const PolyType &_poly) : _orig(_poly) {
                         b = i;
                     }
 
-                    std::cout << "(" << a << ", " << b << ") = ";
+                    //std::cout << "(" << a << ", " << b << ") = ";
 
                     SubP s;
                     s.w = 0;
 
                     if (b-a == 1) {
-                        std::cout << "edge" << std::endl;
+                        //std::cout << "edge" << std::endl;
                     } else {
                         int c = a+1;
-                        std::cout << "wedge" << std::endl;
+                        //std::cout << "wedge" << std::endl;
 
                         s.S.push_back({c, c});
                     }
@@ -222,7 +223,7 @@ void Decomposer::Forw (int i, int j, int k) {
 
     if (j-i > 1) {
         if (subs[p].S.empty()) {
-            throw d_error("S is empty.");
+            vtkbool_throw("", "S is empty.");
         }
 
         if (!IsRefl(j, k, (subs[p].S.end()-1)->g)) {
@@ -272,7 +273,7 @@ void Decomposer::Backw (int i, int j, int k) {
 
     if (k-j > 1) {
         if (subs[p].S.empty()) {
-            throw d_error("S is empty.");
+            vtkbool_throw("", "S is empty.");
         }
 
         if (!IsRefl(j, (subs[p].S.begin())->f, i)) {
@@ -307,7 +308,7 @@ void Decomposer::Recover (int i, int k) {
     SubP &sA = subs[{i, k}];
 
     if (sA.S.empty()) {
-        throw d_error("S is empty.");
+        vtkbool_throw("", "S is empty.");
     }
 
     if (verts[i].refl) {
@@ -363,7 +364,7 @@ void Decomposer::Collect (int i, int k) {
     SubP &s = subs[{i, k}];
 
     if (s.S.empty()) {
-        throw d_error("S is empty.");
+        vtkbool_throw("", "S is empty.");
     }
 
     int j, a, b;
@@ -531,7 +532,7 @@ void Decomposer::GetDecomposed (DecResType &res) {
 
         PolyType _res;
 
-        _Restore(_poly, _zz, _res);
+        SimpleRestore(_poly, _zz, _res);
 
         IdsType _dec;
         for (auto& p : _res) {

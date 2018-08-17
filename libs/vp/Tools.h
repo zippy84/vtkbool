@@ -26,6 +26,7 @@ limitations under the License.
 #include <tuple>
 #include <algorithm>
 #include <cfloat>
+#include <exception>
 
 #define NO_USE -1
 #define PI std::acos(-1)
@@ -156,5 +157,17 @@ public:
 };
 
 void GetExt (const PolyType &poly, Ext &ext);
+
+double GetArea (const PolyType &poly);
+
+double GetDis (const Point &pA, const Point &pB, const Point &pC, double &t, double *pro = nullptr);
+
+double GetSqDis (const Point &a, const Point &b);
+
+void GetSect (int tagA, int tagB, PolyType &poly);
+
+inline void vtkbool_throw (const std::string &type, const std::string &msg) {
+    throw std::runtime_error("[vtkbool.exception." + type + "] " + msg);
+}
 
 #endif

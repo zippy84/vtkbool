@@ -22,6 +22,7 @@ limitations under the License.
 #include <cmath>
 #include <functional>
 #include <queue>
+#include <sstream>
 
 #include <vtkInformation.h>
 #include <vtkInformationVector.h>
@@ -2870,8 +2871,8 @@ void vtkPolyDataBooleanFilter::DecPolys_ (vtkPolyData *pd, InvolvedType &involve
         int cellId = cells->GetId(i),
             origId = origCellIds->GetValue(cellId);
 
-        if (origId != 1) {
-            //continue;
+        if (cellId != 12) {
+            continue;
         }
 
         vtkIdList *cell = vtkIdList::New();
@@ -2882,58 +2883,75 @@ void vtkPolyDataBooleanFilter::DecPolys_ (vtkPolyData *pd, InvolvedType &involve
 
         int numPts = cell->GetNumberOfIds();
 
-        IdsType ptIds;
+        if (numPts > 3) {
 
-        for (int k = 0; k < numPts; k++) {
-            ptIds.push_back(cell->GetId(k));
-        }
+            IdsType ptIds;
 
-        std::reverse(ptIds.begin(), ptIds.end());
-
-        PolyType poly;
-
-        int j = 0;
-
-        for (int id : ptIds) {
-            double pt[3],
-                _pt[2];
-
-            pd->GetPoint(id, pt);
-            Transform(pt, _pt, base);
-
-            poly.push_back({_pt, j++});
-        }
-
-        assert(TestCW(poly));
-
-        Decomposer d(poly);
-
-        DecResType decs;
-        d.GetDecomposed(decs);
-
-        vtkIdList *newCell = vtkIdList::New();
-
-        for (auto& dec : decs) {
-            newCell->Reset();
-
-            std::reverse(dec.begin(), dec.end());
-
-            for (int id : dec) {
-                newCell->InsertNextId(ptIds[id]);
+            for (int k = 0; k < numPts; k++) {
+                ptIds.push_back(cell->GetId(k));
             }
 
-            int newId = pd->InsertNextCell(VTK_POLYGON, newCell);
-            origCellIds->InsertNextValue(origId);
+            std::reverse(ptIds.begin(), ptIds.end());
 
-            rels[newId] = Rel::DEC;
+            PolyType poly;
+
+            int j = 0;
+
+            for (int id : ptIds) {
+                double pt[3],
+                    _pt[2];
+
+                pd->GetPoint(id, pt);
+                Transform(pt, _pt, base);
+
+                poly.push_back({_pt, j++});
+            }
+
+            assert(TestCW(poly));
+
+            try {
+
+                Decomposer d(poly);
+
+                DecResType decs;
+                d.GetDecomposed(decs);
+
+                vtkIdList *newCell = vtkIdList::New();
+
+                for (auto& dec : decs) {
+                    newCell->Reset();
+
+                    std::reverse(dec.begin(), dec.end());
+
+                    for (int id : dec) {
+                        newCell->InsertNextId(ptIds[id]);
+                    }
+
+                    int newId = pd->InsertNextCell(VTK_POLYGON, newCell);
+                    origCellIds->InsertNextValue(origId);
+
+                    rels[newId] = Rel::DEC;
+
+                }
+
+                newCell->Delete();
+
+                rels[cellId] = Rel::ORIG;
+
+            } catch (...) {
+                std::stringstream ss;
+                ss << "Exception on cellId "
+                    << cellId
+                    << " (" << (pd == modPdA ? "modPdA" : "modPdB") << ")";
+
+                std::cerr << ss.str() << std::endl;
+
+                throw;
+            }
+
+            //pd->DeleteCell(cellId);
 
         }
-
-        newCell->Delete();
-
-        //pd->DeleteCell(cellId);
-
-        rels[cellId] = Rel::ORIG;
 
         cell->Delete();
     }

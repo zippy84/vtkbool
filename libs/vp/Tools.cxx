@@ -245,3 +245,52 @@ void GetExt (const PolyType &poly, Ext &ext) {
         }
     }
 }
+
+double GetArea (const PolyType &poly) {
+    int num = poly.size();
+
+    double sum = 0;
+
+    for (int i = 0; i < num; i++) {
+        const Point &a = poly[i],
+            &b = poly[(i+1)%num];
+        sum += a.x*b.y-b.x*a.y;
+    }
+
+    return std::abs(sum);
+}
+
+double GetDis (const Point &pA, const Point &pB, const Point &pC, double &t, double *pro) {
+    double n[] = {pA.y-pB.y, pB.x-pA.x},
+        l = Normalize(n),
+        d = n[0]*(pA.x-pC.x)+n[1]*(pA.y-pC.y),
+        v[] = {pC.x+d*n[0], pC.y+d*n[1]},
+        w[] = {v[0]-pA.x, v[1]-pA.y},
+        m = Normalize(w);
+
+    t = (n[1]*w[0]-n[0]*w[1])*m/l;
+
+    if (pro != nullptr) {
+        Cpy(pro, v);
+    }
+
+    return std::abs(d);
+}
+
+double GetSqDis (const Point &a, const Point &b) {
+    double v[] = {
+        b.x-a.x,
+        b.y-a.y
+    };
+    return v[0]*v[0]+v[1]*v[1];
+}
+
+void GetSect (int tagA, int tagB, PolyType &poly) {
+    std::rotate(poly.begin(), std::find_if(poly.begin(), poly.end(), [&tagA](const Point &p) {
+        return p.tag == tagA;
+    }), poly.end());
+
+    poly.erase(std::find_if(poly.begin()+1, poly.end(), [&tagB](const Point &p) {
+        return p.tag == tagB;
+    })+1, poly.end());
+}
