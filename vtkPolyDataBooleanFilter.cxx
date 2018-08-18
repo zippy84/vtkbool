@@ -2871,9 +2871,13 @@ void vtkPolyDataBooleanFilter::DecPolys_ (vtkPolyData *pd, InvolvedType &involve
         int cellId = cells->GetId(i),
             origId = origCellIds->GetValue(cellId);
 
-        if (cellId != 12) {
-            continue;
-        }
+#ifdef DEBUG
+        std::cout << "cellId " << cellId << std::endl;
+#endif
+
+        // if (cellId != 12) {
+        //     continue;
+        // }
 
         vtkIdList *cell = vtkIdList::New();
 
@@ -2946,10 +2950,8 @@ void vtkPolyDataBooleanFilter::DecPolys_ (vtkPolyData *pd, InvolvedType &involve
 
                 std::cerr << ss.str() << std::endl;
 
-                throw;
+                //throw;
             }
-
-            //pd->DeleteCell(cellId);
 
         }
 
@@ -2957,7 +2959,5 @@ void vtkPolyDataBooleanFilter::DecPolys_ (vtkPolyData *pd, InvolvedType &involve
     }
 
     cells->Delete();
-
-    //pd->RemoveDeletedCells();
 
 }
