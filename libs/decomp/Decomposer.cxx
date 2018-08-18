@@ -190,10 +190,8 @@ bool Decomposer::IsRefl (int a, int b, int c) {
         &vB = verts[b],
         &vC = verts[c];
 
-    double n[] = {vB.y-vC.y, vC.x-vB.x};
-    Normalize(n);
-
-    double d = n[0]*(vA.x-vB.x)+n[1]*(vA.y-vB.y);
+    double t,
+        d = GetDis(vC, vA, vB, t);
 
     return IsNear(vB.pt, vC.pt) || d > 1e-3;
 
