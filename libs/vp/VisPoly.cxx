@@ -400,28 +400,14 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
 list([ list(map(float, p.split(','))) for p in 'm 26.402829,29.895027 -2.132521,24.374833 -3.073759,35.133226 22.541594,1.972134 76.814397,6.720388 1.86346,-21.299507 3.34282,-38.208551 -31.800976,-2.782225 -0.800142,-0.07 -7.246298,-0.633968 -2.155836,24.641314 -6.148254,-0.537902 -8.586643,-0.751234 -4.925747,-0.430947 1.112312,-12.713787 0.198,-2.263145 0.192176,-2.196583 0.326117,-3.727536 0.327231,-3.740264 z'[2:-2].split(' ') ])
 */
 
-void Simplify (const PolyType &poly, YYType &yy, ZZType &zz, PolyType &res, int omit, bool rev) {
+void Simplify (const PolyType &poly, YYType &yy, ZZType &zz, PolyType &res, int skip, bool rev) {
 
     // der dritte anlauf um es in den griff zu bekommen
 
     // std::cout << "POLY " << GetAbsolutePath(poly) << std::endl;
 
-    // std::map<Point, int> counts;
-
-    // for (auto &p : poly) {
-    //     counts[p]++;
-    // }
-
-    // std::map<int, Point> lookup;
-
-    // for (const Point &p : poly) {
-    //     lookup.emplace(p.tag, p);
-    // }
-
     const double tol = 1e-2,
         sol = tol*tol;
-
-    std::vector<double> ls;
 
     PolyType poly2{{poly.front()}};
 
@@ -431,7 +417,6 @@ void Simplify (const PolyType &poly, YYType &yy, ZZType &zz, PolyType &res, int 
         double sq = GetSqDis(*itr, *poly2.rbegin());
         if (sq > sol) {
             poly2.push_back(*itr);
-            ls.push_back(sq);
         }
     }
 
@@ -539,8 +524,24 @@ void Simplify (const PolyType &poly, YYType &yy, ZZType &zz, PolyType &res, int 
         }
     }
 
-    std::copy_if(poly2.begin(), poly2.end(), std::back_inserter(res), [&tags](const Point &p) {
-        return tags.count(p.tag) == 1;
+    tags.insert(skip);
+
+    std::set<Point> pts;
+
+    for (auto &p : poly2) {
+        if (tags.count(p.tag) == 1) {
+            pts.insert(p);
+        }
+    }
+
+    for (auto &p : poly2) {
+        if (tags.count(p.tag) == 0 && pts.count(p) == 1) {
+            yy.insert(p.tag);
+        }
+    }
+
+    std::copy_if(poly2.begin(), poly2.end(), std::back_inserter(res), [&tags, &yy](const Point &p) {
+        return tags.count(p.tag) == 1 || yy.count(p.tag) == 1;
     });
 
     for (itr = res.begin(); itr != res.end(); ++itr) {
@@ -589,6 +590,7 @@ void Simplify (const PolyType &poly, YYType &yy, ZZType &zz, PolyType &res, int 
             }
 
             if (rev) {
+                std::reverse(verts.begin(), verts.end());
                 zz[{b.tag, a.tag}] = verts;
             } else {
                 zz[{a.tag, b.tag}] = verts;
@@ -602,10 +604,15 @@ void Simplify (const PolyType &poly, YYType &yy, ZZType &zz, PolyType &res, int 
     _test.insert(_test.end(), res.begin(), res.begin()+2);
 
     for (itr = _test.begin(); itr != _test.end()-2; ++itr) {
-        double d = GetDis(*itr, *(itr+2), *(itr+1), s);
+        if (yy.count((itr+1)->tag) == 0
+            && (itr+1)->tag != skip
+            && pts.find(*itr) != pts.find(*(itr+2))) {
 
-        if (d < tol) {
-            vtkbool_throw("", "Polygon was not completely simplified.");
+            double d = GetDis(*itr, *(itr+2), *(itr+1), s);
+
+            if (d < tol) {
+                vtkbool_throw("", "Polygon was not completely simplified.");
+            }
         }
     }
 
@@ -813,7 +820,7 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
     YYType yy;
     ZZType zz;
 
-    Simplify(poly, yy, zz, poly2, ind, true);
+    Simplify(poly, yy, zz, poly2, x.tag, true);
 
     Align(poly2, x);
 
@@ -821,7 +828,7 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
 
     TrivialRm(poly2, tr, ind, x).GetSimplified(poly3);
 
-    Simplify(poly3, yy, zz, poly4, ind, false);
+    Simplify(poly3, yy, zz, poly4, x.tag, false);
 
     try {
         GetVisPoly(poly4, tr, poly5);
@@ -842,6 +849,8 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
                 poly5.erase(poly5.begin()+1);
             }
         }
+
+        // std::copy(poly5.begin(), poly5.end(), std::back_inserter(res));
 
         Restore(poly5, tr, zz, res);
 
