@@ -130,7 +130,7 @@ typedef std::map<Pair, VertsType4> ZZType;
 
 typedef std::set<int> YYType;
 
-void Simplify (const PolyType &poly, YYType &yy, ZZType &zz, PolyType &res, int omit, bool rev);
+void Simplify (const PolyType &poly, YYType &yy, ZZType &zz, PolyType &res, int skip, bool rev);
 
 void Align (PolyType &poly, const Point &p);
 
