@@ -218,11 +218,13 @@ class Frieze:
         bf = vtkboolPython.vtkPolyDataBooleanFilter()
         bf.SetInputConnection(extr.GetOutputPort())
         bf.SetInputConnection(1, extr1.GetOutputPort())
+        bf.DecPolysOff()
 
         # extr2 + extr3
         bf1 = vtkboolPython.vtkPolyDataBooleanFilter()
         bf1.SetInputConnection(extr2.GetOutputPort())
         bf1.SetInputConnection(1, extr3.GetOutputPort())
+        bf1.DecPolysOff()
 
         app = vtk.vtkAppendPolyData()
         app.AddInputConnection(bf.GetOutputPort())
@@ -231,6 +233,7 @@ class Frieze:
         bf2 = vtkboolPython.vtkPolyDataBooleanFilter()
         bf2.SetInputConnection(app.GetOutputPort())
         bf2.SetInputConnection(1, extr4.GetOutputPort())
+        bf2.DecPolysOff()
 
         ang = self.cfg['ang']*math.pi/180
 
@@ -249,6 +252,7 @@ class Frieze:
         bf3.SetInputConnection(bf2.GetOutputPort())
         bf3.SetInputConnection(1, plane.GetOutputPort())
         bf3.SetOperModeToDifference()
+        bf3.DecPolysOff()
 
         result = bf3
 
@@ -267,6 +271,7 @@ class Frieze:
             bf4.SetInputConnection(result.GetOutputPort())
             bf4.SetInputConnection(1, plane1.GetOutputPort())
             bf4.SetOperModeToDifference()
+            bf4.DecPolysOff()
 
             result = bf4
 
@@ -281,6 +286,7 @@ class Frieze:
             bf5.SetInputConnection(result.GetOutputPort())
             bf5.SetInputConnection(1, plane2.GetOutputPort())
             bf5.SetOperModeToDifference()
+            bf5.DecPolysOff()
 
             result = bf5
 
@@ -303,6 +309,7 @@ class Frieze:
             bf6 = vtkboolPython.vtkPolyDataBooleanFilter()
             bf6.SetInputConnection(result.GetOutputPort())
             bf6.SetInputConnection(1, app1.GetOutputPort())
+            bf6.DecPolysOff()
 
             result = bf6
 

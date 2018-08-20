@@ -49,20 +49,6 @@ double GetAngle (double *vA, double *vB) {
     return ang;
 }
 
-void Move (double *a, double *b, double *c) {
-    // damit a, b oder c nicht der ursprung ist
-    // det(a,b,c) wäre dann auch 0
-
-    double x = std::min({a[0], b[0], c[0]}),
-        y = std::min({a[1], b[1], c[1]});
-
-    double m[] = {1-x, 2-y};
-
-    a[0] += m[0]; a[1] += m[1];
-    b[0] += m[0]; b[1] += m[1];
-    c[0] += m[0]; c[1] += m[1];
-}
-
 bool Ld (double *a, double *b, double *c) {
     double vA[] = {b[0]-a[0], b[1]-a[1]},
         vB[] = {c[0]-a[0], c[1]-a[1]};
@@ -149,25 +135,12 @@ double GetT (double *a, double *b, double *c) {
         return 1;
     }
 
-    double _a[2], _b[2], _c[2];
-    Cpy(_a, a);
-    Cpy(_b, b);
-    Cpy(_c, c);
+    double vA[] = {b[0]-a[0], b[1]-a[1]},
+        vB[] = {c[0]-a[0], c[1]-a[1]},
+        lA = Normalize(vA),
+        lB = Normalize(vB);
 
-    Move(_a, _b, _c);
-
-    double m11 = _a[0],
-        m12 = _b[0]-_a[0],
-        m21 = _a[1],
-        m22 = _b[1]-_a[1],
-        v1 = _c[0],
-        v2 = _c[1];
-
-    double det = m11*m22-m12*m21;
-
-    assert(std::abs(det) > E);
-
-    return (m11*v2-v1*m21)/det;
+    return (vA[0]*vB[0]+vA[1]*vB[1])*lB/lA;
 }
 
 bool TestCW (const PolyType &poly) {

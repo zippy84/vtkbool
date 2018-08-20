@@ -28,6 +28,7 @@ This is an extension of the graphics library VTK. The goal of the extension is t
 
 - correctness depends on the polygon-defining normals (use vtkPolyDataNormals if you have problems with incorrect orientations)
 - PointData is not preserved - you have to do your own mapping
+- the Decomposer may produce sharp angled triangles
 
 ## Todo
 
@@ -108,12 +109,6 @@ writer.Update()
 ```
 
 There are two complex examples in *python/examples*.
-
-## Examples
-
-For demonstration there are examples for the use in ParaView. They can be found in *paraview\_plugin/demos*. To open a pvsm-file, select **Load State...** in the file-menu of ParaView.
-
-![](https://raw.github.com/zippy84/vtkbool/master/examples.png)
 
 ## Copyright
 
