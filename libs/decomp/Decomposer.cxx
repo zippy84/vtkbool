@@ -78,7 +78,7 @@ Decomposer::Decomposer (const PolyType &_poly) : _orig(_poly) {
 
     _Scale(_orig);
 
-    Simplify(_orig, _yy, _zz, poly, NO_USE, false);
+    Simplify(_orig, _yy, savedPts, poly, NO_USE, false);
 
     std::copy(poly.begin(), poly.end(), std::back_inserter(verts));
 
@@ -190,8 +190,10 @@ bool Decomposer::IsRefl (int a, int b, int c) {
         &vB = verts[b],
         &vC = verts[c];
 
-    double t,
-        d = GetDis(vC, vA, vB, t);
+    double n[] = {vB.y-vC.y, vC.x-vB.x};
+    Normalize(n);
+
+    double d = n[0]*(vA.x-vB.x)+n[1]*(vA.y-vB.y);
 
     return IsNear(vB.pt, vC.pt) || d > 1e-3;
 
@@ -530,7 +532,7 @@ void Decomposer::GetDecomposed (DecResType &res) {
 
         PolyType _res;
 
-        SimpleRestore(_poly, _zz, _res);
+        SimpleRestore(_poly, savedPts, _res);
 
         IdsType _dec;
         for (auto& p : _res) {

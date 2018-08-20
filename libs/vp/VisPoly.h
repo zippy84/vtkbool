@@ -126,18 +126,18 @@ public:
 
 typedef std::vector<Vert4> VertsType4;
 
-typedef std::map<Pair, VertsType4> ZZType;
+typedef std::map<Pair, VertsType4> SavedPtsType;
 
 typedef std::set<int> YYType;
 
-void Simplify (const PolyType &poly, YYType &yy, ZZType &zz, PolyType &res, int skip, bool rev);
+void Simplify (const PolyType &poly, YYType &yy, SavedPtsType &savedPts, PolyType &res, int skip, bool rev);
 
 void Align (PolyType &poly, const Point &p);
 
-void Restore (const PolyType &poly, const Tracker &tr, const ZZType &zz, PolyType &res);
+void Restore (const PolyType &poly, const Tracker &tr, const SavedPtsType &savedPts, PolyType &res);
 void Restore2 (const PolyType &poly, PolyType &res);
 
-void SimpleRestore (const PolyType &poly, const ZZType &zz, PolyType &res);
+void SimpleRestore (const PolyType &poly, const SavedPtsType &savedPts, PolyType &res);
 
 // diese darf nicht direkt verwendet werden
 void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind = 0);

@@ -43,11 +43,16 @@ void ToPoly (const Json::Value& pts, PolyType &poly) {
 }
 
 int main (int argc, char *argv[]) {
+    std::istringstream stream(argv[1]);
+    int t;
+
+    stream >> t;
+
     Json::Value doc;
 
     Json::CharReaderBuilder reader;
 
-    std::ifstream jn("../../vp/dev/complex.json");
+    std::ifstream jn("../../vp/dev/special.json");
 
     std::string err;
 
@@ -60,46 +65,48 @@ int main (int argc, char *argv[]) {
         int i = 0;
 
         for (const Json::Value& p : polys) {
-            PolyType poly;
+            if (i == t) {
+                PolyType poly;
 
-            ToPoly(p, poly);
+                ToPoly(p, poly);
 
-            assert(TestCW(poly));
+                assert(TestCW(poly));
 
-            nlohmann::json data;
+                nlohmann::json data;
 
-            Ext ext;
-            GetExt(poly, ext);
+                Ext ext;
+                GetExt(poly, ext);
 
-            data["width"] = std::abs(ext.maxX-ext.minX);
-            data["height"] = std::abs(ext.maxY-ext.minY);
+                data["width"] = std::abs(ext.maxX-ext.minX);
+                data["height"] = std::abs(ext.maxY-ext.minY);
 
-            data["x"] = -ext.minX;
-            data["y"] = -ext.minY;
+                data["x"] = -ext.minX;
+                data["y"] = -ext.minY;
 
-            data["poly"] = GetAbsolutePath(poly);
+                data["poly"] = GetAbsolutePath(poly);
 
-            Decomposer d(poly);
+                Decomposer d(poly);
 
-            DecResType decs;
-            d.GetDecomposed(decs);
+                DecResType decs;
+                d.GetDecomposed(decs);
 
-            for (auto& dec : decs) {
-                PolyType p;
+                for (auto& dec : decs) {
+                    PolyType p;
 
-                for (int id : dec) {
-                    p.push_back(poly[id]);
+                    for (int id : dec) {
+                        p.push_back(poly[id]);
+                    }
+
+                    data["data"].push_back({{ "path", GetAbsolutePath(p) }});
+
+                    assert(TestCW(p));
                 }
 
-                data["data"].push_back({{ "path", GetAbsolutePath(p) }});
+                std::stringstream name;
+                name << "../dev/res/special_" << i << ".svg";
 
-                assert(TestCW(p));
+                env.write("../dev/template.svg", data, name.str());
             }
-
-            std::stringstream name;
-            name << "../dev/res/data_" << i << ".svg";
-
-            env.write("../dev/template.svg", data, name.str());
 
             i++;
 

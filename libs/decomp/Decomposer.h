@@ -87,10 +87,8 @@ class Decomposer {
 
     std::vector<Pair> diags;
 
-    // testweise
-
     YYType _yy;
-    ZZType _zz;
+    SavedPtsType savedPts;
 
 public:
     Decomposer (const PolyType &_poly);
