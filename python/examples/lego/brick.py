@@ -93,6 +93,7 @@ def add_tube(prev, x, y):
     bA.SetInputConnection(cylA.GetOutputPort())
     bA.SetInputConnection(1, cube.GetOutputPort())
     bA.SetOperModeToUnion()
+    bA.DecPolysOff()
 
     cylB = create_cylinder(r=2.405, h=8.6)
 
@@ -100,9 +101,10 @@ def add_tube(prev, x, y):
     bB.SetInputConnection(bA.GetOutputPort())
     bB.SetInputConnection(1, cylB.GetOutputPort())
     bB.SetOperModeToDifference()
+    bB.DecPolysOff()
 
     tr = vtk.vtkTransform()
-    tr.Translate(x, y, 4.3)
+    tr.Translate(x, y, 4.30001)
     tr.RotateX(90)
 
     tf = vtk.vtkTransformPolyDataFilter()
@@ -113,6 +115,7 @@ def add_tube(prev, x, y):
     bC.SetInputConnection(prev.GetOutputPort())
     bC.SetInputConnection(1, tf.GetOutputPort())
     bC.SetOperModeToUnion()
+    bC.DecPolysOff()
 
     return bC
 
@@ -131,6 +134,7 @@ def add_stud(prev, x, y):
     bA.SetInputConnection(prev.GetOutputPort())
     bA.SetInputConnection(1, tfA.GetOutputPort())
     bA.SetOperModeToUnion()
+    bA.DecPolysOff()
 
     cylB = create_cylinder(r=1.5, h=1.)
 
@@ -146,6 +150,7 @@ def add_stud(prev, x, y):
     bB.SetInputConnection(bA.GetOutputPort())
     bB.SetInputConnection(1, tfB.GetOutputPort())
     bB.SetOperModeToDifference()
+    bB.DecPolysOff()
 
     return bB
 
@@ -169,6 +174,7 @@ def add_bound(prev, x, y, phi):
     b.SetInputConnection(prev.GetOutputPort())
     b.SetInputConnection(1, tf.GetOutputPort())
     b.SetOperModeToUnion()
+    b.DecPolysOff()
 
     return b
 
@@ -197,6 +203,7 @@ boolA = vtkboolPython.vtkPolyDataBooleanFilter()
 boolA.SetInputConnection(subA.GetOutputPort())
 boolA.SetInputConnection(1, subB.GetOutputPort())
 boolA.SetOperModeToDifference()
+boolA.DecPolysOff()
 
 tubeA = add_tube(boolA, 0, 0)
 tubeB = add_tube(tubeA, -8, 0)

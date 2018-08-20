@@ -400,7 +400,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
 list([ list(map(float, p.split(','))) for p in 'm 26.402829,29.895027 -2.132521,24.374833 -3.073759,35.133226 22.541594,1.972134 76.814397,6.720388 1.86346,-21.299507 3.34282,-38.208551 -31.800976,-2.782225 -0.800142,-0.07 -7.246298,-0.633968 -2.155836,24.641314 -6.148254,-0.537902 -8.586643,-0.751234 -4.925747,-0.430947 1.112312,-12.713787 0.198,-2.263145 0.192176,-2.196583 0.326117,-3.727536 0.327231,-3.740264 z'[2:-2].split(' ') ])
 */
 
-void Simplify (const PolyType &poly, YYType &yy, ZZType &zz, PolyType &res, int skip, bool rev) {
+void Simplify (const PolyType &poly, YYType &yy, SavedPtsType &savedPts, PolyType &res, int skip, bool rev) {
 
     // der dritte anlauf um es in den griff zu bekommen
 
@@ -591,9 +591,9 @@ void Simplify (const PolyType &poly, YYType &yy, ZZType &zz, PolyType &res, int 
 
             if (rev) {
                 std::reverse(verts.begin(), verts.end());
-                zz[{b.tag, a.tag}] = verts;
+                savedPts[{b.tag, a.tag}] = verts;
             } else {
-                zz[{a.tag, b.tag}] = verts;
+                savedPts[{a.tag, b.tag}] = verts;
             }
         }
     }
@@ -650,7 +650,7 @@ void Align (PolyType &poly, const Point &p) {
     }
 }
 
-void Restore (const PolyType &poly, const Tracker &tr, const ZZType &zz, PolyType &res) {
+void Restore (const PolyType &poly, const Tracker &tr, const SavedPtsType &savedPts, PolyType &res) {
     std::map<int, Point> rr;
 
     PolyType::const_iterator itr, itr2;
@@ -670,13 +670,13 @@ void Restore (const PolyType &poly, const Tracker &tr, const ZZType &zz, PolyTyp
         const Pos &posA = tr.locs.at(itr->tag),
             &posB = tr.locs.at(itr2->tag);
 
-        if (zz.find({ posA.edA, posA.edB }) != zz.end()
+        if (savedPts.find({ posA.edA, posA.edB }) != savedPts.end()
             && (posA == posB
                 || posA.edB == itr2->tag)) {
 
             double t = posA == posB ? posB.t : 1;
 
-            auto &pts = zz.at({ posA.edA, posA.edB });
+            auto &pts = savedPts.at({ posA.edA, posA.edB });
 
             for (auto &p : pts) {
                 if (p.t > posA.t+E && p.t < t-E) {
@@ -760,7 +760,7 @@ void Restore2 (const PolyType &poly, PolyType &res) {
 
 }
 
-void SimpleRestore (const PolyType &poly, const ZZType &zz, PolyType &res) {
+void SimpleRestore (const PolyType &poly, const SavedPtsType &savedPts, PolyType &res) {
     PolyType::const_iterator itr, itr2;
     for (itr = poly.begin(); itr != poly.end(); ++itr) {
         res.push_back(*itr);
@@ -772,7 +772,7 @@ void SimpleRestore (const PolyType &poly, const ZZType &zz, PolyType &res) {
         }
 
         try {
-            const VertsType4 &pts = zz.at({ itr->tag, itr2->tag });
+            const VertsType4 &pts = savedPts.at({ itr->tag, itr2->tag });
             std::copy(pts.begin(), pts.end(), std::back_inserter(res));
         } catch (...) {}
 
@@ -817,10 +817,10 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
 
     Point x(poly[ind]);
 
+    SavedPtsType savedPts;
     YYType yy;
-    ZZType zz;
 
-    Simplify(poly, yy, zz, poly2, x.tag, true);
+    Simplify(poly, yy, savedPts, poly2, x.tag, true);
 
     Align(poly2, x);
 
@@ -828,7 +828,7 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
 
     TrivialRm(poly2, tr, ind, x).GetSimplified(poly3);
 
-    Simplify(poly3, yy, zz, poly4, x.tag, false);
+    Simplify(poly3, yy, savedPts, poly4, x.tag, false);
 
     try {
         GetVisPoly(poly4, tr, poly5);
@@ -837,10 +837,10 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
             assert(l.second.t < 1);
         }
 
-        i = 0;
-        for (auto &p : poly5) {
-            std::cout << i++ << ". " << p << " => " << tr.locs[p.tag] << std::endl;
-        }
+        // i = 0;
+        // for (auto &p : poly5) {
+        //     std::cout << i++ << ". " << p << " => " << tr.locs[p.tag] << std::endl;
+        // }
 
         if (yy.count(poly5[1].tag) == 1) {
             poly5.erase(poly5.begin()+1);
@@ -852,7 +852,7 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
 
         // std::copy(poly5.begin(), poly5.end(), std::back_inserter(res));
 
-        Restore(poly5, tr, zz, res);
+        Restore(poly5, tr, savedPts, res);
 
         Restore2(poly, res);
 
@@ -874,10 +874,10 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
 
         _Special(res, x);
 
-        i = 0;
-        for (auto &p : res) {
-            std::cout << i++ << ". " << p << std::endl;
-        }
+        // i = 0;
+        // for (auto &p : res) {
+        //     std::cout << i++ << ". " << p << std::endl;
+        // }
 
     } catch (...) {
         throw;

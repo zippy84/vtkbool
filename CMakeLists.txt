@@ -94,7 +94,7 @@ else()
                 add_library(${PROJECT_NAME}PythonD ${${PROJECT_NAME}Python_srcs})
                 target_link_libraries(${PROJECT_NAME}PythonD ${PROJECT_NAME} vtkWrappingPythonCore vtkCommonExecutionModelPythonD)
 
-                python_add_module(${PROJECT_NAME}Python ${PROJECT_NAME}PythonInit.cxx)
+                python_add_module(${PROJECT_NAME}Python PyInit.cxx ${PROJECT_NAME}PythonInit.cxx)
                 target_link_libraries(${PROJECT_NAME}Python ${PROJECT_NAME}PythonD)
 
                 find_package(PythonInterp 2.7 REQUIRED)
