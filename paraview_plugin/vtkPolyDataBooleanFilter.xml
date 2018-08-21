@@ -1,6 +1,6 @@
 <ServerManagerConfiguration>
     <ProxyGroup name="filters">
-        <SourceProxy name="PolyDataBooleanFilter" class="vtkPolyDataBooleanFilter" label="Boolean Filter">
+        <SourceProxy name="PolyDataBooleanFilter" class="vtkPolyDataBooleanFilter" label="PolyDataBooleanFilter">
             <Documentation short_help="A boolean filter for polydata inputs." long_help=""></Documentation>
 
             <InputProperty name="InputA" command="SetInputConnection" port_index="0">

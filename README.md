@@ -36,7 +36,7 @@ Nothing for now.
 
 ## Requirements
 
-- CMake >= 2.8
+- CMake >= 3.1
 - VTK >= 6.1
 - GCC >= 4.7 or another compiler with C++11-support (MSVC for example)
 

@@ -26,14 +26,15 @@ if(ParaView_FOUND)
     set(srcs
         ../vtkPolyDataBooleanFilter.cxx
         ../vtkPolyDataContactFilter.cxx
-        ../Utilities.cxx)
+        ../Utilities.cxx
+        ../PyInit.cxx)
 
     add_subdirectory(../libs libs_build)
     include_directories(../libs/merger ../libs/decomp ../libs/vp)
 
     add_paraview_plugin(
         PolyDataBooleanFilter
-        "2.0"
+        ${vtkbool_VERSION}
         SERVER_MANAGER_XML vtkPolyDataBooleanFilter.xml
         SERVER_MANAGER_SOURCES ../vtkPolyDataBooleanFilter.cxx
         SERVER_SOURCES ${srcs}
