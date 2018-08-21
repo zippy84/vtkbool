@@ -400,7 +400,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
 list([ list(map(float, p.split(','))) for p in 'm 26.402829,29.895027 -2.132521,24.374833 -3.073759,35.133226 22.541594,1.972134 76.814397,6.720388 1.86346,-21.299507 3.34282,-38.208551 -31.800976,-2.782225 -0.800142,-0.07 -7.246298,-0.633968 -2.155836,24.641314 -6.148254,-0.537902 -8.586643,-0.751234 -4.925747,-0.430947 1.112312,-12.713787 0.198,-2.263145 0.192176,-2.196583 0.326117,-3.727536 0.327231,-3.740264 z'[2:-2].split(' ') ])
 */
 
-void Simplify (const PolyType &poly, YYType &yy, SavedPtsType &savedPts, PolyType &res, int skip, bool rev) {
+void Simplify (const PolyType &poly, SavedPtsType &savedPts, SpecTagsType &specTags, PolyType &res, int skip, bool rev) {
 
     // der dritte anlauf um es in den griff zu bekommen
 
@@ -536,12 +536,12 @@ void Simplify (const PolyType &poly, YYType &yy, SavedPtsType &savedPts, PolyTyp
 
     for (auto &p : poly2) {
         if (tags.count(p.tag) == 0 && pts.count(p) == 1) {
-            yy.insert(p.tag);
+            specTags.insert(p.tag);
         }
     }
 
-    std::copy_if(poly2.begin(), poly2.end(), std::back_inserter(res), [&tags, &yy](const Point &p) {
-        return tags.count(p.tag) == 1 || yy.count(p.tag) == 1;
+    std::copy_if(poly2.begin(), poly2.end(), std::back_inserter(res), [&tags, &specTags](const Point &p) {
+        return tags.count(p.tag) == 1 || specTags.count(p.tag) == 1;
     });
 
     for (itr = res.begin(); itr != res.end(); ++itr) {
@@ -604,7 +604,7 @@ void Simplify (const PolyType &poly, YYType &yy, SavedPtsType &savedPts, PolyTyp
     _test.insert(_test.end(), res.begin(), res.begin()+2);
 
     for (itr = _test.begin(); itr != _test.end()-2; ++itr) {
-        if (yy.count((itr+1)->tag) == 0
+        if (specTags.count((itr+1)->tag) == 0
             && (itr+1)->tag != skip
             && pts.find(*itr) != pts.find(*(itr+2))) {
 
@@ -818,9 +818,9 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
     Point x(poly[ind]);
 
     SavedPtsType savedPts;
-    YYType yy;
+    SpecTagsType specTags;
 
-    Simplify(poly, yy, savedPts, poly2, x.tag, true);
+    Simplify(poly, savedPts, specTags, poly2, x.tag, true);
 
     Align(poly2, x);
 
@@ -828,7 +828,7 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
 
     TrivialRm(poly2, tr, ind, x).GetSimplified(poly3);
 
-    Simplify(poly3, yy, savedPts, poly4, x.tag, false);
+    Simplify(poly3, savedPts, specTags, poly4, x.tag, false);
 
     try {
         GetVisPoly(poly4, tr, poly5);
@@ -842,10 +842,10 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
         //     std::cout << i++ << ". " << p << " => " << tr.locs[p.tag] << std::endl;
         // }
 
-        if (yy.count(poly5[1].tag) == 1) {
+        if (specTags.count(poly5[1].tag) == 1) {
             poly5.erase(poly5.begin()+1);
 
-            if (yy.count(poly5[1].tag) == 1) {
+            if (specTags.count(poly5[1].tag) == 1) {
                 poly5.erase(poly5.begin()+1);
             }
         }

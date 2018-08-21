@@ -69,7 +69,7 @@ struct p_h {
 };
 
 class Decomposer {
-    PolyType poly, _orig;
+    PolyType orig, poly;
     VertsType6 verts;
 
     int num;
@@ -87,11 +87,11 @@ class Decomposer {
 
     std::vector<Pair> diags;
 
-    YYType _yy;
     SavedPtsType savedPts;
+    SpecTagsType specTags;
 
 public:
-    Decomposer (const PolyType &_poly);
+    Decomposer (const PolyType &_orig);
 
     void GetDecomposed (DecResType &res);
 
