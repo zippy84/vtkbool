@@ -128,9 +128,9 @@ typedef std::vector<Vert4> VertsType4;
 
 typedef std::map<Pair, VertsType4> SavedPtsType;
 
-typedef std::set<int> YYType;
+typedef std::set<int> SpecTagsType;
 
-void Simplify (const PolyType &poly, YYType &yy, SavedPtsType &savedPts, PolyType &res, int skip, bool rev);
+void Simplify (const PolyType &poly, SavedPtsType &savedPts, SpecTagsType &specTags, PolyType &res, int skip, bool rev);
 
 void Align (PolyType &poly, const Point &p);
 

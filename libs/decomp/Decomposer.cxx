@@ -68,17 +68,17 @@ void SubP::RestoreS () {
     S_tail.clear();
 }
 
-Decomposer::Decomposer (const PolyType &_poly) : _orig(_poly) {
+Decomposer::Decomposer (const PolyType &_orig) : orig(_orig) {
     {
         int i = 0;
-        for(auto& p : poly) {
+        for(auto& p : orig) {
             assert(p.id == i++);
         }
     }
 
-    _Scale(_orig);
+    _Scale(orig);
 
-    Simplify(_orig, _yy, savedPts, poly, NO_USE, false);
+    Simplify(orig, savedPts, specTags, poly, NO_USE, false);
 
     std::copy(poly.begin(), poly.end(), std::back_inserter(verts));
 
@@ -99,10 +99,6 @@ Decomposer::Decomposer (const PolyType &_poly) : _orig(_poly) {
 
     PolyType poly2(verts.begin(), verts.end());
 
-    /*for (auto& p : poly2) {
-        std::cout << p << std::endl;
-    }*/
-
     for (int i = 0; i < num; i++) {
         if (verts[i].refl) {
             PolyType vp;
@@ -120,7 +116,7 @@ Decomposer::Decomposer (const PolyType &_poly) : _orig(_poly) {
 
                 // die ids sind rel. bzgl. verts
 
-                int a = vp[0].id,
+                int a = vp.front().id,
                     b = itr->id;
 
                 if (a < b) {
@@ -133,13 +129,13 @@ Decomposer::Decomposer (const PolyType &_poly) : _orig(_poly) {
         }
     }
 
-    for (auto& v : verts) {
-        std::cout << v << std::endl;
-    }
+    // for (auto& v : verts) {
+    //     std::cout << v << std::endl;
+    // }
 
-    /*for (auto& p : pairs) {
-        std::cout << "-> " << p << std::endl;
-    }*/
+    // for (auto& p : pairs) {
+    //     std::cout << "-> " << p << std::endl;
+    // }
 
     // init um die reflexe
 
@@ -395,7 +391,7 @@ void Decomposer::GetDecomposed (DecResType &res) {
     if (subs.empty()) {
         // keine refl vorhanden
 
-        IdsType ids(_orig.size());
+        IdsType ids(orig.size());
         std::iota(ids.begin(), ids.end(), 0);
 
         res.push_back(ids);
@@ -519,7 +515,7 @@ void Decomposer::GetDecomposed (DecResType &res) {
 
         PolyType _poly;
         for (int id : dec) {
-            _poly.push_back(_orig[id]);
+            _poly.push_back(orig[id]);
         }
 
         /*
