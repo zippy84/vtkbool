@@ -74,11 +74,11 @@ void Merger::GetMerged (PolysType &res) {
             return excludes.count(id) > 0;
         }), ids.end());
 
-        std::cout << ">> [";
-        for (int id : ids) {
-            std::cout << id << ", ";
-        }
-        std::cout << "]" << std::endl;
+        // std::cout << ">> [";
+        // for (int id : ids) {
+        //     std::cout << id << ", ";
+        // }
+        // std::cout << "]" << std::endl;
 
         // erstmal nur die, die holes haben
 
@@ -147,9 +147,9 @@ void Merger::Merge (PolysType &group, PolyType &merged) {
     tree->OmitZPartitioning();
     tree->BuildLocatorFromPoints(pts);
 
-    for (Pair& edge : edges) {
-        std::cout << edge << std::endl;
-    }
+    // for (Pair& edge : edges) {
+    //     std::cout << edge << std::endl;
+    // }
 
     int numPts = pts->GetNumberOfPoints();
 
@@ -180,11 +180,11 @@ void Merger::Merge (PolysType &group, PolyType &merged) {
                 valids.push_back(found->GetId(i));
             }
 
-            std::cout << "_id: " << _id << ", curr: " << curr << ", valids: [";
-            for (int v : valids) {
-                std::cout << v << ", ";
-            }
-            std::cout << "]" << std::endl;
+            // std::cout << "_id: " << _id << ", curr: " << curr << ", valids: [";
+            // for (int v : valids) {
+            //     std::cout << v << ", ";
+            // }
+            // std::cout << "]" << std::endl;
 
             valids.erase(std::remove_if(valids.begin(), valids.end(), [&](int id) {
                 if (src[id] == src[_id]) {
@@ -215,11 +215,11 @@ void Merger::Merge (PolysType &group, PolyType &merged) {
                 }
             }), valids.end());
 
-            std::cout << "=> valids: [";
-            for (int v : valids) {
-                std::cout << v << ", ";
-            }
-            std::cout << "]" << std::endl;
+            // std::cout << "=> valids: [";
+            // for (int v : valids) {
+            //     std::cout << v << ", ";
+            // }
+            // std::cout << "]" << std::endl;
 
             for (int id : valids) {
                 double pt[3];
@@ -244,9 +244,10 @@ void Merger::Merge (PolysType &group, PolyType &merged) {
         _ids.clear();
 
         // erstmal die keys betrachten
-        for (const auto& r : res) {
-            std::cout << r.first << std::endl;
-        }
+
+        // for (const auto& r : res) {
+        //     std::cout << r.first << std::endl;
+        // }
 
         cons.clear();
 
@@ -280,12 +281,13 @@ void Merger::Merge (PolysType &group, PolyType &merged) {
 
             } else {
 
-                std::cout << "not viewed: [";
+                // std::cout << "not viewed: [";
+
                 int i = 0;
 
                 for (auto& poly : group) {
                     if (viewed.count(i) == 0) {
-                        std::cout << i << ", ";
+                        // std::cout << i << ", ";
 
                         for (Point& p : poly) {
                             _ids.push_back(p.id);
@@ -294,7 +296,8 @@ void Merger::Merge (PolysType &group, PolyType &merged) {
 
                     i++;
                 }
-                std::cout << "]" << std::endl;
+
+                // std::cout << "]" << std::endl;
 
                 curr++;
 
@@ -302,18 +305,18 @@ void Merger::Merge (PolysType &group, PolyType &merged) {
             }
         }
 
-        std::cout << "_ids: [";
-        for (int id : _ids) {
-            std::cout << id << ", ";
-        }
-        std::cout << "]" << std::endl;
+        // std::cout << "_ids: [";
+        // for (int id : _ids) {
+        //     std::cout << id << ", ";
+        // }
+        // std::cout << "]" << std::endl;
 
     }
 
     // dies sind die verbindungen
-    for (auto& con : cons) {
-        std::cout << con << std::endl;
-    }
+    // for (auto& con : cons) {
+    //     std::cout << con << std::endl;
+    // }
 
     typedef std::deque<Point> PolyTypeD;
 
@@ -376,7 +379,7 @@ void Merger::Merge (PolysType &group, PolyType &merged) {
         int pA = repls[src[a]],
             pB = repls[src[b]];
 
-        std::cout << pA << ", " << pB << std::endl;
+        // std::cout << pA << ", " << pB << std::endl;
 
         PolyType &polyA = group[pA],
             &polyB = group[pB];
@@ -395,8 +398,8 @@ void Merger::Merge (PolysType &group, PolyType &merged) {
         std::rotate(deqA.begin(), itrA, deqA.end());
         std::rotate(deqB.begin(), itrB, deqB.end());
 
-        std::cout << deqA[0].id << " -> " << a << std::endl;
-        std::cout << deqB[0].id << " -> " << b << std::endl;
+        // std::cout << deqA[0].id << " -> " << a << std::endl;
+        // std::cout << deqB[0].id << " -> " << b << std::endl;
 
         PolyType newPoly;
 
