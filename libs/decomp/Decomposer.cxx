@@ -68,7 +68,7 @@ void SubP::RestoreS () {
     S_tail.clear();
 }
 
-Decomposer::Decomposer (const PolyType &_orig) : orig(_orig) {
+Decomposer::Decomposer (const PolyType &_orig) : orig(_orig), savedPts(new SavedPtsType) {
     {
         int i = 0;
         for(auto& p : orig) {
@@ -97,36 +97,47 @@ Decomposer::Decomposer (const PolyType &_orig) : orig(_orig) {
 
     std::rotate(verts.begin(), first, verts.end());
 
-    PolyType poly2(verts.begin(), verts.end());
+    // indexe der tags bzgl. verts
 
-    for (int i = 0; i < num; i++) {
-        if (verts[i].refl) {
+    std::map<int, int> inds;
+
+    VertsType6::const_iterator itr;
+    for (itr = verts.begin(); itr != verts.end(); ++itr) {
+        inds.emplace(itr->tag, itr-verts.begin());
+    }
+
+    PolyType::const_iterator itr2, itr3;
+
+    int ind;
+
+    for (itr2 = orig.begin(); itr2 != orig.end(); ++itr2) {
+        if (inds.count(itr2->tag) == 1
+            && verts[(ind = inds[itr2->tag])].refl) {
+
+            int i = itr2-orig.begin();
+
             PolyType vp;
-            GetVisPoly_wrapper(poly2, vp, i);
+            GetVisPoly_wrapper(orig, vp, i);
 
-            /*for (auto& v : vp) {
-                std::cout << v << std::endl;
-            }*/
-
-            PolyType::const_iterator itr;
-            for (itr = vp.begin()+1; itr != vp.end(); ++itr) {
-                if (itr->id == NO_USE) {
+            for (itr3 = vp.begin()+1; itr3 != vp.end(); ++itr3) {
+                if (itr3->id == NO_USE) {
                     continue;
                 }
 
-                // die ids sind rel. bzgl. verts
+                try {
+                    int ind2 = inds.at(itr3->tag);
 
-                int a = vp.front().id,
-                    b = itr->id;
+                    if (ind < ind2) {
+                        pairs.insert({ind, ind2});
+                    } else {
+                        pairs.insert({ind2, ind});
+                    }
 
-                if (a < b) {
-                    pairs.insert({a, b});
-                } else {
-                    pairs.insert({b, a});
-                }
-
+                } catch (...) {}
             }
+
         }
+
     }
 
     // for (auto& v : verts) {
@@ -528,7 +539,7 @@ void Decomposer::GetDecomposed (DecResType &res) {
 
         PolyType _res;
 
-        SimpleRestore(_poly, savedPts, _res);
+        SimpleRestore(_poly, *savedPts, _res);
 
         IdsType _dec;
         for (auto& p : _res) {

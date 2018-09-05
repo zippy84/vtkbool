@@ -45,9 +45,9 @@ void TrivialRm::RemovePockets (VertsType3 &good, double *rot, double d, Src src)
         }
     }
 
-    for (auto& p : pairs) {
-        std::cout << "pair " << p << std::endl;
-    }
+    // for (auto& p : pairs) {
+    //     std::cout << "pair " << p << std::endl;
+    // }
 
     std::vector<Pair2>::iterator itr2, itr3;
 
@@ -71,7 +71,7 @@ void TrivialRm::RemovePockets (VertsType3 &good, double *rot, double d, Src src)
                     break;
                 }
 
-                std::cout << "erasing from " << (itr2-pairs.begin()) << std::endl;
+                // std::cout << "erasing from " << (itr2-pairs.begin()) << std::endl;
 
                 pairs.erase(itr2, pairs.end());
                 break;
@@ -160,19 +160,17 @@ void TrivialRm::RemovePockets (VertsType3 &good, double *rot, double d, Src src)
 
         std::vector<Grp>::iterator itr4, itr5;
 
-        {
-            // Ausgabe
+        // {
+        //     for (itr4 = grps.begin(); itr4 != grps.end(); ++itr4) {
+        //         std::cout << "(" << itr4->dir << ", [";
+        //         for (auto id : itr4->ids) {
+        //             std::cout << id << ", ";
+        //         }
+        //         std::cout << "]), ";
+        //     }
 
-            for (itr4 = grps.begin(); itr4 != grps.end(); ++itr4) {
-                std::cout << "(" << itr4->dir << ", [";
-                for (auto id : itr4->ids) {
-                    std::cout << id << ", ";
-                }
-                std::cout << "]), ";
-            }
-
-            std::cout << std::endl;
-        }
+        //     std::cout << std::endl;
+        // }
 
         if ((grps.begin())->dir == Dir::BACKWARD) {
             if (grps.size() > 1) {
@@ -209,21 +207,19 @@ void TrivialRm::RemovePockets (VertsType3 &good, double *rot, double d, Src src)
 
                 grps2.swap(grps);
 
-                {
-                    // Ausgabe
+                // {
+                //     std::cout << ">> ";
 
-                    std::cout << ">> ";
+                //     for (itr4 = grps.begin(); itr4 != grps.end(); ++itr4) {
+                //         std::cout << "(" << itr4->dir << ", [";
+                //         for (auto id : itr4->ids) {
+                //             std::cout << id << ", ";
+                //         }
+                //         std::cout << "]), ";
+                //     }
 
-                    for (itr4 = grps.begin(); itr4 != grps.end(); ++itr4) {
-                        std::cout << "(" << itr4->dir << ", [";
-                        for (auto id : itr4->ids) {
-                            std::cout << id << ", ";
-                        }
-                        std::cout << "]), ";
-                    }
-
-                    std::cout << std::endl;
-                }
+                //     std::cout << std::endl;
+                // }
 
                 auto next = std::find_if(grps.begin(), grps.end(), [](const Grp &g) {
                     return g.dir == Dir::BACKWARD;
@@ -253,10 +249,10 @@ void TrivialRm::RemovePockets (VertsType3 &good, double *rot, double d, Src src)
 
                     bool q = tC-tA > E && tB-tC > E && p.side == Side::OUT;
 
-                    std::cout << j <<  ", (" << tA << ", " << tB << ", " << tC << ") " << q << std::endl;
+                    // std::cout << j <<  ", (" << tA << ", " << tB << ", " << tC << ") " << q << std::endl;
 
                     if (q) {
-                        std::cout << "(1) new pair (" << p.i << ", " << last.j << ")" << std::endl;
+                        // std::cout << "(1) new pair (" << p.i << ", " << last.j << ")" << std::endl;
 
                         _ids.erase(_ids.end()-j-1, _ids.end());
                         _ids.push_back(AddPair(p.i, last.j));
@@ -274,8 +270,8 @@ void TrivialRm::RemovePockets (VertsType3 &good, double *rot, double d, Src src)
                     if (next+1 != grps.end()) {
                         IdsType &_ids2 = (next+1)->ids;
 
-                        std::cout << "(2) new pair (" << pairs[_ids.back()].j
-                                  << ", " << pairs[_ids2.front()].j << ")" << std::endl;
+                        // std::cout << "(2) new pair (" << pairs[_ids.back()].j
+                        //           << ", " << pairs[_ids2.front()].j << ")" << std::endl;
 
                         _ids.push_back(AddPair(pairs[_ids.back()].j, pairs[_ids2.front()].j));
                         AssignSide(pairs[_ids.back()], src);
@@ -292,8 +288,8 @@ void TrivialRm::RemovePockets (VertsType3 &good, double *rot, double d, Src src)
                                 tB = verts[last.j].t;
 
                             if (std::abs(tA-tB) < E) {
-                                std::cout << "(3) new pair (" << p.i
-                                    << ", " << last.j << ")" << std::endl;
+                                // std::cout << "(3) new pair (" << p.i
+                                //     << ", " << last.j << ")" << std::endl;
 
                                 _ids.erase(itr6.base()-1, _ids.end());
 
@@ -323,7 +319,7 @@ void TrivialRm::RemovePockets (VertsType3 &good, double *rot, double d, Src src)
         }
 
         for (itr2 = newPairs.begin(); itr2 != newPairs.end(); ++itr2) {
-            std::cout << *itr2 << std::endl;
+            // std::cout << *itr2 << std::endl;
 
             if (itr2->side == Side::OUT) {
                 IdsType &pocket = itr2->pocket;
@@ -470,10 +466,10 @@ void TrivialRm::GetSimplified (PolyType &res) {
 
     }
 
-    int i = 0;
-    for (auto& v : verts) {
-        std::cout << i++ << " " << v << std::endl;
-    }
+    // int i = 0;
+    // for (auto& v : verts) {
+    //     std::cout << i++ << " " << v << std::endl;
+    // }
 
     auto nxt = std::find_if(verts.begin(), verts.end(), [&](const Vert3 &p) {
         return p.id == ind;
@@ -539,12 +535,12 @@ void TrivialRm::GetSimplified (PolyType &res) {
 
     }
 
-    /*for (Vert3& v : verts) {
-        std::cout << v << std::endl;
-    }*/
+    // for (Vert3& v : verts) {
+    //     std::cout << v << std::endl;
+    // }
 
     {
-        std::cout << "A()" << std::endl;
+        // std::cout << "A()" << std::endl;
 
         for (int i = 0; i < num; i++) {
             verts[i].i = i;
@@ -562,11 +558,11 @@ void TrivialRm::GetSimplified (PolyType &res) {
 
         std::rotate(good.begin(), first, good.end());
 
-        std::cout << "[";
-        for (const auto& g : good) {
-            std::cout << "(" << g.i << ", " << g.t << "), ";
-        }
-        std::cout << "]" << std::endl;
+        // std::cout << "[";
+        // for (const auto& g : good) {
+        //     std::cout << "(" << g.i << ", " << g.t << "), ";
+        // }
+        // std::cout << "]" << std::endl;
 
         double rot[] = {-rA[1], rA[0]};
         Normalize(rot);
@@ -578,7 +574,7 @@ void TrivialRm::GetSimplified (PolyType &res) {
     }
 
     {
-        std::cout << "B()" << std::endl;
+        // std::cout << "B()" << std::endl;
 
         std::reverse(verts.begin(), verts.end());
 
@@ -598,11 +594,11 @@ void TrivialRm::GetSimplified (PolyType &res) {
 
         std::rotate(good.begin(), first, good.end());
 
-        std::cout << "[";
-        for (const auto& g : good) {
-            std::cout << "(" << g.i << ", " << g.t << "), ";
-        }
-        std::cout << "]" << std::endl;
+        // std::cout << "[";
+        // for (const auto& g : good) {
+        //     std::cout << "(" << g.i << ", " << g.t << "), ";
+        // }
+        // std::cout << "]" << std::endl;
 
         double rot[] = {rB[1], -rB[0]};
         Normalize(rot);

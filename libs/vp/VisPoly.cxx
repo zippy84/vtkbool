@@ -44,16 +44,16 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
     for (Vert& v : verts) {
         v.phi = GetAngle(ref, v.r);
 
-        std::cout << v.phi*180/PI << std::endl;
+        // std::cout << v.phi*180/PI << std::endl;
     }
 
     for (int i = 0; i < num-2; i++) {
         verts[i].nxt = i+1;
     }
 
-    for (Vert& v : verts) {
-        std::cout << v.tag << " -> " << verts[v.nxt].tag << std::endl;
-    }
+    // for (Vert& v : verts) {
+    //     std::cout << v.tag << " -> " << verts[v.nxt].tag << std::endl;
+    // }
 
     IdsType vp = {0, 1};
 
@@ -69,16 +69,16 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
             break;
         }
 
-        std::cout << "> " << u << ", " << v << std::endl;
+        // std::cout << "> " << u << ", " << v << std::endl;
 
         double ptU[2], ptV[2];
         Cpy(ptU, verts[u].pt);
         Cpy(ptV, verts[v].pt);
 
-        std::cout << "orig " << verts[u].tag << ", " << verts[v].tag << std::endl;
+        // std::cout << "orig " << verts[u].tag << ", " << verts[v].tag << std::endl;
 
         if (Ld(x, ptU, ptV)) {
-            std::cout << "skipping" << std::endl;
+            // std::cout << "skipping" << std::endl;
 
             t = u;
             continue;
@@ -87,11 +87,11 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
         double cA = Cross(x, ptU, ptV),
             cB = Cross(verts[t].pt, ptU, ptV);
 
-        std::cout << "cA " << cA << std::endl;
-        std::cout << "cB " << cB << std::endl;
+        // std::cout << "cA " << cA << std::endl;
+        // std::cout << "cB " << cB << std::endl;
 
         if (cA < 0) {
-            std::cout << "vis" << std::endl;
+            // std::cout << "vis" << std::endl;
 
             if (vp.back() != u) {
                 vp.push_back(u);
@@ -111,7 +111,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
                     double *ptA = a.pt,
                         *ptB = b.pt;
 
-                    std::cout << ">> " << a.tag << ", " << b.tag << std::endl;
+                    // std::cout << ">> " << a.tag << ", " << b.tag << std::endl;
 
                     std::shared_ptr<D> d(Intersect(x, verts[u].r, ptA, ptB));
 
@@ -173,10 +173,10 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
                 }
 
                 if (d) {
-                    std::cout << "bag " << *bag << std::endl;
+                    // std::cout << "bag " << *bag << std::endl;
 
                     while (vp.size() > 0 && vp.back() != bag->f) {
-                        std::cout << "popping_1 " << vp.back() << std::endl;
+                        // std::cout << "popping_1 " << vp.back() << std::endl;
                         vp.pop_back();
                     }
 
@@ -195,7 +195,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
                         double *ptA = a.pt,
                             *ptB = b.pt;
 
-                        std::cout << ">>" << a.tag << ", " << b.tag << std::endl;
+                        // std::cout << ">>" << a.tag << ", " << b.tag << std::endl;
 
                         std::shared_ptr<D> _d;
 
@@ -261,7 +261,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
                         int a = vp.end()[-2],
                             b = vp.back();
 
-                        std::cout << "popping_2 " << vp.back() << std::endl;
+                        // std::cout << "popping_2 " << vp.back() << std::endl;
 
                         vp.pop_back();
 
@@ -315,7 +315,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
                         w = verts[w].nxt;
                     }
 
-                    std::cout << v << " -> " << p << std::endl;
+                    // std::cout << v << " -> " << p << std::endl;
 
                     double *ptW = verts[w].pt;
                     //double *ptP = verts[p].pt;
@@ -323,8 +323,8 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
                     double cC = Cross(x, ptV, ptW),
                         cD = Cross(ptV, ptU, ptW);
 
-                    std::cout << "cC " << cC << std::endl;
-                    std::cout << "cD " << cD << std::endl;
+                    // std::cout << "cC " << cC << std::endl;
+                    // std::cout << "cD " << cD << std::endl;
 
                     if (cC < 0) {
 
@@ -342,7 +342,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
                                 double *ptA = a.pt,
                                     *ptB = b.pt;
 
-                                std::cout << ">> " << a.tag << ", " << b.tag << std::endl;
+                                // std::cout << ">> " << a.tag << ", " << b.tag << std::endl;
 
                                 std::shared_ptr<D> d(Intersect(x, verts[v].r, ptA, ptB));
 
@@ -400,7 +400,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
 list([ list(map(float, p.split(','))) for p in 'm 26.402829,29.895027 -2.132521,24.374833 -3.073759,35.133226 22.541594,1.972134 76.814397,6.720388 1.86346,-21.299507 3.34282,-38.208551 -31.800976,-2.782225 -0.800142,-0.07 -7.246298,-0.633968 -2.155836,24.641314 -6.148254,-0.537902 -8.586643,-0.751234 -4.925747,-0.430947 1.112312,-12.713787 0.198,-2.263145 0.192176,-2.196583 0.326117,-3.727536 0.327231,-3.740264 z'[2:-2].split(' ') ])
 */
 
-void Simplify (const PolyType &poly, SavedPtsType &savedPts, SpecTagsType &specTags, PolyType &res, int skip, bool rev) {
+void Simplify (const PolyType &poly, SavedPtsPtr &savedPts, SpecTagsPtr &specTags, PolyType &res, int skip, bool rev) {
 
     // der dritte anlauf um es in den griff zu bekommen
 
@@ -534,77 +534,83 @@ void Simplify (const PolyType &poly, SavedPtsType &savedPts, SpecTagsType &specT
         }
     }
 
-    for (auto &p : poly2) {
-        if (tags.count(p.tag) == 0 && pts.count(p) == 1) {
-            specTags.insert(p.tag);
+    if (specTags) {
+        for (auto &p : poly2) {
+            if (tags.count(p.tag) == 0 && pts.count(p) == 1) {
+                specTags->insert(p.tag);
+            }
         }
     }
 
     std::copy_if(poly2.begin(), poly2.end(), std::back_inserter(res), [&tags, &specTags](const Point &p) {
-        return tags.count(p.tag) == 1 || specTags.count(p.tag) == 1;
+        return tags.count(p.tag) == 1 || (specTags && specTags->count(p.tag) == 1);
     });
 
-    for (itr = res.begin(); itr != res.end(); ++itr) {
-        itr2 = itr+1;
+    if (savedPts) {
 
-        if (itr2 == res.end()) {
-            itr2 = res.begin();
+        for (itr = res.begin(); itr != res.end(); ++itr) {
+            itr2 = itr+1;
+
+            if (itr2 == res.end()) {
+                itr2 = res.begin();
+            }
+
+            PolyType sect(poly); // kopiert
+            GetSect(itr->tag, itr2->tag, sect);
+
+            sects.push_back(std::move(sect));
         }
 
-        PolyType sect(poly); // kopiert
-        GetSect(itr->tag, itr2->tag, sect);
+        for (auto &sect : sects) {
+            if (sect.size() > 2) {
 
-        sects.push_back(std::move(sect));
-    }
+                const Point &a = *sect.begin(),
+                    &b = *sect.rbegin();
 
-    for (auto &sect : sects) {
-        if (sect.size() > 2) {
+                double n[] = {b.x-a.x, b.y-a.y},
+                    l = Normalize(n);
 
-            const Point &a = *sect.begin(),
-                &b = *sect.rbegin();
+                double d = a.x*n[0]+a.y*n[1];
 
-            double n[] = {b.x-a.x, b.y-a.y},
-                l = Normalize(n);
+                VertsType4 verts;
 
-            double d = a.x*n[0]+a.y*n[1];
+                for (itr = sect.begin()+1; itr != sect.end()-1; ++itr) {
+                    const Point &_p = *itr;
 
-            VertsType4 verts;
+                    double t = _p.x*n[0]+_p.y*n[1]-d;
 
-            for (itr = sect.begin()+1; itr != sect.end()-1; ++itr) {
-                const Point &_p = *itr;
+                    //assert(t/l > 0 && t/l < 1);
 
-                double t = _p.x*n[0]+_p.y*n[1]-d;
+                    Vert4 v(_p, t/l);
 
-                //assert(t/l > 0 && t/l < 1);
+                    v.pt[0] = a.x+t*n[0];
+                    v.pt[1] = a.y+t*n[1];
 
-                Vert4 v(_p, t/l);
+                    if (rev) {
+                        v.t = 1-v.t;
+                    }
 
-                v.pt[0] = a.x+t*n[0];
-                v.pt[1] = a.y+t*n[1];
-
-                if (rev) {
-                    v.t = 1-v.t;
+                    verts.push_back(std::move(v));
                 }
 
-                verts.push_back(std::move(v));
-            }
-
-            if (rev) {
-                std::reverse(verts.begin(), verts.end());
-                savedPts[{b.tag, a.tag}] = verts;
-            } else {
-                savedPts[{a.tag, b.tag}] = verts;
+                if (rev) {
+                    std::reverse(verts.begin(), verts.end());
+                    (*savedPts)[{b.tag, a.tag}] = verts;
+                } else {
+                    (*savedPts)[{a.tag, b.tag}] = verts;
+                }
             }
         }
-    }
 
-    // std::cout << "POLY3 " << GetAbsolutePath(res) << std::endl;
+        // std::cout << "POLY3 " << GetAbsolutePath(res) << std::endl;
+
+    }
 
     PolyType _test(res);
     _test.insert(_test.end(), res.begin(), res.begin()+2);
 
     for (itr = _test.begin(); itr != _test.end()-2; ++itr) {
-        if (specTags.count((itr+1)->tag) == 0
+        if ((specTags && specTags->count((itr+1)->tag) == 0)
             && (itr+1)->tag != skip
             && pts.find(*itr) != pts.find(*(itr+2))) {
 
@@ -817,8 +823,11 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
 
     Point x(poly[ind]);
 
-    SavedPtsType savedPts;
-    SpecTagsType specTags;
+    SavedPtsPtr savedPts(new SavedPtsType),
+        savedPts2;
+
+    SpecTagsPtr specTags(new SpecTagsType),
+        specTags2;
 
     Simplify(poly, savedPts, specTags, poly2, x.tag, true);
 
@@ -828,7 +837,9 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
 
     TrivialRm(poly2, tr, ind, x).GetSimplified(poly3);
 
-    Simplify(poly3, savedPts, specTags, poly4, x.tag, false);
+    // diese daten benötigt man nicht mehr
+
+    Simplify(poly3, savedPts2, specTags2, poly4, x.tag, false);
 
     try {
         GetVisPoly(poly4, tr, poly5);
@@ -842,34 +853,64 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
         //     std::cout << i++ << ". " << p << " => " << tr.locs[p.tag] << std::endl;
         // }
 
-        if (specTags.count(poly5[1].tag) == 1) {
+        if (specTags->count(poly5[1].tag) == 1) {
             poly5.erase(poly5.begin()+1);
 
-            if (specTags.count(poly5[1].tag) == 1) {
+            if (specTags->count(poly5[1].tag) == 1) {
                 poly5.erase(poly5.begin()+1);
             }
         }
 
         // std::copy(poly5.begin(), poly5.end(), std::back_inserter(res));
 
-        Restore(poly5, tr, savedPts, res);
+        Restore(poly5, tr, *savedPts, res);
 
         Restore2(poly, res);
 
         {
-            int num = poly.size();
+            PolyType::const_iterator itr = std::find_if(poly2.begin(), poly2.end(), [&x](const Point &p) {
+                return p.tag == x.tag;
+            }), itr2 = itr;
 
-            const Point &pA = poly[(ind+1)%num],
-                &pB = poly[(ind+num-1)%num];
+            do {
+                ++itr2;
 
-            if ((res.begin()+1)->tag != pB.tag) {
-                res.insert(res.begin()+1, pB);
-            }
+                if (itr2 == poly2.end()) {
+                    itr2 = poly2.begin();
+                }
 
-            if ((res.end()-1)->tag != pA.tag) {
-                res.push_back(pA);
-            }
+                if (specTags->count(itr2->tag) == 0) {
+                    if ((res.end()-1)->tag != itr2->tag) {
+                        res.push_back(*itr2);
+                    }
 
+                    break;
+                }
+
+            } while (itr2 != itr);
+        }
+
+        {
+            PolyType::const_reverse_iterator itr = std::find_if(poly2.rbegin(), poly2.rend(), [&x](const Point &p) {
+                return p.tag == x.tag;
+            }), itr2 = itr;
+
+            do {
+                ++itr2;
+
+                if (itr2 == poly2.rend()) {
+                    itr2 = poly2.rbegin();
+                }
+
+                if (specTags->count(itr2->tag) == 0) {
+                    if ((res.begin()+1)->tag != itr2->tag) {
+                        res.insert(res.begin()+1, *itr2);
+                    }
+
+                    break;
+                }
+
+            } while (itr2 != itr);
         }
 
         _Special(res, x);
