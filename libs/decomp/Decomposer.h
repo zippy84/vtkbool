@@ -87,8 +87,8 @@ class Decomposer {
 
     std::vector<Pair> diags;
 
-    SavedPtsType savedPts;
-    SpecTagsType specTags;
+    SavedPtsPtr savedPts;
+    SpecTagsPtr specTags;
 
 public:
     Decomposer (const PolyType &_orig);

@@ -127,10 +127,12 @@ public:
 typedef std::vector<Vert4> VertsType4;
 
 typedef std::map<Pair, VertsType4> SavedPtsType;
+typedef std::shared_ptr<SavedPtsType> SavedPtsPtr;
 
 typedef std::set<int> SpecTagsType;
+typedef std::shared_ptr<SpecTagsType> SpecTagsPtr;
 
-void Simplify (const PolyType &poly, SavedPtsType &savedPts, SpecTagsType &specTags, PolyType &res, int skip, bool rev);
+void Simplify (const PolyType &poly, SavedPtsPtr &savedPts, SpecTagsPtr &specTags, PolyType &res, int skip, bool rev);
 
 void Align (PolyType &poly, const Point &p);
 
