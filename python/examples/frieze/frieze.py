@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 # *-* coding: UTF-8 *-*
 
 # Copyright 2012-2018 Ronald Römer
@@ -358,26 +358,26 @@ class Frieze:
             writer1.SetInputConnection(tri.GetOutputPort())
             writer1.Update()
 
+if __name__ == '__main__':
+    cfgs = [
+        { 'seqs': [(2, 2), (2, 1, 2)], 'w': 39., 'pins': 2, 'fake_w': 40*3.25/3 },
+        { 'seqs': [(1, 1), (1, 1)], 'w': 3.25, 'end': 'B', 'flip': True },
+        { 'seqs': [(2, 2), (2, 1, 2)], 'w': 40*3.25/3, 'pins': 2 },
+        { 'seqs': [(1, 1), (1, 1)], 'w': 11.375, 'end': 'C', 'flip': True  },
+        { 'seqs': [(2, 2), (2, 1, 2)], 'w': 91*3.25/3, 'end': 'D', 'end_seqs': [(), (1,)], 'pins': 5 },
+        { 'seqs': [(1, 1), (1, 1)], 'w': 85*3.25/3, 'end': 'C', 'end_seqs': [(0,), (0,)], 'shift': 3*.4333333333/2, 'pins': 5 },
+        { 'seqs': [(2, 1, 2), (2, 2)], 'w': 40*3.25/3, 'end': 'C', 'flip': True, 'end_seqs': [(), (1, 2)], 'pins': 2 },
+        { 'seqs': [(1, 1), (1, 1)], 'w': 3.25, 'end': 'B' },
+        { 'seqs': [(2, 2), (2, 1, 2)], 'w': 40*3.25/3, 'flip': True, 'clip': 8*3.25/3, 'pins': 2 },
+        { 'seqs': [(1, 1), (1, 1)], 'w': 7*3.25/3, 'end': 'B', 'flip': True, 'ang': 22.5, 'pins': 1 },
+        { 'seqs': [(1, 1), (1, 1)], 'w': 47*3.25/3, 'ang': 22.5, 'pins': 3 },
+        { 'seqs': [(2, 2), (2, 1, 2)], 'w': 18.3848, 'end': 'D', 'ang': 22.5, 'sym': True, 'end_seqs': [(1,), ()] },
+        { 'seqs': [(1,), (1,)], 'w': 3.25/3, 'end': 'B', 'flip': True },
+        { 'seqs': [(1, 1), (1, 1)], 'w': 11.5*3.25/3, 'end': 'C', 'pins': 1 },
+        { 'seqs': [(1, 1), (1, 1)], 'w': 11.5*3.25/3, 'end': 'C', 'flip': True, 'pins': 1 }
+    ]
 
-cfgs = [
-    { 'seqs': [(2, 2), (2, 1, 2)], 'w': 39., 'pins': 2, 'fake_w': 40*3.25/3 },
-    { 'seqs': [(1, 1), (1, 1)], 'w': 3.25, 'end': 'B', 'flip': True },
-    { 'seqs': [(2, 2), (2, 1, 2)], 'w': 40*3.25/3, 'pins': 2 },
-    { 'seqs': [(1, 1), (1, 1)], 'w': 11.375, 'end': 'C', 'flip': True  },
-    { 'seqs': [(2, 2), (2, 1, 2)], 'w': 91*3.25/3, 'end': 'D', 'end_seqs': [(), (1,)], 'pins': 5 },
-    { 'seqs': [(1, 1), (1, 1)], 'w': 85*3.25/3, 'end': 'C', 'end_seqs': [(0,), (0,)], 'shift': 3*.4333333333/2, 'pins': 5 },
-    { 'seqs': [(2, 1, 2), (2, 2)], 'w': 40*3.25/3, 'end': 'C', 'flip': True, 'end_seqs': [(), (1, 2)], 'pins': 2 },
-    { 'seqs': [(1, 1), (1, 1)], 'w': 3.25, 'end': 'B' },
-    { 'seqs': [(2, 2), (2, 1, 2)], 'w': 40*3.25/3, 'flip': True, 'clip': 8*3.25/3, 'pins': 2 },
-    { 'seqs': [(1, 1), (1, 1)], 'w': 7*3.25/3, 'end': 'B', 'flip': True, 'ang': 22.5, 'pins': 1 },
-    { 'seqs': [(1, 1), (1, 1)], 'w': 47*3.25/3, 'ang': 22.5, 'pins': 3 },
-    { 'seqs': [(2, 2), (2, 1, 2)], 'w': 18.3848, 'end': 'D', 'ang': 22.5, 'sym': True, 'end_seqs': [(1,), ()] },
-    { 'seqs': [(1,), (1,)], 'w': 3.25/3, 'end': 'B', 'flip': True },
-    { 'seqs': [(1, 1), (1, 1)], 'w': 11.5*3.25/3, 'end': 'C', 'pins': 1 },
-    { 'seqs': [(1, 1), (1, 1)], 'w': 11.5*3.25/3, 'end': 'C', 'flip': True, 'pins': 1 }
-]
+    for i, cfg in enumerate(cfgs):
+        print '~~ {0} ~~'.format(i)
 
-for i, cfg in enumerate(cfgs):
-    print '~~ {0} ~~'.format(i)
-
-    Frieze(cfg).export('test{0}.vtk'.format(i))
+        Frieze(cfg).export('test{0}.vtk'.format(i))
