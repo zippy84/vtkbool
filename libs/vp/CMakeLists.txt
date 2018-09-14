@@ -15,12 +15,15 @@
 cmake_minimum_required(VERSION 3.1)
 project(vp)
 
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 if(MSVC)
-    set(CMAKE_CXX_FLAGS "-std=c++11 /EHsc")
+    set(CMAKE_CXX_FLAGS "/EHsc")
     add_definitions(-D_SCL_SECURE_NO_WARNINGS)
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 else()
-    set(CMAKE_CXX_FLAGS "-std=c++11 -Wno-deprecated -fPIC -Wunused")
+    set(CMAKE_CXX_FLAGS "-Wno-deprecated -fPIC -Wunused")
 endif()
 
 add_library(vp STATIC Tools.cxx RmTrivials.cxx VisPoly.cxx)
