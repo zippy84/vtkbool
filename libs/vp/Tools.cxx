@@ -267,3 +267,5 @@ void GetSect (int tagA, int tagB, PolyType &poly) {
         return p.tag == tagB;
     })+1, poly.end());
 }
+
+int Point::_tag;
