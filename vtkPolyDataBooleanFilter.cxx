@@ -406,25 +406,6 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
             relsA.clear();
             relsB.clear();
 
-#ifdef DEBUG
-            times.push_back(DIFF(start, std::clock()));
-#endif
-
-            DecPolys_(modPdA, involvedA, relsA);
-            DecPolys_(modPdB, involvedB, relsB);
-
-#ifdef DEBUG
-            times.push_back(DIFF(start, std::clock()));
-#endif
-
-#ifdef DEBUG
-            std::cout << "Exporting modPdA_8.vtk" << std::endl;
-            WriteVTK("modPdA_8.vtk", modPdA);
-
-            std::cout << "Exporting modPdB_8.vtk" << std::endl;
-            WriteVTK("modPdB_8.vtk", modPdB);
-#endif
-
             // aufräumen
 
             cl->Delete();
@@ -435,6 +416,25 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
             timePdB = pdB->GetMTime();
 
         }
+
+#ifdef DEBUG
+        times.push_back(DIFF(start, std::clock()));
+#endif
+
+        DecPolys_(modPdA, involvedA, relsA);
+        DecPolys_(modPdB, involvedB, relsB);
+
+#ifdef DEBUG
+        times.push_back(DIFF(start, std::clock()));
+#endif
+
+#ifdef DEBUG
+        std::cout << "Exporting modPdA_8.vtk" << std::endl;
+        WriteVTK("modPdA_8.vtk", modPdA);
+
+        std::cout << "Exporting modPdB_8.vtk" << std::endl;
+        WriteVTK("modPdB_8.vtk", modPdB);
+#endif
 
 #ifdef DEBUG
         start = std::clock();
@@ -2851,6 +2851,10 @@ void vtkPolyDataBooleanFilter::DecPolys_ (vtkPolyData *pd, InvolvedType &involve
 #ifdef DEBUG
     std::cout << "DecPolys_()" << std::endl;
 #endif
+
+    if (!DecPolys || !rels.empty()) {
+        return;
+    }
 
     vtkPoints *pdPts = pd->GetPoints();
 

@@ -41,7 +41,7 @@
                 </Documentation>
             </IntVectorProperty>
 
-            <IntVectorProperty name="DecPolys" command="SetDecPolys" number_of_elements="1" default_values="1">
+            <IntVectorProperty name="DecPolys" command="SetDecPolys" number_of_elements="1" default_values="0">
                 <BooleanDomain name="bool"/>
                 <Documentation>
                     Decompose non-convex polygons.
