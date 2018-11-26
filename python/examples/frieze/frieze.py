@@ -19,7 +19,7 @@
 
 import sys
 sys.path.extend(['/home/zippy/VTK6/lib/python2.7/site-packages',
-    '/home/zippy/vtkbool_light/build'])
+    '/home/zippy/vtkbool/build'])
 
 import vtkboolPython
 import vtk

@@ -44,7 +44,7 @@ limitations under the License.
 
 #include "Utilities.h"
 
-//#define DD
+// #define DD
 
 int Point::_tag = 0;
 
@@ -883,9 +883,9 @@ int main (int argc, char *argv[]) {
         bf->SetInputConnection(0, nf->GetOutputPort());
 
         // ginge mit dem merger
-        //bf->SetInputConnection(1, cube->GetOutputPort());
+        bf->SetInputConnection(1, cube->GetOutputPort());
 
-        bf->SetInputConnection(1, sf->GetOutputPort());
+        // bf->SetInputConnection(1, sf->GetOutputPort());
 
 #ifndef DD
         bf->MergeRegsOn();
