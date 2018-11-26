@@ -571,6 +571,8 @@ void TrivialRm::GetSimplified (PolyType &res) {
 
         RemovePockets(good, rot, d, Src::A);
 
+        RemoveRedundants(good);
+
     }
 
     {
@@ -607,6 +609,8 @@ void TrivialRm::GetSimplified (PolyType &res) {
 
         RemovePockets(good, rot, d, Src::B);
 
+        RemoveRedundants(good);
+
     }
 
     // abschluss
@@ -624,5 +628,31 @@ void TrivialRm::GetSimplified (PolyType &res) {
     std::copy(verts.begin(), verts.end(), std::back_inserter(res));
 
     assert(res.front().id == ind);
+
+}
+
+void TrivialRm::RemoveRedundants (const VertsType3 &good) {
+
+    std::set<int> tags{x.tag};
+
+    for (const Vert3 &v : good) {
+        tags.insert(v.tag);
+    }
+
+    int num = verts.size();
+
+    VertsType3::const_iterator itr;
+
+    for (itr = good.begin(); itr != good.end()-1; ++itr) {
+        const Vert3 &a = verts[(itr->i+1)%num],
+            &b = verts[(itr->i+num-1)%num];
+
+        if ((tags.count(a.tag) == 1 || a.rm)
+            && (tags.count(b.tag) == 1 || b.rm)) {
+
+            verts[itr->i].rm = true;
+
+        }
+    }
 
 }

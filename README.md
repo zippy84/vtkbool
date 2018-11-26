@@ -6,10 +6,6 @@
 
 This is an extension of the graphics library VTK. The goal of the extension is to equip the library with boolean operations on polygonal meshes. I started the project at the end of my studies in mechanical engineering at the University of Applied Sciences ([HTWK](http://htwk-leipzig.de/)) in Leipzig. I used VTK to develop a program, which I had to create for a paper. At this time I would have wished, that this feature already exists. There was several implementations from third parties, but after some tests, I came to the conclusion, that none of them worked correct. I decided to start with my own implementation. This library is the result of my efforts.
 
-## Donating
-
-If you like this project and you want to support it, you can donate with [PayPal](https://paypal.me/zippy84).
-
 ## Features
 
 - no extra libraries required
@@ -55,10 +51,10 @@ To include vtkbool into your program, you have to compile it as a library. All y
 
 The usage of the library is very simple. Look at *testing.cxx* and you can see how. Upon creating the instance of the boolean-filter and connecting the two inputs with the pipeline, you can choose between different operation types, in different manners. You can set the operation mode by calling one of the named methods:
 
-- SetOperModeToUnion
-- SetOperModeToIntersection
-- SetOperModeToDifference
-- SetOperModeToDifference2
+- `SetOperModeToUnion`
+- `SetOperModeToIntersection`
+- `SetOperModeToDifference`
+- `SetOperModeToDifference2`
 
 The alternative is the more generic `SetOperMode`. The method must be called with the number of the desired operation, an integer between 0 and 3, with the same meaning as mentioned before. After updating the pipeline, the result is stored in the first output, typically accessable with `GetOutputPort()`. The second output, `GetOutputPort(1)`, contains the lines of contact between the inputs. The inputs must be outputs of filters or sources returning vtkPolyData. The outputs from this filter are of the same type.
 
@@ -113,6 +109,10 @@ writer.Update()
 ```
 
 There are two complex examples in *python/examples*.
+
+## Donating
+
+If you like this project and you want to support it, you can donate with [PayPal](https://paypal.me/zippy84).
 
 ## Copyright
 

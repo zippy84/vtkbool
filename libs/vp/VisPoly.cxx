@@ -310,6 +310,10 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
 
                     int w = verts[v].nxt;
 
+                    if (w == NO_USE) {
+                        break;
+                    }
+
                     if (Ld(x, ptV, verts[w].pt)) {
                         p = w;
                         w = verts[w].nxt;
@@ -406,7 +410,7 @@ void Simplify (const PolyType &poly, SavedPtsPtr &savedPts, SpecTagsPtr &specTag
 
     // std::cout << "POLY " << GetAbsolutePath(poly) << std::endl;
 
-    const double tol = 1e-2,
+    const double tol = 1e-3,
         sol = tol*tol;
 
     PolyType poly2{{poly.front()}};
@@ -500,31 +504,14 @@ void Simplify (const PolyType &poly, SavedPtsPtr &savedPts, SpecTagsPtr &specTag
     // hier bräuchte man den abschnitt aus poly zw. a.tag und b.tag
     // um die am anfang entfernten mitzunehmen
 
-    std::set<int> tags;
+    std::set<int> tags{skip};
 
     for (auto &w : pairs) {
         tags.insert(poly2[w.f].tag);
         tags.insert(poly2[w.g].tag);
     }
 
-    PolyType _res;
-    std::copy_if(poly2.begin(), poly2.end(), std::back_inserter(_res), [&tags](const Point &p) {
-        return tags.count(p.tag) == 1;
-    });
-
-    _res.insert(_res.end(), _res.begin(), _res.begin()+2);
-
-    double s;
-
-    for (itr = _res.begin(); itr != _res.end()-2; ++itr) {
-        double d = GetDis(*itr, *(itr+2), *(itr+1), s);
-
-        if (d < tol) {
-            tags.erase((itr+1)->tag);
-        }
-    }
-
-    tags.insert(skip);
+    SpecTagsPtr _specTags(new SpecTagsType);
 
     std::set<Point> pts;
 
@@ -534,12 +521,48 @@ void Simplify (const PolyType &poly, SavedPtsPtr &savedPts, SpecTagsPtr &specTag
         }
     }
 
-    if (specTags) {
-        for (auto &p : poly2) {
-            if (tags.count(p.tag) == 0 && pts.count(p) == 1) {
-                specTags->insert(p.tag);
+    for (auto &p : poly2) {
+        if (tags.count(p.tag) == 0 && pts.count(p) == 1) {
+            _specTags->insert(p.tag);
+        }
+    }
+
+    PolyType _res;
+
+    std::copy_if(poly2.begin(), poly2.end(), std::back_inserter(_res), [&tags, &_specTags](const Point &p) {
+        return tags.count(p.tag) == 1 || _specTags->count(p.tag) == 1;
+    });
+
+    _res.insert(_res.end(), _res.begin(), _res.begin()+2);
+
+    double s;
+
+    for (itr = _res.begin(); itr != _res.end()-2; ++itr) {
+        if (_specTags->count((itr+1)->tag) == 0
+            && (itr+1)->tag != skip
+            && pts.find(*itr) != pts.find(*(itr+2))) {
+
+            double d = GetDis(*itr, *(itr+2), *(itr+1), s);
+
+            if (d < tol) {
+                tags.erase((itr+1)->tag);
+
+                if (_specTags->count(itr->tag) == 1) {
+                    _specTags->erase(itr->tag);
+                    tags.insert(itr->tag);
+
+                } else if (_specTags->count((itr+2)->tag) == 1) {
+                    _specTags->erase((itr+2)->tag);
+                    tags.insert((itr+2)->tag);
+
+                }
+
             }
         }
+    }
+
+    if (specTags) {
+        specTags.swap(_specTags);
     }
 
     std::copy_if(poly2.begin(), poly2.end(), std::back_inserter(res), [&tags, &specTags](const Point &p) {
@@ -604,22 +627,6 @@ void Simplify (const PolyType &poly, SavedPtsPtr &savedPts, SpecTagsPtr &specTag
 
         // std::cout << "POLY3 " << GetAbsolutePath(res) << std::endl;
 
-    }
-
-    PolyType _test(res);
-    _test.insert(_test.end(), res.begin(), res.begin()+2);
-
-    for (itr = _test.begin(); itr != _test.end()-2; ++itr) {
-        if ((specTags && specTags->count((itr+1)->tag) == 0)
-            && (itr+1)->tag != skip
-            && pts.find(*itr) != pts.find(*(itr+2))) {
-
-            double d = GetDis(*itr, *(itr+2), *(itr+1), s);
-
-            if (d < tol) {
-                vtkbool_throw("", "Polygon was not completely simplified.");
-            }
-        }
     }
 
 }
@@ -819,15 +826,13 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
         vtkbool_throw("", "Polygon is not clockwise.");
     }
 
-    PolyType poly2, poly3, poly4, poly5;
+    PolyType poly2, poly3, poly4;
 
     Point x(poly[ind]);
 
-    SavedPtsPtr savedPts(new SavedPtsType),
-        savedPts2;
+    SavedPtsPtr savedPts(new SavedPtsType);
 
-    SpecTagsPtr specTags(new SpecTagsType),
-        specTags2;
+    SpecTagsPtr specTags(new SpecTagsType);
 
     Simplify(poly, savedPts, specTags, poly2, x.tag, true);
 
@@ -837,33 +842,29 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
 
     TrivialRm(poly2, tr, ind, x).GetSimplified(poly3);
 
-    // diese daten benötigt man nicht mehr
-
-    Simplify(poly3, savedPts2, specTags2, poly4, x.tag, false);
-
     try {
-        GetVisPoly(poly4, tr, poly5);
+        GetVisPoly(poly3, tr, poly4);
 
         for (auto &l : tr.locs) {
             assert(l.second.t < 1);
         }
 
         // i = 0;
-        // for (auto &p : poly5) {
+        // for (auto &p : poly4) {
         //     std::cout << i++ << ". " << p << " => " << tr.locs[p.tag] << std::endl;
         // }
 
-        if (specTags->count(poly5[1].tag) == 1) {
-            poly5.erase(poly5.begin()+1);
+        if (specTags->count(poly4[1].tag) == 1) {
+            poly4.erase(poly4.begin()+1);
 
-            if (specTags->count(poly5[1].tag) == 1) {
-                poly5.erase(poly5.begin()+1);
+            if (specTags->count(poly4[1].tag) == 1) {
+                poly4.erase(poly4.begin()+1);
             }
         }
 
-        // std::copy(poly5.begin(), poly5.end(), std::back_inserter(res));
+        // std::copy(poly4.begin(), poly4.end(), std::back_inserter(res));
 
-        Restore(poly5, tr, *savedPts, res);
+        Restore(poly4, tr, *savedPts, res);
 
         Restore2(poly, res);
 

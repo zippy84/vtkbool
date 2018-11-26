@@ -121,6 +121,8 @@ private:
     bool HasArea (const IdsType &pocket);
 
     void RemovePockets (VertsType3 &good, double *rot, double d, Src src);
+
+    void RemoveRedundants (const VertsType3 &good);
 };
 
 #endif
