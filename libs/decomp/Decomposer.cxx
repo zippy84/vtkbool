@@ -21,18 +21,6 @@ limitations under the License.
 
 #include "Decomposer.h"
 
-void _Scale (PolyType &poly) {
-    double area = GetArea(poly);
-
-    if (area < 10) {
-        double f = 10/area;
-        for (auto &p : poly) {
-            p.pt[0] *= f;
-            p.pt[1] *= f;
-        }
-    }
-}
-
 void SubP::AddPair (Pair _p, int _w) {
     if (_w > w) {
         return;
@@ -68,7 +56,7 @@ void SubP::RestoreS () {
     S_tail.clear();
 }
 
-Decomposer::Decomposer (const PolyType &_orig) : orig(_orig), savedPts(new SavedPtsType) {
+Decomposer::Decomposer (const PolyType &_orig, double _scale) : orig(_orig), scale(_scale), savedPts(new SavedPtsType) {
     {
         int i = 0;
         for(auto& p : orig) {
@@ -76,7 +64,10 @@ Decomposer::Decomposer (const PolyType &_orig) : orig(_orig), savedPts(new Saved
         }
     }
 
-    _Scale(orig);
+    for (auto &p : orig) {
+        p.pt[0] *= scale;
+        p.pt[1] *= scale;
+    }
 
     Simplify(orig, savedPts, specTags, poly, NO_USE, false);
 

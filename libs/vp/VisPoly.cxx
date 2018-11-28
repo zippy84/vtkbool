@@ -569,6 +569,13 @@ void Simplify (const PolyType &poly, SavedPtsPtr &savedPts, SpecTagsPtr &specTag
         return tags.count(p.tag) == 1 || (specTags && specTags->count(p.tag) == 1);
     });
 
+    double areaA = GetArea(poly),
+        areaB = GetArea(res);
+
+    if (areaB/areaA < .95) {
+        vtkbool_throw("", "...");
+    }
+
     if (savedPts) {
 
         for (itr = res.begin(); itr != res.end(); ++itr) {
@@ -735,6 +742,10 @@ void Restore2 (const PolyType &poly, PolyType &res) {
             itr3 = std::find_if(poly.rbegin(), poly.rend(), [&itr](const Point &p) {
                 return p.tag == itr->tag;
             });
+
+            if (itr3 == poly.rend()) {
+                vtkbool_throw("", "...");
+            }
 
             std::map<Point, int> counts;
 

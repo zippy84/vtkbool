@@ -30,6 +30,10 @@ limitations under the License.
 
 void TrivialRm::RemovePockets (VertsType3 &good, double *rot, double d, Src src) {
 
+    if (good.size() == 0) {
+        vtkbool_throw("", "...");
+    }
+
     std::vector<Pair2> pairs;
 
     VertsType3::iterator itr;
@@ -235,6 +239,10 @@ void TrivialRm::RemovePockets (VertsType3 &good, double *rot, double d, Src src)
 
                 Pair2 &last = pairs[ids.back()];
 
+                if (grps.size() == 1) {
+                    vtkbool_throw("", "...");
+                }
+
                 IdsType &_ids = (next-1)->ids;
 
                 IdsType::reverse_iterator itr6;
@@ -388,7 +396,13 @@ bool TrivialRm::HasArea (const IdsType &pocket) {
 }
 
 void TrivialRm::GetSimplified (PolyType &res) {
-    int ind2 = (std::find_if(poly.begin(), poly.end(), [&](const Point &p) { return p.id == ind; }))-poly.begin();
+    auto itr = std::find_if(poly.begin(), poly.end(), [&](const Point &p) { return p.id == ind; });
+
+    if (itr == poly.end()) {
+        vtkbool_throw("", "...");
+    }
+
+    int ind2 = itr-poly.begin();
 
     int numPts = poly.size();
 
