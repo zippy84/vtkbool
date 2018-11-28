@@ -52,7 +52,8 @@ int main (int argc, char *argv[]) {
 
     Json::CharReaderBuilder reader;
 
-    std::ifstream jn("../../vp/dev/complex.json");
+    // std::ifstream jn("../../vp/dev/complex.json");
+    std::ifstream jn("../../vp/diagn/diagn.json");
 
     std::string err;
 
@@ -85,7 +86,7 @@ int main (int argc, char *argv[]) {
 
                 data["poly"] = GetAbsolutePath(poly);
 
-                Decomposer d(poly);
+                Decomposer d(poly, 1.);
 
                 DecResType decs;
                 d.GetDecomposed(decs);
@@ -103,7 +104,8 @@ int main (int argc, char *argv[]) {
                 }
 
                 std::stringstream name;
-                name << "../dev/res/data_" << i << ".svg";
+                // name << "../dev/res/data_" << i << ".svg";
+                name << "../../vp/diagn/diagn_" << i << ".svg";
 
                 env.write("../dev/template.svg", data, name.str());
             }
