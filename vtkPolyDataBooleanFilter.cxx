@@ -2917,44 +2917,59 @@ void vtkPolyDataBooleanFilter::DecPolys_ (vtkPolyData *pd, InvolvedType &involve
 
             assert(TestCW(poly));
 
-            try {
+            Ext ext;
+            GetExt(poly, ext);
 
-                Decomposer d(poly);
+            double h = ext.maxY-ext.minY,
+                w = ext.maxX-ext.minX;
 
-                DecResType decs;
-                d.GetDecomposed(decs);
+            double m = std::min(h, w);
 
-                vtkIdList *newCell = vtkIdList::New();
+            double f0 = std::max(1., 1/m);
 
-                for (auto& dec : decs) {
-                    newCell->Reset();
+            for (int f : {1, 10, 100, 1000}) {
+                try {
 
-                    std::reverse(dec.begin(), dec.end());
+                    Decomposer d(poly, f0*f);
 
-                    for (int id : dec) {
-                        newCell->InsertNextId(ptIds[id]);
+                    DecResType decs;
+                    d.GetDecomposed(decs);
+
+                    vtkIdList *newCell = vtkIdList::New();
+
+                    for (auto& dec : decs) {
+                        newCell->Reset();
+
+                        std::reverse(dec.begin(), dec.end());
+
+                        for (int id : dec) {
+                            newCell->InsertNextId(ptIds[id]);
+                        }
+
+                        int newId = pd->InsertNextCell(VTK_POLYGON, newCell);
+                        origCellIds->InsertNextValue(origId);
+
+                        rels[newId] = Rel::DEC;
+
                     }
 
-                    int newId = pd->InsertNextCell(VTK_POLYGON, newCell);
-                    origCellIds->InsertNextValue(origId);
+                    newCell->Delete();
 
-                    rels[newId] = Rel::DEC;
+                    rels[cellId] = Rel::ORIG;
 
+                    break;
+
+                } catch (...) {
+                    if (f == 1000) {
+                        std::stringstream ss;
+                        ss << "Exception on " << GetAbsolutePath(poly)
+                            << " with f0=" << f0;
+
+                        std::cerr << ss.str() << std::endl;
+
+                        //throw;
+                    }
                 }
-
-                newCell->Delete();
-
-                rels[cellId] = Rel::ORIG;
-
-            } catch (...) {
-                std::stringstream ss;
-                ss << "Exception on cellId "
-                    << cellId
-                    << " (" << (pd == modPdA ? "modPdA" : "modPdB") << ")";
-
-                std::cerr << ss.str() << std::endl;
-
-                //throw;
             }
 
         }

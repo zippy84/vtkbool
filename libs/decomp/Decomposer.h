@@ -90,8 +90,10 @@ class Decomposer {
     SavedPtsPtr savedPts;
     SpecTagsPtr specTags;
 
+    double scale;
+
 public:
-    Decomposer (const PolyType &_orig);
+    Decomposer (const PolyType &_orig, double _scale);
 
     void GetDecomposed (DecResType &res);
 
