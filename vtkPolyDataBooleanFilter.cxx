@@ -2927,6 +2927,8 @@ void vtkPolyDataBooleanFilter::DecPolys_ (vtkPolyData *pd, InvolvedType &involve
 
             double f0 = std::max(1., 1/m);
 
+            vtkIdList *newCell = vtkIdList::New();
+
             for (int f : {1, 10, 100, 1000}) {
                 try {
 
@@ -2934,8 +2936,6 @@ void vtkPolyDataBooleanFilter::DecPolys_ (vtkPolyData *pd, InvolvedType &involve
 
                     DecResType decs;
                     d.GetDecomposed(decs);
-
-                    vtkIdList *newCell = vtkIdList::New();
 
                     for (auto& dec : decs) {
                         newCell->Reset();
@@ -2953,8 +2953,6 @@ void vtkPolyDataBooleanFilter::DecPolys_ (vtkPolyData *pd, InvolvedType &involve
 
                     }
 
-                    newCell->Delete();
-
                     rels[cellId] = Rel::ORIG;
 
                     break;
@@ -2971,6 +2969,8 @@ void vtkPolyDataBooleanFilter::DecPolys_ (vtkPolyData *pd, InvolvedType &involve
                     }
                 }
             }
+
+            newCell->Delete();
 
         }
 
