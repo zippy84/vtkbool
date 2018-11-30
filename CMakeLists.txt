@@ -84,39 +84,114 @@ else()
         endif()
 
         if(VTK_WRAP_PYTHON)
-            find_package(PythonLibs 2.7 REQUIRED)
 
-            if(PYTHONLIBS_FOUND)
+            set(ENV{LD_LIBRARY_PATH} "${VTK_INSTALL_PREFIX}/lib")
 
-                include_directories(${PYTHON_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR})
+            execute_process(COMMAND "${VTK_INSTALL_PREFIX}/bin/vtkpython" -c "import sys; sys.stdout.write('.'.join(map(str, sys.version_info[:2])))" OUTPUT_VARIABLE py_version)
 
-                include(vtkWrapPython)
+            if(CMAKE_VERSION VERSION_LESS "3.12")
+                find_package(PythonInterp "${py_version}")
+                find_package(PythonLibs "${py_version}")
 
-                vtk_wrap_python3(${PROJECT_NAME}Python ${PROJECT_NAME}Python_srcs vtkPolyDataBooleanFilter.cxx)
+                if(PYTHONLIBS_FOUND)
 
-                add_library(${PROJECT_NAME}PythonD ${${PROJECT_NAME}Python_srcs})
-                target_link_libraries(${PROJECT_NAME}PythonD ${PROJECT_NAME} vtkWrappingPythonCore vtkCommonExecutionModelPythonD)
+                    include_directories(${PYTHON_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR})
 
-                python_add_module(${PROJECT_NAME}Python PyInit.cxx ${PROJECT_NAME}PythonInit.cxx)
-                target_link_libraries(${PROJECT_NAME}Python ${PROJECT_NAME}PythonD)
+                    include(vtkWrapPython)
 
-                find_package(PythonInterp 2.7 REQUIRED)
+                    vtk_wrap_python3(${PROJECT_NAME}Python ${PROJECT_NAME}Python_srcs vtkPolyDataBooleanFilter.cxx)
 
-                if(PYTHONINTERP_FOUND)
-                    add_test(NAME Test_Py COMMAND ${PYTHON_EXECUTABLE}
-                        ${CMAKE_SOURCE_DIR}/testing/test_py_module.py
-                        ${VTK_INSTALL_PREFIX}/lib/python2.7/site-packages
-                        ${CMAKE_BINARY_DIR}
-                        $<CONFIG>)
+                    add_library(${PROJECT_NAME}PythonD ${${PROJECT_NAME}Python_srcs})
+                    target_link_libraries(${PROJECT_NAME}PythonD ${PROJECT_NAME} vtkWrappingPythonCore vtkCommonExecutionModelPythonD)
 
-                    if(WIN32)
-                        set_property(TEST Test_Py PROPERTY ENVIRONMENT "PATH=${vtk_lib}\\bin")
-                    else()
-                        set_property(TEST Test_Py PROPERTY ENVIRONMENT "LD_LIBRARY_PATH=${VTK_INSTALL_PREFIX}/lib")
+                    python_add_module(${PROJECT_NAME}Python PyInit.cxx ${PROJECT_NAME}PythonInit.cxx)
+                    target_link_libraries(${PROJECT_NAME}Python PRIVATE ${PROJECT_NAME}PythonD)
+
+                    if(BUILD_TESTING)
+                        add_test(NAME Test_Py COMMAND ${PYTHON_EXECUTABLE}
+                            ${CMAKE_SOURCE_DIR}/testing/test_py_module.py
+                            ${VTK_INSTALL_PREFIX}/lib/python${py_version}/site-packages
+                            ${CMAKE_BINARY_DIR}
+                            $<CONFIG>)
+
+                        if(WIN32)
+                            set_property(TEST Test_Py PROPERTY ENVIRONMENT "PATH=${vtk_lib}\\bin")
+                        else()
+                            set_property(TEST Test_Py PROPERTY ENVIRONMENT "LD_LIBRARY_PATH=${VTK_INSTALL_PREFIX}/lib")
+                        endif()
                     endif()
+
+                endif()
+
+            else()
+                if (py_version MATCHES "^3")
+                    find_package(Python3 COMPONENTS Interpreter Development)
+
+                    if(Python3_Development_FOUND)
+
+                        include_directories(${PYTHON_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR})
+
+                        include(vtkWrapPython)
+
+                        vtk_wrap_python3(${PROJECT_NAME}Python ${PROJECT_NAME}Python_srcs vtkPolyDataBooleanFilter.cxx)
+
+                        add_library(${PROJECT_NAME}PythonD ${${PROJECT_NAME}Python_srcs})
+                        target_link_libraries(${PROJECT_NAME}PythonD ${PROJECT_NAME} vtkWrappingPythonCore vtkCommonExecutionModelPythonD)
+
+                        Python3_add_library(${PROJECT_NAME}Python MODULE PyInit.cxx ${PROJECT_NAME}PythonInit.cxx)
+                        target_link_libraries(${PROJECT_NAME}Python PRIVATE ${PROJECT_NAME}PythonD)
+
+                        if(BUILD_TESTING)
+                            add_test(NAME Test_Py COMMAND ${Python3_EXECUTABLE}
+                                ${CMAKE_SOURCE_DIR}/testing/test_py_module.py
+                                ${VTK_PYTHONPATH}
+                                ${CMAKE_BINARY_DIR}
+                                $<CONFIG>)
+
+                            if(WIN32)
+                                set_property(TEST Test_Py PROPERTY ENVIRONMENT "PATH=${vtk_lib}\\bin")
+                            else()
+                                set_property(TEST Test_Py PROPERTY ENVIRONMENT "LD_LIBRARY_PATH=${VTK_INSTALL_PREFIX}/lib")
+                            endif()
+                        endif()
+                    endif()
+
+                elseif(py_version EQUAL "2.7")
+                    find_package(Python2 COMPONENTS Interpreter Development)
+
+                    if(Python2_Development_FOUND)
+
+                        include_directories(${PYTHON_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR})
+
+                        include(vtkWrapPython)
+
+                        vtk_wrap_python3(${PROJECT_NAME}Python ${PROJECT_NAME}Python_srcs vtkPolyDataBooleanFilter.cxx)
+
+                        add_library(${PROJECT_NAME}PythonD ${${PROJECT_NAME}Python_srcs})
+                        target_link_libraries(${PROJECT_NAME}PythonD ${PROJECT_NAME} vtkWrappingPythonCore vtkCommonExecutionModelPythonD)
+
+                        Python2_add_library(${PROJECT_NAME}Python MODULE PyInit.cxx ${PROJECT_NAME}PythonInit.cxx)
+                        target_link_libraries(${PROJECT_NAME}Python PRIVATE ${PROJECT_NAME}PythonD)
+
+                        if(BUILD_TESTING)
+                            add_test(NAME Test_Py COMMAND ${Python2_EXECUTABLE}
+                                ${CMAKE_SOURCE_DIR}/testing/test_py_module.py
+                                ${VTK_PYTHONPATH}
+                                ${CMAKE_BINARY_DIR}
+                                $<CONFIG>)
+
+                            if(WIN32)
+                                set_property(TEST Test_Py PROPERTY ENVIRONMENT "PATH=${vtk_lib}\\bin")
+                            else()
+                                set_property(TEST Test_Py PROPERTY ENVIRONMENT "LD_LIBRARY_PATH=${VTK_INSTALL_PREFIX}/lib")
+                            endif()
+                        endif()
+                    endif()
+
                 endif()
 
             endif()
+
         endif()
 
     endif(VTK_FOUND)
