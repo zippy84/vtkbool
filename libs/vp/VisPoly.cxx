@@ -152,6 +152,11 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
                         w = a.nxt;
                     }
 
+                    if (w == NO_USE) {
+                        // tritt meistens dann ein, wenn det() zum nullptr führt oder d->s zu nahe an x ist
+                        vtkbool_throw("VisPoly", "w is NO_USE");
+                    }
+
                 }
 
             } else if (cB < 0) {
@@ -249,6 +254,10 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
 
                         } else {
                             _x = a.nxt;
+                        }
+
+                        if (_x == NO_USE) {
+                            vtkbool_throw("VisPoly", "_x is NO_USE");
                         }
 
                         i++;
@@ -378,6 +387,10 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
                                     _x = a.nxt;
                                 }
 
+                                if (_x == NO_USE) {
+                                    vtkbool_throw("VisPoly", "_x is NO_USE");
+                                }
+
                             }
                         }
 
@@ -420,6 +433,9 @@ void Simplify (const PolyType &poly, SavedPtsPtr &savedPts, SpecTagsPtr &specTag
     for (itr = poly.begin()+1; itr != poly.end(); ++itr) {
         double sq = GetSqDis(*itr, *poly2.rbegin());
         if (sq > sol) {
+            poly2.push_back(*itr);
+        } else if (itr->tag == skip) {
+            poly2.pop_back();
             poly2.push_back(*itr);
         }
     }
@@ -836,6 +852,8 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
     if (!TestCW(poly)) {
         vtkbool_throw("", "Polygon is not clockwise.");
     }
+
+    auto _ps(GetAbsolutePath(poly));
 
     PolyType poly2, poly3, poly4;
 
