@@ -77,14 +77,19 @@ int main (int argc, char *argv[]) {
 
                 for (int j = 0; j < num; j++) {
 
-                    //if (j != t) { continue; }
+                    // if (j != t) { continue; }
 
                     PolyType res;
 
-                    GetVisPoly_wrapper(poly, res, j);
-                    assert(!TestCW(res));
+                    try {
+                        GetVisPoly_wrapper(poly, res, j);
 
-                    all[j] = std::move(res);
+                        assert(!TestCW(res));
+
+                        all[j] = std::move(res);
+                    } catch (std::exception &e) {
+                        std::cerr << j << ": " << e.what() << std::endl;
+                    }
 
                 }
 

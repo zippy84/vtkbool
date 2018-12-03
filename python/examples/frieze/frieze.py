@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # *-* coding: UTF-8 *-*
 
 # Copyright 2012-2018 Ronald Römer
@@ -16,6 +16,8 @@
 # limitations under the License.
 
 # export LD_LIBRARY_PATH=/home/zippy/VTK6/lib
+
+from __future__ import print_function
 
 import sys
 sys.path.extend(['/home/zippy/VTK6/lib/python2.7/site-packages',
@@ -84,7 +86,7 @@ class Frieze:
 
             fixed = sum(seq[1:-1])+sum(end_seq)
 
-            print fixed
+            print(fixed)
 
             w = self.cfg['w']+2*self.cfg['a']
 
@@ -105,7 +107,7 @@ class Frieze:
             for i in range(1, len(seq_)):
                 seq_[i] += seq_[i-1]
 
-            print seq_
+            print(seq_)
 
             for s in seq_:
                 mid = self.cfg['a']-offs-s*self.cfg['f']
@@ -123,16 +125,16 @@ class Frieze:
                 n += 1
                 m = 0
 
-            print n, m
+            print(n, m)
 
             n = int(n)
             n, m_ = divmod(n-sum(seq[:-1]), seq[-1])
 
-            print '->', n, m_
+            print('->', n, m_)
 
             seq.extend([seq[-1]]*(n-1))
 
-            print seq
+            print(seq)
 
             if m_ == 0 and m < 1e-5:
                 del seq[-1]
@@ -170,7 +172,7 @@ class Frieze:
 
         n = int(n)
 
-        print n, m
+        print(n, m)
 
         if self.cfg['sym']:
             self.cfg['shift'] = m/2
@@ -378,6 +380,6 @@ if __name__ == '__main__':
     ]
 
     for i, cfg in enumerate(cfgs):
-        print '~~ {0} ~~'.format(i)
+        print('~~ {0} ~~'.format(i))
 
         Frieze(cfg).export('test{0}.vtk'.format(i))
