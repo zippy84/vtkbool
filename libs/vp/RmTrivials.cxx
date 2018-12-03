@@ -398,9 +398,7 @@ bool TrivialRm::HasArea (const IdsType &pocket) {
 void TrivialRm::GetSimplified (PolyType &res) {
     auto itr = std::find_if(poly.begin(), poly.end(), [&](const Point &p) { return p.id == ind; });
 
-    if (itr == poly.end()) {
-        vtkbool_throw("", "...");
-    }
+    assert(itr != poly.end());
 
     int ind2 = itr-poly.begin();
 

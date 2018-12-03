@@ -43,6 +43,12 @@ public:
         phi = GetAngle(ref, r);
     }
 
+    friend std::ostream& operator<< (std::ostream &out, const Vert &v) {
+        out << (Point) v
+            << ", nxt=" << v.nxt;
+        return out;
+    }
+
 };
 
 typedef std::vector<Vert> VertsType;
