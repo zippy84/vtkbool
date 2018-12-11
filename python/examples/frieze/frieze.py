@@ -15,12 +15,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# export LD_LIBRARY_PATH=/home/zippy/VTK6/lib
-
-from __future__ import print_function
+# export LD_LIBRARY_PATH=/home/zippy/VTK8/lib
 
 import sys
-sys.path.extend(['/home/zippy/VTK6/lib/python2.7/site-packages',
+sys.path.extend(['/home/zippy/VTK8/lib/python3.6/site-packages',
     '/home/zippy/vtkbool/build'])
 
 import vtkboolPython
