@@ -258,7 +258,7 @@ void vtkPolyDataContactFilter::PreparePolyData (vtkPolyData *pd) {
 
 }
 
-InterPtType vtkPolyDataContactFilter::InterEdgeLine (double *eA, double *eB, double *r, double *pt) {
+InterPtType vtkPolyDataContactFilter::InterEdgeLine (double *eA, double *eB, double *r, double *pt, int _pid) {
 
     InterPtType inter;
 
@@ -316,7 +316,7 @@ InterPtType vtkPolyDataContactFilter::InterEdgeLine (double *eA, double *eB, dou
 
 }
 
-InterPtsType vtkPolyDataContactFilter::InterPolyLine (vtkPoints *pts, vtkIdList *poly, double *r, double *pt, _Src src) {
+InterPtsType vtkPolyDataContactFilter::InterPolyLine (vtkPoints *pts, vtkIdList *poly, double *r, double *pt, _Src src, int _pid) {
 
 #ifdef DEBUG
     std::cout << "InterPolyLine()" << std::endl;
@@ -340,7 +340,7 @@ InterPtsType vtkPolyDataContactFilter::InterPolyLine (vtkPoints *pts, vtkIdList 
 
         // schnittpunkt
 
-        InterPtType inter(InterEdgeLine(ptA, ptB, r, pt));
+        InterPtType inter(InterEdgeLine(ptA, ptB, r, pt, _pid));
 
         inter.src = src;
 
@@ -351,6 +351,10 @@ InterPtsType vtkPolyDataContactFilter::InterPolyLine (vtkPoints *pts, vtkIdList 
             if (inter.end != NO_USE) {
                 inter.end = inter.end == 0 ? i : j;
             }
+
+            // if (_pid == 34026) {
+            //     std::cout << inter << std::endl;
+            // }
 
             interPts.push_back(inter);
         }
@@ -653,8 +657,8 @@ void vtkPolyDataContactFilter::InterPolys (vtkIdType idA, vtkIdType idB) {
             << std::endl;
 #endif
 
-        InterPtsType intersA(InterPolyLine(pdA->GetPoints(), polyA, r, s, _Src::A));
-        InterPtsType intersB(InterPolyLine(pdB->GetPoints(), polyB, r, s, _Src::B));
+        InterPtsType intersA(InterPolyLine(pdA->GetPoints(), polyA, r, s, _Src::A, idA));
+        InterPtsType intersB(InterPolyLine(pdB->GetPoints(), polyB, r, s, _Src::B, idB));
 
 #ifdef DEBUG
         std::cout << "intersA " << intersA.size()

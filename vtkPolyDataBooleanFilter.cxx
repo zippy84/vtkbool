@@ -54,6 +54,8 @@ limitations under the License.
 #include <iterator>
 #endif
 
+#include <csignal>
+
 vtkStandardNewMacro(vtkPolyDataBooleanFilter);
 
 vtkPolyDataBooleanFilter::vtkPolyDataBooleanFilter () {
@@ -507,12 +509,14 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, vtkIntArray *sou
 
                 Cpy(pts[realInd].pt, pt, 3);
 
+                int src = sources->GetComponent(*itr, i);
+
+                pts[realInd]._src = src;
+
                 double lastD = DBL_MAX;
 
                 // jetzt muss man die kanten durchlaufen
                 for (int j = 0; j < numPts; j++) {
-
-                    int src = sources->GetComponent(*itr, i);
 
                     if (src > -1 && !(j == src || (j+1)%numPts == src)) {
                         continue;
@@ -550,6 +554,8 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, vtkIntArray *sou
 
                     double d = vtkMath::Norm(w)/n;
 
+                    pts[realInd]._pos.push_back(StripPt::_Str(j, d, t));
+
                     if (d < tol && d < lastD && t > -tol && t < 1+tol) {
                         // liegt im toleranzbereich der kante
 
@@ -586,6 +592,10 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, vtkIntArray *sou
                         }
 
                     }
+                }
+
+                if (src != NO_USE) {
+                    // assert(pts[realInd].edge[0] != NO_USE);
                 }
 
             }
@@ -665,6 +675,8 @@ void vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIntArray *cont
         for (int i = 0; i < numPts; i++) {
             pStrips.poly.push_back(polyPts->GetId(i));
         }
+
+        pStrips._SetPts(pd);
 
         ComputeNormal(pd->GetPoints(), pStrips.n, polyPts);
 
@@ -2883,6 +2895,8 @@ void vtkPolyDataBooleanFilter::DecPolys_ (vtkPolyData *pd, InvolvedType &involve
         //     continue;
         // }
 
+        auto _ps = (pd == modPdA ? polyStripsA : polyStripsB).at(origId);
+
         vtkIdList *cell = vtkIdList::New();
 
         pd->GetCellPoints(cellId, cell);
@@ -2954,6 +2968,8 @@ void vtkPolyDataBooleanFilter::DecPolys_ (vtkPolyData *pd, InvolvedType &involve
                     }
 
                     rels[cellId] = Rel::ORIG;
+
+                    // std::raise(SIGSEGV);
 
                     break;
 

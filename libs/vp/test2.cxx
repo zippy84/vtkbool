@@ -59,6 +59,9 @@ int main (int argc, char *argv[]) {
     //std::ifstream jn("../dev/complex.json");
     std::ifstream jn("../diagn/diagn.json");
 
+    // special.json + ./test 3 0 führt zu einem assert
+    // siehe kommentar zum assert(bnd != NO_USE); in RmTrivials.cxx
+
     std::string err;
 
     if (Json::parseFromStream(reader, jn, &doc, &err)) {
