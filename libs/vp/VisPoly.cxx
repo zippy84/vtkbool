@@ -853,7 +853,7 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
         vtkbool_throw("", "Polygon is not clockwise.");
     }
 
-    auto _ps(GetAbsolutePath(poly));
+    auto _p(GetAbsolutePath(poly));
 
     PolyType poly2, poly3, poly4;
 

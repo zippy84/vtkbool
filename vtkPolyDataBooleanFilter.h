@@ -71,6 +71,16 @@ public:
     }
 
     std::vector<Pair> history;
+
+    // debug
+    int _src;
+    std::vector<std::string> _pos;
+
+    static std::string _Str(int i, double a, double b) {
+        std::stringstream ss;
+        ss << i << "," << a << "," << b;
+        return ss.str();
+    }
 };
 
 class StripPtR {
@@ -110,6 +120,20 @@ public:
     IdsType poly;
     StripPtsType pts;
     StripsType strips;
+
+    std::string _pts;
+
+    void _SetPts (vtkPolyData *pd) {
+        std::stringstream ss;
+        double pt[3];
+
+        for (auto id : poly) {
+            pd->GetPoint(id, pt);
+            ss << pt[0] << "," << pt[1] << "," << pt[2] << ";";
+        }
+
+        _pts = ss.str();
+    }
 };
 
 typedef std::map<int, PStrips> PolyStripsType;

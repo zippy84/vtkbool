@@ -396,6 +396,8 @@ bool TrivialRm::HasArea (const IdsType &pocket) {
 }
 
 void TrivialRm::GetSimplified (PolyType &res) {
+    auto _p(GetAbsolutePath(poly));
+
     auto itr = std::find_if(poly.begin(), poly.end(), [&](const Point &p) { return p.id == ind; });
 
     assert(itr != poly.end());
@@ -502,7 +504,7 @@ void TrivialRm::GetSimplified (PolyType &res) {
 
         double _rA[] = {-rA[0], -rA[1]};
 
-        int bnd;
+        int bnd = NO_USE;
 
         for (int i = 0; i < num; i++) {
             int j = (i+1)%num;
@@ -515,6 +517,12 @@ void TrivialRm::GetSimplified (PolyType &res) {
             }
 
         }
+
+        // bnd ist nur dann nicht gesetzt, wenn verts[ind2].pt mit einem anderen punkt in verts bzw. poly übereinstimmt
+        // das polygon ist malformed!
+        // dieses assert nimmt assert(ss.size() == 1); in zeile 104 vorweg
+        // siehe special:3, ind:0
+        assert(bnd != NO_USE);
 
         for (int i = 0; i < num; i++) {
             int j = (ind2+i)%num;
@@ -558,6 +566,10 @@ void TrivialRm::GetSimplified (PolyType &res) {
             verts[i].i = i;
         }
 
+        PolyType _verts;
+        std::copy(verts.begin(), verts.end(), std::back_inserter(_verts));
+        auto _v = GetAbsolutePath(_verts);
+
         VertsType3 good;
 
         std::copy_if(verts.begin(), verts.end(), std::back_inserter(good), [](const Vert3 &p) {
@@ -595,6 +607,10 @@ void TrivialRm::GetSimplified (PolyType &res) {
         for (int i = 0; i < num; i++) {
             verts[i].i = i;
         }
+
+        PolyType _verts;
+        std::copy(verts.begin(), verts.end(), std::back_inserter(_verts));
+        auto _v = GetAbsolutePath(_verts);
 
         VertsType3 good;
 
