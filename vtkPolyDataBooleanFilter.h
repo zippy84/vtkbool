@@ -48,7 +48,7 @@ limitations under the License.
 
 class StripPt {
 public:
-    StripPt () : t(0), capt(CAPT_NOT) {
+    StripPt () : t(0), capt(CAPT_NOT), catched(true) {
         edge[0] = NO_USE;
         edge[1] = NO_USE;
     }
@@ -72,15 +72,10 @@ public:
 
     std::vector<Pair> history;
 
-    // debug
-    int _src;
-    std::vector<std::string> _pos;
+    int polyId;
 
-    static std::string _Str(int i, double a, double b) {
-        std::stringstream ss;
-        ss << i << "," << a << "," << b;
-        return ss.str();
-    }
+    int src;
+    bool catched;
 };
 
 class StripPtR {
@@ -120,20 +115,6 @@ public:
     IdsType poly;
     StripPtsType pts;
     StripsType strips;
-
-    std::string _pts;
-
-    void _SetPts (vtkPolyData *pd) {
-        std::stringstream ss;
-        double pt[3];
-
-        for (auto id : poly) {
-            pd->GetPoint(id, pt);
-            ss << pt[0] << "," << pt[1] << "," << pt[2] << ";";
-        }
-
-        _pts = ss.str();
-    }
 };
 
 typedef std::map<int, PStrips> PolyStripsType;
