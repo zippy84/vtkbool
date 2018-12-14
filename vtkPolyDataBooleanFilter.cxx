@@ -511,7 +511,7 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, vtkIntArray *sou
 
                 int src = sources->GetComponent(*itr, i);
 
-                pts[realInd]._src = src;
+                pts[realInd].src = src;
 
                 double lastD = DBL_MAX;
 
@@ -554,8 +554,6 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, vtkIntArray *sou
 
                     double d = vtkMath::Norm(w)/n;
 
-                    pts[realInd]._pos.push_back(StripPt::_Str(j, d, t));
-
                     if (d < tol && d < lastD && t > -tol && t < 1+tol) {
                         // liegt im toleranzbereich der kante
 
@@ -592,10 +590,11 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, vtkIntArray *sou
                         }
 
                     }
+
                 }
 
-                if (src != NO_USE) {
-                    // assert(pts[realInd].edge[0] != NO_USE);
+                if (src != NO_USE && pts[realInd].edge[0] == NO_USE) {
+                    pts[realInd].catched = false;
                 }
 
             }
@@ -659,6 +658,8 @@ void vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIntArray *cont
         polyLines[poly].push_back(i);
     }
 
+    std::vector<std::reference_wrapper<StripPt>> notCatched;
+
     std::map<int, IdsType>::iterator itr;
 
     for (itr = polyLines.begin(); itr != polyLines.end(); ++itr) {
@@ -676,13 +677,66 @@ void vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIntArray *cont
             pStrips.poly.push_back(polyPts->GetId(i));
         }
 
-        pStrips._SetPts(pd);
-
         ComputeNormal(pd->GetPoints(), pStrips.n, polyPts);
 
         GetStripPoints(pd, sources, pStrips, lines);
 
-        StripsType &strips = pStrips.strips;
+        for (auto &sp : pStrips.pts) {
+            sp.second.polyId = itr->first;
+
+            if (!sp.second.catched) {
+                notCatched.push_back(sp.second);
+            }
+        }
+
+        polyPts->Delete();
+    }
+
+    auto Next = [](const IdsType &ids, int id) -> int {
+        IdsType::const_iterator itr;
+
+        itr = std::find(ids.begin(), ids.end(), id);
+
+        if (++itr == ids.end()) {
+            itr = ids.begin();
+        }
+
+        return *itr;
+    };
+
+    for (StripPt &sp : notCatched) {
+        for (itr = polyLines.begin(); itr != polyLines.end(); ++itr) {
+            const PStrips &pStrips = polyStrips[itr->first];
+
+            try {
+                const StripPt &corr = pStrips.pts.at(sp.ind);
+
+                if (&corr != &sp) {
+                    if (corr.capt == CAPT_A) {
+                        sp.capt = CAPT_A;
+                        sp.edge[0] = corr.edge[0];
+                        sp.edge[1] = Next(polyStrips[sp.polyId].poly, sp.edge[0]);
+
+                        sp.t = 0;
+
+                        Cpy(sp.captPt, corr.captPt, 3);
+                        Cpy(sp.cutPt, sp.captPt, 3);
+
+                        sp.history.push_back({sp.edge[0], sp.edge[1]});
+
+                    }
+                }
+            } catch (...) {}
+
+        }
+
+    }
+
+    for (itr = polyLines.begin(); itr != polyLines.end(); ++itr) {
+        IdsType &lines = itr->second;
+
+        PStrips &pStrips = polyStrips[itr->first];
+
         StripType strip;
 
         // zusammensetzen
@@ -741,7 +795,7 @@ void vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIntArray *cont
                 || (i == _lines.size())) {
 
                 // einen neuen strip anlegen
-                strips.push_back(strip);
+                pStrips.strips.push_back(strip);
                 strip.clear();
 
                 i = 0;
@@ -750,8 +804,6 @@ void vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIntArray *cont
             linePts->Delete();
 
         }
-
-        polyPts->Delete();
 
         CompleteStrips(pStrips);
 
