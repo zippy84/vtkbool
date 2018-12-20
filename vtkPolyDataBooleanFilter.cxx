@@ -724,11 +724,15 @@ void vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIntArray *cont
 
                         sp.history.push_back({sp.edge[0], sp.edge[1]});
 
+                        sp.catched = true;
+
                     }
                 }
             } catch (...) {}
 
         }
+
+        assert(sp.catched);
 
     }
 
@@ -3025,7 +3029,7 @@ void vtkPolyDataBooleanFilter::DecPolys_ (vtkPolyData *pd, InvolvedType &involve
 
                     break;
 
-                } catch (...) {
+                } catch (const std::exception &e) {
                     if (f == 1000) {
                         std::stringstream ss;
                         ss << "Exception on " << GetAbsolutePath(poly)
@@ -3035,6 +3039,8 @@ void vtkPolyDataBooleanFilter::DecPolys_ (vtkPolyData *pd, InvolvedType &involve
 
                         //throw;
                     }
+
+                    std::cerr << e.what() << std::endl;
                 }
             }
 

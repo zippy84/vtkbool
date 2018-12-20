@@ -444,6 +444,8 @@ void TrivialRm::GetSimplified (PolyType &res) {
             std::shared_ptr<D> d(Intersect(poly[ind2].pt, rA, poly[i].pt, poly[j].pt));
 
             if (d && d->t1 > E) {
+                // std::cout << *d << std::endl;
+
                 Vert3 _v(d->s, Src::A, d->t1);
                 newVerts.emplace(d->t2, _v);
                 num++;
@@ -466,6 +468,8 @@ void TrivialRm::GetSimplified (PolyType &res) {
             std::shared_ptr<D> d(Intersect(poly[ind2].pt, rB, poly[i].pt, poly[j].pt));
 
             if (d && d->t1 > E) {
+                // std::cout << *d << std::endl;
+
                 Vert3 _v(d->s, Src::B, d->t1);
                 newVerts.emplace(d->t2, _v);
                 num++;

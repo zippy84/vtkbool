@@ -80,6 +80,15 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
         if (Ld(x, ptU, ptV)) {
             // std::cout << "skipping" << std::endl;
 
+            double lU = GetSqDis(x, verts[u]),
+                lV = GetSqDis(x, verts[v]);
+
+            if (lU > lV) {
+                verts[u].id = NO_USE;
+            } else {
+                verts[v].id = NO_USE;
+            }
+
             t = u;
             continue;
         }
@@ -124,6 +133,8 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
                             vp.push_back(w);
                             t = u;
                             leftBags.push_back(Bag(u, w, verts[u].phi));
+
+                            verts[w].id = NO_USE;
 
                         } else {
 
@@ -226,6 +237,8 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
                                     vp.push_back(_x);
 
                                     leftBags.push_back(Bag(bag->f, _x, bag->phi));
+
+                                    verts[_x].id = NO_USE;
 
                                 } else {
 
@@ -345,6 +358,9 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
                             verts[vp.back()].nxt = p;
 
                             vp.push_back(p);
+
+                            verts[t].id = NO_USE;
+
                         } else {
                             int _x = w;
 
@@ -819,30 +835,6 @@ void SimpleRestore (const PolyType &poly, const SavedPtsType &savedPts, PolyType
     }
 }
 
-void _Special (PolyType &poly, const Point &p) {
-    PolyType::iterator itr, itr2;
-
-    for (itr = poly.begin(); itr != poly.end()-1; ++itr) {
-        itr2 = itr+1;
-
-        const Point &pA = *itr,
-            &pB = *itr2;
-
-        double t,
-            d = GetDis(p, pA, pB, t);
-
-        if (d < 1e-3) {
-            if (t > 1) {
-                itr2->id = NO_USE;
-            } else {
-                itr->id = NO_USE;
-            }
-        }
-
-    }
-
-}
-
 void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
     int i = 0;
     for (auto& p : poly) {
@@ -865,7 +857,7 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
 
     Simplify(poly, savedPts, specTags, poly2, x.tag, true);
 
-    Align(poly2, x);
+    // Align(poly2, x);
 
     Tracker tr(poly2);
 
@@ -911,6 +903,7 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
 
                 if (specTags->count(itr2->tag) == 0) {
                     if ((res.end()-1)->tag != itr2->tag) {
+                        (res.end()-1)->id = NO_USE;
                         res.push_back(*itr2);
                     }
 
@@ -934,6 +927,7 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
 
                 if (specTags->count(itr2->tag) == 0) {
                     if ((res.begin()+1)->tag != itr2->tag) {
+                        (res.begin()+1)->id = NO_USE;
                         res.insert(res.begin()+1, *itr2);
                     }
 
@@ -943,12 +937,16 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
             } while (itr2 != itr);
         }
 
-        _Special(res, x);
+        /*i = 0;
+        for (auto &p : res) {
+            std::cout << i++ << ". " << p << std::endl;
+        }*/
 
-        // i = 0;
-        // for (auto &p : res) {
-        //     std::cout << i++ << ". " << p << std::endl;
-        // }
+        /*std::cout << "{";
+        for (auto &p : res) {
+            std::cout << p.id << ",";
+        }
+        std::cout << "}" << std::endl;*/
 
     } catch (...) {
         throw;
@@ -962,5 +960,7 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
 
     res.swap(res2);
     */
+
+    // std::cout << GetAbsolutePath(res) << std::endl;
 
 }
