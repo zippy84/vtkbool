@@ -119,9 +119,9 @@ Decomposer::Decomposer (const PolyType &_orig, double _scale) : orig(_orig), sca
                     int ind2 = inds.at(itr3->tag);
 
                     if (ind < ind2) {
-                        pairs.insert({ind, ind2});
+                        pairs.insert({ind, ind2}); /*std::cout << "add_1 {" << itr2->tag << ", " << itr3->tag << "}" << std::endl;*/
                     } else {
-                        pairs.insert({ind2, ind});
+                        pairs.insert({ind2, ind}); /*std::cout << "add_2 {" << itr3->tag << ", " << itr2->tag << "}" << std::endl;*/
                     }
 
                 } catch (...) {}

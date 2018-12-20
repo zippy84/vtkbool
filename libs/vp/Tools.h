@@ -121,6 +121,12 @@ public:
         t2 = _t2;
     }
     double s[2], t1, t2;
+
+    friend std::ostream& operator<< (std::ostream &out, const D &d) {
+        out << "t1: " << d.t1
+            << ", t2: " << d.t2;
+        return out;
+    }
 };
 
 std::shared_ptr<D> Intersect (double *o, double *r, double *pA, double *pB);
