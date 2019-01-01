@@ -49,9 +49,13 @@ double GetAngle (double *vA, double *vB) {
     return ang;
 }
 
-bool Ld (double *a, double *b, double *c) {
+bool Ld (double *a, double *b, double *c, double *r) {
     double vA[] = {b[0]-a[0], b[1]-a[1]},
         vB[] = {c[0]-a[0], c[1]-a[1]};
+
+    if (r != nullptr) {
+        *r = (vA[0]*vA[0]+vA[1]*vA[1])/(vB[0]*vB[0]+vB[1]*vB[1]);
+    }
 
     return std::abs(vA[0]*vB[1]-vA[1]*vB[0]) < E;
 }

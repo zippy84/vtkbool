@@ -107,7 +107,7 @@ typedef std::vector<Point> PolyType;
 
 double Normalize (double *v, const int n = 2);
 double GetAngle (double *vA, double *vB);
-bool Ld (double *a, double *b, double *c);
+bool Ld (double *a, double *b, double *c, double *r = nullptr);
 double Cross (double *a, double *b, double *c);
 
 class D {
