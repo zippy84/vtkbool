@@ -26,7 +26,7 @@ limitations under the License.
 #include "VisPoly.h"
 #include "RmTrivials.h"
 
-void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
+void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, SavedPtsType &savedPts, int ind) {
     double x[] = {poly[ind].x, poly[ind].y};
 
     VertsType verts;
@@ -77,17 +77,14 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
 
         // std::cout << "orig " << verts[u].tag << ", " << verts[v].tag << std::endl;
 
-        if (Ld(x, ptU, ptV)) {
+        double r;
+
+        if (Ld(x, ptU, ptV, &r)) {
             // std::cout << "skipping" << std::endl;
 
-            double lU = GetSqDis(x, verts[u]),
-                lV = GetSqDis(x, verts[v]);
+            verts[r > 1 ? u : v].id = NO_USE;
 
-            if (lU > lV) {
-                verts[u].id = NO_USE;
-            } else {
-                verts[v].id = NO_USE;
-            }
+            savedPts.erase({verts[u].tag, verts[v].tag});
 
             t = u;
             continue;
@@ -857,14 +854,14 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
 
     Simplify(poly, savedPts, specTags, poly2, x.tag, true);
 
-    // Align(poly2, x);
+    Align(poly2, x);
 
     Tracker tr(poly2);
 
     TrivialRm(poly2, tr, ind, x).GetSimplified(poly3);
 
     try {
-        GetVisPoly(poly3, tr, poly4);
+        GetVisPoly(poly3, tr, poly4, *savedPts);
 
         for (auto &l : tr.locs) {
             assert(l.second.t < 1);
@@ -883,7 +880,7 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
             }
         }
 
-        // std::copy(poly4.begin(), poly4.end(), std::back_inserter(res));
+        //std::copy(poly4.begin(), poly4.end(), std::back_inserter(res));
 
         Restore(poly4, tr, *savedPts, res);
 

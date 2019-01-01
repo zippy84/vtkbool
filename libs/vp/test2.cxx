@@ -56,8 +56,7 @@ int main (int argc, char *argv[]) {
 
     Json::CharReaderBuilder reader;
 
-    //std::ifstream jn("../dev/complex.json");
-    std::ifstream jn("../diagn/diagn.json");
+    std::ifstream jn("../dev/special.json");
 
     // special.json + ./test 3 0 führt zu einem assert
     // siehe kommentar zum assert(bnd != NO_USE); in RmTrivials.cxx
@@ -80,7 +79,7 @@ int main (int argc, char *argv[]) {
 
                 for (int j = 0; j < num; j++) {
 
-                    // if (j != t) { continue; }
+                    //if (j != t) { continue; }
 
                     PolyType res;
 
@@ -105,8 +104,7 @@ int main (int argc, char *argv[]) {
                 Json::StreamWriterBuilder writer;
 
                 std::stringstream name;
-                //name << "../dev/data_files/data_" << i << ".js";
-                name << "../diagn/diagn_" << i << ".js";
+                name << "../dev/data_files/special_" << i << ".js";
 
                 std::ofstream f(name.str());
                 f << "var pts = '" << GetAbsolutePath(poly)

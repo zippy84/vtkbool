@@ -52,8 +52,7 @@ int main (int argc, char *argv[]) {
 
     Json::CharReaderBuilder reader;
 
-    // std::ifstream jn("../../vp/dev/complex.json");
-    std::ifstream jn("../../vp/diagn/diagn.json");
+    std::ifstream jn("../../vp/dev/special.json");
 
     std::string err;
 
@@ -104,8 +103,7 @@ int main (int argc, char *argv[]) {
                 }
 
                 std::stringstream name;
-                // name << "../dev/res/data_" << i << ".svg";
-                name << "../../vp/diagn/diagn_" << i << ".svg";
+                name << "../dev/res/special_" << i << ".svg";
 
                 env.write("../dev/template.svg", data, name.str());
             }
