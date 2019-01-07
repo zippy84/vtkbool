@@ -116,7 +116,7 @@ If you like this project and you want to support it, you can donate with [PayPal
 
 ## Copyright
 
-2012-2018 Ronald Römer
+2012-2019 Ronald Römer
 
 ## License
 
