@@ -235,6 +235,7 @@ class VTK_EXPORT vtkPolyDataBooleanFilter : public vtkPolyDataAlgorithm {
     void RemoveDuplicates (IdsType &lines);
     void CompleteStrips (PStrips &pStrips);
     bool HasArea (StripType &strip);
+    void _Test (vtkPolyData *pd, PolyStripsType &polyStrips);
     void CutCells (vtkPolyData *pd, PolyStripsType &polyStrips);
     void RestoreOrigPoints (vtkPolyData *pd, PolyStripsType &polyStrips);
     void DisjoinPolys (vtkPolyData *pd, PolyStripsType &polyStrips);

@@ -280,6 +280,19 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
             times.push_back(DIFF(start, std::clock()));
 #endif
 
+            // löst ein sehr spezielles problem
+
+#ifdef DEBUG
+            start = std::clock();
+#endif
+
+            _Test(modPdA, polyStripsA);
+            _Test(modPdB, polyStripsB);
+
+#ifdef DEBUG
+            times.push_back(DIFF(start, std::clock()));
+#endif
+
             // trennt die polygone an den linien
 
 #ifdef DEBUG
@@ -1492,6 +1505,109 @@ void vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
 
 }
 
+void vtkPolyDataBooleanFilter::_Test (vtkPolyData *pd, PolyStripsType &polyStrips) {
+
+#ifdef DEBUG
+    std::cout << "_Test()" << std::endl;
+#endif
+
+    struct Cmp {
+        bool operator() (const StripPt &l, const StripPt &r) const {
+            const int x1 = static_cast<int>(l.cutPt[0]*1e5),
+                y1 = static_cast<int>(l.cutPt[1]*1e5),
+                z1 = static_cast<int>(l.cutPt[2]*1e5),
+                x2 = static_cast<int>(r.cutPt[0]*1e5),
+                y2 = static_cast<int>(r.cutPt[1]*1e5),
+                z2 = static_cast<int>(r.cutPt[2]*1e5);
+
+            return std::tie(x1, y1, z1) < std::tie(x2, y2, z2);
+        }
+    };
+
+    struct Cmp2 {
+        bool operator() (const StripPt &l, const StripPt &r) const {
+            return l.ind < r.ind;
+        }
+    };
+
+    std::map<StripPt, std::set<std::reference_wrapper<StripPt>, Cmp2>, Cmp> test;
+
+    PolyStripsType::iterator itr;
+    StripPtsType::iterator itr2;
+
+    for (itr = polyStrips.begin(); itr != polyStrips.end(); ++itr) {
+        PStrips &pStrips = itr->second;
+
+        for (itr2 = pStrips.pts.begin(); itr2 != pStrips.pts.end(); ++itr2) {
+            StripPt &sp = itr2->second;
+
+            test[sp].insert(sp);
+        }
+    }
+
+    vtkIdList *cells = vtkIdList::New();
+
+    for (auto &s : test) {
+        auto &pts = s.second;
+
+        if (pts.size() > 1) {
+            StripPt &a = *(pts.begin()),
+                &b = *(std::next(pts.begin()));
+
+            contLines->GetPointCells(b.ind, cells);
+
+            for (int i = 0; i < cells->GetNumberOfIds(); i++) {
+                contLines->ReplaceCellPoint(cells->GetId(i), b.ind, a.ind);
+            }
+
+            int old = b.ind;
+
+            b.ind = a.ind;
+            Cpy(b.pt, a.pt, 3);
+
+            PStrips &p = polyStrips[b.polyId];
+
+            p.pts[a.ind] = b;
+
+            for (StripType &strip : p.strips) {
+                for (StripPtR &r : strip) {
+                    if (r.ind == old) {
+                        r.ind = a.ind;
+                    }
+                }
+            }
+
+            p.pts.erase(old); // braucht man nicht unbedingt
+
+
+            PolyStripsType &other = &polyStrips == &polyStripsA ? polyStripsB : polyStripsA;
+
+            for (itr = other.begin(); itr != other.end(); ++itr) {
+                PStrips &pStrips = itr->second;
+
+                if (pStrips.pts.count(old)) {
+                    assert(pStrips.pts.count(a.ind) == 1);
+
+                    for (StripType &strip : pStrips.strips) {
+                        for (StripPtR &r : strip) {
+                            if (r.ind == old) {
+                                r.ind = a.ind;
+                            }
+                        }
+                    }
+
+                    pStrips.pts.erase(old);
+                }
+            }
+
+        }
+    }
+
+    cells->Delete();
+
+}
+
+
 void vtkPolyDataBooleanFilter::RestoreOrigPoints (vtkPolyData *pd, PolyStripsType &polyStrips) {
 
 #ifdef DEBUG
@@ -2500,6 +2616,8 @@ void vtkPolyDataBooleanFilter::CombineRegions () {
         std::cout << "line " << i << std::endl;
 #else
 
+
+
         // bereits behandelte regionen werden nicht noch einmal untersucht
 
         int notLocated = 0;
@@ -2987,61 +3105,41 @@ void vtkPolyDataBooleanFilter::DecPolys_ (vtkPolyData *pd, InvolvedType &involve
 
             assert(TestCW(poly));
 
-            Ext ext;
-            GetExt(poly, ext);
-
-            double h = ext.maxY-ext.minY,
-                w = ext.maxX-ext.minX;
-
-            double m = std::min(h, w);
-
-            double f0 = std::max(1., 1/m);
-
             vtkIdList *newCell = vtkIdList::New();
 
-            for (int f : {1, 10, 100, 1000}) {
-                try {
+            try {
 
-                    Decomposer d(poly, f0*f);
+                Decomposer d(poly);
 
-                    DecResType decs;
-                    d.GetDecomposed(decs);
+                DecResType decs;
+                d.GetDecomposed(decs);
 
-                    for (auto& dec : decs) {
-                        newCell->Reset();
+                for (auto& dec : decs) {
+                    newCell->Reset();
 
-                        std::reverse(dec.begin(), dec.end());
+                    std::reverse(dec.begin(), dec.end());
 
-                        for (int id : dec) {
-                            newCell->InsertNextId(ptIds[id]);
-                        }
-
-                        int newId = pd->InsertNextCell(VTK_POLYGON, newCell);
-                        origCellIds->InsertNextValue(origId);
-
-                        rels[newId] = Rel::DEC;
-
+                    for (int id : dec) {
+                        newCell->InsertNextId(ptIds[id]);
                     }
 
-                    rels[cellId] = Rel::ORIG;
+                    int newId = pd->InsertNextCell(VTK_POLYGON, newCell);
+                    origCellIds->InsertNextValue(origId);
 
-                    // std::raise(SIGSEGV);
+                    rels[newId] = Rel::DEC;
 
-                    break;
-
-                } catch (const std::exception &e) {
-                    if (f == 1000) {
-                        std::stringstream ss;
-                        ss << "Exception on " << GetAbsolutePath(poly)
-                            << " with f0=" << f0;
-
-                        std::cerr << ss.str() << std::endl;
-
-                        //throw;
-                    }
-
-                    std::cerr << e.what() << std::endl;
                 }
+
+                rels[cellId] = Rel::ORIG;
+
+                // std::raise(SIGSEGV);
+
+            } catch (const std::exception &e) {
+                std::stringstream ss;
+                ss << "Exception on " << GetAbsolutePath(poly);
+
+                std::cerr << ss.str()
+                    << ", " << e.what() << std::endl;
             }
 
             newCell->Delete();

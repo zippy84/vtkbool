@@ -29,6 +29,9 @@ limitations under the License.
 void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, SavedPtsType &savedPts, int ind) {
     double x[] = {poly[ind].x, poly[ind].y};
 
+    // trivial
+    vtkbool_throw(poly.size() > 2, "GetVisPoly", "poly has too few points");
+
     VertsType verts;
 
     int num = poly.size();
@@ -61,361 +64,361 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, SavedPtsType &saved
 
     std::vector<Bag> leftBags;
 
-    for (;;) {
-        u = verts[t].nxt;
-        v = verts[u].nxt;
+    try {
+        for (;;) {
+            u = verts.at(t).nxt;
+            v = verts.at(u).nxt;
 
-        if (v == NO_USE) {
-            break;
-        }
-
-        // std::cout << "> " << u << ", " << v << std::endl;
-
-        double ptU[2], ptV[2];
-        Cpy(ptU, verts[u].pt);
-        Cpy(ptV, verts[v].pt);
-
-        // std::cout << "orig " << verts[u].tag << ", " << verts[v].tag << std::endl;
-
-        double r;
-
-        if (Ld(x, ptU, ptV, &r)) {
-            // std::cout << "skipping" << std::endl;
-
-            verts[r > 1 ? u : v].id = NO_USE;
-
-            savedPts.erase({verts[u].tag, verts[v].tag});
-
-            t = u;
-            continue;
-        }
-
-        double cA = Cross(x, ptU, ptV),
-            cB = Cross(verts[t].pt, ptU, ptV);
-
-        // std::cout << "cA " << cA << std::endl;
-        // std::cout << "cB " << cB << std::endl;
-
-        if (cA < 0) {
-            // std::cout << "vis" << std::endl;
-
-            if (vp.back() != u) {
-                vp.push_back(u);
+            if (v == NO_USE) {
+                break;
             }
 
-            vp.push_back(v);
+            // std::cout << "> " << u << ", " << v << std::endl;
 
-            t = u;
-        } else {
-            if (cB > 0 || IsNear(verts[t].pt, ptV)) {
+            double ptU[2], ptV[2];
 
-                int w = v;
-                for (;;) {
-                    Vert &a = verts[w],
-                        &b = verts[a.nxt];
+            Cpy(ptU, verts.at(u).pt);
+            Cpy(ptV, verts.at(v).pt);
 
-                    double *ptA = a.pt,
-                        *ptB = b.pt;
 
-                    // std::cout << ">> " << a.tag << ", " << b.tag << std::endl;
+            // std::cout << "orig " << verts.at(u).tag << ", " << verts.at(v).tag << std::endl;
 
-                    std::shared_ptr<D> d(Intersect(x, verts[u].r, ptA, ptB));
+            if (Ld(x, ptU, ptV)) {
+                // std::cout << "skipping" << std::endl;
 
-                    if (d
-                        && d->t1 > E
-                        && IsFrontfaced(verts[u].r, ptA, ptB)) {
+                double lU = GetSqDis(x, verts.at(u)),
+                    lV = GetSqDis(x, verts.at(v));
 
-                        if (d->t2 < E) {
-                            verts[u].nxt = w;
-                            vp.push_back(w);
-                            t = u;
-                            leftBags.push_back(Bag(u, w, verts[u].phi));
-
-                            verts[w].id = NO_USE;
-
-                        } else {
-
-                            Point _p(d->s);
-
-                            Vert _v(x, _p, ref, a.nxt);
-                            verts.push_back(_v);
-
-                            int k = verts.size()-1;
-
-                            verts[u].nxt = k;
-
-                            vp.push_back(k);
-
-                            t = u;
-
-                            leftBags.push_back(Bag(u, k, verts[u].phi));
-
-                            tr.Track(a, b, _v, d->t2);
-
-                        }
-
-                        break;
-
-                    } else {
-                        w = a.nxt;
-                    }
-
-                    if (w == NO_USE) {
-                        // tritt meistens dann ein, wenn det() zum nullptr führt oder d->s zu nahe an x ist
-                        vtkbool_throw("VisPoly", "w is NO_USE");
-                    }
-
+                if (lU > lV) {
+                    verts.at(u).id = NO_USE;
+                } else {
+                    verts.at(v).id = NO_USE;
                 }
 
-            } else if (cB < 0) {
-                // schnitt mit leftBags?
+                t = u;
+                continue;
+            }
 
-                std::shared_ptr<Bag> bag;
-                std::shared_ptr<D> d;
+            double cA = Cross(x, ptU, ptV),
+                cB = Cross(verts.at(t).pt, ptU, ptV);
 
-                while (leftBags.size() > 0 && !d) {
-                    bag = std::make_shared<Bag>(leftBags.back());
+            // std::cout << "cA " << cA << std::endl;
+            // std::cout << "cB " << cB << std::endl;
 
-                    if (bag->phi > verts[v].phi || std::abs(bag->phi-verts[v].phi) < E) {
-                        d = Intersect2(verts[bag->f].pt, verts[bag->g].pt, ptU, ptV);
+            if (cA < 0) {
+                // std::cout << "vis" << std::endl;
 
-                        leftBags.pop_back();
-                    } else {
-                        break;
-                    }
+                if (vp.back() != u) {
+                    vp.push_back(u);
                 }
 
-                if (d) {
-                    // std::cout << "bag " << *bag << std::endl;
+                vp.push_back(v);
 
-                    while (vp.size() > 0 && vp.back() != bag->f) {
-                        // std::cout << "popping_1 " << vp.back() << std::endl;
-                        vp.pop_back();
-                    }
+                t = u;
+            } else {
+                if (cB > 0 || IsNear(verts.at(t).pt, ptV)) {
 
-                    if (vp.size() < 2) {
-                        vtkbool_throw("", "Too many pop's.");
-                    }
-
-                    int _x = v;
-
-                    int i = 0;
-
+                    int w = v;
                     for (;;) {
-                        Vert &a = verts[_x],
-                            &b = verts[a.nxt];
+                        Vert &a = verts.at(w),
+                            &b = verts.at(a.nxt);
 
                         double *ptA = a.pt,
                             *ptB = b.pt;
 
-                        // std::cout << ">>" << a.tag << ", " << b.tag << std::endl;
+                        // std::cout << ">> " << a.tag << ", " << b.tag << std::endl;
 
-                        std::shared_ptr<D> _d;
+                        std::shared_ptr<D> d(Intersect(x, verts.at(u).r, ptA, ptB));
 
-                        if (IsNear(verts[bag->f].pt, ptV)) {
-                            _d = std::make_shared<D>(verts[bag->f].pt);
-                        } else {
-                            _d = Intersect2(verts[bag->f].pt, d->s, ptB, ptA);
-                        }
+                        if (d
+                            && d->t1 > E
+                            && IsFrontfaced(verts.at(u).r, ptA, ptB)) {
 
-                        if (_d
-                            && IsFrontfaced(verts[bag->f].r, ptA, ptB)
-                            && (i > 0 || Cross(ptA, ptU, ptB) < 0)) {
-
-                            if (IsNear(verts[bag->f].pt, _d->s)) {
-                                verts[bag->f].nxt = a.nxt;
-
-                                vp.push_back(a.nxt);
-
-                            } else {
-                                if (_d->t2 > 1-E) {
-                                    verts[bag->f].nxt = _x;
-
-                                    vp.push_back(_x);
-
-                                    leftBags.push_back(Bag(bag->f, _x, bag->phi));
-
-                                    verts[_x].id = NO_USE;
-
-                                } else {
-
-                                    Point _p(_d->s);
-
-                                    Vert _v(x, _p, ref, a.nxt);
-                                    verts.push_back(_v);
-
-                                    int k = verts.size()-1;
-
-                                    verts[bag->f].nxt = k;
-
-                                    vp.push_back(k);
-
-                                    leftBags.push_back(Bag(bag->f, k, bag->phi));
-
-                                    tr.Track(b, a, _v, _d->t2);
-
-                                }
-
-                            }
-
-                            t = bag->f;
-
-                            break;
-
-                        } else {
-                            _x = a.nxt;
-                        }
-
-                        if (_x == NO_USE) {
-                            vtkbool_throw("VisPoly", "_x is NO_USE");
-                        }
-
-                        i++;
-
-
-                    }
-
-                } else {
-                    while (vp.size() > 0) {
-                        int a = vp.end()[-2],
-                            b = vp.back();
-
-                        // std::cout << "popping_2 " << vp.back() << std::endl;
-
-                        vp.pop_back();
-
-                        if (vp.size() < 1) {
-                            vtkbool_throw("", "Too many pop's.");
-                        }
-
-                        std::shared_ptr<D> d(Intersect(x, verts[v].r, verts[a].pt, verts[b].pt));
-
-                        if (d) {
                             if (d->t2 < E) {
-                                int c = vp.end()[-2];
+                                verts.at(u).nxt = w;
+                                vp.push_back(w);
+                                t = u;
+                                leftBags.push_back(Bag(u, w, verts.at(u).phi));
 
-                                if (Ld(x, verts[a].pt, verts[c].pt) || IsNear(verts[a].pt, ptV)) {
-                                    vp.pop_back();
-                                    t = vp.back();
-                                } else {
-                                    t = a;
-                                }
+                                verts.at(w).id = NO_USE;
 
                             } else {
+
                                 Point _p(d->s);
 
-                                Vert _v(x, _p, ref);
+                                Vert _v(x, _p, ref, a.nxt);
                                 verts.push_back(_v);
 
                                 int k = verts.size()-1;
 
-                                verts[a].nxt = k;
+                                verts.at(u).nxt = k;
 
                                 vp.push_back(k);
 
-                                t = k;
+                                t = u;
 
-                                tr.Track(verts[a], verts[b], _v, d->t2);
+                                leftBags.push_back(Bag(u, k, verts.at(u).phi));
+
+                                tr.Track(a, b, _v, d->t2);
 
                             }
 
                             break;
 
+                        } else {
+                            w = a.nxt;
                         }
 
+                        // tritt meistens dann ein, wenn det() zum nullptr führt oder d->s zu nahe an x ist
+                        vtkbool_throw(w != NO_USE, "GetVisPoly", "w not set");
+
                     }
 
-                    int p = v;
+                } else if (cB < 0) {
+                    // schnitt mit leftBags?
 
-                    int w = verts[v].nxt;
+                    std::shared_ptr<Bag> bag;
+                    std::shared_ptr<D> d;
 
-                    if (w == NO_USE) {
-                        break;
-                    }
+                    while (leftBags.size() > 0 && !d) {
+                        bag = std::make_shared<Bag>(leftBags.back());
 
-                    if (Ld(x, ptV, verts[w].pt)) {
-                        p = w;
-                        w = verts[w].nxt;
-                    }
+                        if (bag->phi > verts.at(v).phi || std::abs(bag->phi-verts.at(v).phi) < E) {
+                            d = Intersect2(verts.at(bag->f).pt, verts.at(bag->g).pt, ptU, ptV);
 
-                    // std::cout << v << " -> " << p << std::endl;
-
-                    double *ptW = verts[w].pt;
-                    //double *ptP = verts[p].pt;
-
-                    double cC = Cross(x, ptV, ptW),
-                        cD = Cross(ptV, ptU, ptW);
-
-                    // std::cout << "cC " << cC << std::endl;
-                    // std::cout << "cD " << cD << std::endl;
-
-                    if (cC < 0) {
-
-                        if (cD < 0 || IsNear(ptU, ptW)) {
-                            verts[vp.back()].nxt = p;
-
-                            vp.push_back(p);
-
-                            verts[t].id = NO_USE;
-
+                            leftBags.pop_back();
                         } else {
-                            int _x = w;
+                            break;
+                        }
+                    }
 
-                            for (;;) {
-                                Vert &a = verts[_x],
-                                    &b = verts[a.nxt];
+                    if (d) {
+                        // std::cout << "bag " << *bag << std::endl;
 
-                                double *ptA = a.pt,
-                                    *ptB = b.pt;
+                        while (vp.size() > 0 && vp.back() != bag->f) {
+                            // std::cout << "popping_1 " << vp.back() << std::endl;
+                            vp.pop_back();
+                        }
 
-                                // std::cout << ">> " << a.tag << ", " << b.tag << std::endl;
+                        vtkbool_throw(vp.size() > 1, "GetVisPoly", "too many pop's");
 
-                                std::shared_ptr<D> d(Intersect(x, verts[v].r, ptA, ptB));
+                        int _x = v;
 
-                                if (d
-                                    && (!IsFrontfaced(verts[v].r, ptA, ptB)
-                                        || IsNear(ptA, ptV))) { // spezialfall (special:1, ind:1)
+                        int i = 0;
 
-                                    if (d->t2 < E) {
-                                        verts[vp.back()].nxt = _x;
+                        for (;;) {
+                            Vert &a = verts.at(_x),
+                                &b = verts.at(a.nxt);
+
+                            double *ptA = a.pt,
+                                *ptB = b.pt;
+
+                            // std::cout << ">>" << a.tag << ", " << b.tag << std::endl;
+
+                            std::shared_ptr<D> _d;
+
+                            if (IsNear(verts.at(bag->f).pt, ptV)) {
+                                _d = std::make_shared<D>(verts.at(bag->f).pt);
+                            } else {
+                                _d = Intersect2(verts.at(bag->f).pt, d->s, ptB, ptA);
+                            }
+
+                            if (_d
+                                && IsFrontfaced(verts.at(bag->f).r, ptA, ptB)
+                                && (i > 0 || Cross(ptA, ptU, ptB) < 0)) {
+
+                                if (IsNear(verts.at(bag->f).pt, _d->s)) {
+                                    verts.at(bag->f).nxt = a.nxt;
+
+                                    vp.push_back(a.nxt);
+
+                                } else {
+                                    if (_d->t2 > 1-E) {
+                                        verts.at(bag->f).nxt = _x;
+
                                         vp.push_back(_x);
 
+                                        leftBags.push_back(Bag(bag->f, _x, bag->phi));
+
+                                        verts.at(_x).id = NO_USE;
+
                                     } else {
-                                        Point _p(d->s);
+
+                                        Point _p(_d->s);
 
                                         Vert _v(x, _p, ref, a.nxt);
                                         verts.push_back(_v);
+
                                         int k = verts.size()-1;
 
-                                        verts[vp.back()].nxt = k;
+                                        verts.at(bag->f).nxt = k;
 
                                         vp.push_back(k);
 
-                                        tr.Track(a, b, _v, d->t2);
+                                        leftBags.push_back(Bag(bag->f, k, bag->phi));
+
+                                        tr.Track(b, a, _v, _d->t2);
 
                                     }
 
-                                    break;
-                                } else {
-                                    _x = a.nxt;
                                 }
 
-                                if (_x == NO_USE) {
-                                    vtkbool_throw("VisPoly", "_x is NO_USE");
-                                }
+                                t = bag->f;
 
+                                break;
+
+                            } else {
+                                _x = a.nxt;
                             }
+
+                            vtkbool_throw(_x != NO_USE, "GetVisPoly", "_x not set");
+
+                            i++;
+
+
                         }
 
                     } else {
-                        verts[vp.back()].nxt = p;
+                        while (vp.size() > 0) {
+                            int a = vp.end()[-2],
+                                b = vp.back();
 
-                        vp.push_back(p);
+                            // std::cout << "popping_2 " << vp.back() << std::endl;
+
+                            vp.pop_back();
+
+                            vtkbool_throw(vp.size() > 0, "GetVisPoly", "too many pop's");
+
+                            std::shared_ptr<D> d(Intersect(x, verts.at(v).r, verts.at(a).pt, verts.at(b).pt));
+
+                            if (d) {
+                                if (d->t2 < E) {
+                                    int c = vp.end()[-2];
+
+                                    if (Ld(x, verts.at(a).pt, verts.at(c).pt) || IsNear(verts.at(a).pt, ptV)) {
+                                        vp.pop_back();
+                                        t = vp.back();
+                                    } else {
+                                        t = a;
+                                    }
+
+                                } else {
+                                    Point _p(d->s);
+
+                                    Vert _v(x, _p, ref);
+                                    verts.push_back(_v);
+
+                                    int k = verts.size()-1;
+
+                                    verts.at(a).nxt = k;
+
+                                    vp.push_back(k);
+
+                                    t = k;
+
+                                    tr.Track(verts.at(a), verts.at(b), _v, d->t2);
+
+                                }
+
+                                break;
+
+                            }
+
+                        }
+
+                        int p = v;
+
+                        int w = verts.at(v).nxt;
+
+                        if (w == NO_USE) {
+                            break;
+                        }
+
+                        if (Ld(x, ptV, verts.at(w).pt)) {
+                            p = w;
+                            w = verts.at(w).nxt;
+                        }
+
+                        // std::cout << v << " -> " << p << std::endl;
+
+                        double *ptW = verts.at(w).pt;
+                        //double *ptP = verts.at(p).pt;
+
+                        double cC = Cross(x, ptV, ptW),
+                            cD = Cross(ptV, ptU, ptW);
+
+                        // std::cout << "cC " << cC << std::endl;
+                        // std::cout << "cD " << cD << std::endl;
+
+                        if (cC < 0) {
+
+                            if (cD < 0 || IsNear(ptU, ptW)) {
+                                verts.at(vp.back()).nxt = p;
+
+                                vp.push_back(p);
+
+                                verts.at(t).id = NO_USE;
+
+                            } else {
+                                int _x = w;
+
+                                for (;;) {
+                                    Vert &a = verts.at(_x),
+                                        &b = verts.at(a.nxt);
+
+                                    double *ptA = a.pt,
+                                        *ptB = b.pt;
+
+                                    // std::cout << ">> " << a.tag << ", " << b.tag << std::endl;
+
+                                    std::shared_ptr<D> d(Intersect(x, verts.at(v).r, ptA, ptB));
+
+                                    if (d
+                                        && (!IsFrontfaced(verts.at(v).r, ptA, ptB)
+                                            || IsNear(ptA, ptV))) { // spezialfall (special:1, ind:1)
+
+                                        if (d->t2 < E) {
+                                            verts.at(vp.back()).nxt = _x;
+                                            vp.push_back(_x);
+
+                                        } else {
+                                            Point _p(d->s);
+
+                                            Vert _v(x, _p, ref, a.nxt);
+                                            verts.push_back(_v);
+                                            int k = verts.size()-1;
+
+                                            verts.at(vp.back()).nxt = k;
+
+                                            vp.push_back(k);
+
+                                            tr.Track(a, b, _v, d->t2);
+
+                                        }
+
+                                        break;
+                                    } else {
+                                        _x = a.nxt;
+                                    }
+
+                                    vtkbool_throw(_x != NO_USE, "GetVisPoly", "_x not set");
+
+                                }
+                            }
+
+                        } else {
+                            verts.at(vp.back()).nxt = p;
+
+                            vp.push_back(p);
+                        }
+
                     }
-
                 }
             }
         }
+
+    } catch (const std::out_of_range&) {
+        vtkbool_throw(false, "GetVisPoly", "cannot access element in verts");
     }
 
     res.push_back(poly[ind]);
@@ -562,6 +565,8 @@ void Simplify (const PolyType &poly, SavedPtsPtr &savedPts, SpecTagsPtr &specTag
         return tags.count(p.tag) == 1 || _specTags->count(p.tag) == 1;
     });
 
+    vtkbool_throw(_res.size() > 2, "Simplify", "_res has too few points");
+
     _res.insert(_res.end(), _res.begin(), _res.begin()+2);
 
     double s;
@@ -598,12 +603,12 @@ void Simplify (const PolyType &poly, SavedPtsPtr &savedPts, SpecTagsPtr &specTag
         return tags.count(p.tag) == 1 || (specTags && specTags->count(p.tag) == 1);
     });
 
+    // dieser test ist zu einfach
+
     double areaA = GetArea(poly),
         areaB = GetArea(res);
 
-    if (areaB/areaA < .95) {
-        vtkbool_throw("", "...");
-    }
+    vtkbool_throw(areaB/areaA > .95, "Simplify", "failed");
 
     if (savedPts) {
 
@@ -756,7 +761,7 @@ void Restore (const PolyType &poly, const Tracker &tr, const SavedPtsType &saved
 void Restore2 (const PolyType &poly, PolyType &res) {
     PolyType::const_iterator itr, itr2;
 
-    PolyType::const_reverse_iterator itr3;
+    PolyType::const_reverse_iterator itr3, itr4;
 
     std::map<int, Point> found;
 
@@ -772,9 +777,13 @@ void Restore2 (const PolyType &poly, PolyType &res) {
                 return p.tag == itr->tag;
             });
 
-            if (itr3 == poly.rend()) {
-                vtkbool_throw("", "...");
-            }
+            vtkbool_throw(itr3 != poly.rend(), "Restore2", "itr3 is on end");
+
+            itr4 = std::find_if(poly.rbegin(), poly.rend(), [&itr2](const Point &p) {
+                return p.tag == itr2->tag;
+            });
+
+            vtkbool_throw(itr4 != poly.rend(), "Restore2", "itr4 is on end");
 
             std::map<Point, int> counts;
 
@@ -796,19 +805,17 @@ void Restore2 (const PolyType &poly, PolyType &res) {
                 }
             }
 
-            if (single.size() != 1) {
-                vtkbool_throw("", "Too many points at the same place.");
-            }
+            vtkbool_throw(single.size() == 1, "Restore2", "too many points at the same place");
 
             found.emplace(itr2-res.begin(), single.front());
 
         }
     }
 
-    std::map<int, Point>::const_reverse_iterator itr4;
+    std::map<int, Point>::const_reverse_iterator itr5;
 
-    for (itr4 = found.rbegin(); itr4 != found.rend(); ++itr4) {
-        res.insert(res.begin()+itr4->first, itr4->second);
+    for (itr5 = found.rbegin(); itr5 != found.rend(); ++itr5) {
+        res.insert(res.begin()+itr5->first, itr5->second);
     }
 
 }
@@ -838,9 +845,7 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
         p.id = i++;
     }
 
-    if (!TestCW(poly)) {
-        vtkbool_throw("", "Polygon is not clockwise.");
-    }
+    vtkbool_throw(TestCW(poly), "GetVisPoly_wrapper", "poly not clockwise");
 
     auto _p(GetAbsolutePath(poly));
 
@@ -854,17 +859,21 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
 
     Simplify(poly, savedPts, specTags, poly2, x.tag, true);
 
-    Align(poly2, x);
+    auto _p2(GetAbsolutePath(poly2));
+
+    // Align(poly2, x);
 
     Tracker tr(poly2);
 
     TrivialRm(poly2, tr, ind, x).GetSimplified(poly3);
 
+    auto _p3(GetAbsolutePath(poly3));
+
     try {
         GetVisPoly(poly3, tr, poly4, *savedPts);
 
         for (auto &l : tr.locs) {
-            assert(l.second.t < 1);
+            vtkbool_throw(l.second.t < 1, "GetVisPoly_wrapper", "t not less than 1");
         }
 
         // i = 0;

@@ -13,7 +13,7 @@
 # limitations under the License.
 
 cmake_minimum_required(VERSION 3.1)
-project(vtkbool VERSION 2.5.2)
+project(vtkbool VERSION 2.6)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -72,7 +72,7 @@ else()
             add_executable(testing testing/testing.cxx)
             target_link_libraries(testing ${PROJECT_NAME} ${VTK_LIBRARIES})
 
-            foreach(i RANGE 16)
+            foreach(i RANGE 17)
                 add_test(NAME Test_${i} COMMAND testing ${i})
 
                 if(WIN32)

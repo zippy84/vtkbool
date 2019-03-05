@@ -1,3 +1,4 @@
+
 # vtkbool
 
 ![](https://raw.github.com/zippy84/vtkbool/master/cover.png)
@@ -28,7 +29,6 @@ This is an extension of the graphics library VTK. The goal of the extension is t
 
 - correctness depends on the polygon-defining normals (use vtkPolyDataNormals if you have problems with incorrect orientations)
 - PointData is not preserved - you have to do your own mapping
-- the Decomposer may produce sharp angled triangles
 
 ## Todo
 
@@ -64,6 +64,65 @@ The first option is used in testing and is deactivated by default. It ignors the
 
 The second option controls whether non-convex polygons will be decomposed into convex polygons. Only the created polygons will be decomposed. The option is activated by default and it has to stay activated, if you want to triangulate the mesh with `vtkTriangleFilter`.
 
+### Example
+
+Create a directory somewhere in your file system, download vtkbool and unpack it into that. Then create the following two files:
+
+**exp.cxx**
+
+```C++
+#include <vtkCubeSource.h>
+#include <vtkCylinderSource.h>
+
+#include "vtkPolyDataBooleanFilter.h"
+
+int Point::_tag = 0; // important
+
+int main (int argc, char *argv[]) {
+    vtkCubeSource *cu = vtkCubeSource::New();
+    cu->SetYLength(.5);
+
+    vtkCylinderSource *cyl = vtkCylinderSource::New();
+    cyl->SetResolution(32);
+    cyl->SetHeight(.5);
+    cyl->SetCenter(0, .5, 0);
+
+    vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
+    bf->SetInputConnection(0, cu->GetOutputPort());
+    bf->SetInputConnection(1, cyl->GetOutputPort());
+    bf->SetOperModeToDifference();
+    bf->Update();
+
+    bf->Delete();
+    cyl->Delete();
+    cu->Delete();
+
+    return 0;
+}
+```
+**CMakeLists.txt**
+
+```CMake
+cmake_minimum_required(VERSION 3.1)
+project(exp)
+
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+include_directories(vtkbool-master)
+
+add_subdirectory(vtkbool-master)
+
+find_package(VTK REQUIRED COMPONENTS vtkFiltersSources NO_MODULE)
+include(${VTK_USE_FILE})
+
+include_directories(vtkbool-master/libs/vp)
+
+add_executable(exp exp.cxx)
+target_link_libraries(exp ${VTK_LIBRARIES} vtkbool)
+```
+Also create a directory named build. If you are on Linux, open a terminal and enter this directory. Run `ccmake ..`, follow the instructions, and finally type `make`.
+
 ## ParaView Plugin
 
 To build the plugin you have to compile ParaView from source. Download the current version from <http://www.paraview.org> and follow the compilation instructions. As soon as ParaView is compiled, it may take a while, you can build the plugin by activating the **BUILD_PARAVIEW** option within CMake. In CMake you also have to point to **ParaView_DIR** if CMake can't found it and it is not installed in a common location like */usr/lib* or */usr/local/lib*. Make sure **PARAVIEW_INSTALL_DEVELOPMENT_FILES** is set.
@@ -74,8 +133,8 @@ When everything has been compiled successfully, you can install the plugin. For 
 
 The Python module will be generated automatically, if three conditions are met:
 
-- vtkbool is built as a library
-- Python 2.7 is installed with header files
+- vtkbool was built as a library
+- Python 2 or 3 is installed with header files
 - VTK itself is wrapped to Python
 
 After a successful compilation, the module can be used as follows:
