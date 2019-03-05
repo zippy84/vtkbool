@@ -159,6 +159,10 @@ public:
             << ", " << e.maxY << ")";
         return out;
     }
+
+    double GetDiag () {
+        return (maxX-minX)*(maxX-minX)+(maxY-minY)*(maxY-minY);
+    }
 };
 
 void GetExt (const PolyType &poly, Ext &ext);
@@ -171,8 +175,10 @@ double GetSqDis (const Point &a, const Point &b);
 
 void GetSect (int tagA, int tagB, PolyType &poly);
 
-inline void vtkbool_throw (const std::string &type, const std::string &msg) {
-    throw std::runtime_error("[vtkbool.exception." + type + "] " + msg);
+inline void vtkbool_throw (bool test, const std::string &where, const std::string &msg) {
+    if (!test) {
+        throw std::runtime_error("Exception (" + where + ", " + msg + ")");
+    }
 }
 
 #endif

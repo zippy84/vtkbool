@@ -30,6 +30,8 @@ limitations under the License.
 #include <vtkLinearExtrusionFilter.h>
 #include <vtkPlaneSource.h>
 #include <vtkAppendPolyData.h>
+#include <vtkLineSource.h>
+#include <vtkTubeFilter.h>
 
 #include <map>
 #include <vector>
@@ -1071,6 +1073,61 @@ int main (int argc, char *argv[]) {
         cylB->Delete();
         cylA->Delete();
         cu->Delete();
+
+        return ok;
+
+    } else if (t == 17) {
+        // testet _Test()
+
+        double pA[] = {0.001, 10.122, 100.000};
+        double pB[] ={-0.000, -10.128, 100.000};
+
+        double pC[] = {10.125, -0.003, 99.995};
+        double pD[] = {-10.124, -0.002, 100.005};
+
+        vtkLineSource *lineA = vtkLineSource::New();
+        lineA->SetPoint1(pA);
+        lineA->SetPoint2(pB);
+
+        vtkLineSource *lineB = vtkLineSource::New();
+        lineB->SetPoint1(pC);
+        lineB->SetPoint2(pD);
+
+        vtkTubeFilter *tubeA = vtkTubeFilter::New();
+        tubeA->SetRadius(3);
+        tubeA->SetNumberOfSides(30);
+        tubeA->SetInputConnection(lineA->GetOutputPort());
+
+        vtkTubeFilter *tubeB = vtkTubeFilter::New();
+        tubeB->SetRadius(3);
+        tubeB->SetNumberOfSides(30);
+        tubeB->SetInputConnection(lineB->GetOutputPort());
+
+        vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
+        bf->SetInputConnection(0, tubeA->GetOutputPort());
+        bf->SetInputConnection(1, tubeB->GetOutputPort());
+
+#ifndef DD
+        bf->MergeRegsOn();
+#else
+        bf->SetOperModeToDifference();
+#endif
+
+        bf->Update();
+
+#ifndef DD
+        Test test(bf->GetOutput(0), bf->GetOutput(1));
+        int ok = test.run();
+#else
+        int ok = 0;
+        WriteVTK("test17.vtk", bf->GetOutput(0));
+#endif
+
+        bf->Delete();
+        tubeB->Delete();
+        tubeA->Delete();
+        lineB->Delete();
+        lineA->Delete();
 
         return ok;
 
