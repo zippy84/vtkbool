@@ -56,17 +56,12 @@ void SubP::RestoreS () {
     S_tail.clear();
 }
 
-Decomposer::Decomposer (const PolyType &_orig, double _scale) : orig(_orig), scale(_scale), savedPts(new SavedPtsType) {
+Decomposer::Decomposer (const PolyType &_orig) : orig(_orig), savedPts(new SavedPtsType) {
     {
         int i = 0;
         for(auto& p : orig) {
             assert(p.id == i++);
         }
-    }
-
-    for (auto &p : orig) {
-        p.pt[0] *= scale;
-        p.pt[1] *= scale;
     }
 
     Simplify(orig, savedPts, specTags, poly, NO_USE, false);
@@ -220,9 +215,7 @@ void Decomposer::Forw (int i, int j, int k) {
     }
 
     if (j-i > 1) {
-        if (subs[p].S.empty()) {
-            vtkbool_throw("", "S is empty.");
-        }
+        vtkbool_throw(!subs[p].S.empty(), "Decomposer::Forw", "S is empty");
 
         if (!IsRefl(j, k, (subs[p].S.end()-1)->g)) {
             while (subs[p].S.size() > 1
@@ -270,9 +263,7 @@ void Decomposer::Backw (int i, int j, int k) {
     }
 
     if (k-j > 1) {
-        if (subs[p].S.empty()) {
-            vtkbool_throw("", "S is empty.");
-        }
+        vtkbool_throw(!subs[p].S.empty(), "Decomposer::Backw", "S is empty");
 
         if (!IsRefl(j, (subs[p].S.begin())->f, i)) {
             while (subs[p].S.size() > 1
@@ -305,9 +296,7 @@ void Decomposer::Recover (int i, int k) {
 
     SubP &sA = subs[{i, k}];
 
-    if (sA.S.empty()) {
-        vtkbool_throw("", "S is empty.");
-    }
+    vtkbool_throw(!sA.S.empty(), "Decomposer::Recover", "S is empty");
 
     if (verts[i].refl) {
         int j = (sA.S.end()-1)->g;
@@ -361,9 +350,7 @@ void Decomposer::Collect (int i, int k) {
 
     SubP &s = subs[{i, k}];
 
-    if (s.S.empty()) {
-        vtkbool_throw("", "S is empty.");
-    }
+    vtkbool_throw(!s.S.empty(), "Decomposer::Collect", "S is empty");
 
     int j, a, b;
 

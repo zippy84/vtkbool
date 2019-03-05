@@ -30,9 +30,7 @@ limitations under the License.
 
 void TrivialRm::RemovePockets (VertsType3 &good, double *rot, double d, Src src) {
 
-    if (good.size() == 0) {
-        vtkbool_throw("", "...");
-    }
+    vtkbool_throw(good.size() > 0, "TrivialRm::RemovePockets", "good is empty");
 
     std::vector<Pair2> pairs;
 
@@ -101,7 +99,7 @@ void TrivialRm::RemovePockets (VertsType3 &good, double *rot, double d, Src src)
                     }
                 }
 
-                assert(ss.size() == 1);
+                vtkbool_throw(ss.size() == 1, "TrivialRm::RemovePockets", "ss not of size 1");
 
                 if (HasArea(pocket)) {
 
@@ -239,9 +237,7 @@ void TrivialRm::RemovePockets (VertsType3 &good, double *rot, double d, Src src)
 
                 Pair2 &last = pairs[ids.back()];
 
-                if (grps.size() == 1) {
-                    vtkbool_throw("", "...");
-                }
+                vtkbool_throw(grps.size() > 1, "TrivialRm::RemovePockets", "too few grps");
 
                 IdsType &_ids = (next-1)->ids;
 
@@ -400,7 +396,7 @@ void TrivialRm::GetSimplified (PolyType &res) {
 
     auto itr = std::find_if(poly.begin(), poly.end(), [&](const Point &p) { return p.id == ind; });
 
-    assert(itr != poly.end());
+    vtkbool_throw(itr != poly.end(), "TrivialRm::GetSimplified", "ind not in poly");
 
     int ind2 = itr-poly.begin();
 
@@ -484,10 +480,30 @@ void TrivialRm::GetSimplified (PolyType &res) {
 
     }
 
-    // int i = 0;
-    // for (auto& v : verts) {
-    //     std::cout << i++ << " " << v << std::endl;
-    // }
+    /*int i = 0;
+    for (auto& v : verts) {
+        std::cout << i++ << " " << v << std::endl;
+    }
+
+    PolyType _mod(verts.begin(), verts.end());
+    std::cout << GetAbsolutePath(_mod) << std::endl;*/
+
+    // es folgt ein trivialer test
+
+    VertsType3::iterator itr2, itr3;
+
+    for (itr2 = verts.begin(); itr2 != verts.end(); ++itr2) {
+        if (itr2->src != Src::NONE
+            && tr.locs.at(itr2->tag).t < E) {
+            itr3 = itr2 != verts.begin() ? itr2-1 : verts.end()-1;
+
+            if (itr3->id == NO_USE
+                && itr2->tag == tr.locs.at(itr3->tag).edA) {
+
+                itr3->rm = true;
+            }
+        }
+    }
 
     auto nxt = std::find_if(verts.begin(), verts.end(), [&](const Vert3 &p) {
         return p.id == ind;
@@ -526,7 +542,9 @@ void TrivialRm::GetSimplified (PolyType &res) {
         // das polygon ist malformed!
         // dieses assert nimmt assert(ss.size() == 1); in zeile 104 vorweg
         // siehe special:3, ind:0
-        assert(bnd != NO_USE);
+        //assert(bnd != NO_USE);
+
+        vtkbool_throw(bnd != NO_USE, "TrivialRm::GetSimplified", "bnd not set");
 
         for (int i = 0; i < num; i++) {
             int j = (ind2+i)%num;
