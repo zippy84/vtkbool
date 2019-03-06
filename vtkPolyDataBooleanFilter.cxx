@@ -48,13 +48,12 @@ limitations under the License.
 #include "Decomposer.h"
 
 #ifdef DEBUG
-#include <ctime>
-#define DIFF(s, e) float(e-s)/CLOCKS_PER_SEC
+#include <chrono>
 #include <numeric>
 #include <iterator>
 #endif
 
-#include <csignal>
+// #include <csignal>
 
 vtkStandardNewMacro(vtkPolyDataBooleanFilter);
 
@@ -116,8 +115,9 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
         resultB = vtkPolyData::SafeDownCast(outInfoB->Get(vtkDataObject::DATA_OBJECT()));
 
 #ifdef DEBUG
-        std::vector<float> times;
-        std::clock_t start;
+        using clock = std::chrono::steady_clock;
+        std::vector<clock::duration> times;
+        clock::time_point start;
 #endif
 
         if (pdA->GetMTime() > timePdA || pdB->GetMTime() > timePdB) {
@@ -153,7 +153,7 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
 #ifdef DEBUG
 
-            start = std::clock();
+            start = clock::now();
 #endif
 
             vtkPolyDataContactFilter *cl = vtkPolyDataContactFilter::New();
@@ -162,7 +162,7 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
             cl->Update();
 
 #ifdef DEBUG
-            times.push_back(DIFF(start, std::clock()));
+            times.push_back(clock::now()-start);
 #endif
 
             contLines->DeepCopy(cl->GetOutput());
@@ -270,40 +270,40 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
 
 #ifdef DEBUG
-            start = std::clock();
+            start = clock::now();
 #endif
 
             GetPolyStrips(modPdA, contsA, sourcesA, polyStripsA);
             GetPolyStrips(modPdB, contsB, sourcesB, polyStripsB);
 
 #ifdef DEBUG
-            times.push_back(DIFF(start, std::clock()));
+            times.push_back(clock::now()-start);
 #endif
 
             // löst ein sehr spezielles problem
 
 #ifdef DEBUG
-            start = std::clock();
+            start = clock::now();
 #endif
 
             _Test(modPdA, polyStripsA);
             _Test(modPdB, polyStripsB);
 
 #ifdef DEBUG
-            times.push_back(DIFF(start, std::clock()));
+            times.push_back(clock::now()-start);
 #endif
 
             // trennt die polygone an den linien
 
 #ifdef DEBUG
-            start = std::clock();
+            start = clock::now();
 #endif
 
             CutCells(modPdA, polyStripsA);
             CutCells(modPdB, polyStripsB);
 
 #ifdef DEBUG
-            times.push_back(DIFF(start, std::clock()));
+            times.push_back(clock::now()-start);
 #endif
 
 #ifdef DEBUG
@@ -315,14 +315,14 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 #endif
 
 #ifdef DEBUG
-            start = std::clock();
+            start = clock::now();
 #endif
 
             RestoreOrigPoints(modPdA, polyStripsA);
             RestoreOrigPoints(modPdB, polyStripsB);
 
 #ifdef DEBUG
-            times.push_back(DIFF(start, std::clock()));
+            times.push_back(clock::now()-start);
 #endif
 
 #ifdef DEBUG
@@ -334,14 +334,14 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 #endif
 
 #ifdef DEBUG
-            start = std::clock();
+            start = clock::now();
 #endif
 
             ResolveOverlaps(modPdA, contsA, polyStripsA);
             ResolveOverlaps(modPdB, contsB, polyStripsB);
 
 #ifdef DEBUG
-            times.push_back(DIFF(start, std::clock()));
+            times.push_back(clock::now()-start);
 #endif
 
 #ifdef DEBUG
@@ -353,14 +353,14 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 #endif
 
 #ifdef DEBUG
-            start = std::clock();
+            start = clock::now();
 #endif
 
             AddAdjacentPoints(modPdA, contsA, polyStripsA);
             AddAdjacentPoints(modPdB, contsB, polyStripsB);
 
 #ifdef DEBUG
-            times.push_back(DIFF(start, std::clock()));
+            times.push_back(clock::now()-start);
 #endif
 
 #ifdef DEBUG
@@ -372,14 +372,14 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 #endif
 
 #ifdef DEBUG
-            start = std::clock();
+            start = clock::now();
 #endif
 
             DisjoinPolys(modPdA, polyStripsA);
             DisjoinPolys(modPdB, polyStripsB);
 
 #ifdef DEBUG
-            times.push_back(DIFF(start, std::clock()));
+            times.push_back(clock::now()-start);
 #endif
 
 #ifdef DEBUG
@@ -391,14 +391,14 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 #endif
 
 #ifdef DEBUG
-            start = std::clock();
+            start = clock::now();
 #endif
 
             MergePoints(modPdA, polyStripsA);
             MergePoints(modPdB, polyStripsB);
 
 #ifdef DEBUG
-            times.push_back(DIFF(start, std::clock()));
+            times.push_back(clock::now()-start);
 #endif
 
 #ifdef DEBUG
@@ -433,14 +433,14 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
         }
 
 #ifdef DEBUG
-        times.push_back(DIFF(start, std::clock()));
+        times.push_back(clock::now()-start);
 #endif
 
         DecPolys_(modPdA, involvedA, relsA);
         DecPolys_(modPdB, involvedB, relsB);
 
 #ifdef DEBUG
-        times.push_back(DIFF(start, std::clock()));
+        times.push_back(clock::now()-start);
 #endif
 
 #ifdef DEBUG
@@ -452,7 +452,7 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 #endif
 
 #ifdef DEBUG
-        start = std::clock();
+        start = clock::now();
 #endif
 
         if (MergeRegs) {
@@ -462,19 +462,19 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
         }
 
 #ifdef DEBUG
-        times.push_back(DIFF(start, std::clock()));
+        times.push_back(clock::now()-start);
 #endif
 
 
 #ifdef DEBUG
-        // http://www.gnu.org/software/libc/manual/html_node/CPU-Time.html
+        double sum = std::chrono::duration_cast<std::chrono::duration<double>>(std::accumulate(times.begin(), times.end(), clock::duration())).count();
 
-        float sum = std::accumulate(times.begin(), times.end(), 0.);
-
-        std::vector<float>::const_iterator itr;
+        std::vector<clock::duration>::const_iterator itr;
         for (itr = times.begin(); itr != times.end(); itr++) {
+            double time = std::chrono::duration_cast<std::chrono::duration<double>>(*itr).count();
+
             std::cout << "Time " << (itr-times.begin())
-                << ": " << *itr << " (" << (*itr/sum)*100 << "%)"
+                << ": " << time << "s (" << (time/sum) << "%)"
                 << std::endl;
         }
 #endif
