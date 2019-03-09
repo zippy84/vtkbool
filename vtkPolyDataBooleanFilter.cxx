@@ -980,6 +980,14 @@ void vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
         for (itr2 = strips.begin(); itr2 != strips.end(); ++itr2) {
             StripType &strip = *itr2;
 
+#ifdef DEBUG
+            std::cout << "strip [";
+            for (auto &s : strip) {
+                std::cout << s.ind << ", ";
+            }
+            std::cout << "]" << std::endl;
+#endif
+
             // init
             if (pts[strip.front().ind].edge[0] == pts[strip.back().ind].edge[0]
                 && strip.front().ind != strip.back().ind
@@ -1554,51 +1562,94 @@ void vtkPolyDataBooleanFilter::_Test (vtkPolyData *pd, PolyStripsType &polyStrip
             StripPt &a = *(pts.begin()),
                 &b = *(std::next(pts.begin()));
 
+            int indA = a.ind,
+                indB = b.ind;
+
+#ifdef DEBUG
+            std::cout << "collapsing " << b.ind << " -> " << a.ind << std::endl;
+#endif
+
             contLines->GetPointCells(b.ind, cells);
 
             for (int i = 0; i < cells->GetNumberOfIds(); i++) {
-                contLines->ReplaceCellPoint(cells->GetId(i), b.ind, a.ind);
+                contLines->ReplaceCellPoint(cells->GetId(i), indB, indA);
+
+                // aktualisiert die links
+                contLines->RemoveReferenceToCell(indB, cells->GetId(i));
+                contLines->ResizeCellList(indA, 1);
+                contLines->AddReferenceToCell(indA, cells->GetId(i));
             }
 
-            int old = b.ind;
+            std::set<Pair> pairs;
 
-            b.ind = a.ind;
-            Cpy(b.pt, a.pt, 3);
+            if (a.capt == CAPT_A && b.capt == CAPT_A) {
+                std::map<int, IdsType> shared;
 
-            PStrips &p = polyStrips[b.polyId];
+                vtkIdList *lines = vtkIdList::New(),
+                    *cell = vtkIdList::New();
+                contLines->GetPointCells(indA, lines);
 
-            p.pts[a.ind] = b;
+                for (int i = 0; i < lines->GetNumberOfIds(); i++) {
+                    contLines->GetCellPoints(lines->GetId(i), cell);
 
-            for (StripType &strip : p.strips) {
-                for (StripPtR &r : strip) {
-                    if (r.ind == old) {
-                        r.ind = a.ind;
+                    int pA = cell->GetId(0),
+                        pB = cell->GetId(1);
+
+                    shared[pA == indA ? pB : pA].push_back(lines->GetId(i));
+                }
+
+                cell->Delete();
+                lines->Delete();
+
+                for (auto &s : shared) {
+                    if (s.second.size() > 1) {
+                        assert(s.second.size() == 2);
+
+                        for (int l : s.second) {
+                            contLines->DeleteCell(l);
+
+                            pairs.insert({indA, s.first});
+                            pairs.insert({s.first, indA});
+                        }
                     }
                 }
+
             }
 
-            p.pts.erase(old); // braucht man nicht unbedingt
+            auto Fct = [&](PolyStripsType &polyStrips_) -> void {
+                for (auto &ps : polyStrips_) {
+                    StripsType &strips = ps.second.strips;
+                    StripPtsType &pts = ps.second.pts;
 
+                    if (pts.count(indB) == 1) {
+                        if (pts.count(indA) == 0) {
+                            pts[indA] = pts[indB];
+                            pts[indA].ind = indA;
+                            Cpy(pts[indA].pt, a.pt, 3);
+                        }
 
-            PolyStripsType &other = &polyStrips == &polyStripsA ? polyStripsB : polyStripsA;
-
-            for (itr = other.begin(); itr != other.end(); ++itr) {
-                PStrips &pStrips = itr->second;
-
-                if (pStrips.pts.count(old)) {
-                    assert(pStrips.pts.count(a.ind) == 1);
-
-                    for (StripType &strip : pStrips.strips) {
-                        for (StripPtR &r : strip) {
-                            if (r.ind == old) {
-                                r.ind = a.ind;
+                        for (auto &strip : strips) {
+                            if (strip.front().ind == indB) {
+                                strip.front().ind = indA;
                             }
+
+                            if (strip.back().ind == indB) {
+                                strip.back().ind = indA;
+                            }
+
                         }
                     }
 
-                    pStrips.pts.erase(old);
+                    if (pairs.size() > 0) {
+                        strips.erase(std::remove_if(strips.begin(), strips.end(), [&pairs](const StripType &strip) {
+                            return pairs.count({strip.front().ind, strip.back().ind}) == 1;
+                        }), strips.end());
+                    }
                 }
-            }
+            };
+
+            Fct(polyStripsA);
+            Fct(polyStripsB);
 
         }
     }
@@ -2604,6 +2655,10 @@ void vtkPolyDataBooleanFilter::CombineRegions () {
 
     for (int i = 0; i < contLines->GetNumberOfCells(); i++) {
 
+        if (contLines->GetCellType(i) == VTK_EMPTY_CELL) {
+            continue;
+        }
+
         contLines->GetCellPoints(i, line);
 
         contLines->GetPoint(line->GetId(0), ptA);
@@ -3135,11 +3190,11 @@ void vtkPolyDataBooleanFilter::DecPolys_ (vtkPolyData *pd, InvolvedType &involve
                 // std::raise(SIGSEGV);
 
             } catch (const std::exception &e) {
-                std::stringstream ss;
+                /*std::stringstream ss;
                 ss << "Exception on " << GetAbsolutePath(poly);
 
                 std::cerr << ss.str()
-                    << ", " << e.what() << std::endl;
+                    << ", " << e.what() << std::endl;*/
             }
 
             newCell->Delete();
