@@ -80,10 +80,13 @@ public:
 
 class StripPtR {
 public:
-    StripPtR (int _ind) : ind(_ind) {
+    StripPtR (int _ind) : ind(_ind)/*, desc{NO_USE, NO_USE}*/ {
         strip = NO_USE;
         side = NO_USE;
         ref = NO_USE;
+
+        desc[0] = NO_USE;
+        desc[1] = NO_USE;
     }
 
     int ind;
