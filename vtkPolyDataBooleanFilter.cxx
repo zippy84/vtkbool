@@ -1607,6 +1607,7 @@ void vtkPolyDataBooleanFilter::_Test (vtkPolyData *pd, PolyStripsType &polyStrip
 
                         for (int l : s.second) {
                             contLines->DeleteCell(l);
+                            contLines->RemoveCellReference(l);
 
                             pairs.insert({indA, s.first});
                             pairs.insert({s.first, indA});
@@ -1638,6 +1639,8 @@ void vtkPolyDataBooleanFilter::_Test (vtkPolyData *pd, PolyStripsType &polyStrip
                             }
 
                         }
+
+                        pts.erase(indB);
                     }
 
                     if (pairs.size() > 0) {
