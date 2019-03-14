@@ -1617,6 +1617,30 @@ void vtkPolyDataBooleanFilter::_Test (vtkPolyData *pd, PolyStripsType &polyStrip
 
             }
 
+            if (a.capt == CAPT_A && b.capt == CAPT_EDGE) {
+                vtkIdList *lines = vtkIdList::New(),
+                    *cell = vtkIdList::New();
+                contLines->GetPointCells(indA, lines);
+
+                for (int i = 0; i < lines->GetNumberOfIds(); i++) {
+                    if (contLines->GetCellType(lines->GetId(i)) != VTK_EMPTY_CELL) {
+                        contLines->GetCellPoints(lines->GetId(i), cell);
+
+                        int pA = cell->GetId(0),
+                            pB = cell->GetId(1);
+
+                        if (pA == indA && pB == indA) {
+                            contLines->DeleteCell(lines->GetId(i));
+                            contLines->RemoveCellReference(lines->GetId(i));
+                        }
+                    }
+
+                }
+
+                cell->Delete();
+                lines->Delete();
+            }
+
             auto Fct = [&](PolyStripsType &polyStrips_) -> void {
                 for (auto &ps : polyStrips_) {
                     StripsType &strips = ps.second.strips;
@@ -1624,9 +1648,16 @@ void vtkPolyDataBooleanFilter::_Test (vtkPolyData *pd, PolyStripsType &polyStrip
 
                     if (pts.count(indB) == 1) {
                         if (pts.count(indA) == 0) {
-                            pts[indA] = pts[indB];
-                            pts[indA].ind = indA;
-                            Cpy(pts[indA].pt, a.pt, 3);
+                            if (a.capt == pts[indB].capt) {
+                                pts[indA] = pts[indB];
+                                pts[indA].ind = indA;
+                                Cpy(pts[indA].pt, a.pt, 3);
+                            } else if (a.capt == CAPT_A && pts[indB].capt == CAPT_EDGE) {
+                                pts[indA] = a;
+                            } else {
+                                // hier brauche ich ein beispiel
+                                assert(false);
+                            }
                         }
 
                         for (auto &strip : strips) {
@@ -2673,8 +2704,6 @@ void vtkPolyDataBooleanFilter::CombineRegions () {
 #ifdef DEBUG
         std::cout << "line " << i << std::endl;
 #else
-
-
 
         // bereits behandelte regionen werden nicht noch einmal untersucht
 
