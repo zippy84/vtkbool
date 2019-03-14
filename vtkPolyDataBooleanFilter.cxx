@@ -1559,8 +1559,19 @@ void vtkPolyDataBooleanFilter::_Test (vtkPolyData *pd, PolyStripsType &polyStrip
         auto &pts = s.second;
 
         if (pts.size() > 1) {
-            StripPt &a = *(pts.begin()),
-                &b = *(std::next(pts.begin()));
+            StripPt &_a = *(pts.begin()),
+                &_b = *(std::next(pts.begin()));
+
+            std::reference_wrapper<StripPt> __a(_a), __b(_b);
+
+            if (_a.capt == CAPT_EDGE && _b.capt == CAPT_A) {
+                // so ist a niemals CAPT_EDGE, wenn b CAPT_A ist
+                __a = _b;
+                __b = _a;
+            }
+
+            StripPt &a = __a,
+                &b = __b;
 
             int indA = a.ind,
                 indB = b.ind;
@@ -1652,11 +1663,8 @@ void vtkPolyDataBooleanFilter::_Test (vtkPolyData *pd, PolyStripsType &polyStrip
                                 pts[indA] = pts[indB];
                                 pts[indA].ind = indA;
                                 Cpy(pts[indA].pt, a.pt, 3);
-                            } else if (a.capt == CAPT_A && pts[indB].capt == CAPT_EDGE) {
+                            } else /*if (a.capt == CAPT_A && pts[indB].capt == CAPT_EDGE)*/ {
                                 pts[indA] = a;
-                            } else {
-                                // hier brauche ich ein beispiel
-                                assert(false);
                             }
                         }
 
