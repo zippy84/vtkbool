@@ -32,7 +32,7 @@ This is an extension of the graphics library VTK. The goal of the extension is t
 
 ## Todo
 
-Nothing for now.
+- the filters needs a mesh optimizer for sharp-angled triangles
 
 ## Requirements
 
@@ -43,7 +43,7 @@ Nothing for now.
 ### Optional
 
 - ParaView >= 5.0
-- Python 2.7
+- Python 2.7 or 3.x
 
 ## Library
 
@@ -133,7 +133,7 @@ When everything has been compiled successfully, you can install the plugin. For 
 
 The Python module will be generated automatically, if three conditions are met:
 
-- vtkbool was built as a library
+- vtkbool is configured as a library
 - Python 2 or 3 is installed with header files
 - VTK itself is wrapped to Python
 
