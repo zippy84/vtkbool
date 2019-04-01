@@ -32,7 +32,7 @@ This is an extension of the graphics library VTK. The goal of the extension is t
 
 ## Todo
 
-- the filters needs a mesh optimizer for sharp-angled triangles
+- the filter needs a mesh optimizer for sharp-angled triangles
 
 ## Requirements
 

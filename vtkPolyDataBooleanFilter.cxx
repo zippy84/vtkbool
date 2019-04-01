@@ -197,21 +197,23 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
             // gültigkeit des schnitts prüfen
 
+            int numPts = contLines->GetNumberOfPoints();
+
+            vtkIdList *cells = vtkIdList::New(),
+                *line = vtkIdList::New();
+
             bool valid = true;
+            int amb = NO_USE;
 
-            vtkIdList *cells = vtkIdList::New();
-
-            for (int i = 0; i < contLines->GetNumberOfPoints() && valid; i++) {
-                cells->Reset();
+            for (int i = 0; i < numPts && valid; i++) {
                 contLines->GetPointCells(i, cells);
 
                 // der schnitt endet abrupt
                 if (cells->GetNumberOfIds() == 1) {
+                    amb = i;
                     valid = false;
                     break;
                 }
-
-                vtkIdList *line = vtkIdList::New();
 
                 std::map<int, std::set<int> > countsA, countsB;
 
@@ -228,6 +230,7 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
                     countsA[indA].insert(target);
 
                     if (countsA[indA].size() > 2) {
+                        amb = i;
                         valid = false;
                         break;
                     }
@@ -235,19 +238,19 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
                     countsB[indB].insert(target);
 
                     if (countsB[indB].size() > 2) {
+                        amb = i;
                         valid = false;
                         break;
                     }
 
                 }
-
-                line->Delete();
             }
 
+            line->Delete();
             cells->Delete();
 
             if (!valid) {
-                vtkErrorMacro("Contact is ambiguous or incomplete.");
+                vtkErrorMacro("Contact is ambiguous or incomplete (at line " << amb << ").");
 
                 return 1;
             }
@@ -413,6 +416,7 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
             involvedB.clear();
 
             int numLines = contLines->GetNumberOfCells();
+
             for (int i = 0; i < numLines; i++) {
                 involvedA.insert(contsA->GetValue(i));
                 involvedB.insert(contsB->GetValue(i));
