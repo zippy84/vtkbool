@@ -276,8 +276,14 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
             start = clock::now();
 #endif
 
-            GetPolyStrips(modPdA, contsA, sourcesA, polyStripsA);
-            GetPolyStrips(modPdB, contsB, sourcesB, polyStripsB);
+            if (GetPolyStrips(modPdA, contsA, sourcesA, polyStripsA) ||
+                GetPolyStrips(modPdB, contsB, sourcesB, polyStripsB)) {
+
+                vtkErrorMacro("Strips are invalid.");
+
+                return 1;
+
+            }
 
 #ifdef DEBUG
             times.push_back(clock::now()-start);
@@ -661,7 +667,7 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, vtkIntArray *sou
 
 }
 
-void vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIntArray *conts, vtkIntArray *sources, PolyStripsType &polyStrips) {
+bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIntArray *conts, vtkIntArray *sources, PolyStripsType &polyStrips) {
 #ifdef DEBUG
     std::cout << "GetPolyStrips()" << std::endl;
 #endif
@@ -829,6 +835,89 @@ void vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIntArray *cont
         CompleteStrips(pStrips);
 
     }
+
+    // validierung
+    // sucht nach schnitten zw. den strips
+
+    PolyStripsType::const_iterator itr2;
+    StripsType::const_iterator itr3, itr4;
+
+    for (itr2 = polyStrips.begin(); itr2 != polyStrips.end(); ++itr2) {
+        const PStrips &pStrips = itr2->second;
+
+        const StripsType &strips = pStrips.strips;
+        const StripPtsType &pts = pStrips.pts;
+
+        const IdsType &poly = pStrips.poly;
+
+        auto Coord = [&poly](const StripPt &a, const StripPt &b) -> double {
+            double t = 1-a.t+b.t;
+
+            auto iA = std::find(poly.begin(), poly.end(), a.edge[0]),
+                iB = std::find(poly.begin(), poly.end(), b.edge[0]);
+
+            if (iA == iB && a.t < b.t) {
+                return b.t-a.t;
+            }
+
+            for (;;) {
+                if (++iA == poly.end()) {
+                    iA = poly.begin();
+                }
+
+                if (iA == iB) {
+                    break;
+                }
+
+                t += 1;
+            }
+
+            return t;
+        };
+
+        if (!strips.empty()) {
+            for (itr3 = strips.begin(); itr3 != strips.end()-1; ++itr3) {
+                const StripType &stripA = *itr3;
+
+                const StripPt &pA = pts.at(stripA.front().ind),
+                    &pB = pts.at(stripA.back().ind);
+
+                if (pA.capt != CAPT_NOT && pB.capt != CAPT_NOT) {
+                    double c1 = Coord(pA, pB);
+
+                    for (itr4 = itr3+1; itr4 != strips.end(); ++itr4) {
+                        const StripType &stripB = *itr4;
+
+                        const StripPt &pC = pts.at(stripB.front().ind),
+                            &pD = pts.at(stripB.back().ind);
+
+                        if (pC.ind != pA.ind && pC.ind != pB.ind
+                            && pD.ind != pA.ind && pD.ind != pB.ind) {
+
+                            double c2 = Coord(pA, pC),
+                                c3 = Coord(pA, pD);
+
+                            if ((c2 < c1) != (c3 < c1)) {
+#ifdef DEBUG
+                                std::cout << "c1=" << c1 << ", c2=" << c2 << ", c3=" << c3
+                                    << ", poly=" << itr2->first
+                                    << ", " << ((pd == modPdA) ? "A" : "B")
+                                    << std::endl;
+#endif
+
+                                return true;
+                            }
+                        }
+
+                    }
+
+                }
+            }
+        }
+
+    }
+
+    return false;
 
 }
 
