@@ -32,6 +32,7 @@ limitations under the License.
 #include <vtkAppendPolyData.h>
 #include <vtkLineSource.h>
 #include <vtkTubeFilter.h>
+#include <vtkCommand.h>
 
 #include <map>
 #include <vector>
@@ -344,6 +345,28 @@ private:
 
     }
 
+};
+
+class Observer : public vtkCommand {
+public:
+    bool hasError;
+    std::string msg;
+
+    Observer() : hasError(false) {}
+
+    static Observer *New() {
+        return new Observer;
+    }
+
+    virtual void Execute(vtkObject *vtkNotUsed(caller), unsigned long event, void *calldata) {
+        hasError = event == vtkCommand::ErrorEvent;
+        msg = static_cast<char*>(calldata);
+    }
+
+    void Clear() {
+        hasError = false;
+        msg.clear();
+    }
 };
 
 int main (int argc, char *argv[]) {
@@ -1128,6 +1151,40 @@ int main (int argc, char *argv[]) {
         tubeA->Delete();
         lineB->Delete();
         lineA->Delete();
+
+        return ok;
+
+    } else if (t == 18) {
+        vtkCubeSource *cuA = vtkCubeSource::New();
+
+        vtkCubeSource *cuB = vtkCubeSource::New();
+        cuB->SetCenter(.3, .3, 0);
+
+        vtkCubeSource *cuC = vtkCubeSource::New();
+        cuC->SetCenter(.2, .9, 0);
+        cuC->SetXLength(2);
+        cuC->SetYLength(2);
+
+        vtkAppendPolyData *app = vtkAppendPolyData::New();
+        app->AddInputConnection(cuA->GetOutputPort());
+        app->AddInputConnection(cuB->GetOutputPort());
+
+        Observer *obs = Observer::New();
+
+        vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
+        bf->SetInputConnection(0, app->GetOutputPort());
+        bf->SetInputConnection(1, cuC->GetOutputPort());
+        bf->AddObserver(vtkCommand::ErrorEvent, obs);
+        bf->Update();
+
+        int ok = static_cast<int>(!obs->hasError);
+
+        bf->Delete();
+        obs->Delete();
+        app->Delete();
+        cuC->Delete();
+        cuB->Delete();
+        cuA->Delete();
 
         return ok;
 
