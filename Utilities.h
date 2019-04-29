@@ -44,7 +44,7 @@ public:
     double n[3], ei[3], ej[3], d;
 };
 
-void Transform (double *in, double *out, Base &base);
-void BackTransform (double *in, double *out, Base &base);
+void Transform (const double *in, double *out, Base &base);
+void BackTransform (const double *in, double *out, Base &base);
 
 #endif

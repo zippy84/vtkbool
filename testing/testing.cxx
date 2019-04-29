@@ -42,6 +42,7 @@ limitations under the License.
 #include <sstream>
 #include <iomanip>
 #include <cmath>
+#include <array>
 
 #include "vtkPolyDataBooleanFilter.h"
 
@@ -1155,6 +1156,8 @@ int main (int argc, char *argv[]) {
         return ok;
 
     } else if (t == 18) {
+        // einfachste art sich überschneidender strips
+
         vtkCubeSource *cuA = vtkCubeSource::New();
 
         vtkCubeSource *cuB = vtkCubeSource::New();
@@ -1188,6 +1191,62 @@ int main (int argc, char *argv[]) {
 
         return ok;
 
+    } else if (t == 19) {
+        // hier überschneiden sich strips, die holes bilden
+        // 4 tests in einem
+
+        vtkCubeSource *cuA = vtkCubeSource::New();
+        vtkCubeSource *cuB = vtkCubeSource::New();
+        vtkCubeSource *cuC = vtkCubeSource::New();
+
+        vtkAppendPolyData *app = vtkAppendPolyData::New();
+        app->AddInputConnection(cuB->GetOutputPort());
+        app->AddInputConnection(cuC->GetOutputPort());
+
+        Observer *obs = Observer::New();
+
+        vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
+        bf->SetInputConnection(0, cuA->GetOutputPort());
+        bf->SetInputConnection(1, app->GetOutputPort());
+        bf->AddObserver(vtkCommand::ErrorEvent, obs);
+
+        std::vector<std::array<double, 4>> data{
+            {.8, .8, .2, 1},
+            {.8, .5, .5, .8},
+            {.5, .5, .5, 1},
+            {.5, .5, .5, .8}
+        };
+
+        std::vector<bool> errors;
+
+        for (auto &d : data) {
+            cuB->SetXLength(d[0]);
+            cuB->SetYLength(d[1]);
+
+            cuC->SetXLength(d[2]);
+            cuC->SetYLength(d[3]);
+
+            bf->Update();
+
+            errors.push_back(obs->hasError);
+
+            obs->Clear();
+        }
+
+        for (bool e : errors) {
+            std::cout << e << std::endl;
+        }
+
+        int ok = static_cast<int>(std::find(errors.begin(), errors.end(), false) != errors.end());
+
+        bf->Delete();
+        obs->Delete();
+        app->Delete();
+        cuC->Delete();
+        cuB->Delete();
+        cuA->Delete();
+
+        return ok;
     }
 
 }
