@@ -129,8 +129,9 @@ public:
     }
 };
 
-std::shared_ptr<D> Intersect (double *o, double *r, double *pA, double *pB);
-std::shared_ptr<D> Intersect2 (double *oA, double *oB, double *pA, double *pB);
+std::shared_ptr<D> Intersect (const double *o, const double *r, const double *pA, const double *pB);
+std::shared_ptr<D> Intersect2 (const double *oA, const double *oB, const double *pA, const double *pB);
+std::shared_ptr<D> Intersect3 (const double *oA, const double *oB, const double *pA, const double *pB);
 
 bool IsFrontfaced (double *r, double *a, double *b);
 bool IsNear (const double *a, const double *b);
