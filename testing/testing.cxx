@@ -1233,10 +1233,6 @@ int main (int argc, char *argv[]) {
             obs->Clear();
         }
 
-        for (bool e : errors) {
-            std::cout << e << std::endl;
-        }
-
         int ok = static_cast<int>(std::find(errors.begin(), errors.end(), false) != errors.end());
 
         bf->Delete();

@@ -84,16 +84,7 @@ public:
 
 class AABB {
 public:
-    std::vector<Node> nodes;
-
-    int rootId;
-
     AABB () : rootId(NO_USE) {}
-
-    int CreateNode (std::shared_ptr<Obj> obj = nullptr) {
-        nodes.emplace_back(obj);
-        return nodes.size()-1;
-    }
 
     void InsertObj (std::shared_ptr<Obj> obj) {
         int nodeId = CreateNode(obj);
@@ -196,6 +187,15 @@ public:
     }
 
 private:
+    std::vector<Node> nodes;
+
+    int rootId;
+
+    int CreateNode (std::shared_ptr<Obj> obj = nullptr) {
+        nodes.emplace_back(obj);
+        return nodes.size()-1;
+    }
+
     void Update (int id) {
         while (id != NO_USE) {
             Node &node = nodes[id];
