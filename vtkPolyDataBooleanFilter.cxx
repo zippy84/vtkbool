@@ -46,6 +46,7 @@ limitations under the License.
 
 #include "Merger.h"
 #include "Decomposer.h"
+#include "AABB.h"
 
 #ifdef DEBUG
 #include <chrono>
@@ -839,6 +840,7 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIntArray *cont
     // validierung
     // sucht nach schnitten zw. den strips
 
+    /*
     PolyStripsType::const_iterator itr2;
     StripsType::const_iterator itr3, itr4;
 
@@ -891,26 +893,103 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIntArray *cont
                         const StripPt &pC = pts.at(stripB.front().ind),
                             &pD = pts.at(stripB.back().ind);
 
-                        if (pC.ind != pA.ind && pC.ind != pB.ind
-                            && pD.ind != pA.ind && pD.ind != pB.ind) {
+                        if (pC.capt != CAPT_NOT && pD.capt != CAPT_NOT) {
 
-                            double c2 = Coord(pA, pC),
-                                c3 = Coord(pA, pD);
+                            if (pC.ind != pA.ind && pC.ind != pB.ind
+                                && pD.ind != pA.ind && pD.ind != pB.ind) {
 
-                            if ((c2 < c1) != (c3 < c1)) {
+                                double c2 = Coord(pA, pC),
+                                    c3 = Coord(pA, pD);
+
+                                if ((c2 < c1) != (c3 < c1)) {
 #ifdef DEBUG
-                                std::cout << "c1=" << c1 << ", c2=" << c2 << ", c3=" << c3
-                                    << ", poly=" << itr2->first
-                                    << ", " << ((pd == modPdA) ? "A" : "B")
-                                    << std::endl;
+                                    std::cout << "c1=" << c1 << ", c2=" << c2 << ", c3=" << c3
+                                        << ", poly=" << itr2->first
+                                        << ", " << ((pd == modPdA) ? "A" : "B")
+                                        << std::endl;
 #endif
 
-                                return true;
+                                    return true;
+                                }
                             }
                         }
 
                     }
 
+                }
+
+            }
+        }
+
+    }
+    */
+
+    PolyStripsType::const_iterator itr2;
+    StripsType::const_iterator itr3;
+    StripType::const_iterator itr4;
+
+    for (itr2 = polyStrips.begin(); itr2 != polyStrips.end(); ++itr2) {
+        const PStrips &pStrips = itr2->second;
+
+        const StripsType &strips = pStrips.strips;
+        const StripPtsType &pts = pStrips.pts;
+
+        vtkIdList *cell = vtkIdList::New();
+        pd->GetCellPoints(itr2->first, cell);
+
+        Base base(pd->GetPoints(), cell);
+
+        cell->Delete();
+
+        AABB tree;
+
+        std::vector<std::shared_ptr<Line>> lines;
+
+        for (itr3 = strips.begin(); itr3 != strips.end(); ++itr3) {
+            const StripType &strip = *itr3;
+
+            for (itr4 = strip.begin(); itr4 != strip.end()-1; ++itr4) {
+                const StripPt &spA = pts.at(itr4->ind),
+                    &spB = pts.at((itr4+1)->ind);
+
+                double ptA[2], ptB[2];
+
+                Transform(spA.pt, ptA, base);
+                Transform(spB.pt, ptB, base);
+
+                int grp = itr3-strips.begin();
+
+                lines.emplace_back(new Line({ptA, itr4->ind}, {ptB, (itr4+1)->ind}, grp));
+            }
+
+        }
+
+        for (auto &line : lines) {
+            // std::cout << *line << std::endl;
+
+            tree.InsertObj(line);
+        }
+
+        std::vector<std::shared_ptr<Line>>::const_iterator itr5;
+        std::vector<std::shared_ptr<Obj>>::const_iterator itr6;
+
+        for (itr5 = lines.begin(); itr5 != lines.end(); ++itr5) {
+            auto found = tree.Search(*itr5);
+
+            const Line &lA = **itr5;
+
+            for (itr6 = found.begin(); itr6 != found.end(); ++itr6) {
+                const Line &lB = dynamic_cast<Line&>(**itr6);
+
+                // die linien dürfen nicht zum gleichen strip gehören und sich nicht an den enden berühren
+
+                if (lA.grp != lB.grp
+                    && lA.pA.id != lB.pA.id
+                    && lA.pA.id != lB.pB.id
+                    && lA.pB.id != lB.pA.id
+                    && lA.pB.id != lB.pB.id
+                    && Intersect3(lA.pA.pt, lA.pB.pt, lB.pA.pt, lB.pB.pt)) {
+                    return true;
                 }
             }
         }

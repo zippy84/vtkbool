@@ -59,7 +59,7 @@ else()
 
         add_subdirectory(libs)
 
-        include_directories(libs/merger libs/decomp libs/vp)
+        include_directories(libs/merger libs/decomp libs/vp libs/aabb)
 
         add_library(${PROJECT_NAME} SHARED ${srcs})
         target_link_libraries(${PROJECT_NAME} ${VTK_LIBRARIES} decomp merger)
@@ -72,7 +72,7 @@ else()
             add_executable(testing testing/testing.cxx)
             target_link_libraries(testing ${PROJECT_NAME} ${VTK_LIBRARIES})
 
-            foreach(i RANGE 18)
+            foreach(i RANGE 19)
                 add_test(NAME Test_${i} COMMAND testing ${i})
 
                 if(WIN32)

@@ -30,7 +30,7 @@ if(ParaView_FOUND)
         ../PyInit.cxx)
 
     add_subdirectory(../libs libs_build)
-    include_directories(../libs/merger ../libs/decomp ../libs/vp)
+    include_directories(../libs/merger ../libs/decomp ../libs/vp ../libs/aabb)
 
     add_paraview_plugin(
         PolyDataBooleanFilter

@@ -170,7 +170,7 @@ Base::Base (vtkPoints *pts, vtkIdList *poly) {
     d = n[0]*ptA[0]+n[1]*ptA[1]+n[2]*ptA[2];
 }
 
-void Transform (double *in, double *out, Base &base) {
+void Transform (const double *in, double *out, Base &base) {
     double x = base.ei[0]*in[0]+base.ei[1]*in[1]+base.ei[2]*in[2],
         y = base.ej[0]*in[0]+base.ej[1]*in[1]+base.ej[2]*in[2];
 
@@ -178,7 +178,7 @@ void Transform (double *in, double *out, Base &base) {
     out[1] = y;
 }
 
-void BackTransform (double *in, double *out, Base &base) {
+void BackTransform (const double *in, double *out, Base &base) {
     double x = in[0]*base.ei[0]+in[1]*base.ej[0]+base.d*base.n[0],
         y = in[0]*base.ei[1]+in[1]*base.ej[1]+base.d*base.n[1],
         z = in[0]*base.ei[2]+in[1]*base.ej[2]+base.d*base.n[2];

@@ -65,7 +65,7 @@ double Cross (double *a, double *b, double *c) {
     return (b[1]-a[1])*(c[0]-a[0])-(b[0]-a[0])*(c[1]-a[1]);
 }
 
-std::shared_ptr<D> Intersect (double *o, double *r, double *pA, double *pB) {
+std::shared_ptr<D> Intersect (const double *o, const double *r, const double *pA, const double *pB) {
     double oB[] = {o[0]+r[0], o[1]+r[1]};
 
     double m11 = oB[0]-o[0],
@@ -92,7 +92,7 @@ std::shared_ptr<D> Intersect (double *o, double *r, double *pA, double *pB) {
     }
 }
 
-std::shared_ptr<D> Intersect2 (double *oA, double *oB, double *pA, double *pB) {
+std::shared_ptr<D> Intersect2 (const double *oA, const double *oB, const double *pA, const double *pB) {
     double m11 = oB[0]-oA[0],
         m12 = pA[0]-pB[0],
         m21 = oB[1]-oA[1],
@@ -111,6 +111,33 @@ std::shared_ptr<D> Intersect2 (double *oA, double *oB, double *pA, double *pB) {
 
     if ((t1 > -E && t1 < 1+E)
         && (t2 > E && t2 < 1+E)) {
+
+        double s[] = {pA[0]+t2*(pB[0]-pA[0]), pA[1]+t2*(pB[1]-pA[1])};
+        return std::make_shared<D>(s, t1, t2);
+    } else {
+        return nullptr;
+    }
+}
+
+std::shared_ptr<D> Intersect3 (const double *oA, const double *oB, const double *pA, const double *pB) {
+    double m11 = oB[0]-oA[0],
+        m12 = pA[0]-pB[0],
+        m21 = oB[1]-oA[1],
+        m22 = pA[1]-pB[1],
+        v1 = pA[0]-oA[0],
+        v2 = pA[1]-oA[1];
+
+    double det = m11*m22-m12*m21;
+
+    if (std::abs(det) < E) {
+        return nullptr;
+    }
+
+    double t1 = (v1*m22-m12*v2)/det,
+        t2 = (m11*v2-v1*m21)/det;
+
+    if ((t1 > -E && t1 < 1+E)
+        && (t2 > -E && t2 < 1+E)) {
 
         double s[] = {pA[0]+t2*(pB[0]-pA[0]), pA[1]+t2*(pB[1]-pA[1])};
         return std::make_shared<D>(s, t1, t2);
