@@ -970,6 +970,8 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIntArray *cont
             tree.InsertObj(line);
         }
 
+        Bnds bnds(-E, E, -E, E);
+
         std::vector<std::shared_ptr<Line>>::const_iterator itr5;
         std::vector<std::shared_ptr<Obj>>::const_iterator itr6;
 
@@ -979,6 +981,8 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIntArray *cont
             const Line &lA = **itr5;
 
             for (itr6 = found.begin(); itr6 != found.end(); ++itr6) {
+                // std::cout << itr6->use_count() << std::endl;
+
                 const Line &lB = dynamic_cast<Line&>(**itr6);
 
                 // die linien dürfen nicht zum gleichen strip gehören und sich nicht an den enden berühren
@@ -988,7 +992,7 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIntArray *cont
                     && lA.pA.id != lB.pB.id
                     && lA.pB.id != lB.pA.id
                     && lA.pB.id != lB.pB.id
-                    && Intersect3(lA.pA.pt, lA.pB.pt, lB.pA.pt, lB.pB.pt)) {
+                    && Intersect2(lA.pA.pt, lA.pB.pt, lB.pA.pt, lB.pB.pt, bnds)) {
                     return true;
                 }
             }
