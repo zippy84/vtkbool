@@ -31,7 +31,7 @@ if(NOT VTK_FOUND AND NOT ParaView_FOUND)
     include(${VTK_USE_FILE})
 endif()
 
-include_directories(../vp)
+include_directories(../vp ../aabb)
 
 add_library(merger STATIC Merger.cxx ../vp/Tools.cxx)
 target_link_libraries(merger ${VTK_LIBRARIES})
