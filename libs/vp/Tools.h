@@ -129,9 +129,17 @@ public:
     }
 };
 
+class Bnds {
+public:
+    Bnds () : lA(-E), uA(1+E), lB(E), uB(1+E) {}
+    Bnds (double lTa, double uTa, double lTb, double uTb) : lA(lTa), uA(1+uTa), lB(lTb), uB(1+uTb) {}
+    const double lA, uA, lB, uB;
+};
+
 std::shared_ptr<D> Intersect (const double *o, const double *r, const double *pA, const double *pB);
+std::shared_ptr<D> Intersect2 (const double *oA, const double *oB, const double *pA, const double *pB, const Bnds &bnds);
+
 std::shared_ptr<D> Intersect2 (const double *oA, const double *oB, const double *pA, const double *pB);
-std::shared_ptr<D> Intersect3 (const double *oA, const double *oB, const double *pA, const double *pB);
 
 bool IsFrontfaced (double *r, double *a, double *b);
 bool IsNear (const double *a, const double *b);

@@ -29,9 +29,9 @@ typedef std::map<int, ConsType> ResType;
 
 class G {
 public:
-	G (double _d, Pair _con) : d(_d), con(_con) {}
-	double d;
-	Pair con;
+    G (double _d, Pair _con) : d(_d), con(_con) {}
+    double d;
+    Pair con;
 };
 
 class Merger {

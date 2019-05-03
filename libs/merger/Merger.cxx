@@ -31,6 +31,7 @@ limitations under the License.
 #include <vtkMath.h>
 
 #include "Tools.h"
+#include "AABB.h"
 
 void Merger::AddPoly (PolyType &poly) {
     polys.push_back(poly);
@@ -115,46 +116,49 @@ void Merger::Merge (PolysType &group, PolyType &merged) {
 
     vtkPoints *pts = vtkPoints::New();
 
-    std::vector<Pair> edges;
+    AABB treeA;
+
+    PolyType::iterator itr, itr2;
 
     for (auto& poly : group) {
-        for (Point& p : poly) {
+        for (itr = poly.begin(); itr != poly.end(); ++itr) {
             // alte id sichern
-
-            if (p.id != NO_USE) {
-                oldPtIds[a] = p.id;
+            if (itr->id != NO_USE) {
+                oldPtIds[a] = itr->id;
             }
 
-            p.id = a++;
+            itr->id = a++;
 
             src.push_back(b);
+
+            pts->InsertNextPoint(itr->x, itr->y, 0);
         }
 
-        int num = poly.size();
+        for (itr = poly.begin(); itr != poly.end(); ++itr) {
+            itr2 = itr+1;
 
-        for (int i = 0; i < num; i++) {
-            int j = (i+1)%num;
+            if (itr2 == poly.end()) {
+                itr2 = poly.begin();
+            }
 
-            edges.push_back({poly[i].id, poly[j].id});
+            std::shared_ptr<Line> line(new Line({*itr}, {*itr2}));
 
-            pts->InsertNextPoint(poly[i].x, poly[i].y, 0);
+            treeA.InsertObj(line);
         }
 
         b++;
     }
 
-    vtkKdTree *tree = vtkKdTree::New();
-    tree->OmitZPartitioning();
-    tree->BuildLocatorFromPoints(pts);
-
-    // for (Pair& edge : edges) {
-    //     std::cout << edge << std::endl;
-    // }
+    vtkKdTree *treeB = vtkKdTree::New();
+    treeB->OmitZPartitioning();
+    treeB->BuildLocatorFromPoints(pts);
 
     int numPts = pts->GetNumberOfPoints();
 
-    IdsType _ids(numPts);
-    std::iota(_ids.begin(), _ids.end(), 0);
+    const Bnds bnds(-E, E, -E, E);
+
+    IdsType ids(numPts);
+    std::iota(ids.begin(), ids.end(), 0);
 
     int curr = 1;
 
@@ -162,86 +166,74 @@ void Merger::Merge (PolysType &group, PolyType &merged) {
 
     std::vector<Pair> cons;
 
-    while (!_ids.empty()) {
+    while (!ids.empty()) {
+        for (int idA : ids) {
+            double ptA[3],
+                ptB[3];
 
-        for (int _id  : _ids) {
+            pts->GetPoint(idA, ptA);
 
-            double _pt[3];
-            pts->GetPoint(_id, _pt);
+            vtkIdList *cls = vtkIdList::New();
+            treeB->FindClosestNPoints(curr*2, ptA, cls);
 
-            vtkIdList *found = vtkIdList::New();
-            tree->FindClosestNPoints(curr*2, _pt, found);
+            int numCls = cls->GetNumberOfIds();
 
             // sucht nach gültigen verbindungen
 
-            IdsType valids;
+            std::vector<int> _ids;
 
-            for (int i = (curr-1)*2; i < found->GetNumberOfIds(); i++) {
-                valids.push_back(found->GetId(i));
+            int srcA = src[idA];
+
+            for (int i = (curr-1)*2; i < numCls; i++) {
+                int idB = cls->GetId(i),
+                    srcB = src[idB];
+
+                if (srcA != srcB) {
+                    _ids.push_back(idB);
+                }
             }
 
-            // std::cout << "_id: " << _id << ", curr: " << curr << ", valids: [";
-            // for (int v : valids) {
-            //     std::cout << v << ", ";
-            // }
-            // std::cout << "]" << std::endl;
+            _ids.erase(std::remove_if(_ids.begin(), _ids.end(), [&](int idB) {
+                pts->GetPoint(idB, ptB);
 
-            valids.erase(std::remove_if(valids.begin(), valids.end(), [&](int id) {
-                if (src[id] == src[_id]) {
-                    return true;
-                } else {
-                    for (Pair& edge : edges) {
-                        // edge mit id oder _id auslassen
-                        if (edge.f != id && edge.g != id
-                            && edge.f != _id && edge.g != _id) {
+                std::shared_ptr<Line> lineA(new Line({ptA}, {ptB}));
 
-                            double eA[3], eB[3];
+                auto found = treeA.Search(lineA);
 
-                            pts->GetPoint(edge.f, eA);
-                            pts->GetPoint(edge.g, eB);
+                for (auto &f : found) {
+                    Line &lineB = dynamic_cast<Line&>(*f);
 
-                            double pt[3];
-                            pts->GetPoint(id, pt);
+                    if (lineB.pA.id != idA && lineB.pB.id != idA
+                        && lineB.pA.id != idB && lineB.pB.id != idB
+                        && Intersect2(ptA, ptB, lineB.pA.pt, lineB.pB.pt, bnds)) {
 
-                            std::shared_ptr<D> d = Intersect2(_pt, pt, eA, eB);
-                            if (d) {
-                                // es existiert ein schnitt zw. der verbindung und einem der edges
-                                return true;
-                            }
-                        }
+                        return true;
                     }
-
-                    return false;
                 }
-            }), valids.end());
 
-            // std::cout << "=> valids: [";
-            // for (int v : valids) {
-            //     std::cout << v << ", ";
-            // }
-            // std::cout << "]" << std::endl;
+                return false;
 
-            for (int id : valids) {
-                double pt[3];
-                pts->GetPoint(id, pt);
+            }), _ids.end());
+
+            for (int idB : _ids) {
+                pts->GetPoint(idB, ptB);
 
                 double v[3];
-                vtkMath::Subtract(_pt, pt, v);
+                vtkMath::Subtract(ptA, ptB, v);
 
                 double d = vtkMath::Norm(v);
 
-                int pA = src[_id],
-                    pB = src[id];
+                int pA = src[idA],
+                    pB = src[idB];
 
-                res[pA].emplace(Pair(_id, id), d);
-                res[pB].emplace(Pair(id, _id), d);
-
+                res[pA].emplace(Pair(idA, idB), d);
+                res[pB].emplace(Pair(idB, idA), d);
             }
 
-            found->Delete();
+            cls->Delete();
         }
 
-        _ids.clear();
+        ids.clear();
 
         // erstmal die keys betrachten
 
@@ -290,7 +282,7 @@ void Merger::Merge (PolysType &group, PolyType &merged) {
                         // std::cout << i << ", ";
 
                         for (Point& p : poly) {
-                            _ids.push_back(p.id);
+                            ids.push_back(p.id);
                         }
                     }
 
@@ -305,8 +297,8 @@ void Merger::Merge (PolysType &group, PolyType &merged) {
             }
         }
 
-        // std::cout << "_ids: [";
-        // for (int id : _ids) {
+        // std::cout << "ids: [";
+        // for (int id : ids) {
         //     std::cout << id << ", ";
         // }
         // std::cout << "]" << std::endl;
@@ -441,8 +433,7 @@ void Merger::Merge (PolysType &group, PolyType &merged) {
 
     assert(!TestCW(merged));
 
-    tree->Delete();
+    treeB->Delete();
     pts->Delete();
 
 }
-
