@@ -368,13 +368,16 @@ void Merger::Merge (PolysType &group, PolyType &merged) {
         int a = con.f,
             b = con.g;
 
-        int pA = repls[src[a]],
-            pB = repls[src[b]];
+        int pA = repls.at(src[a]),
+            pB = repls.at(src[b]);
 
-        // std::cout << pA << ", " << pB << std::endl;
+        // std::cout << a << "->" << pA << ", " << b << "->" << pB << std::endl;
 
-        PolyType &polyA = group[pA],
-            &polyB = group[pB];
+        PolyType &polyA = group.at(pA),
+            &polyB = group.at(pB);
+
+        // std::cout << "polyA " << GetAbsolutePath(polyA) << std::endl;
+        // std::cout << "polyB " << GetAbsolutePath(polyB) << std::endl;
 
         PolyTypeD deqA(polyA.begin(), polyA.end()),
             deqB(polyB.begin(), polyB.end());
@@ -411,10 +414,16 @@ void Merger::Merge (PolysType &group, PolyType &merged) {
             newPoly.push_back(deqB.front());
         }
 
-        group.push_back(std::move(newPoly));
+        // std::cout << GetAbsolutePath(newPoly) << std::endl;
 
-        repls[src[a]] = num;
-        repls[src[b]] = num;
+        group.push_back(newPoly);
+
+        // repls[src[a]] = num;
+        // repls[src[b]] = num;
+
+        for (auto &v : newPoly) {
+            repls[src[v.id]] = num;
+        }
 
         num++;
 
