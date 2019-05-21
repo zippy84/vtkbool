@@ -31,7 +31,7 @@ limitations under the License.
             color: #00f;
         }
     </style>
-    <script type="text/javascript" src="data_files/special_0.js"></script>
+    <script type="text/javascript" src="data_files/special_6.js"></script>
     <script type="text/javascript">
         window.addEventListener('load', function () {
             function toPoly (pts_) {
@@ -54,9 +54,11 @@ limitations under the License.
             var x = [],
                 y = [];
 
+            var f = 30;
+
             for (var i = 0; i < poly.length; i++) {
-                x.push(poly[i][0]);
-                y.push(poly[i][1]);
+                x.push(poly[i][0] *= f);
+                y.push(poly[i][1] *= f);
             }
 
             var mnX = Math.min.apply(null, x),
@@ -101,6 +103,11 @@ limitations under the License.
 
             function drawResult (k) {
                 var p = toPoly(polys[k]);
+
+                p.forEach((pt) => {
+                    pt[0] *= f;
+                    pt[1] *= f;
+                });
 
                 for (var i = 0; i < p.length; i++) {
                     p[i][0] += -mnX+20;
