@@ -175,10 +175,10 @@ std::string GetAbsolutePath (const PolyType &poly) {
     std::stringstream path;
 
     for (const Point& p : poly) {
-        path << "L" << p.x << "," << p.y << " ";
+        path << p.x << "," << p.y << " ";
     }
 
-    std::string svg = "M" + path.str().substr(1) + "Z";
+    std::string svg = "M" + path.str() + "Z";
 
     return svg;
 }

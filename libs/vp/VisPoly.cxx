@@ -848,7 +848,9 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
 
     vtkbool_throw(TestCW(poly), "GetVisPoly_wrapper", "poly not clockwise");
 
-    auto _p(GetAbsolutePath(poly));
+    std::cout << "?" << std::endl
+        << "?X " << ind << std::endl
+        << "?A " << GetAbsolutePath(poly) << std::endl;
 
     PolyType poly2, poly3, poly4;
 
@@ -860,15 +862,13 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
 
     Simplify(poly, savedPts, specTags, poly2, x.tag, true);
 
-    auto _p2(GetAbsolutePath(poly2));
-
     // Align(poly2, x);
 
     Tracker tr(poly2);
 
     TrivialRm(poly2, tr, ind, x).GetSimplified(poly3);
 
-    auto _p3(GetAbsolutePath(poly3));
+    std::cout << "?D " << GetAbsolutePath(poly3) << std::endl;
 
     try {
         GetVisPoly(poly3, tr, poly4, *savedPts);
@@ -954,6 +954,8 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
             std::cout << p.id << ",";
         }
         std::cout << "}" << std::endl;*/
+
+        std::cout << "?E " << GetAbsolutePath(res) << std::endl;
 
     } catch (...) {
         throw;
