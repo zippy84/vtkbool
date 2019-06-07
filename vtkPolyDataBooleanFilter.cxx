@@ -3406,11 +3406,11 @@ void vtkPolyDataBooleanFilter::DecPolys_ (vtkPolyData *pd, InvolvedType &involve
                 // std::raise(SIGSEGV);
 
             } catch (const std::exception &e) {
-                /*std::stringstream ss;
+                std::stringstream ss;
                 ss << "Exception on " << GetAbsolutePath(poly);
 
                 std::cerr << ss.str()
-                    << ", " << e.what() << std::endl;*/
+                    << ", " << e.what() << std::endl;
             }
 
             newCell->Delete();

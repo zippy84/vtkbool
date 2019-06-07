@@ -26,6 +26,8 @@ else()
     set(CMAKE_CXX_FLAGS "-Wno-deprecated -fPIC -Wunused")
 endif()
 
+#include_directories(../third)
+
 add_library(vp STATIC Tools.cxx RmTrivials.cxx VisPoly.cxx)
 
 if(${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})

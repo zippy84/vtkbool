@@ -79,7 +79,7 @@ public:
     friend std::ostream& operator<< (std::ostream &out, const Pair2 &p) {
         out << "i: " << p.i
             << ", j: " << p.j
-            << ", dir: " << static_cast<int>(p.dir)
+            << ", dir: " << (p.dir == Dir::FORWARD ? "FORWARD" : (p.dir == Dir::BACKWARD ? "BACKWARD" : "UNDEFINED"))
             << ", side: " << static_cast<int>(p.side)
             << ", pocket: [";
 
