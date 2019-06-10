@@ -52,7 +52,7 @@ else()
 
     #unset(VTK_DIR CACHE)
 
-    find_package(VTK REQUIRED COMPONENTS vtkFiltersSources vtkIOLegacy vtkFiltersExtraction vtkFiltersGeometry vtkFiltersModeling vtkRenderingFreeType vtkWrappingPythonCore NO_MODULE)
+    find_package(VTK REQUIRED COMPONENTS vtkFiltersSources vtkIOLegacy vtkFiltersExtraction vtkFiltersGeometry vtkFiltersModeling vtkRenderingFreeType OPTIONAL_COMPONENTS vtkWrappingPythonCore NO_MODULE)
 
     if(VTK_FOUND)
         include(${VTK_USE_FILE})
@@ -64,7 +64,15 @@ else()
         add_library(${PROJECT_NAME} SHARED ${srcs})
         target_link_libraries(${PROJECT_NAME} ${VTK_LIBRARIES} decomp merger)
 
-        string(REPLACE "/" "\\" vtk_lib ${VTK_INSTALL_PREFIX})
+        if (VTK_INSTALL_PREFIX)
+            set(_vtk ${VTK_INSTALL_PREFIX})
+        else()
+            set(_vtk ${VTK_DIR})
+        endif()
+
+        if(WIN32)
+            string(REPLACE "/" "\\" _vtk ${_vtk})
+        endif()
 
         if(BUILD_TESTING)
             enable_testing()
@@ -85,9 +93,9 @@ else()
 
         if(VTK_WRAP_PYTHON)
 
-            set(ENV{LD_LIBRARY_PATH} "${VTK_INSTALL_PREFIX}/lib")
+            set(ENV{LD_LIBRARY_PATH} "${_vtk}/lib")
 
-            execute_process(COMMAND "${VTK_INSTALL_PREFIX}/bin/vtkpython" -c "import sys; sys.stdout.write('.'.join(map(str, sys.version_info[:2])))" OUTPUT_VARIABLE py_version)
+            execute_process(COMMAND "${_vtk}/bin/vtkpython" -c "import sys; sys.stdout.write('.'.join(map(str, sys.version_info[:2])))" OUTPUT_VARIABLE py_version)
 
             if(CMAKE_VERSION VERSION_LESS "3.12")
                 find_package(PythonInterp "${py_version}")
@@ -110,14 +118,14 @@ else()
                     if(BUILD_TESTING)
                         add_test(NAME Test_Py COMMAND ${PYTHON_EXECUTABLE}
                             ${CMAKE_SOURCE_DIR}/testing/test_py_module.py
-                            ${VTK_INSTALL_PREFIX}/lib/python${py_version}/site-packages
+                            ${_vtk}/lib/python${py_version}/site-packages
                             ${CMAKE_BINARY_DIR}
                             $<CONFIG>)
 
                         if(WIN32)
-                            set_property(TEST Test_Py PROPERTY ENVIRONMENT "PATH=${vtk_lib}\\bin")
+                            set_property(TEST Test_Py PROPERTY ENVIRONMENT "PATH=${_vtk}\\bin")
                         else()
-                            set_property(TEST Test_Py PROPERTY ENVIRONMENT "LD_LIBRARY_PATH=${VTK_INSTALL_PREFIX}/lib")
+                            set_property(TEST Test_Py PROPERTY ENVIRONMENT "LD_LIBRARY_PATH=${_vtk}/lib")
                         endif()
                     endif()
 
@@ -149,9 +157,9 @@ else()
                                 $<CONFIG>)
 
                             if(WIN32)
-                                set_property(TEST Test_Py PROPERTY ENVIRONMENT "PATH=${vtk_lib}\\bin")
+                                set_property(TEST Test_Py PROPERTY ENVIRONMENT "PATH=${_vtk}\\bin")
                             else()
-                                set_property(TEST Test_Py PROPERTY ENVIRONMENT "LD_LIBRARY_PATH=${VTK_INSTALL_PREFIX}/lib")
+                                set_property(TEST Test_Py PROPERTY ENVIRONMENT "LD_LIBRARY_PATH=${_vtk}/lib")
                             endif()
                         endif()
                     endif()
@@ -181,9 +189,9 @@ else()
                                 $<CONFIG>)
 
                             if(WIN32)
-                                set_property(TEST Test_Py PROPERTY ENVIRONMENT "PATH=${vtk_lib}\\bin")
+                                set_property(TEST Test_Py PROPERTY ENVIRONMENT "PATH=${_vtk}\\bin")
                             else()
-                                set_property(TEST Test_Py PROPERTY ENVIRONMENT "LD_LIBRARY_PATH=${VTK_INSTALL_PREFIX}/lib")
+                                set_property(TEST Test_Py PROPERTY ENVIRONMENT "LD_LIBRARY_PATH=${_vtk}/lib")
                             endif()
                         endif()
                     endif()

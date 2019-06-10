@@ -18,6 +18,7 @@ limitations under the License.
 #include <algorithm>
 #include <tuple>
 #include <numeric>
+#include <iterator>
 
 #include "Decomposer.h"
 
