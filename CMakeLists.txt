@@ -189,7 +189,7 @@ else()
                                 $<CONFIG>)
 
                             if(WIN32)
-                                set_property(TEST Test_Py PROPERTY ENVIRONMENT "PATH=${_vtk}\\bin")
+                                set_property(TEST Test_Py PROPERTY ENVIRONMENT "PATH=${_vtk_win}\\bin")
                             else()
                                 set_property(TEST Test_Py PROPERTY ENVIRONMENT "LD_LIBRARY_PATH=${_vtk}/lib")
                             endif()
