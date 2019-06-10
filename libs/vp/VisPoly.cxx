@@ -21,6 +21,7 @@ limitations under the License.
 #include <map>
 #include <cassert>
 #include <deque>
+#include <iterator>
 
 #include "Tools.h"
 #include "VisPoly.h"
