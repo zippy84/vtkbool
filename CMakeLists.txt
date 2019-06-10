@@ -64,14 +64,14 @@ else()
         add_library(${PROJECT_NAME} SHARED ${srcs})
         target_link_libraries(${PROJECT_NAME} ${VTK_LIBRARIES} decomp merger)
 
-        if (VTK_INSTALL_PREFIX)
+        if(VTK_INSTALL_PREFIX)
             set(_vtk ${VTK_INSTALL_PREFIX})
         else()
             set(_vtk ${VTK_DIR})
         endif()
 
         if(WIN32)
-            string(REPLACE "/" "\\" _vtk ${_vtk_win})
+            string(REPLACE "/" "\\" _vtk_win ${_vtk})
         endif()
 
         if(BUILD_TESTING)
