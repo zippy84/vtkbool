@@ -85,17 +85,20 @@ void TrivialRm::RemovePockets (VertsType3 &good, double *rot, double d, Src src)
                 IdsType pocket;
                 GetPocket(*itr2, pocket);
 
-                std::set<int> ss;
-
                 IdsType::iterator itr4;
+
+                std::vector<int> _s;
 
                 for (itr4 = pocket.begin()+1; itr4 != pocket.end()-1; ++itr4) {
                     double e = (verts[*itr4].x*rot[0]+verts[*itr4].y*rot[1])-d;
 
                     if (std::abs(e) > E) {
-                        ss.insert(int(e/std::abs(e)));
+                        _s.push_back(int(e/std::abs(e)));
                     }
                 }
+
+                // _s kann 0en und 1en enthalten
+                // es kommt aber nur auf den anfang oder das ende an
 
                 if (HasArea(pocket)) {
 
@@ -105,32 +108,19 @@ void TrivialRm::RemovePockets (VertsType3 &good, double *rot, double d, Src src)
                         _poly.push_back(verts[id].pt);
                     }
 
-                    if (ss.size() == 1) {
-                        if (src == Src::B) {
-                            std::reverse(_poly.begin(), _poly.end());
-                        }
-
-                        if (*(ss.begin()) == 1 ^ TestCW(_poly)) {
-                            itr2->dir = Dir::BACKWARD;
-                        } else {
-                            itr2->dir = Dir::FORWARD;
-                        }
-                    } else {
-                        if (TestCW(_poly)) {
-                            if (itr2-pairs.begin() == 0) {
-                                pairs.erase(itr2, pairs.end());
-                                break;
-                            } else {
-                                assert(false);
-                            }
-                        } else {
-                            assert(false);
-                        }
-
+                    if (src == Src::B) {
+                        std::reverse(_poly.begin(), _poly.end());
                     }
 
+                    if (*(_s.begin()) == 1 ^ TestCW(_poly)) {
+                        itr2->dir = Dir::BACKWARD;
+                    } else {
+                        itr2->dir = Dir::FORWARD;
+                    }
 
                 } else {
+                    std::set<int> ss(_s.begin(), _s.end());
+
                     if (ss.size() == 1) {
                         if (*(ss.begin()) == 1) {
                             itr2->dir = Dir::BACKWARD;
@@ -292,6 +282,13 @@ void TrivialRm::RemovePockets (VertsType3 &good, double *rot, double d, Src src)
                         std::cout << "?_ [" << tA << ", " << tB << "]" << std::endl;
 
                         // assert(tA < tB);
+
+                        /*TODO: Tolerenzen berücksichtigen
+                        was ist, wenn sie nahezu gleich sind?
+                        müsste man dann vll in UNDEFINED umwandeln...
+                        diesem kann man ja über über die mechanik ab zeile 84 auslösen*/
+
+                        assert(std::abs(tB-tA) > E);
 
                         if (tA < tB) {
                             _ids.push_back(AddPair(pairs[_ids.back()].j, pairs[_ids2.front()].j));
@@ -624,6 +621,10 @@ void TrivialRm::GetSimplified (PolyType &res) {
 
         std::rotate(good.begin(), first, good.end());
 
+        auto m = std::max_element(good.begin(), good.end());
+
+        std::cout << "?_ " << *m << std::endl;
+
         // std::cout << "[";
         // for (const auto& g : good) {
         //     std::cout << "(" << g.i << ", " << g.t << "), ";
@@ -638,6 +639,13 @@ void TrivialRm::GetSimplified (PolyType &res) {
         RemovePockets(good, rot, d, Src::A);
 
         RemoveRedundants(good);
+
+        // zwischenergebnis
+        PolyType ir;
+        std::copy_if(verts.begin(), verts.end(), std::back_inserter(ir), [](const Vert3 &v) {
+            return !v.rm;
+        });
+        std::cout << "?G " << GetAbsolutePath(ir) << std::endl;
 
     }
 
@@ -667,6 +675,10 @@ void TrivialRm::GetSimplified (PolyType &res) {
 
         std::rotate(good.begin(), first, good.end());
 
+        auto m = std::max_element(good.begin(), good.end());
+
+        std::cout << "?_ " << *m << std::endl;
+
         // std::cout << "[";
         // for (const auto& g : good) {
         //     std::cout << "(" << g.i << ", " << g.t << "), ";
@@ -681,6 +693,13 @@ void TrivialRm::GetSimplified (PolyType &res) {
         RemovePockets(good, rot, d, Src::B);
 
         RemoveRedundants(good);
+
+        // zwischenergebnis
+        PolyType ir;
+        std::copy_if(verts.begin(), verts.end(), std::back_inserter(ir), [](const Vert3 &v) {
+            return !v.rm;
+        });
+        std::cout << "?H " << GetAbsolutePath(ir) << std::endl;
 
     }
 

@@ -47,7 +47,8 @@ public:
             << ", t: " << v.t
             << ", src: " << static_cast<int>(v.src)
             << ", rm: " << v.rm
-            << ", tag: " << v.tag;
+            << ", tag: " << v.tag
+            << ", i: " << v.i;
         return out;
     }
 

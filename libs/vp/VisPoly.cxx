@@ -26,6 +26,7 @@ limitations under the License.
 #include "Tools.h"
 #include "VisPoly.h"
 #include "RmTrivials.h"
+#include "AABB.h"
 
 void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, SavedPtsType &savedPts, int ind) {
     double x[] = {poly[ind].x, poly[ind].y};
@@ -877,10 +878,10 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
             vtkbool_throw(l.second.t < 1, "GetVisPoly_wrapper", "t not less than 1");
         }
 
-        // i = 0;
-        // for (auto &p : poly4) {
-        //     std::cout << i++ << ". " << p << " => " << tr.locs[p.tag] << std::endl;
-        // }
+        /*i = 0;
+        for (auto &p : poly4) {
+            std::cout << i++ << ". " << p << " => " << tr.locs[p.tag] << std::endl;
+        }*/
 
         if (specTags->count(poly4[1].tag) == 1) {
             poly4.erase(poly4.begin()+1);
@@ -890,7 +891,7 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
             }
         }
 
-        //std::copy(poly4.begin(), poly4.end(), std::back_inserter(res));
+        // std::copy(poly4.begin(), poly4.end(), std::back_inserter(res));
 
         Restore(poly4, tr, *savedPts, res);
 
@@ -954,6 +955,53 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
             std::cout << p.id << ",";
         }
         std::cout << "}" << std::endl;*/
+
+        // trivialer test ob sich die linien innerhalb von res überschneiden
+
+        AABB tree;
+
+        std::vector<std::shared_ptr<Line>> lines;
+
+        PolyType::const_iterator itr, itr2;
+
+        for (itr = res.begin(); itr != res.end(); ++itr) {
+            itr2 = itr+1;
+
+            if (itr2 == res.end()) {
+                itr2 = res.begin();
+            }
+
+            lines.emplace_back(new Line({*itr}, {*itr2}));
+
+        }
+
+        for (auto &line : lines) {
+            tree.InsertObj(line);
+        }
+
+        Bnds bnds(-E, E, -E, E);
+
+        for (auto &lineA : lines) {
+            auto found = tree.Search(lineA);
+            const Line &lA = *lineA;
+
+            for (auto &lineB : found) {
+                const Line &lB = dynamic_cast<Line&>(*lineB);
+
+                // die linien dürfen sich nicht an den enden berühren
+
+                if (lA.pA.id != lB.pA.id
+                    && lA.pA.id != lB.pB.id
+                    && lA.pB.id != lB.pA.id
+                    && lA.pB.id != lB.pB.id
+                    && Intersect2(lA.pA.pt, lA.pB.pt, lB.pA.pt, lB.pB.pt, bnds)) {
+
+                    assert(false);
+                }
+            }
+        }
+
+        // alles gut
 
         std::cout << "?E " << GetAbsolutePath(res) << std::endl;
 

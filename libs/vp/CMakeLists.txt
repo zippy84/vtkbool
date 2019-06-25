@@ -26,7 +26,7 @@ else()
     set(CMAKE_CXX_FLAGS "-Wno-deprecated -fPIC -Wunused")
 endif()
 
-#include_directories(../third)
+include_directories(../aabb)
 
 add_library(vp STATIC Tools.cxx RmTrivials.cxx VisPoly.cxx)
 
