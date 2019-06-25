@@ -26,12 +26,14 @@ import vtk
 
 import math
 
-n, m = 5, 5
+# n, m = 6, 6
+n, m = 4, 4
 
 app = vtk.vtkAppendPolyData()
 
 cyl = vtk.vtkCylinderSource()
-cyl.SetResolution(4)
+# cyl.SetResolution(4)
+cyl.SetResolution(8)
 
 for i in range(n):
     for j in range(m):

@@ -76,14 +76,14 @@
             function drawOne (d, it) {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-                let f = 40;
+                let f = 100;
 
                 let mnX, mxX, mnY, mxY;
 
                 let chars = [],
                     polys = [];
 
-                'ABCDEFG'.split('').forEach((l) => {
+                'ABCDEFGH'.split('').forEach((l) => {
                     if (d[l]) {
                         let poly = scalePoly(d[l], f);
 
