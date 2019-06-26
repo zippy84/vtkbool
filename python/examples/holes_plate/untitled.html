@@ -21,6 +21,10 @@
             word-wrap: break-word;
             white-space: pre-wrap;
         }
+        .h {
+            font-weight: bold;
+            color: red;
+        }
     </style>
     <script type="text/javascript" src="test.js"></script>
     <script type="text/javascript">
@@ -76,14 +80,14 @@
             function drawOne (d, it) {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-                let f = 100;
+                let f = 50;
 
                 let mnX, mxX, mnY, mxY;
 
                 let chars = [],
                     polys = [];
 
-                'ABCDEFGH'.split('').forEach((l) => {
+                'ABCDE'.split('').forEach((l) => {
                     if (d[l]) {
                         let poly = scalePoly(d[l], f);
 
@@ -132,7 +136,7 @@
                 ctx.arc(polys[0][d.X][0], polys[0][d.X][1], 5, 0, 2*Math.PI);
                 ctx.stroke();
 
-                info.textContent = d._.join('\n');
+                info.innerHTML = d._.join('\n').replace(/dir -> \d/, '<span class="h">$&</span>');
 
                 if (it !== '-') {
                     ctx.fillStyle = 'black';
@@ -149,11 +153,11 @@
             }
 
             let descMap = {
-                A: 'ursprüngliches Polygon',
-                B: 'verts im A-Block',
-                C: 'verts im B-Block',
-                D: 'Ergebnis von TrivialRm',
-                E: 'Ergebnis von GetVisPoly'
+                A: 'poly',
+                B: 'verts in A()',
+                C: 'verts in B()',
+                D: 'res of TrivialRm',
+                E: 'res of GetVisPoly'
             };
 
             let sel = 0;
@@ -172,6 +176,9 @@
 
                     polySel.appendChild(op);
                 });
+
+                /*polySel.selectedIndex = 4;
+                polySel.dispatchEvent(new Event('change'));*/
 
             });
 
