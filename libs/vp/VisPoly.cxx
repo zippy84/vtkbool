@@ -849,9 +849,9 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
 
     vtkbool_throw(TestCW(poly), "GetVisPoly_wrapper", "poly not clockwise");
 
-    std::cout << "?" << std::endl
+    /*std::cout << "?" << std::endl
         << "?X " << ind << std::endl
-        << "?A " << GetAbsolutePath(poly) << std::endl;
+        << "?A " << GetAbsolutePath(poly) << std::endl;*/
 
     PolyType poly2, poly3, poly4;
 
@@ -869,7 +869,7 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
 
     TrivialRm(poly2, tr, ind, x).GetSimplified(poly3);
 
-    std::cout << "?D " << GetAbsolutePath(poly3) << std::endl;
+    // std::cout << "?D " << GetAbsolutePath(poly3) << std::endl;
 
     try {
         GetVisPoly(poly3, tr, poly4, *savedPts);
@@ -964,6 +964,8 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
 
         PolyType::const_iterator itr, itr2;
 
+        std::set<Point> pts;
+
         for (itr = res.begin(); itr != res.end(); ++itr) {
             itr2 = itr+1;
 
@@ -972,6 +974,8 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
             }
 
             lines.emplace_back(new Line({*itr}, {*itr2}));
+
+            pts.insert(*itr);
 
         }
 
@@ -990,20 +994,21 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
 
                 // die linien dürfen sich nicht an den enden berühren
 
-                if (lA.pA.id != lB.pA.id
-                    && lA.pA.id != lB.pB.id
-                    && lA.pB.id != lB.pA.id
-                    && lA.pB.id != lB.pB.id
+                if (pts.find(lA.pA) != pts.find(lB.pA)
+                    && pts.find(lA.pA) != pts.find(lB.pB)
+                    && pts.find(lA.pB) != pts.find(lB.pA)
+                    && pts.find(lA.pB) != pts.find(lB.pB)
+
                     && Intersect2(lA.pA.pt, lA.pB.pt, lB.pA.pt, lB.pB.pt, bnds)) {
 
-                    assert(false);
+                    vtkbool_throw(false, "GetVisPoly_wrapper", "res is invalid - intersecting edges");
                 }
             }
         }
 
         // alles gut
 
-        std::cout << "?E " << GetAbsolutePath(res) << std::endl;
+        // std::cout << "?E " << GetAbsolutePath(res) << std::endl;
 
     } catch (...) {
         throw;

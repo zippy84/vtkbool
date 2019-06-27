@@ -45,9 +45,9 @@ void TrivialRm::RemovePockets (VertsType3 &good, double *rot, double d, Src src)
         }
     }
 
-    for (auto& p : pairs) {
+    /*for (auto& p : pairs) {
         std::cout << "?_ pair " << p << std::endl;
-    }
+    }*/
 
     std::vector<Pair2>::iterator itr2, itr3;
 
@@ -124,7 +124,7 @@ void TrivialRm::RemovePockets (VertsType3 &good, double *rot, double d, Src src)
                     break;
                 }
 
-                std::cout << "?_ erasing from " << (itr2-pairs.begin()) << std::endl;
+                // std::cout << "?_ erasing from " << (itr2-pairs.begin()) << std::endl;
 
                 pairs.erase(itr2, pairs.end());
                 break;
@@ -170,7 +170,7 @@ void TrivialRm::RemovePockets (VertsType3 &good, double *rot, double d, Src src)
 
         std::vector<Grp>::iterator itr4, itr5;
 
-        {
+        /*{
             for (itr4 = grps.begin(); itr4 != grps.end(); ++itr4) {
                 std::cout << "?_ (" << itr4->dir << ", [";
                 for (auto id : itr4->ids) {
@@ -178,7 +178,7 @@ void TrivialRm::RemovePockets (VertsType3 &good, double *rot, double d, Src src)
                 }
                 std::cout << "])" << std::endl;
             }
-        }
+        }*/
 
         if ((grps.begin())->dir == Dir::BACKWARD) {
             if (grps.size() > 1) {
@@ -215,7 +215,7 @@ void TrivialRm::RemovePockets (VertsType3 &good, double *rot, double d, Src src)
 
                 grps2.swap(grps);
 
-                {
+                /*{
                     for (itr4 = grps.begin(); itr4 != grps.end(); ++itr4) {
                         std::cout << "?_ > (" << itr4->dir << ", [";
                         for (auto id : itr4->ids) {
@@ -223,7 +223,7 @@ void TrivialRm::RemovePockets (VertsType3 &good, double *rot, double d, Src src)
                         }
                         std::cout << "])" << std::endl;
                     }
-                }
+                }*/
 
                 auto next = std::find_if(grps.begin(), grps.end(), [](const Grp &g) {
                     return g.dir == Dir::BACKWARD;
@@ -255,10 +255,10 @@ void TrivialRm::RemovePockets (VertsType3 &good, double *rot, double d, Src src)
 
                     bool q = tC-tA > E && tB-tC > E && p.side == Side::OUT;
 
-                    std::cout << "?_ " << j <<  ", (" << tA << ", " << tB << ", " << tC << ") " << q << std::endl;
+                    // std::cout << "?_ " << j <<  ", (" << tA << ", " << tB << ", " << tC << ") " << q << std::endl;
 
                     if (q) {
-                        std::cout << "?_ (1) new pair (" << p.i << ", " << last.j << ")" << std::endl;
+                        // std::cout << "?_ (1) new pair (" << p.i << ", " << last.j << ")" << std::endl;
 
                         _ids.erase(_ids.end()-j-1, _ids.end());
                         _ids.push_back(AddPair(p.i, last.j));
@@ -279,13 +279,13 @@ void TrivialRm::RemovePockets (VertsType3 &good, double *rot, double d, Src src)
                         int jA = pairs[_ids.back()].j,
                             jB = pairs[_ids2.front()].j;
 
-                        std::cout << "?_ (2) new pair (" << jA
-                            << ", " << jB << ")" << std::endl;
+                        /*std::cout << "?_ (2) new pair (" << jA
+                            << ", " << jB << ")" << std::endl;*/
 
                         double tA = verts[jA].t,
                             tB = verts[jB].t;
 
-                        std::cout << "?_ [" << tA << ", " << tB << "]" << std::endl;
+                        // std::cout << "?_ [" << tA << ", " << tB << "]" << std::endl;
 
                         // (jA, jB) kann in abh. von t alle drei zustände von Dir annehmen
 
@@ -295,7 +295,7 @@ void TrivialRm::RemovePockets (VertsType3 &good, double *rot, double d, Src src)
                             Pair2 p(jA, jB);
                             ResolveUD(p);
 
-                            std::cout << "?_ dir -> " << p.dir << std::endl;
+                            // std::cout << "?_ dir -> " << p.dir << std::endl;
 
                             fr = p.dir == Dir::FORWARD;
                         }
@@ -332,8 +332,8 @@ void TrivialRm::RemovePockets (VertsType3 &good, double *rot, double d, Src src)
                                 tB = verts[last.j].t;
 
                             if (std::abs(tA-tB) < E) {
-                                std::cout << "?_ (3) new pair (" << p.i
-                                    << ", " << last.j << ")" << std::endl;
+                                /*std::cout << "?_ (3) new pair (" << p.i
+                                    << ", " << last.j << ")" << std::endl;*/
 
                                 _ids.erase(itr6.base()-1, _ids.end());
 
@@ -610,7 +610,7 @@ void TrivialRm::GetSimplified (PolyType &res) {
     // }
 
     {
-        std::cout << "?_ A()" << std::endl;
+        // std::cout << "?_ A()" << std::endl;
 
         for (int i = 0; i < num; i++) {
             verts[i].i = i;
@@ -619,7 +619,7 @@ void TrivialRm::GetSimplified (PolyType &res) {
         PolyType _verts;
         std::copy(verts.begin(), verts.end(), std::back_inserter(_verts));
 
-        std::cout << "?B " << GetAbsolutePath(_verts) << std::endl;
+        // std::cout << "?B " << GetAbsolutePath(_verts) << std::endl;
 
         VertsType3 good;
 
@@ -633,9 +633,8 @@ void TrivialRm::GetSimplified (PolyType &res) {
 
         std::rotate(good.begin(), first, good.end());
 
-        auto m = std::max_element(good.begin(), good.end());
-
-        std::cout << "?_ " << *m << std::endl;
+        /*auto m = std::max_element(good.begin(), good.end());
+        std::cout << "?_ " << *m << std::endl;*/
 
         // std::cout << "[";
         // for (const auto& g : good) {
@@ -655,7 +654,7 @@ void TrivialRm::GetSimplified (PolyType &res) {
     }
 
     {
-        std::cout << "?_ B()" << std::endl;
+        // std::cout << "?_ B()" << std::endl;
 
         std::reverse(verts.begin(), verts.end());
 
@@ -666,7 +665,7 @@ void TrivialRm::GetSimplified (PolyType &res) {
         PolyType _verts;
         std::copy(verts.begin(), verts.end(), std::back_inserter(_verts));
 
-        std::cout << "?C " << GetAbsolutePath(_verts) << std::endl;
+        // std::cout << "?C " << GetAbsolutePath(_verts) << std::endl;
 
         VertsType3 good;
 
@@ -680,9 +679,8 @@ void TrivialRm::GetSimplified (PolyType &res) {
 
         std::rotate(good.begin(), first, good.end());
 
-        auto m = std::max_element(good.begin(), good.end());
-
-        std::cout << "?_ " << *m << std::endl;
+        /*auto m = std::max_element(good.begin(), good.end());
+        std::cout << "?_ " << *m << std::endl;*/
 
         // std::cout << "[";
         // for (const auto& g : good) {
