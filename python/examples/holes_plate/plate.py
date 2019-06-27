@@ -16,6 +16,7 @@
 # limitations under the License.
 
 # export LD_LIBRARY_PATH=/home/zippy/VTK6/lib
+# ./plate.py | ~/vtkbool/libs/vp/dev/untitled.py > test.js
 
 import sys
 sys.path.extend(['/home/zippy/VTK6/lib/python2.7/site-packages',
@@ -26,14 +27,14 @@ import vtk
 
 import math
 
-# n, m = 6, 6
-n, m = 4, 4
+n, m = 6, 6
+# n, m = 4, 4
 
 app = vtk.vtkAppendPolyData()
 
 cyl = vtk.vtkCylinderSource()
-# cyl.SetResolution(4)
-cyl.SetResolution(8)
+cyl.SetResolution(4)
+# cyl.SetResolution(8)
 
 for i in range(n):
     for j in range(m):

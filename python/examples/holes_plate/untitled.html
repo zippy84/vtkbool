@@ -21,10 +21,6 @@
             word-wrap: break-word;
             white-space: pre-wrap;
         }
-        .h {
-            font-weight: bold;
-            color: red;
-        }
     </style>
     <script type="text/javascript" src="test.js"></script>
     <script type="text/javascript">
@@ -80,7 +76,7 @@
             function drawOne (d, it) {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-                let f = 50;
+                let f = 40;
 
                 let mnX, mxX, mnY, mxY;
 
@@ -136,7 +132,7 @@
                 ctx.arc(polys[0][d.X][0], polys[0][d.X][1], 5, 0, 2*Math.PI);
                 ctx.stroke();
 
-                info.innerHTML = d._.join('\n').replace(/dir -> \d/, '<span class="h">$&</span>');
+                info.innerHTML = d._.join('\n');
 
                 if (it !== '-') {
                     ctx.fillStyle = 'black';
