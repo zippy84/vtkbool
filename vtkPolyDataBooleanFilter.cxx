@@ -251,7 +251,7 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
             cells->Delete();
 
             if (!valid) {
-                vtkErrorMacro("Contact is ambiguous or incomplete (at line " << amb << ").");
+                vtkErrorMacro("Contact is ambiguous or incomplete (at point " << amb << ").");
 
                 return 1;
             }
