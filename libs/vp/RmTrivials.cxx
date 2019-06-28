@@ -633,9 +633,6 @@ void TrivialRm::GetSimplified (PolyType &res) {
 
         std::rotate(good.begin(), first, good.end());
 
-        /*auto m = std::max_element(good.begin(), good.end());
-        std::cout << "?_ " << *m << std::endl;*/
-
         // std::cout << "[";
         // for (const auto& g : good) {
         //     std::cout << "(" << g.i << ", " << g.t << "), ";
@@ -678,9 +675,6 @@ void TrivialRm::GetSimplified (PolyType &res) {
         });
 
         std::rotate(good.begin(), first, good.end());
-
-        /*auto m = std::max_element(good.begin(), good.end());
-        std::cout << "?_ " << *m << std::endl;*/
 
         // std::cout << "[";
         // for (const auto& g : good) {
