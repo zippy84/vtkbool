@@ -29,10 +29,13 @@ limitations under the License.
 #include "AABB.h"
 
 void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, SavedPtsType &savedPts, int ind) {
-    double x[] = {poly[ind].x, poly[ind].y};
+    if (poly.size() < 3) {
+        return;
+    }
 
-    // trivial
-    vtkbool_throw(poly.size() > 2, "GetVisPoly", "poly has too few points");
+    std::cout << "?_ --" << std::endl;
+
+    double x[] = {poly[ind].x, poly[ind].y};
 
     VertsType verts;
 
@@ -67,7 +70,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, SavedPtsType &saved
     std::vector<Bag> leftBags;
 
     try {
-        for (;;) {
+        for (int _i = 0;; _i++) {
             u = verts.at(t).nxt;
             v = verts.at(u).nxt;
 
@@ -75,18 +78,15 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, SavedPtsType &saved
                 break;
             }
 
-            // std::cout << "> " << u << ", " << v << std::endl;
+            std::cout << "?_ > " << (u+1) << ", " << (v+1) << std::endl;
 
             double ptU[2], ptV[2];
 
             Cpy(ptU, verts.at(u).pt);
             Cpy(ptV, verts.at(v).pt);
 
-
-            // std::cout << "orig " << verts.at(u).tag << ", " << verts.at(v).tag << std::endl;
-
             if (Ld(x, ptU, ptV)) {
-                // std::cout << "skipping" << std::endl;
+                std::cout << "?_ skipping" << std::endl;
 
                 double lU = GetSqDis(x, verts.at(u)),
                     lV = GetSqDis(x, verts.at(v));
@@ -104,11 +104,11 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, SavedPtsType &saved
             double cA = Cross(x, ptU, ptV),
                 cB = Cross(verts.at(t).pt, ptU, ptV);
 
-            // std::cout << "cA " << cA << std::endl;
-            // std::cout << "cB " << cB << std::endl;
+            std::cout << "?_ cA " << cA << std::endl;
+            std::cout << "?_ cB " << cB << std::endl;
 
             if (cA < 0) {
-                // std::cout << "vis" << std::endl;
+                std::cout << "?_ vis" << std::endl;
 
                 if (vp.back() != u) {
                     vp.push_back(u);
@@ -128,7 +128,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, SavedPtsType &saved
                         double *ptA = a.pt,
                             *ptB = b.pt;
 
-                        // std::cout << ">> " << a.tag << ", " << b.tag << std::endl;
+                        std::cout << "?_ 1> " << (w+1) << ", " << (a.nxt+1) << std::endl;
 
                         std::shared_ptr<D> d(Intersect(x, verts.at(u).r, ptA, ptB));
 
@@ -195,10 +195,12 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, SavedPtsType &saved
                     }
 
                     if (d) {
-                        // std::cout << "bag " << *bag << std::endl;
+                        std::cout << "?_ bag " << *bag << std::endl;
+
+                        assert(std::find(vp.begin(), vp.end(), bag->f) != vp.end());
 
                         while (vp.size() > 0 && vp.back() != bag->f) {
-                            // std::cout << "popping_1 " << vp.back() << std::endl;
+                            std::cout << "?_ popping_1 " << (vp.back()+1) << std::endl;
                             vp.pop_back();
                         }
 
@@ -215,7 +217,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, SavedPtsType &saved
                             double *ptA = a.pt,
                                 *ptB = b.pt;
 
-                            // std::cout << ">>" << a.tag << ", " << b.tag << std::endl;
+                            std::cout << "?_ 2>" << (_x+1) << ", " << (a.nxt+1) << std::endl;
 
                             std::shared_ptr<D> _d;
 
@@ -285,7 +287,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, SavedPtsType &saved
                             int a = vp.end()[-2],
                                 b = vp.back();
 
-                            // std::cout << "popping_2 " << vp.back() << std::endl;
+                            std::cout << "?_ popping_2 " << (vp.back()+1) << std::endl;
 
                             vp.pop_back();
 
@@ -341,7 +343,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, SavedPtsType &saved
                             w = verts.at(w).nxt;
                         }
 
-                        // std::cout << v << " -> " << p << std::endl;
+                        std::cout << "?_ " << (v+1) << " -> " << (p+1) << std::endl;
 
                         double *ptW = verts.at(w).pt;
                         //double *ptP = verts.at(p).pt;
@@ -349,8 +351,8 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, SavedPtsType &saved
                         double cC = Cross(x, ptV, ptW),
                             cD = Cross(ptV, ptU, ptW);
 
-                        // std::cout << "cC " << cC << std::endl;
-                        // std::cout << "cD " << cD << std::endl;
+                        std::cout << "?_ cC " << cC << std::endl;
+                        std::cout << "?_ cD " << cD << std::endl;
 
                         if (cC < 0) {
 
@@ -371,7 +373,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, SavedPtsType &saved
                                     double *ptA = a.pt,
                                         *ptB = b.pt;
 
-                                    // std::cout << ">> " << a.tag << ", " << b.tag << std::endl;
+                                    std::cout << "?_ 3> " << (_x+1) << ", " << (a.nxt+1) << std::endl;
 
                                     std::shared_ptr<D> d(Intersect(x, verts.at(v).r, ptA, ptB));
 
@@ -417,6 +419,18 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, SavedPtsType &saved
                     }
                 }
             }
+
+            // -
+
+            PolyType r;
+            r.push_back(poly[ind]);
+
+            for (int _v : vp) {
+                r.push_back(verts[_v]);
+            }
+
+            std::cout << "?F " << _i << " " << GetAbsolutePath(r) << std::endl;
+
         }
 
     } catch (const std::out_of_range&) {
@@ -849,9 +863,9 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
 
     vtkbool_throw(TestCW(poly), "GetVisPoly_wrapper", "poly not clockwise");
 
-    /*std::cout << "?" << std::endl
+    std::cout << "?" << std::endl
         << "?X " << ind << std::endl
-        << "?A " << GetAbsolutePath(poly) << std::endl;*/
+        << "?A " << GetAbsolutePath(poly) << std::endl;
 
     PolyType poly2, poly3, poly4;
 
@@ -869,7 +883,7 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
 
     TrivialRm(poly2, tr, ind, x).GetSimplified(poly3);
 
-    // std::cout << "?D " << GetAbsolutePath(poly3) << std::endl;
+    std::cout << "?D " << GetAbsolutePath(poly3) << std::endl;
 
     try {
         GetVisPoly(poly3, tr, poly4, *savedPts);
@@ -1008,7 +1022,7 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
 
         // alles gut
 
-        // std::cout << "?E " << GetAbsolutePath(res) << std::endl;
+        std::cout << "?E " << GetAbsolutePath(res) << std::endl;
 
     } catch (...) {
         throw;
