@@ -64,8 +64,8 @@ public:
 
     friend std::ostream& operator<< (std::ostream &out, const Bag &b) {
         out << "phi: " << b.phi
-            << ", g: " << b.g
-            << ", f: " << b.f;
+            << ", f: " << (b.f+1)
+            << ", g: " << (b.g+1);
         return out;
     }
 };

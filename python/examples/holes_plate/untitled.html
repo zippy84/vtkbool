@@ -22,7 +22,7 @@
             white-space: pre-wrap;
         }
     </style>
-    <script type="text/javascript" src="test.js"></script>
+    <script type="text/javascript" src="test2.js"></script>
     <script type="text/javascript">
         window.addEventListener('load', function () {
             let dataSel = document.getElementById('dataSel'),
@@ -76,18 +76,19 @@
             function drawOne (d, it) {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-                let f = 40;
+                let f = 15;
 
                 let mnX, mxX, mnY, mxY;
 
                 let chars = [],
                     polys = [];
 
-                'ABCDE'.split('').forEach((l) => {
-                    if (d[l]) {
-                        let poly = scalePoly(d[l], f);
+                Object.keys(d).forEach(k => {
+                    if (/[A-Z]\d*/.exec(k)
+                        && k != 'X') {
+                        let poly = scalePoly(d[k], f);
 
-                        if (l == 'A') {
+                        if (k == 'A') {
                             let x = [],
                                 y = [];
 
@@ -110,10 +111,9 @@
 
                         movePoly(poly, -mnX+20, -mnY+20);
 
-                        chars.push(l);
+                        chars.push(k);
                         polys.push(poly);
                     }
-
                 });
 
                 drawPoly('#000', polys[0]);

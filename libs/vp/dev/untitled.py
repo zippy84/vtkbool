@@ -20,9 +20,12 @@ for line in sys.stdin:
         elif ln.startswith('?_'):
             data[-1]['_'].append(ln[3:])
         else:
-            poly = parse_svg(ln[3:])
+            m = re.match(r'([A-Z]\s*\d*)\s+(.+)', ln[1:])
 
-            if len(poly) > 0:
-                data[-1][ln[1]] = poly
+            if m:
+                poly = parse_svg(m.group(2))
+
+                if len(poly) > 0:
+                    data[-1][m.group(1).replace(' ', '')] = poly
 
 print('var data = {};'.format(json.dumps(data)))

@@ -16,7 +16,7 @@
 # limitations under the License.
 
 # export LD_LIBRARY_PATH=/home/zippy/VTK6/lib
-# ./plate.py | ~/vtkbool/libs/vp/dev/untitled.py > test.js
+# ./plate.py | ~/vtkbool/libs/vp/dev/untitled.py > test2.js
 
 import sys
 sys.path.extend(['/home/zippy/VTK6/lib/python2.7/site-packages',
@@ -33,13 +33,13 @@ n, m = 6, 6
 app = vtk.vtkAppendPolyData()
 
 cyl = vtk.vtkCylinderSource()
-cyl.SetResolution(4)
+cyl.SetResolution(6) # die 4 macht auch probleme
 # cyl.SetResolution(8)
 
 for i in range(n):
     for j in range(m):
         tr = vtk.vtkTransform()
-        tr.Translate(1.5*i, 0, 1.5*j)
+        tr.Translate(5*i, 0, 5*j)
 
         tf = vtk.vtkTransformPolyDataFilter()
         tf.SetInputConnection(cyl.GetOutputPort())
@@ -48,9 +48,9 @@ for i in range(n):
         app.AddInputConnection(tf.GetOutputPort())
 
 box = vtk.vtkCubeSource()
-box.SetXLength(n*1.5)
-box.SetZLength(m*1.5)
-box.SetCenter((n*1.5)/2-.75, 0, (m*1.5)/2-.75)
+box.SetXLength(n*5)
+box.SetZLength(m*5)
+box.SetCenter((n*5)/2-2.5, 0, (m*5)/2-2.5)
 
 bf = vtkboolPython.vtkPolyDataBooleanFilter();
 bf.SetInputConnection(0, box.GetOutputPort())
@@ -59,5 +59,5 @@ bf.SetOperModeToDifference()
 
 w = vtk.vtkPolyDataWriter()
 w.SetInputConnection(bf.GetOutputPort())
-w.SetFileName('plate.vtk')
+w.SetFileName('plate2.vtk')
 w.Update()
