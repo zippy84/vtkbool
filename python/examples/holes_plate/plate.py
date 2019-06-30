@@ -51,7 +51,7 @@ for i in range(n):
 box = vtk.vtkCubeSource()
 box.SetXLength(n*d)
 box.SetZLength(m*d)
-box.SetCenter((n*d)/2-d/2, 0, (m*d)/2-d/2)
+box.SetCenter((n*d)/2.-d/2., 0, (m*d)/2.-d/2.)
 
 bf = vtkboolPython.vtkPolyDataBooleanFilter();
 bf.SetInputConnection(0, box.GetOutputPort())
