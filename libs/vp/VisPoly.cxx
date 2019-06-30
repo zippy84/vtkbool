@@ -33,7 +33,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, SavedPtsType &saved
         return;
     }
 
-    std::cout << "?_ --" << std::endl;
+    // std::cout << "?_ --" << std::endl;
 
     double x[] = {poly[ind].x, poly[ind].y};
 
@@ -59,15 +59,17 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, SavedPtsType &saved
         verts[i].nxt = i+1;
     }
 
-    // for (Vert& v : verts) {
-    //     std::cout << v.tag << " -> " << verts[v.nxt].tag << std::endl;
-    // }
+    /*for (Vert& v : verts) {
+        std::cout << v.tag << " -> " << verts[v.nxt].tag << std::endl;
+    }*/
 
     IdsType vp = {0, 1};
 
     int t = 0, u, v;
 
     std::vector<Bag> leftBags;
+
+    std::map<int, int> repl;
 
     try {
         for (int _i = 0;; _i++) {
@@ -78,7 +80,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, SavedPtsType &saved
                 break;
             }
 
-            std::cout << "?_ > " << (u+1) << ", " << (v+1) << std::endl;
+            // std::cout << "?_ > " << (u+1) << ", " << (v+1) << std::endl;
 
             double ptU[2], ptV[2];
 
@@ -86,7 +88,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, SavedPtsType &saved
             Cpy(ptV, verts.at(v).pt);
 
             if (Ld(x, ptU, ptV)) {
-                std::cout << "?_ skipping" << std::endl;
+                // std::cout << "?_ skipping" << std::endl;
 
                 double lU = GetSqDis(x, verts.at(u)),
                     lV = GetSqDis(x, verts.at(v));
@@ -95,6 +97,8 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, SavedPtsType &saved
                     verts.at(u).id = NO_USE;
                 } else {
                     verts.at(v).id = NO_USE;
+
+                    repl.emplace(v, u);
                 }
 
                 t = u;
@@ -104,11 +108,11 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, SavedPtsType &saved
             double cA = Cross(x, ptU, ptV),
                 cB = Cross(verts.at(t).pt, ptU, ptV);
 
-            std::cout << "?_ cA " << cA << std::endl;
-            std::cout << "?_ cB " << cB << std::endl;
+            /*std::cout << "?_ cA " << cA << std::endl;
+            std::cout << "?_ cB " << cB << std::endl;*/
 
             if (cA < 0) {
-                std::cout << "?_ vis" << std::endl;
+                // std::cout << "?_ vis" << std::endl;
 
                 if (vp.back() != u) {
                     vp.push_back(u);
@@ -128,7 +132,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, SavedPtsType &saved
                         double *ptA = a.pt,
                             *ptB = b.pt;
 
-                        std::cout << "?_ 1> " << (w+1) << ", " << (a.nxt+1) << std::endl;
+                        // std::cout << "?_ 1> " << (w+1) << ", " << (a.nxt+1) << std::endl;
 
                         std::shared_ptr<D> d(Intersect(x, verts.at(u).r, ptA, ptB));
 
@@ -136,11 +140,23 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, SavedPtsType &saved
                             && d->t1 > E
                             && IsFrontfaced(verts.at(u).r, ptA, ptB)) {
 
+                            // steht im zusammenhang mit dem skipping
+
+                            int _u = u;
+
+                            for (;;) {
+                                try {
+                                    _u = repl.at(_u);
+                                } catch (...) {
+                                    break;
+                                }
+                            }
+
                             if (d->t2 < E) {
-                                verts.at(u).nxt = w;
+                                verts.at(_u).nxt = w;
                                 vp.push_back(w);
-                                t = u;
-                                leftBags.push_back(Bag(u, w, verts.at(u).phi));
+                                t = _u;
+                                leftBags.push_back(Bag(_u, w, verts.at(_u).phi));
 
                                 verts.at(w).id = NO_USE;
 
@@ -153,13 +169,13 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, SavedPtsType &saved
 
                                 int k = verts.size()-1;
 
-                                verts.at(u).nxt = k;
+                                verts.at(_u).nxt = k;
 
                                 vp.push_back(k);
 
-                                t = u;
+                                t = _u;
 
-                                leftBags.push_back(Bag(u, k, verts.at(u).phi));
+                                leftBags.push_back(Bag(_u, k, verts.at(_u).phi));
 
                                 tr.Track(a, b, _v, d->t2);
 
@@ -195,12 +211,12 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, SavedPtsType &saved
                     }
 
                     if (d) {
-                        std::cout << "?_ bag " << *bag << std::endl;
+                        // std::cout << "?_ bag " << *bag << std::endl;
 
                         assert(std::find(vp.begin(), vp.end(), bag->f) != vp.end());
 
                         while (vp.size() > 0 && vp.back() != bag->f) {
-                            std::cout << "?_ popping_1 " << (vp.back()+1) << std::endl;
+                            // std::cout << "?_ popping_1 " << (vp.back()+1) << std::endl;
                             vp.pop_back();
                         }
 
@@ -217,7 +233,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, SavedPtsType &saved
                             double *ptA = a.pt,
                                 *ptB = b.pt;
 
-                            std::cout << "?_ 2>" << (_x+1) << ", " << (a.nxt+1) << std::endl;
+                            // std::cout << "?_ 2>" << (_x+1) << ", " << (a.nxt+1) << std::endl;
 
                             std::shared_ptr<D> _d;
 
@@ -287,7 +303,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, SavedPtsType &saved
                             int a = vp.end()[-2],
                                 b = vp.back();
 
-                            std::cout << "?_ popping_2 " << (vp.back()+1) << std::endl;
+                            // std::cout << "?_ popping_2 " << (vp.back()+1) << std::endl;
 
                             vp.pop_back();
 
@@ -343,16 +359,15 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, SavedPtsType &saved
                             w = verts.at(w).nxt;
                         }
 
-                        std::cout << "?_ " << (v+1) << " -> " << (p+1) << std::endl;
+                        // std::cout << "?_ " << (v+1) << " -> " << (p+1) << std::endl;
 
                         double *ptW = verts.at(w).pt;
-                        //double *ptP = verts.at(p).pt;
 
                         double cC = Cross(x, ptV, ptW),
                             cD = Cross(ptV, ptU, ptW);
 
-                        std::cout << "?_ cC " << cC << std::endl;
-                        std::cout << "?_ cD " << cD << std::endl;
+                        /*std::cout << "?_ cC " << cC << std::endl;
+                        std::cout << "?_ cD " << cD << std::endl;*/
 
                         if (cC < 0) {
 
@@ -373,7 +388,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, SavedPtsType &saved
                                     double *ptA = a.pt,
                                         *ptB = b.pt;
 
-                                    std::cout << "?_ 3> " << (_x+1) << ", " << (a.nxt+1) << std::endl;
+                                    // std::cout << "?_ 3> " << (_x+1) << ", " << (a.nxt+1) << std::endl;
 
                                     std::shared_ptr<D> d(Intersect(x, verts.at(v).r, ptA, ptB));
 
@@ -429,7 +444,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, SavedPtsType &saved
                 r.push_back(verts[_v]);
             }
 
-            std::cout << "?F " << _i << " " << GetAbsolutePath(r) << std::endl;
+            // std::cout << "?F " << _i << " " << GetAbsolutePath(r) << std::endl;
 
         }
 
@@ -863,9 +878,9 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
 
     vtkbool_throw(TestCW(poly), "GetVisPoly_wrapper", "poly not clockwise");
 
-    std::cout << "?" << std::endl
+    /*std::cout << "?" << std::endl
         << "?X " << ind << std::endl
-        << "?A " << GetAbsolutePath(poly) << std::endl;
+        << "?A " << GetAbsolutePath(poly) << std::endl;*/
 
     PolyType poly2, poly3, poly4;
 
@@ -883,7 +898,7 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
 
     TrivialRm(poly2, tr, ind, x).GetSimplified(poly3);
 
-    std::cout << "?D " << GetAbsolutePath(poly3) << std::endl;
+    // std::cout << "?D " << GetAbsolutePath(poly3) << std::endl;
 
     try {
         GetVisPoly(poly3, tr, poly4, *savedPts);
@@ -1022,7 +1037,7 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
 
         // alles gut
 
-        std::cout << "?E " << GetAbsolutePath(res) << std::endl;
+        // std::cout << "?E " << GetAbsolutePath(res) << std::endl;
 
     } catch (...) {
         throw;

@@ -27,19 +27,19 @@ import vtk
 
 import math
 
-n, m = 6, 6
-# n, m = 4, 4
+# n, m, r, d, name = 6, 6, 4, 1.5, 'plate.vtk'
+# n, m, r, d, name = 4, 4, 8, 1.5, 'plate2.vtk'
+n, m, r, d, name = 6, 6, 6, 5, 'plate3.vtk'
 
 app = vtk.vtkAppendPolyData()
 
 cyl = vtk.vtkCylinderSource()
-cyl.SetResolution(6) # die 4 macht auch probleme
-# cyl.SetResolution(8)
+cyl.SetResolution(r)
 
 for i in range(n):
     for j in range(m):
         tr = vtk.vtkTransform()
-        tr.Translate(5*i, 0, 5*j)
+        tr.Translate(d*i, 0, d*j)
 
         tf = vtk.vtkTransformPolyDataFilter()
         tf.SetInputConnection(cyl.GetOutputPort())
@@ -48,9 +48,9 @@ for i in range(n):
         app.AddInputConnection(tf.GetOutputPort())
 
 box = vtk.vtkCubeSource()
-box.SetXLength(n*5)
-box.SetZLength(m*5)
-box.SetCenter((n*5)/2-2.5, 0, (m*5)/2-2.5)
+box.SetXLength(n*d)
+box.SetZLength(m*d)
+box.SetCenter((n*d)/2-d/2, 0, (m*d)/2-d/2)
 
 bf = vtkboolPython.vtkPolyDataBooleanFilter();
 bf.SetInputConnection(0, box.GetOutputPort())
@@ -59,5 +59,5 @@ bf.SetOperModeToDifference()
 
 w = vtk.vtkPolyDataWriter()
 w.SetInputConnection(bf.GetOutputPort())
-w.SetFileName('plate2.vtk')
+w.SetFileName(name)
 w.Update()
