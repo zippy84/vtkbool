@@ -29,7 +29,8 @@ import math
 
 # n, m, r, d, name = 6, 6, 4, 1.5, 'plate.vtk'
 # n, m, r, d, name = 4, 4, 8, 1.5, 'plate2.vtk'
-n, m, r, d, name = 6, 6, 6, 5, 'plate3.vtk'
+#n, m, r, d, name = 6, 6, 6, 5, 'plate3.vtk'
+n, m, r, d, name = 15, 15, 4, 5, 'plate4.vtk'
 
 app = vtk.vtkAppendPolyData()
 
