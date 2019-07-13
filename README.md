@@ -1,4 +1,4 @@
-# vtkbool [![Travis CI Build Status](https://travis-ci.com/zippy84/vtkbool-1.svg?branch=master)](https://travis-ci.com/zippy84/vtkbool-1) [![Appveyor Build Status](https://ci.appveyor.com/api/projects/status/github/zippy84/vtkbool-1?branch=master&svg=true)](https://ci.appveyor.com/project/zippy84/vtkbool-1) [![Coverage Status](https://codecov.io/gh/zippy84/vtkbool-1/branch/master/graph/badge.svg)](https://codecov.io/gh/zippy84/vtkbool-1)
+# vtkbool [![Travis CI Build Status](https://travis-ci.com/zippy84/vtkbool.svg?branch=master)](https://travis-ci.com/zippy84/vtkbool) [![Appveyor Build Status](https://ci.appveyor.com/api/projects/status/github/zippy84/vtkbool?branch=master&svg=true)](https://ci.appveyor.com/project/zippy84/vtkbool) [![Coverage Status](https://codecov.io/gh/zippy84/vtkbool/branch/master/graph/badge.svg)](https://codecov.io/gh/zippy84/vtkbool)
 
 ![](https://raw.github.com/zippy84/vtkbool/master/cover.png)
 
