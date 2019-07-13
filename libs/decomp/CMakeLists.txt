@@ -18,12 +18,14 @@ project(decomp)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set(CMAKE_CXX_OUTPUT_EXTENSION_REPLACE 1)
+
 if(MSVC)
-    set(CMAKE_CXX_FLAGS "/EHsc")
+    add_compile_options(/EHsc)
     add_definitions(-D_SCL_SECURE_NO_WARNINGS)
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 else()
-    set(CMAKE_CXX_FLAGS "-Wno-deprecated -fPIC -Wunused")
+    add_compile_options(-Wno-deprecated -fPIC -Wunused)
 endif()
 
 add_subdirectory(../vp vp_build)

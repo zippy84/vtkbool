@@ -45,6 +45,6 @@ public:
 };
 
 void Transform (const double *in, double *out, Base &base);
-void BackTransform (const double *in, double *out, Base &base);
+// void BackTransform (const double *in, double *out, Base &base);
 
 #endif

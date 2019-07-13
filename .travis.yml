@@ -1,0 +1,19 @@
+language: cpp
+compiler:
+  - gcc
+  - clang
+dist: xenial
+before_install:
+  - sudo apt-get update -y
+  - sudo apt-get install -y libvtk6.2 libvtk6-dev python-vtk6
+script:
+  - mkdir build
+  - cd build
+  - cmake -DVTKBOOL_TESTING=ON -DVTKBOOL_COVERAGE=ON -DCMAKE_BUILD_TYPE=Release ..
+  - make VERBOSE=1
+  - ctest
+install:
+  - sudo pip install codecov
+after_success:
+  - gcov ../testing/testing.cxx -i -o CMakeFiles/testing.dir/testing/
+  - codecov

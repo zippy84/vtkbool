@@ -18,19 +18,30 @@ project(vtkbool VERSION 2.7.1)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set(CMAKE_CXX_OUTPUT_EXTENSION_REPLACE 1)
+
 if(MSVC)
-    set(CMAKE_CXX_FLAGS "/EHsc")
+    add_compile_options(/EHsc)
     add_definitions(-D_SCL_SECURE_NO_WARNINGS)
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 else()
-    set(CMAKE_CXX_FLAGS "-Wno-deprecated -fPIC -Wunused")
+    add_compile_options(-Wno-deprecated -fPIC -Wunused)
 endif()
 
-option(BUILD_PARAVIEW_PLUGIN "" OFF)
-option(BUILD_AS_DEBUG "" OFF)
-option(BUILD_TESTING "" OFF)
+option(VTKBOOL_PARAVIEW "" OFF)
+option(VTKBOOL_DEBUG "" OFF)
+option(VTKBOOL_TESTING "" OFF)
+option(VTKBOOL_COVERAGE "" OFF)
 
-mark_as_advanced(BUILD_AS_DEBUG)
+mark_as_advanced(VTKBOOL_DEBUG)
+mark_as_advanced(VTKBOOL_TESTING)
+mark_as_advanced(VTKBOOL_COVERAGE)
+
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND VTKBOOL_COVERAGE)
+    add_compile_options(-fprofile-arcs -ftest-coverage)
+    set(CMAKE_EXE_LINKER_FLAGS "-fprofile-arcs")
+    set(CMAKE_SHARED_LINKER_FLAGS "-fprofile-arcs")
+endif()
 
 set(srcs
     vtkPolyDataBooleanFilter.cxx
@@ -39,12 +50,12 @@ set(srcs
 
 include_directories(".")
 
-if(BUILD_AS_DEBUG)
+if(VTKBOOL_DEBUG)
     add_definitions(-DDEBUG)
 endif()
 
-if(BUILD_PARAVIEW_PLUGIN)
-    set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+if(VTKBOOL_PARAVIEW)
+    set(VTKBOOL_TESTING OFF CACHE BOOL "" FORCE)
 
     add_subdirectory(paraview_plugin ${CMAKE_BINARY_DIR}/paraview_plugin)
 
@@ -74,7 +85,7 @@ else()
             string(REPLACE "/" "\\" _vtk_win ${_vtk})
         endif()
 
-        if(BUILD_TESTING)
+        if(VTKBOOL_TESTING)
             enable_testing()
 
             add_executable(testing testing/testing.cxx)
@@ -95,47 +106,14 @@ else()
 
             set(ENV{LD_LIBRARY_PATH} "${_vtk}/lib")
 
-            execute_process(COMMAND "${_vtk}/bin/vtkpython" -c "import sys; sys.stdout.write('.'.join(map(str, sys.version_info[:2])))" OUTPUT_VARIABLE py_version)
+            execute_process(COMMAND "${_vtk}/bin/vtkpython" -c "import sys; sys.stdout.write('.'.join(map(str, sys.version_info[:2])))" OUTPUT_VARIABLE py_ver)
 
-            if(CMAKE_VERSION VERSION_LESS "3.12")
-                find_package(PythonInterp "${py_version}")
-                find_package(PythonLibs "${py_version}")
+            if(py_ver)
+                if(CMAKE_VERSION VERSION_LESS "3.12")
+                    find_package(PythonInterp ${py_ver})
+                    find_package(PythonLibs ${py_ver})
 
-                if(PYTHONLIBS_FOUND)
-
-                    include_directories(${PYTHON_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR})
-
-                    include(vtkWrapPython)
-
-                    vtk_wrap_python3(${PROJECT_NAME}Python ${PROJECT_NAME}Python_srcs vtkPolyDataBooleanFilter.cxx)
-
-                    add_library(${PROJECT_NAME}PythonD ${${PROJECT_NAME}Python_srcs})
-                    target_link_libraries(${PROJECT_NAME}PythonD ${PROJECT_NAME} vtkWrappingPythonCore vtkCommonExecutionModelPythonD)
-
-                    python_add_module(${PROJECT_NAME}Python PyInit.cxx ${PROJECT_NAME}PythonInit.cxx)
-                    target_link_libraries(${PROJECT_NAME}Python PRIVATE ${PROJECT_NAME}PythonD)
-
-                    if(BUILD_TESTING)
-                        add_test(NAME Test_Py COMMAND ${PYTHON_EXECUTABLE}
-                            ${CMAKE_SOURCE_DIR}/testing/test_py_module.py
-                            ${_vtk}/lib/python${py_version}/site-packages
-                            ${CMAKE_BINARY_DIR}
-                            $<CONFIG>)
-
-                        if(WIN32)
-                            set_property(TEST Test_Py PROPERTY ENVIRONMENT "PATH=${_vtk_win}\\bin")
-                        else()
-                            set_property(TEST Test_Py PROPERTY ENVIRONMENT "LD_LIBRARY_PATH=${_vtk}/lib")
-                        endif()
-                    endif()
-
-                endif()
-
-            else()
-                if (py_version MATCHES "^3")
-                    find_package(Python3 COMPONENTS Interpreter Development)
-
-                    if(Python3_Development_FOUND)
+                    if(PYTHONLIBS_FOUND)
 
                         include_directories(${PYTHON_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR})
 
@@ -146,13 +124,13 @@ else()
                         add_library(${PROJECT_NAME}PythonD ${${PROJECT_NAME}Python_srcs})
                         target_link_libraries(${PROJECT_NAME}PythonD ${PROJECT_NAME} vtkWrappingPythonCore vtkCommonExecutionModelPythonD)
 
-                        Python3_add_library(${PROJECT_NAME}Python MODULE PyInit.cxx ${PROJECT_NAME}PythonInit.cxx)
+                        python_add_module(${PROJECT_NAME}Python PyInit.cxx ${PROJECT_NAME}PythonInit.cxx)
                         target_link_libraries(${PROJECT_NAME}Python PRIVATE ${PROJECT_NAME}PythonD)
 
-                        if(BUILD_TESTING)
-                            add_test(NAME Test_Py COMMAND ${Python3_EXECUTABLE}
+                        if(VTKBOOL_TESTING)
+                            add_test(NAME Test_Py COMMAND ${PYTHON_EXECUTABLE}
                                 ${CMAKE_SOURCE_DIR}/testing/test_py_module.py
-                                ${VTK_PYTHONPATH}
+                                ${_vtk}/lib/python${py_ver}/site-packages
                                 ${CMAKE_BINARY_DIR}
                                 $<CONFIG>)
 
@@ -162,36 +140,71 @@ else()
                                 set_property(TEST Test_Py PROPERTY ENVIRONMENT "LD_LIBRARY_PATH=${_vtk}/lib")
                             endif()
                         endif()
+
                     endif()
 
-                elseif(py_version EQUAL "2.7")
-                    find_package(Python2 COMPONENTS Interpreter Development)
+                else()
+                    if (py_ver MATCHES "^3")
+                        find_package(Python3 ${py_ver} COMPONENTS Interpreter Development)
 
-                    if(Python2_Development_FOUND)
+                        if(Python3_Development_FOUND)
 
-                        include_directories(${PYTHON_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR})
+                            include_directories(${PYTHON_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR})
 
-                        include(vtkWrapPython)
+                            include(vtkWrapPython)
 
-                        vtk_wrap_python3(${PROJECT_NAME}Python ${PROJECT_NAME}Python_srcs vtkPolyDataBooleanFilter.cxx)
+                            vtk_wrap_python3(${PROJECT_NAME}Python ${PROJECT_NAME}Python_srcs vtkPolyDataBooleanFilter.cxx)
 
-                        add_library(${PROJECT_NAME}PythonD ${${PROJECT_NAME}Python_srcs})
-                        target_link_libraries(${PROJECT_NAME}PythonD ${PROJECT_NAME} vtkWrappingPythonCore vtkCommonExecutionModelPythonD)
+                            add_library(${PROJECT_NAME}PythonD ${${PROJECT_NAME}Python_srcs})
+                            target_link_libraries(${PROJECT_NAME}PythonD ${PROJECT_NAME} vtkWrappingPythonCore vtkCommonExecutionModelPythonD)
 
-                        Python2_add_library(${PROJECT_NAME}Python MODULE PyInit.cxx ${PROJECT_NAME}PythonInit.cxx)
-                        target_link_libraries(${PROJECT_NAME}Python PRIVATE ${PROJECT_NAME}PythonD)
+                            Python3_add_library(${PROJECT_NAME}Python MODULE PyInit.cxx ${PROJECT_NAME}PythonInit.cxx)
+                            target_link_libraries(${PROJECT_NAME}Python PRIVATE ${PROJECT_NAME}PythonD)
 
-                        if(BUILD_TESTING)
-                            add_test(NAME Test_Py COMMAND ${Python2_EXECUTABLE}
-                                ${CMAKE_SOURCE_DIR}/testing/test_py_module.py
-                                ${VTK_PYTHONPATH}
-                                ${CMAKE_BINARY_DIR}
-                                $<CONFIG>)
+                            if(VTKBOOL_TESTING)
+                                add_test(NAME Test_Py COMMAND ${Python3_EXECUTABLE}
+                                    ${CMAKE_SOURCE_DIR}/testing/test_py_module.py
+                                    ${VTK_PYTHONPATH}
+                                    ${CMAKE_BINARY_DIR}
+                                    $<CONFIG>)
 
-                            if(WIN32)
-                                set_property(TEST Test_Py PROPERTY ENVIRONMENT "PATH=${_vtk_win}\\bin")
-                            else()
-                                set_property(TEST Test_Py PROPERTY ENVIRONMENT "LD_LIBRARY_PATH=${_vtk}/lib")
+                                if(WIN32)
+                                    set_property(TEST Test_Py PROPERTY ENVIRONMENT "PATH=${_vtk_win}\\bin")
+                                else()
+                                    set_property(TEST Test_Py PROPERTY ENVIRONMENT "LD_LIBRARY_PATH=${_vtk}/lib")
+                                endif()
+                            endif()
+                        endif()
+
+                    elseif(py_ver EQUAL "2.7")
+                        find_package(Python2 ${py_ver} COMPONENTS Interpreter Development)
+
+                        if(Python2_Development_FOUND)
+
+                            include_directories(${PYTHON_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR})
+
+                            include(vtkWrapPython)
+
+                            vtk_wrap_python3(${PROJECT_NAME}Python ${PROJECT_NAME}Python_srcs vtkPolyDataBooleanFilter.cxx)
+
+                            add_library(${PROJECT_NAME}PythonD ${${PROJECT_NAME}Python_srcs})
+                            target_link_libraries(${PROJECT_NAME}PythonD ${PROJECT_NAME} vtkWrappingPythonCore vtkCommonExecutionModelPythonD)
+
+                            Python2_add_library(${PROJECT_NAME}Python MODULE PyInit.cxx ${PROJECT_NAME}PythonInit.cxx)
+                            target_link_libraries(${PROJECT_NAME}Python PRIVATE ${PROJECT_NAME}PythonD)
+
+                            if(VTKBOOL_TESTING)
+                                add_test(NAME Test_Py COMMAND ${Python2_EXECUTABLE}
+                                    ${CMAKE_SOURCE_DIR}/testing/test_py_module.py
+                                    ${VTK_PYTHONPATH}
+                                    ${CMAKE_BINARY_DIR}
+                                    $<CONFIG>)
+
+                                if(WIN32)
+                                    set_property(TEST Test_Py PROPERTY ENVIRONMENT "PATH=${_vtk_win}\\bin")
+                                else()
+                                    set_property(TEST Test_Py PROPERTY ENVIRONMENT "LD_LIBRARY_PATH=${_vtk}/lib")
+                                endif()
                             endif()
                         endif()
                     endif()

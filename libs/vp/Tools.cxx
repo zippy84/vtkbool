@@ -280,4 +280,6 @@ void GetSect (int tagA, int tagB, PolyType &poly) {
     })+1, poly.end());
 }
 
-// int Point::_tag;
+#ifdef _WIN32
+int Point::_tag;
+#endif
