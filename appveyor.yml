@@ -1,0 +1,52 @@
+image:
+  - Visual Studio 2017
+  - Ubuntu1804
+branches:
+  only:
+    - master
+for:
+  - matrix:
+      only:
+        - image: Ubuntu1804
+    install:
+      - sudo apt-get update -y
+      - sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
+      - sudo apt-get remove -y libpq5
+      - sudo apt-get install -y libgdal-dev libpq-dev
+      - sudo apt-get install -y libvtk7.1 libvtk7-dev python3-vtk7
+      - ls /usr/bin/vtk*
+    build_script:
+      - mkdir build
+      - cd build
+      - cmake -DVTKBOOL_TESTING=ON -DCMAKE_BUILD_TYPE=Release ..
+      - make
+    test_script:
+      - ctest
+  - matrix:
+      only:
+        - image: Visual Studio 2017
+    init:
+      - cmake --version
+    cache:
+      - VTK7.tar.gz
+      - VTK7
+    install:
+      - set path=C:\Python36;%path%
+      - echo %path%
+      - python --version
+      - dir C:\Python36
+      - if not exist VTK7 ( python -u _install.py )
+    build_script:
+      - cd
+      - if exist VTK7 (
+          mkdir build &
+          cd build &
+          cmake -DVTKBOOL_TESTING=ON -DVTK_DIR=C:\projects\vtkbool-1\VTK7\lib\cmake\vtk-7.1 -DCMAKE_BUILD_TYPE=Release .. &
+          cmake --build . --config Release &
+          cd ..
+        )
+    test_script:
+      - if exist build (
+          cd build &
+          ctest -VV -C Release
+        )

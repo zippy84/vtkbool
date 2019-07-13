@@ -1,5 +1,4 @@
-
-# vtkbool
+# vtkbool [![Travis CI Build Status](https://travis-ci.com/zippy84/vtkbool-1.svg?branch=master)](https://travis-ci.com/zippy84/vtkbool-1) [![Appveyor Build Status](https://ci.appveyor.com/api/projects/status/github/zippy84/vtkbool-1?branch=master&svg=true)](https://ci.appveyor.com/project/zippy84/vtkbool-1) [![Coverage Status](https://codecov.io/gh/zippy84/vtkbool-1/branch/master/graph/badge.svg)](https://codecov.io/gh/zippy84/vtkbool-1)
 
 ![](https://raw.github.com/zippy84/vtkbool/master/cover.png)
 
@@ -125,7 +124,7 @@ Also create a directory named build. If you are on Linux, open a terminal and en
 
 ## ParaView Plugin
 
-To build the plugin you have to compile ParaView from source. Download the current version from <http://www.paraview.org> and follow the compilation instructions. As soon as ParaView is compiled, it may take a while, you can build the plugin by activating the **BUILD_PARAVIEW** option within CMake. In CMake you also have to point to **ParaView_DIR** if CMake can't found it and it is not installed in a common location like */usr/lib* or */usr/local/lib*. Make sure **PARAVIEW_INSTALL_DEVELOPMENT_FILES** is set.
+To build the plugin you have to compile ParaView from source. Download the current version from <http://www.paraview.org> and follow the compilation instructions. As soon as ParaView is compiled, it may take a while, you can build the plugin by activating the **VTKBOOL_PARAVIEW** option within CMake. In CMake you also have to point to **ParaView_DIR** if CMake can't found it and it is not installed in a common location like */usr/lib* or */usr/local/lib*. Make sure **PARAVIEW_INSTALL_DEVELOPMENT_FILES** is set.
 
 When everything has been compiled successfully, you can install the plugin. For that purpose I made screenshots from the necessary steps. You can find them under *paraview\_plugin/install/*. There is also a screenshot of how to use it.
 
