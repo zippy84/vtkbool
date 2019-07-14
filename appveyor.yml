@@ -41,7 +41,7 @@ for:
       - if exist VTK7 (
           mkdir build &
           cd build &
-          cmake -DVTKBOOL_TESTING=ON -DVTK_DIR=C:\projects\vtkbool-1\VTK7\lib\cmake\vtk-7.1 -DCMAKE_BUILD_TYPE=Release .. &
+          cmake -DVTKBOOL_TESTING=ON -DVTK_DIR=C:\projects\vtkbool\VTK7\lib\cmake\vtk-7.1 -DCMAKE_BUILD_TYPE=Release .. &
           cmake --build . --config Release &
           cd ..
         )

@@ -44,7 +44,7 @@ if not os.path.exists('VTK7.tar.gz'):
 
   print('Configuring VTK')
 
-  proc = subprocess.Popen(shlex.split('cmake -Wno-deprecated -Wno-dev -DVTK_PYTHON_VERSION=3 -DVTK_WRAP_PYTHON=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=C:/projects/vtkbool-1/VTK7 ..'), cwd='VTK-7.1.1/build')
+  proc = subprocess.Popen(shlex.split('cmake -Wno-deprecated -Wno-dev -DVTK_PYTHON_VERSION=3 -DVTK_WRAP_PYTHON=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=C:/projects/vtkbool/VTK7 ..'), cwd='VTK-7.1.1/build')
   proc.wait()
 else:
   print('VTK7.tar.gz already exists')
@@ -54,25 +54,25 @@ else:
 
   os.remove('VTK7.tar.gz')
 
-with open('build.log', 'ab') as log:
-  print('Building VTK')
+  with open('build.log', 'ab') as log:
+    print('Building VTK')
 
-  proc = subprocess.Popen(shlex.split('cmake --build . --config Release'), creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, cwd='VTK-7.1.1/build')
+    proc = subprocess.Popen(shlex.split('cmake --build . --config Release'), creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, cwd='VTK-7.1.1/build')
 
-  try:
-    proc.wait(1800)
-  except subprocess.TimeoutExpired:
-    print('cmake will be killed')
+    try:
+      proc.wait(2700)
+    except subprocess.TimeoutExpired:
+      print('cmake will be killed')
 
-    proc.send_signal(signal.CTRL_BREAK_EVENT)
-    proc.kill()
-    proc.wait()
+      proc.send_signal(signal.CTRL_BREAK_EVENT)
+      proc.kill()
+      proc.wait()
 
-  else:
-    print('Ready :)')
+    else:
+      print('Ready :)')
 
-    proc2 = subprocess.Popen(shlex.split('cmake --build . --config Release --target install'), cwd='VTK-7.1.1/build')
-    proc2.wait()
+      proc2 = subprocess.Popen(shlex.split('cmake --build . --config Release --target install'), cwd='VTK-7.1.1/build')
+      proc2.wait()
 
 print('Creating VTK7.tar.gz')
 
