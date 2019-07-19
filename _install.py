@@ -60,7 +60,7 @@ else:
     proc = subprocess.Popen(shlex.split('cmake --build . --config Release'), creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, cwd='VTK-7.1.1/build')
 
     try:
-      proc.wait(2700)
+      proc.wait(3600)
     except subprocess.TimeoutExpired:
       print('cmake will be killed')
 
