@@ -5,6 +5,7 @@ compiler:
 dist: xenial
 before_install:
   - sudo apt-get update -y
+  - sudo apt-get remove -y --auto-remove mysql-server
   - sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
   - sudo apt-get remove -y libpq5
   - sudo apt-get install -y libgdal-dev libpq-dev
