@@ -4,11 +4,9 @@ compiler:
   - clang
 dist: xenial
 before_install:
-  - sudo apt-get update -y
-  - sudo apt-get remove -y --auto-remove mysql-server
+  - sudo apt-get update
+  - sudo apt-get remove -y --auto-remove mysql-*
   - sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
-  - sudo apt-get remove -y libpq5
-  - sudo apt-get install -y libgdal-dev libpq-dev
   - sudo apt-get install -y libvtk6.2 libvtk6-dev python-vtk6
 script:
   - mkdir build
