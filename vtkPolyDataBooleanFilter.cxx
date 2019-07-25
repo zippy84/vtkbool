@@ -196,62 +196,22 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
             vtkIntArray *sourcesA = vtkIntArray::SafeDownCast(contLines->GetCellData()->GetScalars("sourcesA"));
             vtkIntArray *sourcesB = vtkIntArray::SafeDownCast(contLines->GetCellData()->GetScalars("sourcesB"));
 
-            // gültigkeit des schnitts prüfen
+            int i, numPts = contLines->GetNumberOfPoints();
 
-            int numPts = contLines->GetNumberOfPoints();
+            vtkIdList *cells = vtkIdList::New();
 
-            vtkIdList *cells = vtkIdList::New(),
-                *line = vtkIdList::New();
-
-            bool valid = true;
-            int amb = NO_USE;
-
-            for (int i = 0; i < numPts && valid; i++) {
+            for (i = 0; i < numPts; i++) {
                 contLines->GetPointCells(i, cells);
 
-                // der schnitt endet abrupt
                 if (cells->GetNumberOfIds() == 1) {
-                    amb = i;
-                    valid = false;
                     break;
-                }
-
-                std::map<int, std::set<int> > countsA, countsB;
-
-                for (int j = 0; j < cells->GetNumberOfIds(); j++) {
-                    contLines->GetCellPoints(cells->GetId(j), line);
-
-                    int target = line->GetId(0) == i ? line->GetId(1) : line->GetId(0);
-
-                    int indA = contsA->GetValue(cells->GetId(j));
-                    int indB = contsB->GetValue(cells->GetId(j));
-
-                    // sind am punkt sind mehr als zwei linien beteiligt?
-
-                    countsA[indA].insert(target);
-
-                    if (countsA[indA].size() > 2) {
-                        amb = i;
-                        valid = false;
-                        break;
-                    }
-
-                    countsB[indB].insert(target);
-
-                    if (countsB[indB].size() > 2) {
-                        amb = i;
-                        valid = false;
-                        break;
-                    }
-
                 }
             }
 
-            line->Delete();
             cells->Delete();
 
-            if (!valid) {
-                vtkErrorMacro("Contact is ambiguous or incomplete (at point " << amb << ").");
+            if (i < numPts) {
+                vtkErrorMacro("Contact ends suddenly at point " << i << ".");
 
                 return 1;
             }
@@ -760,10 +720,44 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIntArray *cont
 
     }
 
-    for (itr = polyLines.begin(); itr != polyLines.end(); ++itr) {
-        IdsType &lines = itr->second;
+    StripPtsType::const_iterator itr5;
 
+    for (itr = polyLines.begin(); itr != polyLines.end(); ++itr) {
         PStrips &pStrips = polyStrips[itr->first];
+
+        const IdsType &lines = itr->second;
+        const StripPtsType &pts = pStrips.pts;
+
+        for (itr5 = pts.begin(); itr5 != pts.end(); ++itr5) {
+            // ist der punkt auf einer kante, dürfen von ihm mehr als 2 linien ausgehen
+
+            const StripPt &pt = itr5->second;
+
+            if (pt.capt == CAPT_NOT) {
+
+                vtkIdList *cells = vtkIdList::New(),
+                    *line = vtkIdList::New();
+
+                contLines->GetPointCells(pt.ind, cells);
+
+                int numCells = cells->GetNumberOfIds();
+
+                std::set<int> ends;
+
+                for (int i = 0; i < numCells; i++) {
+                    contLines->GetCellPoints(cells->GetId(i), line);
+
+                    ends.insert(pt.ind == line->GetId(0) ? line->GetId(1) : line->GetId(0));
+                }
+
+                line->Delete();
+                cells->Delete();
+
+                if (ends.size() > 2) {
+                    return true;
+                }
+            }
+        }
 
         StripType strip;
 
@@ -786,8 +780,8 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIntArray *cont
 
                 _lines.erase(_lines.begin());
             } else {
-                StripPt &start = pStrips.pts[strip.front().ind],
-                    &end = pStrips.pts[strip.back().ind];
+                const StripPt &start = pts.at(strip.front().ind),
+                    &end = pts.at(strip.back().ind);
 
                 if (end.capt == CAPT_NOT && end.ind == indA) {
                     strip.push_back(StripPtR(indB));
@@ -815,8 +809,8 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIntArray *cont
                 }
             }
 
-            StripPt &_start = pStrips.pts[strip.front().ind],
-                &_end = pStrips.pts[strip.back().ind];
+            const StripPt &_start = pts.at(strip.front().ind),
+                &_end = pts.at(strip.back().ind);
 
             if ((_start.capt != CAPT_NOT && _end.capt != CAPT_NOT)
                 || (_start.ind == _end.ind)
