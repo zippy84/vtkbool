@@ -256,8 +256,8 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
             start = clock::now();
 #endif
 
-            _Test(modPdA, polyStripsA);
-            _Test(modPdB, polyStripsB);
+            CollapseCaptPoints(modPdA, polyStripsA);
+            CollapseCaptPoints(modPdB, polyStripsB);
 
 #ifdef DEBUG
             times.push_back(clock::now()-start);
@@ -1683,10 +1683,10 @@ void vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
 
 }
 
-void vtkPolyDataBooleanFilter::_Test (vtkPolyData *pd, PolyStripsType &polyStrips) {
+void vtkPolyDataBooleanFilter::CollapseCaptPoints (vtkPolyData *pd, PolyStripsType &polyStrips) {
 
 #ifdef DEBUG
-    std::cout << "_Test()" << std::endl;
+    std::cout << "CollapseCaptPoints()" << std::endl;
 #endif
 
     struct Cmp {
