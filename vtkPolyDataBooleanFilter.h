@@ -238,7 +238,7 @@ class VTK_EXPORT vtkPolyDataBooleanFilter : public vtkPolyDataAlgorithm {
     void RemoveDuplicates (IdsType &lines);
     void CompleteStrips (PStrips &pStrips);
     bool HasArea (StripType &strip);
-    void _Test (vtkPolyData *pd, PolyStripsType &polyStrips);
+    void CollapseCaptPoints (vtkPolyData *pd, PolyStripsType &polyStrips);
     void CutCells (vtkPolyData *pd, PolyStripsType &polyStrips);
     void RestoreOrigPoints (vtkPolyData *pd, PolyStripsType &polyStrips);
     void DisjoinPolys (vtkPolyData *pd, PolyStripsType &polyStrips);
@@ -259,10 +259,10 @@ public:
     vtkSetClampMacro(OperMode, int, OPER_UNION, OPER_DIFFERENCE2);
     vtkGetMacro(OperMode, int);
 
-    void SetOperModeToUnion () { OperMode = OPER_UNION; };
-    void SetOperModeToIntersection () { OperMode = OPER_INTERSECTION; };
-    void SetOperModeToDifference () { OperMode = OPER_DIFFERENCE; };
-    void SetOperModeToDifference2 () { OperMode = OPER_DIFFERENCE2; };
+    void SetOperModeToUnion () { OperMode = OPER_UNION; }
+    void SetOperModeToIntersection () { OperMode = OPER_INTERSECTION; }
+    void SetOperModeToDifference () { OperMode = OPER_DIFFERENCE; }
+    void SetOperModeToDifference2 () { OperMode = OPER_DIFFERENCE2; }
 
     vtkSetMacro(MergeRegs, bool);
     vtkGetMacro(MergeRegs, bool);
