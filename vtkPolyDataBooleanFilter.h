@@ -278,6 +278,10 @@ protected:
 
     int ProcessRequest (vtkInformation *request, vtkInformationVector **inputVector, vtkInformationVector *outputVector);
 
+private:
+    vtkPolyDataBooleanFilter (const vtkPolyDataBooleanFilter&) = delete;
+    void operator= (const vtkPolyDataBooleanFilter&) = delete;
+
 };
 
 #endif

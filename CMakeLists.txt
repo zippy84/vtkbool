@@ -104,6 +104,14 @@ else()
 
         if(VTK_WRAP_PYTHON)
 
+            if(${VTK_MAJOR_VERSION} GREATER 7)
+                set(MODULE_HIERARCHY_NAME ${PROJECT_NAME}Hierarchy)
+                include(vtkWrapHierarchy)
+                vtk_wrap_hierarchy(${PROJECT_NAME} ${CMAKE_CURRENT_BINARY_DIR} vtkPolyDataBooleanFilter.h)
+                set(KIT_HIERARCHY_FILE ${CMAKE_CURRENT_BINARY_DIR}/${MODULE_HIERARCHY_NAME}.txt)
+                set(LIB_HIERARCHY_STAMP ${CMAKE_CURRENT_BINARY_DIR}/${MODULE_HIERARCHY_NAME}.stamp.txt)
+            endif()
+
             set(ENV{LD_LIBRARY_PATH} "${_vtk}/lib")
 
             execute_process(COMMAND "${_vtk}/bin/vtkpython" -c "import sys; sys.stdout.write('.'.join(map(str, sys.version_info[:2])))" OUTPUT_VARIABLE py_ver)

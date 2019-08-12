@@ -117,6 +117,10 @@ protected:
 
     int ProcessRequest (vtkInformation *request, vtkInformationVector **inputVector, vtkInformationVector *outputVector);
 
+private:
+    vtkPolyDataContactFilter (const vtkPolyDataContactFilter&) = delete;
+    void operator= (const vtkPolyDataContactFilter&) = delete;
+
 };
 
 #endif
