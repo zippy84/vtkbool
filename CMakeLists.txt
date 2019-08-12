@@ -119,8 +119,8 @@ else()
 
             if(py_ver)
                 if(CMAKE_VERSION VERSION_LESS "3.12")
-                    find_package(PythonInterp ${py_ver})
-                    find_package(PythonLibs ${py_ver})
+                    find_package(PythonInterp ${py_ver} EXACT)
+                    find_package(PythonLibs ${py_ver} EXACT)
 
                     if(PYTHONLIBS_FOUND)
 
@@ -154,7 +154,7 @@ else()
 
                 else()
                     if (py_ver MATCHES "^3")
-                        find_package(Python3 ${py_ver} COMPONENTS Interpreter Development)
+                        find_package(Python3 ${py_ver} EXACT COMPONENTS Interpreter Development)
 
                         if(Python3_Development_FOUND)
 
@@ -186,7 +186,7 @@ else()
                         endif()
 
                     elseif(py_ver EQUAL "2.7")
-                        find_package(Python2 ${py_ver} COMPONENTS Interpreter Development)
+                        find_package(Python2 ${py_ver} EXACT COMPONENTS Interpreter Development)
 
                         if(Python2_Development_FOUND)
 
