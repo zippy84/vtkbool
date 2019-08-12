@@ -106,6 +106,7 @@ else()
 
             if(${VTK_MAJOR_VERSION} GREATER 7)
                 set(MODULE_HIERARCHY_NAME ${PROJECT_NAME}Hierarchy)
+                set(${PROJECT_NAME}_WRAP_DEPENDS vtkCommonExecutionModel)
                 include(vtkWrapHierarchy)
                 vtk_wrap_hierarchy(${PROJECT_NAME} ${CMAKE_CURRENT_BINARY_DIR} vtkPolyDataBooleanFilter.h)
                 set(KIT_HIERARCHY_FILE ${CMAKE_CURRENT_BINARY_DIR}/${MODULE_HIERARCHY_NAME}.txt)
