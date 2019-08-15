@@ -46,7 +46,7 @@ for:
       - if exist VTK7 (
           mkdir build &
           cd build &
-          cmake -DVTKBOOL_TESTING=ON -DVTK_DIR=C:\projects\vtkbool-1\VTK7\lib\cmake\vtk-7.1 -DCMAKE_BUILD_TYPE=Release .. &
+          cmake -DVTKBOOL_TESTING=ON -DVTK_DIR=C:\projects\vtkbool\VTK7\lib\cmake\vtk-7.1 -DCMAKE_BUILD_TYPE=Release .. &
           cmake --build . --config Release &
           cd ..
         )
@@ -74,7 +74,7 @@ for:
       - if exist VTK8 (
           mkdir build &
           cd build &
-          cmake -DVTKBOOL_TESTING=ON -DVTK_DIR=C:\projects\vtkbool-1\VTK8\lib\cmake\vtk-8.2 -DCMAKE_BUILD_TYPE=Release .. &
+          cmake -DVTKBOOL_TESTING=ON -DVTK_DIR=C:\projects\vtkbool\VTK8\lib\cmake\vtk-8.2 -DCMAKE_BUILD_TYPE=Release .. &
           cmake --build . --config Release &
           cd ..
         )

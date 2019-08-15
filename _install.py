@@ -77,7 +77,7 @@ if __name__ == '__main__':
         else:
             print('Ready :)')
 
-            proc2 = subprocess.Popen(shlex.split('cmake --install . --prefix C:/projects/vtkbool-1/{}'.format(arg_dir)), cwd='{}/build'.format(name))
+            proc2 = subprocess.Popen(shlex.split('cmake --install . --prefix C:/projects/vtkbool/{}'.format(arg_dir)), cwd='{}/build'.format(name))
             proc2.wait()
 
     print('Creating {}.tar'.format(arg_dir))
