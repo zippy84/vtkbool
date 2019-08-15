@@ -5,7 +5,7 @@ compiler:
 dist: xenial
 branches:
   only:
-  - master
+    - master
 before_install:
   - sudo apt-get update
   - sudo apt-get remove -y --auto-remove mysql-*

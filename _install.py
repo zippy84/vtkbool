@@ -25,62 +25,61 @@ import zipfile
 import shlex
 import shutil
 
-from collections import deque
-
 import sys
 
-if not os.path.exists('VTK7.tar.gz'):
-  print('Downloading VTK')
+if __name__ == '__main__':
+    assert(len(sys.argv) == 3)
 
-  f = urllib.request.urlopen('https://www.vtk.org/files/release/7.1/VTK-7.1.1.zip')
+    arg_zip = sys.argv[1]
+    arg_dir = sys.argv[2]
 
-  with open('VTK-7.1.1.zip', 'wb') as zf:
-    zf.write(f.read())
+    filename = arg_zip.rsplit('/', 1)[-1]
+    name = filename[:-4]
 
-  with zipfile.ZipFile('VTK-7.1.1.zip') as zf:
-    zf.extractall()
+    if not os.path.exists('{}.tar'.format(arg_dir)):
+        print('Downloading VTK')
 
-  os.mkdir('VTK-7.1.1/build')
+        f = urllib.request.urlopen(arg_zip)
 
-  print('Configuring VTK')
+        with open(filename, 'wb') as zf:
+            zf.write(f.read())
 
-  proc = subprocess.Popen(shlex.split('cmake -Wno-deprecated -Wno-dev -DVTK_PYTHON_VERSION=3 -DVTK_WRAP_PYTHON=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=C:/projects/vtkbool/VTK7 ..'), cwd='VTK-7.1.1/build')
-  proc.wait()
-else:
-  print('VTK7.tar.gz already exists')
+        with zipfile.ZipFile(filename) as zf:
+            zf.extractall()
 
-  with tarfile.open('VTK7.tar.gz', 'r:gz') as zf:
-    zf.extractall('VTK-7.1.1')
+        os.mkdir('{}/build'.format(name))
 
-  os.remove('VTK7.tar.gz')
+        print('Configuring VTK')
 
-  with open('build.log', 'ab') as log:
-    print('Building VTK')
-
-    proc = subprocess.Popen(shlex.split('cmake --build . --config Release'), creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, cwd='VTK-7.1.1/build')
-
-    try:
-      proc.wait(3600)
-    except subprocess.TimeoutExpired:
-      print('cmake will be killed')
-
-      proc.send_signal(signal.CTRL_BREAK_EVENT)
-      proc.kill()
-      proc.wait()
-
+        proc = subprocess.Popen(shlex.split('cmake -Wno-deprecated -Wno-dev -DVTK_PYTHON_VERSION=3 -DVTK_WRAP_PYTHON=ON -DCMAKE_BUILD_TYPE=Release ..'), cwd='{}/build'.format(name))
+        proc.wait()
     else:
-      print('Ready :)')
+        print('{}.tar already exists'.format(arg_dir))
 
-      proc2 = subprocess.Popen(shlex.split('cmake --build . --config Release --target install'), cwd='VTK-7.1.1/build')
-      proc2.wait()
+        with tarfile.open('{}.tar'.format(arg_dir), 'r:') as zf:
+            zf.extractall(name)
 
-print('Creating VTK7.tar.gz')
+        os.remove('{}.tar'.format(arg_dir))
 
-shutil.make_archive('VTK7', 'gztar', 'VTK-7.1.1')
+        print('Building VTK')
 
-try:
-  with open('build.log') as log:
-    for l in deque(log, 50):
-      print(l.rstrip())
-except FileNotFoundError:
-  pass
+        proc = subprocess.Popen(shlex.split('cmake --build . --config Release'), creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, cwd='{}/build'.format(name))
+
+        try:
+            proc.wait(3600)
+        except subprocess.TimeoutExpired:
+            print('cmake will be killed')
+
+            proc.send_signal(signal.CTRL_BREAK_EVENT)
+            proc.kill()
+            proc.wait()
+
+        else:
+            print('Ready :)')
+
+            proc2 = subprocess.Popen(shlex.split('cmake --install . --prefix C:/projects/vtkbool-1/{}'.format(arg_dir)), cwd='{}/build'.format(name))
+            proc2.wait()
+
+    print('Creating {}.tar'.format(arg_dir))
+
+    shutil.make_archive(arg_dir, 'tar', name)
