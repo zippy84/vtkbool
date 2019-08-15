@@ -3,43 +3,26 @@ branches:
     - master
 environment:
   matrix:
-    - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu1804
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
       a: 0
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
       a: 1
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+    - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu1804
       a: 2
 for:
   - matrix:
       only:
         - a: 0
-    install:
-      - sudo apt-get update
-      - sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
-      - sudo apt-get remove -y libpq5
-      - sudo apt-get install -y libgdal-dev libpq-dev
-      - sudo apt-get install -y libvtk7.1 libvtk7-dev python3-vtk7
-      - ls /usr/bin/vtk*
-    build_script:
-      - mkdir build
-      - cd build
-      - cmake -DVTKBOOL_TESTING=ON -DCMAKE_BUILD_TYPE=Release ..
-      - make
-    test_script:
-      - ctest
-  - matrix:
-      only:
-        - a: 1
     init:
       - cmake --version
     cache:
       - VTK7.tar
       - VTK7
     install:
-      - set path=C:\Python37;%path%
+      - set path=C:\Python36;%path%
       - echo %path%
       - python --version
-      - dir C:\Python37
+      - dir C:\Python36
       - if not exist VTK7 ( python -u _install.py https://www.vtk.org/files/release/7.1/VTK-7.1.1.zip VTK7 )
     build_script:
       - cd
@@ -57,7 +40,7 @@ for:
         )
   - matrix:
       only:
-        - a: 2
+        - a: 1
     init:
       - cmake --version
     cache:
@@ -83,3 +66,20 @@ for:
           cd build &
           ctest -VV -C Release
         )
+  - matrix:
+      only:
+        - a: 2
+    install:
+      - sudo apt-get update
+      - sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
+      - sudo apt-get remove -y libpq5
+      - sudo apt-get install -y libgdal-dev libpq-dev
+      - sudo apt-get install -y libvtk7.1 libvtk7-dev python3-vtk7
+      - ls /usr/bin/vtk*
+    build_script:
+      - mkdir build
+      - cd build
+      - cmake -DVTKBOOL_TESTING=ON -DCMAKE_BUILD_TYPE=Release ..
+      - make
+    test_script:
+      - ctest
