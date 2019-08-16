@@ -38,6 +38,7 @@ limitations under the License.
 #include <vtkKdTreePointLocator.h>
 #include <vtkCleanPolyData.h>
 #include <vtkPolyDataConnectivityFilter.h>
+#include <vtkSmartPointer.h>
 
 #include "vtkPolyDataBooleanFilter.h"
 #include "vtkPolyDataContactFilter.h"
@@ -125,13 +126,13 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
             // eventuell vorhandene regionen vereinen
 
-            vtkCleanPolyData *cleanA = vtkCleanPolyData::New();
+            vtkSmartPointer<vtkCleanPolyData> cleanA = vtkSmartPointer<vtkCleanPolyData>::New();
             cleanA->SetOutputPointsPrecision(DOUBLE_PRECISION);
             cleanA->SetTolerance(1e-6);
             cleanA->SetInputData(pdA);
             cleanA->Update();
 
-            vtkCleanPolyData *cleanB = vtkCleanPolyData::New();
+            vtkSmartPointer<vtkCleanPolyData> cleanB = vtkSmartPointer<vtkCleanPolyData>::New();
             cleanB->SetOutputPointsPrecision(DOUBLE_PRECISION);
             cleanB->SetTolerance(1e-6);
             cleanB->SetInputData(pdB);
@@ -157,7 +158,7 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
             start = clock::now();
 #endif
 
-            vtkPolyDataContactFilter *cl = vtkPolyDataContactFilter::New();
+            vtkSmartPointer<vtkPolyDataContactFilter> cl = vtkSmartPointer<vtkPolyDataContactFilter>::New();
             cl->SetInputConnection(0, cleanA->GetOutputPort());
             cl->SetInputConnection(1, cleanB->GetOutputPort());
             cl->Update();
@@ -394,9 +395,9 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
             // aufräumen
 
-            cl->Delete();
+            /*cl->Delete();
             cleanB->Delete();
-            cleanA->Delete();
+            cleanA->Delete();*/
 
             timePdA = pdA->GetMTime();
             timePdB = pdB->GetMTime();
