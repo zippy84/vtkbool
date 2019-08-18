@@ -1,0 +1,10 @@
+C:/Workarea/ThirdPartyLibs/vtkbool/out/install/x64-Debug/bin/vtkbool.dll
+C:/Workarea/ThirdPartyLibs/vtkbool/out/install/x64-Debug/include/vtkPolyDataBooleanFilter.h
+C:/Workarea/ThirdPartyLibs/vtkbool/out/install/x64-Debug/CMake/vtkbool.cmake
+C:/Workarea/ThirdPartyLibs/vtkbool/out/install/x64-Debug/CMake/vtkboolVersion.cmake
+C:/Workarea/ThirdPartyLibs/vtkbool/out/install/x64-Debug/lib/decomp.lib
+C:/Workarea/ThirdPartyLibs/vtkbool/out/install/x64-Debug/include/vtkbool/libs/decomp/Decomposer.h
+C:/Workarea/ThirdPartyLibs/vtkbool/out/install/x64-Debug/lib/vp.lib
+C:/Workarea/ThirdPartyLibs/vtkbool/out/install/x64-Debug/include/vtkbool/libs/vp/Tools.h
+C:/Workarea/ThirdPartyLibs/vtkbool/out/install/x64-Debug/lib/merger.lib
+C:/Workarea/ThirdPartyLibs/vtkbool/out/install/x64-Debug/include/vtkbool/libs/merger/Merger.h

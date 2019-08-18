@@ -280,4 +280,4 @@ void GetSect (int tagA, int tagB, PolyType &poly) {
     })+1, poly.end());
 }
 
-// int Point::_tag;
+int Point::_tag;

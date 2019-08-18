@@ -1,0 +1,328 @@
+{
+	"inputs" : 
+	[
+		{
+			"path" : "CMakeLists.txt"
+		},
+		{
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/CMakeFiles/3.14.19060802-MSVC_2/CMakeSystem.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Workarea/vcpkg/scripts/buildsystems/vcpkg.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Professional/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.14/Modules/CMakeSystemSpecificInitialize.cmake"
+		},
+		{
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/CMakeFiles/3.14.19060802-MSVC_2/CMakeCCompiler.cmake"
+		},
+		{
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/CMakeFiles/3.14.19060802-MSVC_2/CMakeCXXCompiler.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Professional/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.14/Modules/CMakeSystemSpecificInformation.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Professional/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.14/Modules/CMakeGenericSystem.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Professional/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.14/Modules/CMakeInitializeConfigs.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Professional/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.14/Modules/Platform/Windows.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Professional/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.14/Modules/Platform/WindowsPaths.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Professional/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.14/Modules/CMakeCInformation.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Professional/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.14/Modules/CMakeLanguageInformation.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Professional/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.14/Modules/Compiler/MSVC-C.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Professional/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.14/Modules/Platform/Windows-MSVC-C.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Professional/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.14/Modules/Platform/Windows-MSVC.cmake"
+		},
+		{
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/CMakeFiles/3.14.19060802-MSVC_2/CMakeRCCompiler.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Professional/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.14/Modules/CMakeRCInformation.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Professional/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.14/Modules/CMakeCommonLanguageInclude.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Professional/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.14/Modules/CMakeCXXInformation.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Professional/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.14/Modules/CMakeLanguageInformation.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Professional/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.14/Modules/Compiler/MSVC-CXX.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Professional/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.14/Modules/Compiler/CMakeCommonCompilerMacros.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Professional/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.14/Modules/Platform/Windows-MSVC-CXX.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Professional/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.14/Modules/Platform/Windows-MSVC.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "C:/Program Files (x86)/Microsoft Visual Studio/2019/Professional/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.14/Modules/CMakeCommonLanguageInclude.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Workarea/vcpkg/installed/x64-windows/share/vtk/VTKConfigVersion.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Workarea/vcpkg/installed/x64-windows/share/vtk/VTKConfig.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Workarea/vcpkg/installed/x64-windows/share/vtk/VTKTargets.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Workarea/vcpkg/installed/x64-windows/share/vtk/VTKTargets-debug.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Workarea/vcpkg/installed/x64-windows/share/vtk/VTKTargets-release.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Workarea/vcpkg/installed/x64-windows/share/vtk/vtkModuleAPI.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Workarea/vcpkg/installed/x64-windows/share/vtk/Modules/vtkFiltersSources.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Workarea/vcpkg/installed/x64-windows/share/vtk/Modules/vtkCommonComputationalGeometry.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Workarea/vcpkg/installed/x64-windows/share/vtk/Modules/vtkCommonCore.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Workarea/vcpkg/installed/x64-windows/share/vtk/Modules/vtkkwiml.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Workarea/vcpkg/installed/x64-windows/share/vtk/Modules/vtksys.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Workarea/vcpkg/installed/x64-windows/share/vtk/Modules/vtkutf8.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Workarea/vcpkg/installed/x64-windows/share/vtk/Modules/vtkCommonDataModel.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Workarea/vcpkg/installed/x64-windows/share/vtk/Modules/vtkCommonMath.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Workarea/vcpkg/installed/x64-windows/share/vtk/Modules/vtkCommonMisc.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Workarea/vcpkg/installed/x64-windows/share/vtk/Modules/vtkCommonSystem.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Workarea/vcpkg/installed/x64-windows/share/vtk/Modules/vtkCommonTransforms.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Workarea/vcpkg/installed/x64-windows/share/vtk/Modules/vtkCommonExecutionModel.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Workarea/vcpkg/installed/x64-windows/share/vtk/Modules/vtkFiltersCore.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Workarea/vcpkg/installed/x64-windows/share/vtk/Modules/vtkFiltersGeneral.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Workarea/vcpkg/installed/x64-windows/share/vtk/Modules/vtkIOLegacy.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Workarea/vcpkg/installed/x64-windows/share/vtk/Modules/vtkIOCore.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Workarea/vcpkg/installed/x64-windows/share/vtk/Modules/vtkdoubleconversion.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Workarea/vcpkg/installed/x64-windows/share/vtk/Modules/vtklz4.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Workarea/vcpkg/installed/x64-windows/share/vtk/Modules/vtklzma.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Workarea/vcpkg/installed/x64-windows/share/vtk/Modules/vtkzlib.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Workarea/vcpkg/installed/x64-windows/share/vtk/Modules/vtkFiltersExtraction.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Workarea/vcpkg/installed/x64-windows/share/vtk/Modules/vtkFiltersStatistics.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Workarea/vcpkg/installed/x64-windows/share/vtk/Modules/vtkImagingFourier.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Workarea/vcpkg/installed/x64-windows/share/vtk/Modules/vtkImagingCore.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Workarea/vcpkg/installed/x64-windows/share/vtk/Modules/vtkeigen.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Workarea/vcpkg/installed/x64-windows/share/vtk/Modules/vtkFiltersGeometry.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Workarea/vcpkg/installed/x64-windows/share/vtk/Modules/vtkFiltersModeling.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Workarea/vcpkg/installed/x64-windows/share/vtk/Modules/vtkRenderingFreeType.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Workarea/vcpkg/installed/x64-windows/share/vtk/Modules/vtkRenderingCore.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Workarea/vcpkg/installed/x64-windows/share/vtk/Modules/vtkCommonColor.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Workarea/vcpkg/installed/x64-windows/share/vtk/Modules/vtkfreetype.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Workarea/vcpkg/installed/x64-windows/share/vtk/Modules/vtkWrappingPythonCore.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Workarea/vcpkg/installed/x64-windows/share/vtk/Modules/vtkPython.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Workarea/vcpkg/installed/x64-windows/share/vtk/Modules/vtkPythonInterpreter.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Workarea/vcpkg/installed/x64-windows/share/vtk/Modules/vtkWrappingTools.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Workarea/vcpkg/installed/x64-windows/share/vtk/UseVTK.cmake"
+		},
+		{
+			"path" : "vtkbool.cmake.in"
+		},
+		{
+			"path" : "vtkbool.cmake.in"
+		},
+		{
+			"path" : "vtkboolVersion.cmake.in"
+		},
+		{
+			"path" : "libs/CMakeLists.txt"
+		},
+		{
+			"path" : "libs/decomp/CMakeLists.txt"
+		},
+		{
+			"path" : "libs/vp/CMakeLists.txt"
+		},
+		{
+			"path" : "libs/merger/CMakeLists.txt"
+		}
+	],
+	"kind" : "cmakeFiles",
+	"paths" : 
+	{
+		"build" : "C:/Workarea/ThirdPartyLibs/vtkbool/out/build/x64-Debug",
+		"source" : "C:/Workarea/ThirdPartyLibs/vtkbool"
+	},
+	"version" : 
+	{
+		"major" : 1,
+		"minor" : 0
+	}
+}

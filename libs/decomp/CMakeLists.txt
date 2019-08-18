@@ -45,3 +45,15 @@ if(${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
     target_link_libraries(test decomp ${JSONCPP_LIBRARIES})
 
 endif()
+
+set_target_properties(decomp PROPERTIES
+  PUBLIC_HEADER "Decomposer.h")
+
+install(TARGETS decomp
+  # IMPORTANT: Add the foo library to the "export-set"
+  EXPORT vtkboolTargets
+  RUNTIME DESTINATION "${INSTALL_BIN_DIR}" COMPONENT bin
+  LIBRARY DESTINATION "${INSTALL_LIB_DIR}" COMPONENT shlib
+  PUBLIC_HEADER DESTINATION "${INSTALL_INCLUDE_DIR}/vtkbool/libs/decomp"
+    COMPONENT dev)
+

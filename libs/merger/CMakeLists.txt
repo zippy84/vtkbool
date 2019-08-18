@@ -49,3 +49,14 @@ if(${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
     target_link_libraries(test merger ${JSONCPP_LIBRARIES})
 
 endif()
+
+set_target_properties(merger PROPERTIES
+  PUBLIC_HEADER "Merger.h")
+
+install(TARGETS merger
+  # IMPORTANT: Add the foo library to the "export-set"
+  EXPORT vtkboolTargets
+  RUNTIME DESTINATION "${INSTALL_BIN_DIR}" COMPONENT bin
+  LIBRARY DESTINATION "${INSTALL_LIB_DIR}" COMPONENT shlib
+  PUBLIC_HEADER DESTINATION "${INSTALL_INCLUDE_DIR}/vtkbool/libs/merger"
+    COMPONENT dev)
