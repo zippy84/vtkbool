@@ -6,6 +6,6 @@
 # Compute paths
 get_filename_component(VTKBOOL_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
 set(VTKBOOL_INCLUDE_DIRS "@CONF_INCLUDE_DIRS@")
-
+include("${VTKBOOL_CMAKE_DIR}/VTKBoolTargets.cmake")
 set(VTKBOOL_LIBRARIES VTKBOOL)
 

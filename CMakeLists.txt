@@ -271,24 +271,24 @@ install(TARGETS vtkbool
 	# (this registers the build-tree with a global CMake-registry)
 	export(PACKAGE vtkbool)
 
-		# Create the vtkboolConfig.cmake and vtkboolVersion files
+		# Create the vtkboolConfig.cmake and vtkboolVersionConfig files
 	file(RELATIVE_PATH REL_INCLUDE_DIR "${INSTALL_CMAKE_DIR}"
 	   "${INSTALL_INCLUDE_DIR}")
 	# ... for the build tree
 	set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}" "${PROJECT_BINARY_DIR}")
 	configure_file(vtkbool.cmake.in
-	  "${PROJECT_BINARY_DIR}/vtkbool.cmake" @ONLY)
+	  "${PROJECT_BINARY_DIR}/vtkboolConfig.cmake" @ONLY)
 	# ... for the install tree
 	set(CONF_INCLUDE_DIRS "\${VTKBOOL_CMAKE_DIR}/${REL_INCLUDE_DIR}")
 	configure_file(vtkbool.cmake.in
-	  "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/vtkbool.cmake" @ONLY)
+	  "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/vtkboolConfig.cmake" @ONLY)
 	# ... for both
 	configure_file(vtkboolVersion.cmake.in
-	  "${PROJECT_BINARY_DIR}/vtkboolVersion.cmake" @ONLY)
+	  "${PROJECT_BINARY_DIR}/vtkboolVersionConfig.cmake" @ONLY)
 
 
 	# Install the vtkbool.cmake and vtkboolVersion.cmake
 	install(FILES
-	  "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/vtkbool.cmake"
-	  "${PROJECT_BINARY_DIR}/vtkboolVersion.cmake"
+	  "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/vtkboolConfig.cmake"
+	  "${PROJECT_BINARY_DIR}/vtkboolVersionConfig.cmake"
 	  DESTINATION "${INSTALL_CMAKE_DIR}" COMPONENT dev)
