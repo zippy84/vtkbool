@@ -46,6 +46,12 @@ if(${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
 
 endif()
 
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# for Decomposer install target 
+
+set(INSTALL_INCLUDE_DIR include CACHE PATH
+	"Installation directory for header files")
+
 set_target_properties(decomp PROPERTIES
   PUBLIC_HEADER "Decomposer.h")
 
@@ -54,6 +60,6 @@ install(TARGETS decomp
   EXPORT vtkboolTargets
   RUNTIME DESTINATION "${INSTALL_BIN_DIR}" COMPONENT bin
   LIBRARY DESTINATION "${INSTALL_LIB_DIR}" COMPONENT shlib
-  PUBLIC_HEADER DESTINATION "${INSTALL_INCLUDE_DIR}/vtkbool/libs/decomp"
+  PUBLIC_HEADER DESTINATION "${INSTALL_INCLUDE_DIR}/libs/decomp"
     COMPONENT dev)
 

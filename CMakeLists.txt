@@ -206,7 +206,9 @@ else()
 
 endif()
 
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+# for vtkbool install target 
 
 set_target_properties(vtkbool PROPERTIES
   PUBLIC_HEADER vtkPolyDataBooleanFilter.h vtkPolyDataContactFilter.h Utilities.h)
@@ -221,7 +223,7 @@ install(TARGETS vtkbool
 
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+# for vtkbool pakcage
 
 	set(VTKBOOL_MAJOR_VERSION 0)
 	set(VTKBOOL_MINOR_VERSION 1)
@@ -292,3 +294,6 @@ install(TARGETS vtkbool
 	  "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/vtkboolConfig.cmake"
 	  "${PROJECT_BINARY_DIR}/vtkboolVersionConfig.cmake"
 	  DESTINATION "${INSTALL_CMAKE_DIR}" COMPONENT dev)
+
+	#Install the export set for use with the install-tree
+	install(EXPORT vtkboolTargets DESTINATION "${INSTALL_CMAKE_DIR}" COMPONENT dev)

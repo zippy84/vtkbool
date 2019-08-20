@@ -50,6 +50,13 @@ if(${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
 
 endif()
 
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# for merger install target 
+
+set(INSTALL_INCLUDE_DIR include CACHE PATH
+	"Installation directory for header files")
+
+
 set_target_properties(merger PROPERTIES
   PUBLIC_HEADER "Merger.h")
 
@@ -58,5 +65,5 @@ install(TARGETS merger
   EXPORT vtkboolTargets
   RUNTIME DESTINATION "${INSTALL_BIN_DIR}" COMPONENT bin
   LIBRARY DESTINATION "${INSTALL_LIB_DIR}" COMPONENT shlib
-  PUBLIC_HEADER DESTINATION "${INSTALL_INCLUDE_DIR}/vtkbool/libs/merger"
+  PUBLIC_HEADER DESTINATION "${INSTALL_INCLUDE_DIR}/libs/merger"
     COMPONENT dev)
