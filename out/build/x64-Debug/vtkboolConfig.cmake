@@ -5,7 +5,7 @@
 
 # Compute paths
 get_filename_component(VTKBOOL_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
-set(VTKBOOL_INCLUDE_DIRS "C:/Workarea/vtkbool;C:/Workarea/vtkbool/out/build/x64-Debug")
+set(VTKBOOL_INCLUDE_DIRS "C:/Workarea/vtkbool;C:/Workarea/vtkbool/out/build/x64-Debug;C:/Workarea/vtkbool/libs/vp;C:/Workarea/vtkbool/out/build/x64-Debug/libs/vp")
 include("${VTKBOOL_CMAKE_DIR}/VTKBoolTargets.cmake")
 set(VTKBOOL_LIBRARIES VTKBOOL)
 
