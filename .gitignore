@@ -4,5 +4,6 @@
 /Release/
 /x64/
 /.vs/
-/.out/
+/out/
+/bin/
 /*.sdf/

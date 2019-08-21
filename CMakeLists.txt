@@ -28,7 +28,7 @@ endif()
 
 option(BUILD_PARAVIEW_PLUGIN "" OFF)
 option(BUILD_AS_DEBUG "" OFF)
-option(BUILD_TESTING "" OFF)
+option(BUILD_TESTING "" ON)
 
 mark_as_advanced(BUILD_AS_DEBUG)
 
