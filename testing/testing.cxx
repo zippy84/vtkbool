@@ -371,10 +371,14 @@ public:
 };
 
 int main (int argc, char *argv[]) {
-    std::istringstream stream(argv[1]);
-    int t;
+    
+    int t = 0;
 
-    stream >> t;
+	if (argc > 1)
+	{
+		std::istringstream stream(argv[1]);
+		stream >> t;
+	}
 
     if (t == 0) {
         vtkCubeSource *cu = vtkCubeSource::New();
