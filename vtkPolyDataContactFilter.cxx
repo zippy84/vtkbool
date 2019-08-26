@@ -258,7 +258,7 @@ void vtkPolyDataContactFilter::PreparePolyData (vtkPolyData *pd) {
 
 }
 
-InterPtType vtkPolyDataContactFilter::InterEdgeLine (double *eA, double *eB, double *r, double *pt, int _pid) {
+InterPtType vtkPolyDataContactFilter::InterEdgeLine (double *eA, double *eB, double *r, double *pt, int vtkNotUsed(_pid)) {
 
     InterPtType inter;
 
@@ -748,7 +748,7 @@ OverlapsType vtkPolyDataContactFilter::OverlapLines (InterPtsType &intersA, Inte
 
 }
 
-int vtkPolyDataContactFilter::InterOBBNodes (vtkOBBNode *nodeA, vtkOBBNode *nodeB, vtkMatrix4x4 *mat, void *caller) {
+int vtkPolyDataContactFilter::InterOBBNodes (vtkOBBNode *nodeA, vtkOBBNode *nodeB, vtkMatrix4x4 *vtkNotUsed(mat), void *caller) {
     vtkPolyDataContactFilter *self = reinterpret_cast<vtkPolyDataContactFilter*>(caller);
 
     vtkIdList *cellsA = nodeA->Cells;

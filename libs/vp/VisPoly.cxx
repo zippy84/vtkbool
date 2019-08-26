@@ -28,7 +28,7 @@ limitations under the License.
 #include "RmTrivials.h"
 #include "AABB.h"
 
-void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, SavedPtsType &savedPts, int ind) {
+void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
     if (poly.size() < 3) {
         return;
     }
@@ -901,7 +901,7 @@ void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind) {
     // std::cout << "?D " << GetAbsolutePath(poly3) << std::endl;
 
     try {
-        GetVisPoly(poly3, tr, poly4, *savedPts);
+        GetVisPoly(poly3, tr, poly4);
 
         for (auto &l : tr.locs) {
             vtkbool_throw(l.second.t < 1, "GetVisPoly_wrapper", "t not less than 1");

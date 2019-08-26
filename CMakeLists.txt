@@ -25,7 +25,7 @@ if(MSVC)
     add_definitions(-D_SCL_SECURE_NO_WARNINGS)
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 else()
-    add_compile_options(-Wno-deprecated -fPIC -Wunused)
+    add_compile_options(-Wall -Wextra -Wno-sign-compare -fPIC)
 endif()
 
 option(VTKBOOL_PARAVIEW "" OFF)

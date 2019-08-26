@@ -1684,7 +1684,7 @@ void vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
 
 }
 
-void vtkPolyDataBooleanFilter::CollapseCaptPoints (vtkPolyData *pd, PolyStripsType &polyStrips) {
+void vtkPolyDataBooleanFilter::CollapseCaptPoints (vtkPolyData *vtkNotUsed(pd), PolyStripsType &polyStrips) {
 
 #ifdef DEBUG
     std::cout << "CollapseCaptPoints()" << std::endl;

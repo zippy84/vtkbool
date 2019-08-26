@@ -59,8 +59,6 @@ typedef std::vector<int> IdsType;
 class Point {
     static int _tag;
 public:
-    int tag;
-
     Point (double _x, double _y, int _id = NO_USE) : id(_id), tag(_tag++) {
         pt[0] = _x;
         pt[1] = _y;
@@ -85,7 +83,7 @@ public:
 
     const double &x = pt[0],
         &y = pt[1];
-    int id;
+    int id, tag;
 
     friend std::ostream& operator<< (std::ostream &out, const Point &p) {
         out << "id: " << p.id << ", pt: [" << p.x << "," << p.y << "], tag: " << p.tag;

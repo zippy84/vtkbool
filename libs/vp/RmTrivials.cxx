@@ -82,7 +82,7 @@ void TrivialRm::RemovePockets (VertsType3 &good, double *rot, double d, Src src)
                 std::reverse(_poly.begin(), _poly.end());
             }
 
-            if (*(_s.begin()) == 1 ^ TestCW(_poly)) {
+            if ((*(_s.begin()) == 1) ^ TestCW(_poly)) {
                 p.dir = Dir::BACKWARD;
             } else {
                 p.dir = Dir::FORWARD;

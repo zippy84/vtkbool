@@ -58,12 +58,14 @@ void SubP::RestoreS () {
 }
 
 Decomposer::Decomposer (const PolyType &_orig) : orig(_orig), savedPts(new SavedPtsType) {
+    #ifndef NDEBUG
     {
         int i = 0;
         for(auto& p : orig) {
             assert(p.id == i++);
         }
     }
+    #endif
 
     Simplify(orig, savedPts, specTags, poly, NO_USE, false);
 
