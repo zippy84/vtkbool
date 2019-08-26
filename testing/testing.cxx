@@ -55,7 +55,7 @@ int Point::_tag = 0;
 typedef std::map<int, IdsType> LinksType;
 
 class Test {
-    vtkPolyData *lines, *pd;
+    vtkPolyData *pd, *lines;
     vtkKdTreePointLocator *loc;
     vtkIdList *cells, *poly, *pts;
 
@@ -370,7 +370,7 @@ public:
     }
 };
 
-int main (int argc, char *argv[]) {
+int main (int vtkNotUsed(argc), char *argv[]) {
     std::istringstream stream(argv[1]);
     int t;
 
