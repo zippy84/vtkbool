@@ -165,9 +165,9 @@ public:
     StripPtL3 (const double *_pt, double _t, int _ind = NO_USE) : t(_t), ind(_ind) {
         Cpy(pt, _pt, 3);
     }
+    double t;
     int ind;
     double pt[3];
-    double t;
 
     bool operator< (const StripPtL3 &other) const {
         return t < other.t;
@@ -195,8 +195,8 @@ typedef std::vector<IdsType> HolesType;
 
 class _Wrapper {
     vtkPolyData *pd;
-    int origId;
     IdsType descIds;
+    int origId;
 
     Base base;
     HolesType holes;

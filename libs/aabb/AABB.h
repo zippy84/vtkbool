@@ -78,8 +78,8 @@ public:
         }
     }
 
-    int left, right, parent;
     std::shared_ptr<Obj> obj;
+    int left, right, parent;
 };
 
 class AABB {

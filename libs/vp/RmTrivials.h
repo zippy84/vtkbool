@@ -32,12 +32,14 @@ enum class Src {
 
 class Vert3 : public Point {
 public:
-    Vert3 (Point &p) : Point(p), rm(false), src(Src::NONE), t(0) {}
-    Vert3 (double *_s, Src _src, double _t) : Point(_s), rm(false), src(_src), t(_t) {}
+    // i wird in GetSimplified explizit gesetzt
 
-    double t;
-    Src src;
+    Vert3 (Point &p) : Point(p), rm(false), src(Src::NONE), t(0), i(NO_USE) {}
+    Vert3 (double *_s, Src _src, double _t) : Point(_s), rm(false), src(_src), t(_t), i(NO_USE) {}
+
     bool rm;
+    Src src;
+    double t;
 
     int i;
 

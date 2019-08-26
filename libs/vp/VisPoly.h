@@ -73,8 +73,8 @@ public:
 class Vert2 {
 public:
     Vert2 (int _i, double _l) : i(_i), l(_l) {}
-    double l;
     int i;
+    double l;
 };
 
 typedef std::vector<Vert2> VertsType2;
@@ -148,7 +148,7 @@ void Restore2 (const PolyType &poly, PolyType &res);
 void SimpleRestore (const PolyType &poly, const SavedPtsType &savedPts, PolyType &res);
 
 // diese darf nicht direkt verwendet werden
-void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, SavedPtsType &savedPts, int ind = 0);
+void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind = 0);
 
 void GetVisPoly_wrapper (PolyType &poly, PolyType &res, int ind);
 
