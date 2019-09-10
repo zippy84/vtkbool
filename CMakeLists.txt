@@ -91,7 +91,7 @@ else()
 
         endif()
 
-        if(VTK_WRAP_PYTHON)
+	if(VTK_WRAP_PYTHON AND WIN32)
 
             set(ENV{LD_LIBRARY_PATH} "${_vtk}/lib")
 
@@ -213,14 +213,23 @@ endif()
 set_target_properties(vtkbool PROPERTIES
   PUBLIC_HEADER vtkPolyDataBooleanFilter.h vtkPolyDataContactFilter.h Utilities.h)
 
+if(WIN32)
 install(TARGETS vtkbool
   # IMPORTANT: Add the vtkbool library to the "export-set"
   EXPORT vtkboolTargets
   RUNTIME DESTINATION "${INSTALL_BIN_DIR}" COMPONENT bin
   LIBRARY DESTINATION "${INSTALL_LIB_DIR}" COMPONENT shlib
-  PUBLIC_HEADER DESTINATION "${INSTALL_INCLUDE_DIR}" 
+  PUBLIC_HEADER DESTINATION "${INSTALL_INCLUDE_DIR}"
     COMPONENT dev)
-
+else()
+install(TARGETS vtkbool
+  # IMPORTANT: Add the vtkbool library to the "export-set"
+  EXPORT vtkboolTargets
+  RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/${INSTALL_BIN_DIR}" COMPONENT bin
+  LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/${INSTALL_LIB_DIR}" COMPONENT shlib
+  PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_PREFIX}/${INSTALL_INCLUDE_DIR}"
+    COMPONENT dev)
+endif()
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # for vtkbool pakcage
@@ -239,7 +248,7 @@ install(TARGETS vtkbool
 	if(WIN32 AND NOT CYGWIN)
 	  set(DEF_INSTALL_CMAKE_DIR CMake)
 	else()
-	  set(DEF_INSTALL_CMAKE_DIR lib/CMake/vtkbool)
+	  set(DEF_INSTALL_CMAKE_DIR lib/cmake/vtkbool)
 	endif()
 	set(INSTALL_CMAKE_DIR ${DEF_INSTALL_CMAKE_DIR} CACHE PATH
 	  "Installation directory for CMake files")

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdecomp.a  CMakeFiles/decomp.dir/Decomposer.cxx.o
+/usr/bin/ranlib libdecomp.a

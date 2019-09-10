@@ -1,0 +1,2 @@
+/usr/bin/ar qc libvp.a  CMakeFiles/vp.dir/Tools.cxx.o CMakeFiles/vp.dir/RmTrivials.cxx.o CMakeFiles/vp.dir/VisPoly.cxx.o
+/usr/bin/ranlib libvp.a
