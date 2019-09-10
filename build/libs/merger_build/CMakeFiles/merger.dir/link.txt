@@ -1,2 +1,0 @@
-/usr/bin/ar qc libmerger.a  CMakeFiles/merger.dir/Merger.cxx.o CMakeFiles/merger.dir/__/vp/Tools.cxx.o
-/usr/bin/ranlib libmerger.a
