@@ -211,7 +211,7 @@ endif()
 # for vtkbool install target 
 
 set_target_properties(vtkbool PROPERTIES
-  PUBLIC_HEADER vtkPolyDataBooleanFilter.h vtkPolyDataContactFilter.h Utilities.h)
+  PUBLIC_HEADER "vtkPolyDataBooleanFilter.h;vtkPolyDataContactFilter.h;Utilities.h")
 
 if(WIN32)
 install(TARGETS vtkbool
