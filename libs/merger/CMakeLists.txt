@@ -60,6 +60,7 @@ set(INSTALL_INCLUDE_DIR include CACHE PATH
 set_target_properties(merger PROPERTIES
   PUBLIC_HEADER "Merger.h")
 
+if(WIN32)
 install(TARGETS merger
   # IMPORTANT: Add the foo library to the "export-set"
   EXPORT vtkboolTargets
@@ -67,3 +68,13 @@ install(TARGETS merger
   LIBRARY DESTINATION "${INSTALL_LIB_DIR}" COMPONENT shlib
   PUBLIC_HEADER DESTINATION "${INSTALL_INCLUDE_DIR}/libs/merger"
     COMPONENT dev)
+else()
+install(TARGETS merger
+  # IMPORTANT: Add the foo library to the "export-set"
+ EXPORT vtkboolTargets
+  RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/${INSTALL_BIN_DIR}" COMPONENT bin
+  LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/${INSTALL_LIB_DIR}" COMPONENT shlib
+  ARCHIVE DESTINATION "${CMAKE_INSTALL_PREFIX}/${INSTALL_LIB_DIR}" COMPONENT shlib
+  PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_PREFIX}/${INSTALL_INCLUDE_DIR}"
+    COMPONENT dev)
+endif()
