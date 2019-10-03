@@ -47,7 +47,7 @@ This is an extension of the graphics library VTK. The goal of the extension is t
 
 ## Library
 
-To include vtkbool into your program, you have to compile it as a library. All you need is an installation of VTK with header files. If you have installed VTK over your package manager, CMake is able to find the required files. Otherwise you have to set **VTK\_DIR** manually. It must be a path like */home/zippy/VTK6/lib/cmake/vtk-6.3* or *C:/Users/zippy/VTK6/lib/cmake/vtk-6.3*.
+To include vtkbool into your program, you have to compile it as a library. All you need is an installation of VTK with header files. If you have installed VTK over your package manager, CMake is able to find the required files. Otherwise you have to set **VTK\_DIR** manually. 
 
 The usage of the library is very simple. Look at *testing.cxx* and you can see how. Upon creating the instance of the boolean-filter and connecting the two inputs with the pipeline, you can choose between different operation types, in different manners. You can set the operation mode by calling one of the named methods:
 
@@ -190,13 +190,12 @@ Get vtkbool codes from repository.
 from vtbool folder right click to open vs2019
 
 select vtkbool\CMakeLists.txt and right click "Generate Cache for vtkbool".
-    1> [CMake] -- Build files have been written to: C:/Workarea/vtkbool/out/build/x64-Debug
+    1> [CMake] -- Build files have been written to: build folder
 	
 select vtkbool\CMakeLists.txt (two times) and right click "Build" to make sure the original vtkbool codes could be built successfully! 
 
-  [13/13] cmd.exe /C "cmd.exe /C ""C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E __create_def C:\Workarea\vtkbool\out\build\x64-Debug\CMakeFiles\vtkbool.dir\exports.def C:\Workarea\vtkbool\out\build\x64-Debug\CMakeFiles\vtkbool.dir\exports.def.objs && cd C:\Workarea\vtkbool\out\build\x64-Debug" && "C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E vs_link_dll --intdir=CMakeFiles\vtkbool.dir --rc=C:\PROGRA~2\WI3CF2~1\10\bin\100183~1.0\x64\rc.exe --mt=C:\PROGRA~2\WI3CF2~1\10\bin\100183~1.0\x64\mt.exe --manifests  -- C:\PROGRA~2\MICROS~2\2019\PROFES~1\VC\Tools\MSVC\1422~1.279\bin\Hostx64\x64\link.exe /nologo @CMakeFiles\vtkbool.rsp  /out:vtkbool.dll /implib:vtkbool.lib /pdb:vtkbool.pdb /dll /version:0.0 /machine:x64  /debug /INCREMENTAL  /DEF:CMakeFiles\vtkbool.dir\exports.def   && cmd.exe /C "cd /D C:\Workarea\vtkbool\out\build\x64-Debug && powershell -noprofile -executionpolicy Bypass -file C:/Workarea/vcpkg/scripts/buildsystems/msbuild/applocal.ps1 -targetBinary C:/Workarea/vtkbool/out/build/x64-Debug/vtkbool.dll -installedDir C:/Workarea/vcpkg/installed/x64-windows/debug/bin -OutVariable out""
-     Creating library vtkbool.lib and object vtkbool.exp
-     Creating library vtkbool.lib and object vtkbool.exp
+     Creating library 
+     Creating library 
 Build succeeded.	 
 	 
 The vtkbool has self codes and three dependencies codes.
@@ -213,7 +212,6 @@ set_target_properties(dependency PROPERTIES
   PUBLIC_HEADER "dependency.h")
 
 install(TARGETS dependency
-  # IMPORTANT: Add the foo library to the "export-set"
   EXPORT vtkboolTargets
   RUNTIME DESTINATION "${INSTALL_BIN_DIR}" COMPONENT bin
   LIBRARY DESTINATION "${INSTALL_LIB_DIR}" COMPONENT shlib
@@ -319,7 +317,7 @@ install(TARGETS vtkbool
     export(PACKAGE vtkbool) will registers the build-tree with a global CMake-registry at
 	local computer Registry Editor 
 	  Computer\HKEY_CURRENT_USER\Software\Kitware\CMake\Packages\VTKBool
-	      Data: C:/Workarea/vtkbool/out/build/x64-Debug
+	      Data: build folder
 	
     From this location the user will using find_package command to get vtkboolConfig.cmake file to get vtkbool package information.
 	
@@ -343,33 +341,30 @@ install(TARGETS vtkbool
     After all done and saved,
 	
 	select vtkbool\CMakeLists.txt and right click "Generate Cache for vtkbool".
-		1> [CMake] -- Build files have been written to: C:/Workarea/vtkbool/out/build/x64-Debug
+		1> [CMake] -- Build files have been written to: build folder
 		
 	select vtkbool\CMakeLists.txt (two times) and right click "Build" 
 
-	  [13/13] cmd.exe /C "cmd.exe /C ""C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E __create_def C:\Workarea\vtkbool\out\build\x64-Debug\CMakeFiles\vtkbool.dir\exports.def C:\Workarea\vtkbool\out\build\x64-Debug\CMakeFiles\vtkbool.dir\exports.def.objs && cd C:\Workarea\vtkbool\out\build\x64-Debug" && "C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E vs_link_dll --intdir=CMakeFiles\vtkbool.dir --rc=C:\PROGRA~2\WI3CF2~1\10\bin\100183~1.0\x64\rc.exe --mt=C:\PROGRA~2\WI3CF2~1\10\bin\100183~1.0\x64\mt.exe --manifests  -- C:\PROGRA~2\MICROS~2\2019\PROFES~1\VC\Tools\MSVC\1422~1.279\bin\Hostx64\x64\link.exe /nologo @CMakeFiles\vtkbool.rsp  /out:vtkbool.dll /implib:vtkbool.lib /pdb:vtkbool.pdb /dll /version:0.0 /machine:x64  /debug /INCREMENTAL  /DEF:CMakeFiles\vtkbool.dir\exports.def   && cmd.exe /C "cd /D C:\Workarea\vtkbool\out\build\x64-Debug && powershell -noprofile -executionpolicy Bypass -file C:/Workarea/vcpkg/scripts/buildsystems/msbuild/applocal.ps1 -targetBinary C:/Workarea/vtkbool/out/build/x64-Debug/vtkbool.dll -installedDir C:/Workarea/vcpkg/installed/x64-windows/debug/bin -OutVariable out""
-		 Creating library vtkbool.lib and object vtkbool.exp
-		 Creating library vtkbool.lib and object vtkbool.exp
-	Build succeeded.	 
+	 Creating library vtkbool.lib and object vtkbool.exp
+	 Creating library vtkbool.lib and object vtkbool.exp
 	
     select vtkbool\CMakeLists.txt (two times) and right click "Install"
 	
 >------ Build started: Project: CMakeLists, Configuration:  ------
-  [0/1] cmd.exe /C "cd /D C:\Workarea\vtkbool\out\build\x64-Debug && "C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -P cmake_install.cmake"
   -- Install configuration: "Debug"
-  -- Up-to-date: C:/Workarea/vtkbool/out/install/x64-Debug/lib/vtkbool.lib
-  -- Up-to-date: C:/Workarea/vtkbool/out/install/x64-Debug/bin/vtkbool.dll
-  -- Up-to-date: C:/Workarea/vtkbool/out/install/x64-Debug/include/vtkPolyDataBooleanFilter.h
-  -- Up-to-date: C:/Workarea/vtkbool/out/install/x64-Debug/CMake/vtkboolConfig.cmake
-  -- Up-to-date: C:/Workarea/vtkbool/out/install/x64-Debug/CMake/vtkboolVersionConfig.cmake
-  -- Up-to-date: C:/Workarea/vtkbool/out/install/x64-Debug/CMake/vtkboolTargets.cmake
-  -- Up-to-date: C:/Workarea/vtkbool/out/install/x64-Debug/CMake/vtkboolTargets-debug.cmake
-  -- Up-to-date: C:/Workarea/vtkbool/out/install/x64-Debug/lib/decomp.lib
-  -- Up-to-date: C:/Workarea/vtkbool/out/install/x64-Debug/include/libs/decomp/Decomposer.h
-  -- Up-to-date: C:/Workarea/vtkbool/out/install/x64-Debug/lib/vp.lib
-  -- Up-to-date: C:/Workarea/vtkbool/out/install/x64-Debug/include/libs/vp/Tools.h
-  -- Up-to-date: C:/Workarea/vtkbool/out/install/x64-Debug/lib/merger.lib
-  -- Up-to-date: C:/Workarea/vtkbool/out/install/x64-Debug/include/libs/merger/Merger.h
+  -- Up-to-date: lib/vtkbool.lib
+  -- Up-to-date: bin/vtkbool.dll
+  -- Up-to-date: include/vtkPolyDataBooleanFilter.h
+  -- Up-to-date: CMake/vtkboolConfig.cmake
+  -- Up-to-date: CMake/vtkboolVersionConfig.cmake
+  -- Up-to-date: CMake/vtkboolTargets.cmake
+  -- Up-to-date: CMake/vtkboolTargets-debug.cmake
+  -- Up-to-date: lib/decomp.lib
+  -- Up-to-date: include/libs/decomp/Decomposer.h
+  -- Up-to-date: lib/vp.lib
+  -- Up-to-date: include/libs/vp/Tools.h
+  -- Up-to-date: lib/merger.lib
+  -- Up-to-date: include/libs/merger/Merger.h
 Install succeeded.
 
 

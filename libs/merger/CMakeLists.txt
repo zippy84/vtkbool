@@ -62,7 +62,6 @@ set_target_properties(merger PROPERTIES
 
 if(WIN32)
 install(TARGETS merger
-  # IMPORTANT: Add the foo library to the "export-set"
   EXPORT vtkboolTargets
   RUNTIME DESTINATION "${INSTALL_BIN_DIR}" COMPONENT bin
   LIBRARY DESTINATION "${INSTALL_LIB_DIR}" COMPONENT shlib
@@ -70,8 +69,7 @@ install(TARGETS merger
     COMPONENT dev)
 else()
 install(TARGETS merger
-  # IMPORTANT: Add the foo library to the "export-set"
- EXPORT vtkboolTargets
+  EXPORT vtkboolTargets
   RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/${INSTALL_BIN_DIR}" COMPONENT bin
   LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/${INSTALL_LIB_DIR}" COMPONENT shlib
   ARCHIVE DESTINATION "${CMAKE_INSTALL_PREFIX}/${INSTALL_LIB_DIR}" COMPONENT shlib

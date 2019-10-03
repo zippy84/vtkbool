@@ -57,7 +57,6 @@ set_target_properties(decomp PROPERTIES
 
 if(WIN32)
 install(TARGETS decomp
-  # IMPORTANT: Add the foo library to the "export-set"
   EXPORT vtkboolTargets
   RUNTIME DESTINATION "${INSTALL_BIN_DIR}" COMPONENT bin
   LIBRARY DESTINATION "${INSTALL_LIB_DIR}" COMPONENT shlib
@@ -65,7 +64,6 @@ install(TARGETS decomp
     COMPONENT dev)
 else()
 install(TARGETS decomp
-  # IMPORTANT: Add the foo library to the "export-set"
   EXPORT vtkboolTargets
   RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/${INSTALL_BIN_DIR}" COMPONENT bin
   LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/${INSTALL_LIB_DIR}" COMPONENT shlib
