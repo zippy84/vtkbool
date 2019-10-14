@@ -48,7 +48,7 @@ void Merger::GetMerged (PolysType &res) {
 
         for (int j = 0; j < numPolys; j++) {
             if (i != j) {
-                if (TestPIP(polys[j], polys[i][0])) {
+                if (TestPip(polys[j], polys[i][0])) {
                     outer.push_back(j);
                 }
             }

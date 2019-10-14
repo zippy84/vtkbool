@@ -43,7 +43,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
 
     for (int i = 0; i < num-1; i++) {
         int _i = (ind+i+1)%num;
-        verts.push_back(Vert(x, poly[_i]));
+        verts.push_back(Vert(x, poly[_i])); // xxx
     }
 
     double ref[] = {verts[0].pt[0]-x[0], verts[0].pt[1]-x[1]};
@@ -90,8 +90,8 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
             if (Ld(x, ptU, ptV)) {
                 // std::cout << "?_ skipping" << std::endl;
 
-                double lU = GetSqDis(x, verts.at(u)),
-                    lV = GetSqDis(x, verts.at(v));
+                double lU = GetDis2(x, verts.at(u)),
+                    lV = GetDis2(x, verts.at(v));
 
                 if (lU > lV) {
                     verts.at(u).id = NO_USE;
@@ -165,7 +165,7 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
                                 Point _p(d->s);
 
                                 Vert _v(x, _p, ref, a.nxt);
-                                verts.push_back(_v);
+                                verts.push_back(_v); // xxx
 
                                 int k = verts.size()-1;
 
@@ -461,118 +461,147 @@ void GetVisPoly (PolyType &poly, Tracker &tr, PolyType &res, int ind) {
 }
 
 /*
-list([ list(map(float, p.split(','))) for p in 'm 26.402829,29.895027 -2.132521,24.374833 -3.073759,35.133226 22.541594,1.972134 76.814397,6.720388 1.86346,-21.299507 3.34282,-38.208551 -31.800976,-2.782225 -0.800142,-0.07 -7.246298,-0.633968 -2.155836,24.641314 -6.148254,-0.537902 -8.586643,-0.751234 -4.925747,-0.430947 1.112312,-12.713787 0.198,-2.263145 0.192176,-2.196583 0.326117,-3.727536 0.327231,-3.740264 z'[2:-2].split(' ') ])
+m 26.402829,29.895027 -2.132521,24.374833 -3.073759,35.133226 22.541594,1.972134 76.814397,6.720388 1.86346,-21.299507 3.34282,-38.208551 -31.800976,-2.782225 -0.800142,-0.07 -7.246298,-0.633968 -2.155836,24.641314 -6.148254,-0.537902 -8.586643,-0.751234 -4.925747,-0.430947 1.112312,-12.713787 0.198,-2.263145 0.192176,-2.196583 0.326117,-3.727536 0.327231,-3.740264 z
 */
 
-void Simplify (const PolyType &poly, SavedPtsPtr &savedPts, SpecTagsPtr &specTags, PolyType &res, int skip, bool rev) {
+void DouglasPeucker (const PolyType &poly, const CurvsType curvs, FeatureTagsType &tags) {
+    std::size_t num = poly.size();
 
-    // der dritte anlauf um es in den griff zu bekommen
+    std::deque<Pair> pairs;
 
-    // std::cout << "POLY " << GetAbsolutePath(poly) << std::endl;
+    pairs.emplace_back(0, num-1);
 
-    const double tol = 1e-3,
-        sol = tol*tol;
+    while (!pairs.empty()) {
+        Pair p(pairs.front());
+        pairs.pop_front();
 
-    PolyType poly2{{poly.front()}};
+        double mx = 0, d, t;
 
-    PolyType::const_iterator itr, itr2;
+        int j;
 
-    for (itr = poly.begin()+1; itr != poly.end(); ++itr) {
-        double sq = GetSqDis(*itr, *poly2.rbegin());
-        if (sq > sol) {
-            poly2.push_back(*itr);
-        } else if (itr->tag == skip) {
-            poly2.pop_back();
-            poly2.push_back(*itr);
-        }
-    }
+        if (p.g-p.f > 1) {
+            for (int i = p.f+1; i < p.g; i++) {
+                d = GetDis(poly.at(p.f), poly.at(p.g), poly.at(i), t);
 
-    if (GetSqDis(poly2.front(), poly2.back()) < sol) {
-        poly2.pop_back();
-    }
+                // std::cout << d << std::endl;
 
-    // std::cout << "POLY2 " << GetAbsolutePath(poly2) << std::endl;
-
-    auto GetMaxDis = [&poly2, &tol](int i, int k, int &id) {
-        double last = 0, _t;
-
-        for (int j = i+1; j < k; j++) {
-            double t,
-                d = GetDis(poly2[i], poly2[k], poly2[j], t);
-
-            double delt = std::abs(last-d);
-
-            // if (i == 77 && k == 82) {
-            //     std::cout << "=> " << j << ", " << d << ", " << t;
-            // }
-
-            if (id > 0 && delt < tol) {
-               if (t < _t) {
-                    last = d;
-                    id = j;
-                    _t = t;
-
-                    // if (i == 77 && k == 82) {
-                    //     std::cout << " -> I";
-                    // }
+                if (i == p.f+1) {
+                    mx = d;
+                    j = i;
+                } else {
+                    if (std::abs(mx-d) < E) {
+                        if (curvs.at(poly.at(i).tag) > curvs.at(poly.at(j).tag)) {
+                            mx = d;
+                            j = i;
+                        }
+                    } else if (d > mx) {
+                        mx = d;
+                        j = i;
+                    }
                 }
-            } else if (d > last) {
-                last = d;
-                id = j;
-                _t = t;
-
-                // if (i == 77 && k == 82) {
-                //     std::cout << " -> II";
-                // }
             }
 
-            // if (i == 77 && k == 82) {
-            //     std::cout << std::endl;
-            // }
-
-        }
-        return last;
-    };
-
-    std::vector<PolyType> sects;
-
-    std::deque<Pair> test{{0, static_cast<int>(poly2.size()-1)}}, pairs;
-
-    while (!test.empty()) {
-        Pair _p = test.front();
-        test.pop_front();
-
-        if (_p.g-_p.f == 1) {
-            pairs.push_back(_p); // es könnten sich interne punkt darin befinden
-            continue;
+            // std::cout << "mx, j = " << mx << ", " << j << std::endl;
         }
 
-        int id = 0;
-
-        double d = GetMaxDis(_p.f, _p.g, id);
-
-        // std::cout << "_" << _p << " -> " << id << ", " << d << std::endl;
-
-        if (d > tol) {
-            test.push_back({_p.f, id});
-            test.push_back({id, _p.g});
-
+        if (mx > 1e-3) {
+            pairs.emplace_back(p.f, j);
+            pairs.emplace_back(j, p.g);
         } else {
-            // std::cout << _p << ", d=" << d << std::endl;
-
-            pairs.push_back(_p);
+            tags.insert(poly.at(p.f).tag);
+            tags.insert(poly.at(p.g).tag);
         }
     }
 
-    // hier bräuchte man den abschnitt aus poly zw. a.tag und b.tag
-    // um die am anfang entfernten mitzunehmen
+}
 
-    std::set<int> tags{skip};
+void Simplify (const PolyType &poly, SavedPtsPtr &savedPts, SpecTagsPtr &specTags, PolyType &res, int skip, bool rev) {
+    PolyType poly2;
 
-    for (auto &w : pairs) {
-        tags.insert(poly2[w.f].tag);
-        tags.insert(poly2[w.g].tag);
+    PolyType::const_iterator itr, itr2, itr3;
+
+    for (itr = poly.begin(); itr != poly.end(); ++itr) {
+        itr2 = itr+1;
+
+        if (itr2 == poly.end()) {
+            itr2 = poly.begin();
+        }
+
+        if (!IsNear(itr->pt, itr2->pt)) {
+            poly2.push_back(*itr);
+        }
     }
+
+    std::vector<Curv> curvs;
+
+    for (itr = poly2.begin(); itr != poly2.end(); ++itr) {
+        itr2 = itr+1;
+
+        if (itr2 == poly2.end()) {
+            itr2 = poly2.begin();
+        }
+
+        itr3 = itr2+1;
+
+        if (itr3 == poly2.end()) {
+            itr3 = poly2.begin();
+        }
+
+        double c = GetCurv(*itr, *itr2, *itr3);
+
+        curvs.emplace_back(itr2->tag, std::abs(c));
+
+    }
+
+    std::sort(curvs.begin(), curvs.end());
+
+    CurvsType _curvs;
+
+    for (const Curv &c : curvs) {
+        _curvs.emplace(c.tag, c.c);
+    }
+
+    PolyType polyA(poly2), polyB(poly2);
+
+    int a = curvs.begin()->tag,
+        b;
+
+    // a und b dürfen nicht an gleicher stelle sein
+
+    std::map<int, Point> _map;
+
+    for (const Point &p : poly2) {
+        _map.emplace(p.tag, p);
+    }
+
+    std::set<Point> _pts(poly2.begin(), poly2.end());
+
+    std::vector<Curv>::const_iterator itr4;
+
+    for (itr4 = curvs.begin()+1; itr4 != curvs.end(); ++itr4) {
+        if (_pts.find(_map.at(a)) != _pts.find(_map.at(itr4->tag)) ) {
+            b = itr4->tag;
+            break;
+        }
+    }
+
+    // std::cout << "a, b = " << a << ", " << b << std::endl;
+
+    GetSect(a, b, polyA);
+    GetSect(b, a, polyB);
+
+    FeatureTagsType tags;
+
+    DouglasPeucker(polyA, _curvs, tags);
+    DouglasPeucker(polyB, _curvs, tags);
+
+    tags.insert(skip);
+
+    /*for (auto tag : tags) {
+        std::cout << tag << std::endl;
+    }*/
+
+    // sucht nach bestimmten punkten außerhalb der tags
 
     SpecTagsPtr _specTags(new SpecTagsType);
 
@@ -590,42 +619,6 @@ void Simplify (const PolyType &poly, SavedPtsPtr &savedPts, SpecTagsPtr &specTag
         }
     }
 
-    PolyType _res;
-
-    std::copy_if(poly2.begin(), poly2.end(), std::back_inserter(_res), [&tags, &_specTags](const Point &p) {
-        return tags.count(p.tag) == 1 || _specTags->count(p.tag) == 1;
-    });
-
-    vtkbool_throw(_res.size() > 2, "Simplify", "_res has too few points");
-
-    _res.insert(_res.end(), _res.begin(), _res.begin()+2);
-
-    double s;
-
-    for (itr = _res.begin(); itr != _res.end()-2; ++itr) {
-        if (_specTags->count((itr+1)->tag) == 0
-            && (itr+1)->tag != skip
-            && pts.find(*itr) != pts.find(*(itr+2))) {
-
-            double d = GetDis(*itr, *(itr+2), *(itr+1), s);
-
-            if (d < tol) {
-                tags.erase((itr+1)->tag);
-
-                if (_specTags->count(itr->tag) == 1) {
-                    _specTags->erase(itr->tag);
-                    tags.insert(itr->tag);
-
-                } else if (_specTags->count((itr+2)->tag) == 1) {
-                    _specTags->erase((itr+2)->tag);
-                    tags.insert((itr+2)->tag);
-
-                }
-
-            }
-        }
-    }
-
     if (specTags) {
         specTags.swap(_specTags);
     }
@@ -634,14 +627,16 @@ void Simplify (const PolyType &poly, SavedPtsPtr &savedPts, SpecTagsPtr &specTag
         return tags.count(p.tag) == 1 || (specTags && specTags->count(p.tag) == 1);
     });
 
-    // dieser test ist zu einfach
+    /*for (auto &r : res) {
+        std::cout << r << std::endl;
+    }*/
 
-    double areaA = GetArea(poly),
-        areaB = GetArea(res);
+    vtkbool_throw(res.size() > 2, "Simplify", "too few points left");
 
-    vtkbool_throw(areaB/areaA > .95, "Simplify", "failed");
+    // sichert die gelöschten punkte
 
     if (savedPts) {
+        std::vector<PolyType> sects;
 
         for (itr = res.begin(); itr != res.end(); ++itr) {
             itr2 = itr+1;
@@ -658,7 +653,6 @@ void Simplify (const PolyType &poly, SavedPtsPtr &savedPts, SpecTagsPtr &specTag
 
         for (auto &sect : sects) {
             if (sect.size() > 2) {
-
                 const Point &a = *sect.begin(),
                     &b = *sect.rbegin();
 
@@ -696,9 +690,6 @@ void Simplify (const PolyType &poly, SavedPtsPtr &savedPts, SpecTagsPtr &specTag
                 }
             }
         }
-
-        // std::cout << "POLY3 " << GetAbsolutePath(res) << std::endl;
-
     }
 
 }

@@ -108,15 +108,36 @@ public:
         }
     }
     void Track (const Point &before, const Point &after, const Point &p, double t) {
-        const Pos &posB = locs[before.tag],
-            &posA = locs[after.tag];
+        try {
+            const Pos &posB = locs.at(before.tag), // xxx
+                &posA = locs.at(after.tag); // xxx
 
-        double tA = posB == posA ? posA.t : 1;
+            double tA = posB == posA ? posA.t : 1;
 
-        locs[p.tag] = { posB.edA, posB.edB, posB.t+(tA-posB.t)*t };
+            locs[p.tag] = { posB.edA, posB.edB, posB.t+(tA-posB.t)*t };
+        } catch(...) {}
     }
 
 };
+
+class Curv {
+public:
+    Curv (int _tag, double _c) : tag(_tag), c(_c) {}
+    int tag;
+    double c;
+
+    bool operator< (const Curv &other) const {
+        return other.c < c;
+    }
+};
+
+typedef std::map<int, double> CurvsType;
+
+inline double GetCurv (const Point &a, const Point &b, const Point &c) {
+    return (a.x*b.y-b.x*a.y)+(b.x*c.y-c.x*b.y)+(c.x*a.y-a.x*c.y);
+}
+
+typedef std::set<int> FeatureTagsType;
 
 class Vert4 : public Point {
 public:

@@ -147,7 +147,7 @@ bool TestCW (const PolyType &poly);
 
 std::string GetAbsolutePath (const PolyType &poly);
 
-bool TestPIP (PolyType &poly, Point &pt);
+bool TestPip (PolyType &poly, Point &pt);
 
 template<typename T>
 std::ostream& operator<< (typename std::enable_if<std::is_enum<T>::value, std::ostream>::type& stream, const T& e) {
@@ -174,11 +174,9 @@ public:
 
 void GetExt (const PolyType &poly, Ext &ext);
 
-double GetArea (const PolyType &poly);
-
 double GetDis (const Point &pA, const Point &pB, const Point &pC, double &t, double *pro = nullptr);
 
-double GetSqDis (const Point &a, const Point &b);
+double GetDis2 (const Point &a, const Point &b);
 
 void GetSect (int tagA, int tagB, PolyType &poly);
 

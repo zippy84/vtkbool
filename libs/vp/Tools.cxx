@@ -183,7 +183,7 @@ std::string GetAbsolutePath (const PolyType &poly) {
     return svg;
 }
 
-bool TestPIP (PolyType &poly, Point &pt) {
+bool TestPip (PolyType &poly, Point &pt) {
     // Point-In-Polygon
 
     for (auto& p : poly) {
@@ -231,21 +231,8 @@ void GetExt (const PolyType &poly, Ext &ext) {
     }
 }
 
-double GetArea (const PolyType &poly) {
-    int num = poly.size();
-
-    double sum = 0;
-
-    for (int i = 0; i < num; i++) {
-        const Point &a = poly[i],
-            &b = poly[(i+1)%num];
-        sum += a.x*b.y-b.x*a.y;
-    }
-
-    return std::abs(sum);
-}
-
 double GetDis (const Point &pA, const Point &pB, const Point &pC, double &t, double *pro) {
+    // pC muss zw. pA, pB liegen
     double n[] = {pA.y-pB.y, pB.x-pA.x},
         l = Normalize(n),
         d = n[0]*(pA.x-pC.x)+n[1]*(pA.y-pC.y),
@@ -262,7 +249,7 @@ double GetDis (const Point &pA, const Point &pB, const Point &pC, double &t, dou
     return std::abs(d);
 }
 
-double GetSqDis (const Point &a, const Point &b) {
+double GetDis2 (const Point &a, const Point &b) {
     double v[] = {
         b.x-a.x,
         b.y-a.y
