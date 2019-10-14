@@ -115,7 +115,7 @@ void TrivialRm::RemovePockets (VertsType3 &good, double *rot, double d, Src src)
                 _poly.push_back(verts[id].pt);
             }
 
-            if (TestPIP(_poly, x)) {
+            if (TestPip(_poly, x)) {
 
                 if ((src == Src::A && !TestCW(_poly))
                     || (src == Src::B && TestCW(_poly))) {

@@ -22,7 +22,6 @@ limitations under the License.
 #include <cmath>
 #include <functional>
 #include <queue>
-#include <sstream>
 
 #include <vtkInformation.h>
 #include <vtkInformationVector.h>
@@ -3401,11 +3400,9 @@ void vtkPolyDataBooleanFilter::DecPolys_ (vtkPolyData *pd, InvolvedType &involve
                 // std::raise(SIGSEGV);
 
             } catch (const std::exception &e) {
-                std::stringstream ss;
-                ss << "Exception on " << GetAbsolutePath(poly);
-
-                std::cerr << ss.str()
-                    << ", " << e.what() << std::endl;
+                std::cerr << e.what()
+                    << " on " << GetAbsolutePath(poly)
+                    << std::endl;
             }
 
             newCell->Delete();
