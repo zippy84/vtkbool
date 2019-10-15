@@ -504,7 +504,7 @@ void DouglasPeucker (const PolyType &poly, const CurvsType curvs, FeatureTagsTyp
             // std::cout << "mx, j = " << mx << ", " << j << std::endl;
         }
 
-        if (mx > 1e-3) {
+        if (mx > .25e-2) {
             pairs.emplace_back(p.f, j);
             pairs.emplace_back(j, p.g);
         } else {
