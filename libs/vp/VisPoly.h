@@ -161,7 +161,7 @@ typedef std::shared_ptr<SpecTagsType> SpecTagsPtr;
 
 void Simplify (const PolyType &poly, SavedPtsPtr &savedPts, SpecTagsPtr &specTags, PolyType &res, int skip, bool rev);
 
-void Align (PolyType &poly, const Point &p);
+// void Align (PolyType &poly, const Point &p);
 
 void Restore (const PolyType &poly, const Tracker &tr, const SavedPtsType &savedPts, PolyType &res);
 void Restore2 (const PolyType &poly, PolyType &res);

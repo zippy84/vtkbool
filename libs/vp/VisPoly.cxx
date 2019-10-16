@@ -477,7 +477,7 @@ void DouglasPeucker (const PolyType &poly, const CurvsType curvs, FeatureTagsTyp
 
         double mx = 0, d, t;
 
-        int j;
+        int j = 0;
 
         if (p.g-p.f > 1) {
             for (int i = p.f+1; i < p.g; i++) {
@@ -564,7 +564,7 @@ void Simplify (const PolyType &poly, SavedPtsPtr &savedPts, SpecTagsPtr &specTag
     PolyType polyA(poly2), polyB(poly2);
 
     int a = curvs.begin()->tag,
-        b;
+        b = 0;
 
     // a und b dürfen nicht an gleicher stelle sein
 
@@ -694,7 +694,7 @@ void Simplify (const PolyType &poly, SavedPtsPtr &savedPts, SpecTagsPtr &specTag
 
 }
 
-void Align (PolyType &poly, const Point &p) {
+/*void Align (PolyType &poly, const Point &p) {
     VertsType2 verts;
 
     PolyType::iterator itr;
@@ -724,7 +724,7 @@ void Align (PolyType &poly, const Point &p) {
         }
 
     }
-}
+}*/
 
 void Restore (const PolyType &poly, const Tracker &tr, const SavedPtsType &savedPts, PolyType &res) {
     std::map<int, Point> rr;
