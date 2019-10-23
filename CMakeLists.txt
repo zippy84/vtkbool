@@ -107,20 +107,48 @@ else()
             if(${VTK_MAJOR_VERSION} GREATER 7)
                 set(MODULE_HIERARCHY_NAME ${PROJECT_NAME}Hierarchy)
                 set(${PROJECT_NAME}_WRAP_DEPENDS vtkCommonExecutionModel)
+
+                set(${PROJECT_NAME}_LINK_DEPENDS vtkFiltersSources vtkIOLegacy vtkFiltersExtraction vtkFiltersGeometry vtkFiltersModeling vtkRenderingFreeType)
+
                 include(vtkWrapHierarchy)
                 vtk_wrap_hierarchy(${PROJECT_NAME} ${CMAKE_CURRENT_BINARY_DIR} vtkPolyDataBooleanFilter.h)
                 set(KIT_HIERARCHY_FILE ${CMAKE_CURRENT_BINARY_DIR}/${MODULE_HIERARCHY_NAME}.txt)
                 set(LIB_HIERARCHY_STAMP ${CMAKE_CURRENT_BINARY_DIR}/${MODULE_HIERARCHY_NAME}.stamp.txt)
+
+                if(${VTK_VERSION} VERSION_EQUAL "8.1")
+                    configure_file(
+                        ${VTK_CMAKE_DIR}/vtkWrapperInit.data.in
+                        ${MODULE_HIERARCHY_NAME}.data
+                        @ONLY
+                    )
+
+                    set(OTHER_HIERARCHY_FILES)
+
+                    foreach(dep ${${PROJECT_NAME}_LINK_DEPENDS})
+                        list(APPEND OTHER_HIERARCHY_FILES "${${dep}_WRAP_HIERARCHY_FILE}")
+                    endforeach()
+
+                    add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${MODULE_HIERARCHY_NAME}.txt
+                            ${CMAKE_CURRENT_BINARY_DIR}/${MODULE_HIERARCHY_NAME}.stamp.txt
+                        COMMAND ${VTK_WRAP_HIERARCHY_EXE} -o ${CMAKE_CURRENT_BINARY_DIR}/${MODULE_HIERARCHY_NAME}.txt
+                                ${MODULE_HIERARCHY_NAME}.data ${OTHER_HIERARCHY_FILES}
+                        COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_BINARY_DIR}/${MODULE_HIERARCHY_NAME}.stamp.txt
+                        DEPENDS ${VTK_WRAP_HIERARCHY_EXE}
+                            ${CMAKE_CURRENT_BINARY_DIR}/${MODULE_HIERARCHY_NAME}.data
+                            ${OTHER_HIERARCHY_FILES}
+                        VERBATIM)
+                endif()
+
             endif()
 
             set(ENV{LD_LIBRARY_PATH} "${_vtk}/lib")
 
-            execute_process(COMMAND "${_vtk}/bin/vtkpython" -c "import sys; sys.stdout.write('.'.join(map(str, sys.version_info[:2])))" OUTPUT_VARIABLE py_ver)
+            execute_process(COMMAND "${_vtk}/bin/vtkpython" -c "import sys; sys.stdout.write('.'.join(map(str, sys.version_info[:2])))" OUTPUT_VARIABLE _py)
 
-            if(py_ver)
+            if(_py)
                 if(CMAKE_VERSION VERSION_LESS "3.12")
-                    find_package(PythonInterp ${py_ver} EXACT)
-                    find_package(PythonLibs ${py_ver} EXACT)
+                    find_package(PythonInterp ${_py} EXACT)
+                    find_package(PythonLibs ${_py} EXACT)
 
                     if(PYTHONLIBS_FOUND)
 
@@ -139,7 +167,7 @@ else()
                         if(VTKBOOL_TESTING)
                             add_test(NAME Test_Py COMMAND ${PYTHON_EXECUTABLE}
                                 ${CMAKE_SOURCE_DIR}/testing/test_py_module.py
-                                ${_vtk}/lib/python${py_ver}/site-packages
+                                ${_vtk}/lib/python${_py}/site-packages
                                 ${CMAKE_BINARY_DIR}
                                 $<CONFIG>)
 
@@ -153,7 +181,7 @@ else()
                     endif()
 
                 else()
-                    find_package(Python ${py_ver} EXACT COMPONENTS Interpreter Development)
+                    find_package(Python ${_py} EXACT COMPONENTS Interpreter Development)
 
                     if(Python_Development_FOUND)
 
