@@ -108,7 +108,7 @@ else()
                 set(MODULE_HIERARCHY_NAME ${PROJECT_NAME}Hierarchy)
                 set(${PROJECT_NAME}_WRAP_DEPENDS vtkCommonExecutionModel)
 
-                set(${PROJECT_NAME}_LINK_DEPENDS vtkFiltersSources vtkIOLegacy vtkFiltersExtraction vtkFiltersGeometry vtkFiltersModeling vtkRenderingFreeType)
+                set(${PROJECT_NAME}_LINK_DEPENDS vtkCommonExecutionModel)
 
                 include(vtkWrapHierarchy)
                 vtk_wrap_hierarchy(${PROJECT_NAME} ${CMAKE_CURRENT_BINARY_DIR} vtkPolyDataBooleanFilter.h)
@@ -128,11 +128,11 @@ else()
                         list(APPEND OTHER_HIERARCHY_FILES "${${dep}_WRAP_HIERARCHY_FILE}")
                     endforeach()
 
-                    add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${MODULE_HIERARCHY_NAME}.txt
-                            ${CMAKE_CURRENT_BINARY_DIR}/${MODULE_HIERARCHY_NAME}.stamp.txt
-                        COMMAND ${VTK_WRAP_HIERARCHY_EXE} -o ${CMAKE_CURRENT_BINARY_DIR}/${MODULE_HIERARCHY_NAME}.txt
+                    add_custom_command(OUTPUT ${KIT_HIERARCHY_FILE}
+                            ${LIB_HIERARCHY_STAMP}
+                        COMMAND ${VTK_WRAP_HIERARCHY_EXE} -o ${KIT_HIERARCHY_FILE}
                                 ${MODULE_HIERARCHY_NAME}.data ${OTHER_HIERARCHY_FILES}
-                        COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_BINARY_DIR}/${MODULE_HIERARCHY_NAME}.stamp.txt
+                        COMMAND ${CMAKE_COMMAND} -E touch ${LIB_HIERARCHY_STAMP}
                         DEPENDS ${VTK_WRAP_HIERARCHY_EXE}
                             ${CMAKE_CURRENT_BINARY_DIR}/${MODULE_HIERARCHY_NAME}.data
                             ${OTHER_HIERARCHY_FILES}
