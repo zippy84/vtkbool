@@ -115,7 +115,7 @@ else()
                 set(KIT_HIERARCHY_FILE ${CMAKE_CURRENT_BINARY_DIR}/${MODULE_HIERARCHY_NAME}.txt)
                 set(LIB_HIERARCHY_STAMP ${CMAKE_CURRENT_BINARY_DIR}/${MODULE_HIERARCHY_NAME}.stamp.txt)
 
-                if(${VTK_VERSION} VERSION_EQUAL "8.1")
+                if(${VTK_MAJOR_VERSION}.${VTK_MINOR_VERSION} EQUAL "8.1")
                     configure_file(
                         ${VTK_CMAKE_DIR}/vtkWrapperInit.data.in
                         ${MODULE_HIERARCHY_NAME}.data
