@@ -91,7 +91,7 @@ else()
             add_executable(testing testing/testing.cxx)
             target_link_libraries(testing ${PROJECT_NAME} ${VTK_LIBRARIES})
 
-            foreach(i RANGE 19)
+            foreach(i RANGE 20)
                 add_test(NAME Test_${i} COMMAND testing ${i})
 
                 if(WIN32)

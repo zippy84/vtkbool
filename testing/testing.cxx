@@ -33,6 +33,7 @@ limitations under the License.
 #include <vtkLineSource.h>
 #include <vtkTubeFilter.h>
 #include <vtkCommand.h>
+#include <vtkPolyDataConnectivityFilter.h>
 
 #include <map>
 #include <vector>
@@ -1243,6 +1244,42 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         cuA->Delete();
 
         return ok;
+
+    }  else if (t == 20) {
+        vtkSphereSource *spA = vtkSphereSource::New();
+
+        vtkSphereSource *spB = vtkSphereSource::New();
+        spB->SetCenter(0, -1, 0);
+
+        vtkAppendPolyData *app = vtkAppendPolyData::New();
+        app->AddInputConnection(spA->GetOutputPort());
+        app->AddInputConnection(spB->GetOutputPort());
+
+        vtkSphereSource *spC = vtkSphereSource::New();
+        spC->SetCenter(0, .5, 0);
+
+        vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
+        bf->SetInputConnection(0, app->GetOutputPort());
+        bf->SetInputConnection(1, spC->GetOutputPort());
+        bf->SetOperModeToDifference();
+
+        vtkPolyDataConnectivityFilter *cf = vtkPolyDataConnectivityFilter::New();
+        cf->SetExtractionModeToAllRegions();
+        cf->SetInputConnection(bf->GetOutputPort(0));
+
+        cf->Update();
+
+        int ok = cf->GetNumberOfExtractedRegions() != 3;
+
+        cf->Delete();
+        bf->Delete();
+        spC->Delete();
+        app->Delete();
+        spB->Delete();
+        spA->Delete();
+
+        return ok;
+
     }
 
 }

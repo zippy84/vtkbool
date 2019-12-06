@@ -2777,7 +2777,6 @@ PolyPair GetEdgePolys (vtkPolyData *pd, vtkIdList *ptsA, vtkIdList *ptsB) {
 
 }
 
-
 void vtkPolyDataBooleanFilter::CombineRegions () {
 
 #ifdef DEBUG
@@ -2976,6 +2975,9 @@ void vtkPolyDataBooleanFilter::CombineRegions () {
         comb[0] = LOC_INSIDE;
     }
 
+    int numA = cfA->GetNumberOfExtractedRegions(),
+        numB = cfB->GetNumberOfExtractedRegions();
+
     cfA->SetExtractionModeToSpecifiedRegions();
     cfB->SetExtractionModeToSpecifiedRegions();
 
@@ -2993,25 +2995,52 @@ void vtkPolyDataBooleanFilter::CombineRegions () {
         }
     }
 
-    // nach innen zeigende normalen umkehren
+    // nicht beteiligte regionen hinzufügen
 
-    cfA->Update();
+    int i;
 
-    vtkPolyData *regsA = cfA->GetOutput();
-
-    if (comb[0] == LOC_INSIDE && OperMode != OPER_INTERSECTION) {
-        for (int i = 0; i < regsA->GetNumberOfCells(); i++) {
-            regsA->ReverseCell(i);
+    if (OperMode == OPER_UNION || OperMode == OPER_DIFFERENCE) {
+        for (i = 0; i < numA; i++) {
+            if (locsA.count(i) == 0) {
+                cfA->AddSpecifiedRegion(i);
+            }
         }
     }
 
+    if (OperMode == OPER_UNION || OperMode == OPER_DIFFERENCE2) {
+        for (i = 0; i < numB; i++) {
+            if (locsB.count(i) == 0) {
+                cfB->AddSpecifiedRegion(i);
+            }
+        }
+    }
+
+    // nach innen zeigende normalen umkehren
+
+    cfA->Update();
     cfB->Update();
 
+    vtkPolyData *regsA = cfA->GetOutput();
     vtkPolyData *regsB = cfB->GetOutput();
 
-    if (comb[1] == LOC_INSIDE && OperMode != OPER_INTERSECTION) {
-        for (int i = 0; i < regsB->GetNumberOfCells(); i++) {
-            regsB->ReverseCell(i);
+    scalarsA = regsA->GetPointData()->GetScalars();
+    scalarsB = regsB->GetPointData()->GetScalars();
+
+    if (OperMode != OPER_INTERSECTION) {
+        if (comb[0] == LOC_INSIDE) {
+            for (int i = 0; i < regsA->GetNumberOfCells(); i++) {
+                if (locsA.count(scalarsA->GetTuple1(i)) == 1) {
+                    regsA->ReverseCell(i);
+                }
+            }
+        }
+
+        if (comb[1] == LOC_INSIDE) {
+            for (int i = 0; i < regsB->GetNumberOfCells(); i++) {
+                if (locsB.count(scalarsB->GetTuple1(i)) == 1) {
+                    regsB->ReverseCell(i);
+                }
+            }
         }
     }
 
