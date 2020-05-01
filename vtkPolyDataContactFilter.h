@@ -90,10 +90,10 @@ class VTK_EXPORT vtkPolyDataContactFilter : public vtkPolyDataAlgorithm {
 
     void PreparePolyData (vtkPolyData *pd);
 
-    InterPtType InterEdgeLine (double *edgePtA, double *edgePtB, double *r, double *pt, int _pid);
-    InterPtsType InterPolyLine (vtkPoints *pts, vtkIdList *poly, double *r, double *pt, _Src src, int _pid);
+    static void InterEdgeLine (InterPtType &inter, const double *eA, const double *eB, const double *r, const double *pt, int _pid);
+    static void InterPolyLine (InterPtsType &interPts, vtkPolyData *pd, vtkIdType num, const vtkIdType *poly, const double *r, const double *pt, _Src src, int _pid);
     void InterPolys (vtkIdType idA, vtkIdType idB);
-    OverlapsType OverlapLines (InterPtsType &intersA, InterPtsType &intersB);
+    static void OverlapLines (OverlapsType &ols, InterPtsType &intersA, InterPtsType &intersB);
 
     vtkIntArray *contA, *contB;
 

@@ -34,6 +34,39 @@ void ComputeNormal (vtkPoints *pts, double *n, vtkIdList *poly = nullptr);
 void FindPoints (vtkKdTreePointLocator *pl, const double *pt, vtkIdList *pts, double tol = 1e-6);
 void WriteVTK (const char *name, vtkPolyData *pd);
 
+inline void ComputeNormal2 (vtkPolyData *pd, double *n, vtkIdType num, const vtkIdType *poly) {
+    n[0] = 0; n[1] = 0; n[2] = 0;
+
+    if (num == 3) {
+        double p0[3], p1[3], p2[3], a[3], b[3];
+
+        pd->GetPoint(poly[0], p0);
+        pd->GetPoint(poly[1], p1);
+        pd->GetPoint(poly[2], p2);
+
+        vtkMath::Subtract(p1, p0, a);
+        vtkMath::Subtract(p2, p0, b);
+
+        vtkMath::Cross(a, b, n);
+    } else {
+        double p0[3], p1[3];
+
+        for (int i = 0; i < num; i++) {
+            vtkIdType a = poly[i],
+                b = poly[(i+1)%num];
+
+            pd->GetPoint(a, p0);
+            pd->GetPoint(b, p1);
+
+            n[0] += (p0[1]-p1[1])*(p0[2]+p1[2]);
+            n[1] += (p0[2]-p1[2])*(p0[0]+p1[0]);
+            n[2] += (p0[0]-p1[0])*(p0[1]+p1[1]);
+        }
+    }
+
+    vtkMath::Normalize(n);
+}
+
 /* Misc */
 double Mod (int a, int b);
 
