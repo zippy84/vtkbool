@@ -48,11 +48,11 @@ limitations under the License.
 #include "Decomposer.h"
 #include "AABB.h"
 
-#ifdef DEBUG
+// #ifdef DEBUG
 #include <chrono>
 #include <numeric>
 #include <iterator>
-#endif
+// #endif
 
 // #include <csignal>
 
@@ -115,11 +115,11 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
         resultA = vtkPolyData::SafeDownCast(outInfoA->Get(vtkDataObject::DATA_OBJECT()));
         resultB = vtkPolyData::SafeDownCast(outInfoB->Get(vtkDataObject::DATA_OBJECT()));
 
-#ifdef DEBUG
+// #ifdef DEBUG
         using clock = std::chrono::steady_clock;
         std::vector<clock::duration> times;
         clock::time_point start;
-#endif
+// #endif
 
         if (pdA->GetMTime() > timePdA || pdB->GetMTime() > timePdB) {
 
@@ -152,19 +152,19 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
             // ermittelt kontaktstellen
 
-#ifdef DEBUG
+// #ifdef DEBUG
 
             start = clock::now();
-#endif
+// #endif
 
             vtkSmartPointer<vtkPolyDataContactFilter> cl = vtkSmartPointer<vtkPolyDataContactFilter>::New();
             cl->SetInputConnection(0, cleanA->GetOutputPort());
             cl->SetInputConnection(1, cleanB->GetOutputPort());
             cl->Update();
 
-#ifdef DEBUG
+// #ifdef DEBUG
             times.push_back(clock::now()-start);
-#endif
+// #endif
 
             contLines->DeepCopy(cl->GetOutput());
 
@@ -233,9 +233,9 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
             }
 
 
-#ifdef DEBUG
+// #ifdef DEBUG
             start = clock::now();
-#endif
+// #endif
 
             if (GetPolyStrips(modPdA, contsA, sourcesA, polyStripsA) ||
                 GetPolyStrips(modPdB, contsB, sourcesB, polyStripsB)) {
@@ -246,35 +246,35 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
             }
 
-#ifdef DEBUG
+// #ifdef DEBUG
             times.push_back(clock::now()-start);
-#endif
+// #endif
 
             // löst ein sehr spezielles problem
 
-#ifdef DEBUG
+// #ifdef DEBUG
             start = clock::now();
-#endif
+// #endif
 
             CollapseCaptPoints(modPdA, polyStripsA);
             CollapseCaptPoints(modPdB, polyStripsB);
 
-#ifdef DEBUG
+// #ifdef DEBUG
             times.push_back(clock::now()-start);
-#endif
+// #endif
 
             // trennt die polygone an den linien
 
-#ifdef DEBUG
+// #ifdef DEBUG
             start = clock::now();
-#endif
+// #endif
 
             CutCells(modPdA, polyStripsA);
             CutCells(modPdB, polyStripsB);
 
-#ifdef DEBUG
+// #ifdef DEBUG
             times.push_back(clock::now()-start);
-#endif
+// #endif
 
 #ifdef DEBUG
             std::cout << "Exporting modPdA_2.vtk" << std::endl;
@@ -284,16 +284,16 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
             WriteVTK("modPdB_2.vtk", modPdB);
 #endif
 
-#ifdef DEBUG
+// #ifdef DEBUG
             start = clock::now();
-#endif
+// #endif
 
             RestoreOrigPoints(modPdA, polyStripsA);
             RestoreOrigPoints(modPdB, polyStripsB);
 
-#ifdef DEBUG
+// #ifdef DEBUG
             times.push_back(clock::now()-start);
-#endif
+// #endif
 
 #ifdef DEBUG
             std::cout << "Exporting modPdA_3.vtk" << std::endl;
@@ -303,16 +303,16 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
             WriteVTK("modPdB_3.vtk", modPdB);
 #endif
 
-#ifdef DEBUG
+// #ifdef DEBUG
             start = clock::now();
-#endif
+// #endif
 
             ResolveOverlaps(modPdA, contsA, polyStripsA);
             ResolveOverlaps(modPdB, contsB, polyStripsB);
 
-#ifdef DEBUG
+// #ifdef DEBUG
             times.push_back(clock::now()-start);
-#endif
+// #endif
 
 #ifdef DEBUG
             std::cout << "Exporting modPdA_4.vtk" << std::endl;
@@ -322,16 +322,16 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
             WriteVTK("modPdB_4.vtk", modPdB);
 #endif
 
-#ifdef DEBUG
+// #ifdef DEBUG
             start = clock::now();
-#endif
+// #endif
 
             AddAdjacentPoints(modPdA, contsA, polyStripsA);
             AddAdjacentPoints(modPdB, contsB, polyStripsB);
 
-#ifdef DEBUG
+// #ifdef DEBUG
             times.push_back(clock::now()-start);
-#endif
+// #endif
 
 #ifdef DEBUG
             std::cout << "Exporting modPdA_5.vtk" << std::endl;
@@ -341,16 +341,16 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
             WriteVTK("modPdB_5.vtk", modPdB);
 #endif
 
-#ifdef DEBUG
+// #ifdef DEBUG
             start = clock::now();
-#endif
+// #endif
 
             DisjoinPolys(modPdA, polyStripsA);
             DisjoinPolys(modPdB, polyStripsB);
 
-#ifdef DEBUG
+// #ifdef DEBUG
             times.push_back(clock::now()-start);
-#endif
+// #endif
 
 #ifdef DEBUG
             std::cout << "Exporting modPdA_6.vtk" << std::endl;
@@ -360,16 +360,16 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
             WriteVTK("modPdB_6.vtk", modPdB);
 #endif
 
-#ifdef DEBUG
+// #ifdef DEBUG
             start = clock::now();
-#endif
+// #endif
 
             MergePoints(modPdA, polyStripsA);
             MergePoints(modPdB, polyStripsB);
 
-#ifdef DEBUG
+// #ifdef DEBUG
             times.push_back(clock::now()-start);
-#endif
+// #endif
 
 #ifdef DEBUG
             std::cout << "Exporting modPdA_7.vtk" << std::endl;
@@ -403,16 +403,16 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
         }
 
-#ifdef DEBUG
+// #ifdef DEBUG
         times.push_back(clock::now()-start);
-#endif
+// #endif
 
         DecPolys_(modPdA, involvedA, relsA);
         DecPolys_(modPdB, involvedB, relsB);
 
-#ifdef DEBUG
+// #ifdef DEBUG
         times.push_back(clock::now()-start);
-#endif
+// #endif
 
 #ifdef DEBUG
         std::cout << "Exporting modPdA_8.vtk" << std::endl;
@@ -422,9 +422,9 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
         WriteVTK("modPdB_8.vtk", modPdB);
 #endif
 
-#ifdef DEBUG
+// #ifdef DEBUG
         start = clock::now();
-#endif
+// #endif
 
         if (MergeRegs) {
             MergeRegions();
@@ -432,12 +432,12 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
             CombineRegions();
         }
 
-#ifdef DEBUG
+// #ifdef DEBUG
         times.push_back(clock::now()-start);
-#endif
+// #endif
 
 
-#ifdef DEBUG
+// #ifdef DEBUG
         double sum = std::chrono::duration_cast<std::chrono::duration<double>>(std::accumulate(times.begin(), times.end(), clock::duration())).count();
 
         std::vector<clock::duration>::const_iterator itr;
@@ -445,10 +445,10 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
             double time = std::chrono::duration_cast<std::chrono::duration<double>>(*itr).count();
 
             std::cout << "Time " << (itr-times.begin())
-                << ": " << time << "s (" << (time/sum) << "%)"
+                << ": " << time << "s (" << (time/sum*100) << "%)"
                 << std::endl;
         }
-#endif
+// #endif
 
     }
 
