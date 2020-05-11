@@ -31,31 +31,27 @@ enum class _Src {
 
 class InterPtType {
 public:
-    InterPtType () : ind(0), onEdge(false), end(NO_USE), count(1), srcA(NO_USE), srcB(NO_USE) {}
-
-    int ind;
+    InterPtType () : onEdge(false), end(NO_USE), srcA(NO_USE), srcB(NO_USE), count(1) {}
 
     double pt[3];
     double t;
     bool onEdge;
 
-    int edge[2];
+    vtkIdType edge[2], end, srcA, srcB;
 
-    int end, count;
-
-    int srcA, srcB;
+    int count;
 
     bool operator< (const InterPtType &other) const {
         return t < other.t;
     }
 
     friend std::ostream& operator<< (std::ostream &out, const InterPtType &s) {
-        out << "ind " << s.ind
-            << ", pt [" << s.pt[0] << ", " << s.pt[1] << ", " << s.pt[2] << "]"
+        out << "pt [" << s.pt[0] << ", " << s.pt[1] << ", " << s.pt[2] << "]"
             << ", t " << s.t
             << ", edge [" << s.edge[0] << ", " << s.edge[1] << "]"
             << ", end " << s.end
-            << ", src " << s.src;
+            << ", src " << s.src
+            << ", count " << s.count;
 
         return out;
     }
@@ -90,8 +86,8 @@ class VTK_EXPORT vtkPolyDataContactFilter : public vtkPolyDataAlgorithm {
 
     void PreparePolyData (vtkPolyData *pd);
 
-    static void InterEdgeLine (InterPtType &inter, const double *eA, const double *eB, const double *r, const double *pt, int _pid);
-    static void InterPolyLine (InterPtsType &interPts, vtkPolyData *pd, vtkIdType num, const vtkIdType *poly, const double *r, const double *pt, _Src src, int _pid);
+    static void InterEdgeLine (InterPtType &inter, const double *eA, const double *eB, const double *r, const double *pt, vtkIdType _pid);
+    static void InterPolyLine (InterPtsType &interPts, vtkPolyData *pd, vtkIdType num, const vtkIdType *poly, const double *r, const double *pt, _Src src, double _pt[3], double _n[3], double _d, vtkIdType _pid);
     void InterPolys (vtkIdType idA, vtkIdType idB);
     static void OverlapLines (OverlapsType &ols, InterPtsType &intersA, InterPtsType &intersB);
 
