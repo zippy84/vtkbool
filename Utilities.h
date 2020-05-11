@@ -23,6 +23,7 @@ limitations under the License.
 #include <vtkKdTreePointLocator.h>
 #include <vtkPoints.h>
 #include <vtkIdList.h>
+#include <vtkMath.h>
 
 #include "Tools.h"
 
