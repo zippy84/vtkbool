@@ -6,6 +6,10 @@
 
 This is an extension of the graphics library VTK. The goal of the extension is to equip the library with boolean operations on polygonal meshes. I started the project at the end of my studies in mechanical engineering at the University of Applied Sciences ([HTWK](http://htwk-leipzig.de/)) in Leipzig. I used VTK to develop a program, which I had to create for a paper. At this time I would have wished, that this feature already exists. There was several implementations from third parties, but after some tests, I came to the conclusion, that none of them worked correct. I decided to start with my own implementation. This library is the result of my efforts.
 
+## Donation
+
+You can support my project with [PayPal](https://paypal.me/zippy84).
+
 ## Features
 
 - no extra libraries required
@@ -31,7 +35,7 @@ This is an extension of the graphics library VTK. The goal of the extension is t
 
 ## Todo
 
-- the filter needs a mesh optimizer for sharp-angled triangles
+- the filter needs a mesh optimizer for sharp-angled triangles and non-planar polygons
 
 ## Requirements
 
@@ -168,13 +172,9 @@ writer.Update()
 
 There are two complex examples in *python/examples*.
 
-## Donating
-
-If you like this project and you want to support it, you can donate with [PayPal](https://paypal.me/zippy84).
-
 ## Copyright
 
-2012-2019 Ronald Römer
+2012-2020 Ronald Römer
 
 ## License
 
