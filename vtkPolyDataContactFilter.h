@@ -111,7 +111,7 @@ protected:
     vtkPolyDataContactFilter ();
     ~vtkPolyDataContactFilter ();
 
-    int ProcessRequest (vtkInformation *request, vtkInformationVector **inputVector, vtkInformationVector *outputVector);
+    int ProcessRequest (vtkInformation *request, vtkInformationVector **inputVector, vtkInformationVector *outputVector) override;
 
 private:
     vtkPolyDataContactFilter (const vtkPolyDataContactFilter&) = delete;

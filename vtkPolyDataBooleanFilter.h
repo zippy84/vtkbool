@@ -276,7 +276,7 @@ protected:
     vtkPolyDataBooleanFilter ();
     ~vtkPolyDataBooleanFilter ();
 
-    int ProcessRequest (vtkInformation *request, vtkInformationVector **inputVector, vtkInformationVector *outputVector);
+    int ProcessRequest (vtkInformation *request, vtkInformationVector **inputVector, vtkInformationVector *outputVector) override;
 
 private:
     vtkPolyDataBooleanFilter (const vtkPolyDataBooleanFilter&) = delete;

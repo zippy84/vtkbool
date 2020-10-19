@@ -205,7 +205,7 @@ void vtkPolyDataContactFilter::PreparePolyData (vtkPolyData *pd) {
     vtkCellArray *strips = pd->GetStrips();
 
     vtkIdType n;
-    vtkIdType *pts;
+    const vtkIdType *pts;
 
     vtkIdType i = 0;
 
@@ -516,7 +516,7 @@ void vtkPolyDataContactFilter::InterPolys (vtkIdType idA, vtkIdType idB) {
 #endif
 
     vtkIdType numA, numB;
-    vtkIdType *polyA, *polyB;
+    const vtkIdType *polyA, *polyB;
 
     pdA->GetCellPoints(idA, numA, polyA);
     pdB->GetCellPoints(idB, numB, polyB);
