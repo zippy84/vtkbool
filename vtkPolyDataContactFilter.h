@@ -24,49 +24,52 @@ limitations under the License.
 class vtkOBBNode;
 class vtkMatrix4x4;
 
-enum class _Src {
+enum class Src {
     A = 1,
     B = 2
 };
 
-class InterPtType {
+class InterPt {
 public:
-    InterPtType () : onEdge(false), end(NO_USE), srcA(NO_USE), srcB(NO_USE), count(1) {}
+    InterPt () : onEdge(false), end(NO_USE), srcA(NO_USE), srcB(NO_USE) {}
 
-    double pt[3];
+    InterPt (double _t, vtkIdType _end, double x, double y, double z) : InterPt() {
+        t = _t;
+        onEdge = true;
+        end = _end;
+        pt[0] = x;
+        pt[1] = y;
+        pt[2] = z;
+    }
+
     double t;
     bool onEdge;
 
     vtkIdType edge[2], end, srcA, srcB;
 
-    int count;
+    double pt[3];
 
-    bool operator< (const InterPtType &other) const {
-        return t < other.t;
-    }
-
-    friend std::ostream& operator<< (std::ostream &out, const InterPtType &s) {
+    friend std::ostream& operator<< (std::ostream &out, const InterPt &s) {
         out << "pt [" << s.pt[0] << ", " << s.pt[1] << ", " << s.pt[2] << "]"
             << ", t " << s.t
             << ", edge [" << s.edge[0] << ", " << s.edge[1] << "]"
             << ", end " << s.end
-            << ", src " << s.src
-            << ", count " << s.count;
+            << ", src " << s.src;
 
         return out;
     }
 
-    void Merge (const InterPtType &other) {
+    void Merge (const InterPt &other) {
         assert(src != other.src);
 
-        if (src == _Src::A) {
+        if (src == Src::A) {
             srcA = end == NO_USE ? edge[0] : end;
         } else {
             srcB = end == NO_USE ? edge[0] : end;
         }
 
         if (std::abs(other.t-t) < 1e-5) {
-            if (other.src == _Src::A) {
+            if (other.src == Src::A) {
                 srcA = other.end == NO_USE ? other.edge[0] : other.end;
             } else {
                 srcB = other.end == NO_USE ? other.edge[0] : other.end;
@@ -74,20 +77,20 @@ public:
         }
     }
 
-    _Src src;
+    Src src;
 
 };
 
-typedef std::vector<InterPtType> InterPtsType;
+typedef std::vector<InterPt> InterPtsType;
 
-typedef std::vector<std::pair<InterPtType, InterPtType> > OverlapsType;
+typedef std::vector<std::pair<InterPt, InterPt>> OverlapsType;
 
 class VTK_EXPORT vtkPolyDataContactFilter : public vtkPolyDataAlgorithm {
 
     void PreparePolyData (vtkPolyData *pd);
 
-    static void InterEdgeLine (InterPtType &inter, const double *eA, const double *eB, const double *r, const double *pt, vtkIdType _pid);
-    static void InterPolyLine (InterPtsType &interPts, vtkPolyData *pd, vtkIdType num, const vtkIdType *poly, const double *r, const double *pt, _Src src, double _pt[3], double _n[3], double _d, vtkIdType _pid);
+    static void InterEdgeLine (InterPtsType &interPts, const double *eA, const double *eB, const double *r, const double *pt);
+    static void InterPolyLine (InterPtsType &interPts, vtkPolyData *pd, vtkIdType num, const vtkIdType *poly, const double *r, const double *pt, Src src, const double *n);
     void InterPolys (vtkIdType idA, vtkIdType idB);
     static void OverlapLines (OverlapsType &ols, InterPtsType &intersA, InterPtsType &intersB);
 
