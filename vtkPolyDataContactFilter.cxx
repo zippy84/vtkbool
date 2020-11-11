@@ -19,8 +19,6 @@ limitations under the License.
 #include <map>
 #include <set>
 #include <algorithm>
-#include <unordered_map>
-#include <array>
 
 #include <vtkInformation.h>
 #include <vtkInformationVector.h>
@@ -433,8 +431,6 @@ void vtkPolyDataContactFilter::InterPolyLine (InterPtsType &interPts, vtkPolyDat
         double m[3], q[3], d, e, t;
 
         vtkMath::Cross(n, r, m);
-        vtkMath::Normalize(m);
-
         d = vtkMath::Dot(m, pt);
 
         std::map<vtkIdType, double> ends;
