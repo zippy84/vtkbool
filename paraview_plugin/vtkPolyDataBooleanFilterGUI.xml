@@ -1,5 +1,0 @@
-<ParaViewFilters>
-    <Category name="Extensions" menu_label="Extensions">
-        <Filter name="PolyDataBooleanFilter"/>
-    </Category>
-</ParaViewFilters>

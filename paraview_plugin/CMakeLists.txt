@@ -38,7 +38,6 @@ if(ParaView_FOUND)
         SERVER_MANAGER_XML vtkPolyDataBooleanFilter.xml
         SERVER_MANAGER_SOURCES ../vtkPolyDataBooleanFilter.cxx
         SERVER_SOURCES ${srcs}
-        #GUI_RESOURCE_FILES vtkPolyDataBooleanFilterGUI.xml
     )
 
     target_link_libraries(PolyDataBooleanFilter PRIVATE decomp merger)
