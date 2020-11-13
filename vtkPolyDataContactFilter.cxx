@@ -313,7 +313,7 @@ void vtkPolyDataContactFilter::InterEdgeLine (InterPtsType &interPts, const doub
             dA = vtkMath::Norm(cA);
             dB = vtkMath::Norm(cB);
 
-            if (dA < 1e-4) {
+            if (dA < 1e-4 || dB < 1e-4) {
 #ifdef DEBUG
                 std::cout << "congruent lines with d (" << dA << ", " << dB << ") and t (" << dotA << ", " << dotB << ") and l " << l << std::endl;
 #endif

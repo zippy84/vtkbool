@@ -390,12 +390,6 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
             relsA.clear();
             relsB.clear();
 
-            // aufräumen
-
-            /*cl->Delete();
-            cleanB->Delete();
-            cleanA->Delete();*/
-
             timePdA = pdA->GetMTime();
             timePdB = pdB->GetMTime();
 
@@ -769,7 +763,7 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIntArray *cont
 
         std::deque<int> _lines(lines.begin(), lines.end());
 
-        int i = 0;
+        std::size_t i = 0;
 
         while (_lines.size() > 0) {
             vtkIdList *linePts = vtkIdList::New();
@@ -1006,14 +1000,12 @@ void vtkPolyDataBooleanFilter::RemoveDuplicates (IdsType &lines) {
 
     IdsType unique;
 
-    int i, j;
-
     // die indexe der enden auf übereinstimmung prüfen
 
     vtkIdList *linePtsA = vtkIdList::New();
     vtkIdList *linePtsB = vtkIdList::New();
 
-    int numLines = lines.size();
+    std::size_t i, j, numLines = lines.size();
 
     for (i = 0; i < numLines-1; i++) {
         j = i+1;
@@ -1071,9 +1063,10 @@ void vtkPolyDataBooleanFilter::CompleteStrips (PStrips &pStrips) {
 bool vtkPolyDataBooleanFilter::HasArea (StripType &strip) {
     bool area = true;
 
-    int n = strip.size();
+    std::size_t i, n = strip.size();
+
     if (n%2 == 1) {
-        for (int i = 0; i < (n-1)/2; i++) {
+        for (i = 0; i < (n-1)/2; i++) {
             area = strip[i].ind != strip[n-i-1].ind;
         }
     }
@@ -1208,9 +1201,6 @@ void vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
         StripType::reverse_iterator itr6;
 
         RefsType::iterator itr7;
-
-        std::vector<IdsType>::iterator itr8;
-
 
         for (itr4 = edges.begin(); itr4 != edges.end(); ++itr4) {
             RefsType &edge = itr4->second;
@@ -1371,8 +1361,6 @@ void vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
         std::deque<IdsType> polys;
         polys.push_back(pStrips.poly);
 
-        int i = 0;
-
         std::deque<IdsType>::iterator itr9;
 
         for (itr2 = strips.begin(); itr2 != strips.end(); ++itr2) {
@@ -1382,12 +1370,12 @@ void vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
                 &end = strip.back();
 
 #ifdef DEBUG
-            std::cout << "strip=" << start.strip
-                << " refs=[" << start.ref << ", " << end.ref << "]"
+            std::cout << "strip " << start.strip
+                << " , refs (" << start.ref << ", " << end.ref << ")"
                 << std::endl;
 #endif
 
-            int cycle = 0;
+            std::size_t cycle = 0;
 
             while (true) {
 
@@ -1395,29 +1383,26 @@ void vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
                     break;
                 }
 
-                IdsType p = polys.front();
+                IdsType next = polys.front();
                 polys.pop_front();
 
-                // IdsType newA, newB;
-                // auto newPolys{newA, newB};
+                std::vector<IdsType> newPolys(2);
 
-                std::vector<IdsType> divided(2);
-
-                if (std::find(p.begin(), p.end(), start.ref) != p.end()) {
+                if (std::find(next.begin(), next.end(), start.ref) != next.end()) {
                     if (start.ref == end.ref) {
-                        for (itr5 = p.begin(); itr5 != p.end(); ++itr5) {
-                            divided[0].push_back(*itr5);
+                        for (itr5 = next.begin(); itr5 != next.end(); ++itr5) {
+                            newPolys[0].push_back(*itr5);
 
 #ifdef DEBUG
-                            std::cout << "add d[0] " << *itr5 << std::endl;
+                            std::cout << "adding " << *itr5 << " to 0" << std::endl;
 #endif
 
                             if (*itr5 == start.ref) {
                                 for (itr3 = strip.begin(); itr3 != strip.end(); ++itr3) {
-                                    divided[0].push_back(itr3->desc[0]);
+                                    newPolys[0].push_back(itr3->desc[0]);
 
 #ifdef DEBUG
-                                    std::cout << "add d[0] " << itr3->desc[0] << std::endl;
+                                    std::cout << "adding " << itr3->desc[0] << " to 0" << std::endl;
 #endif
 
                                 }
@@ -1427,58 +1412,63 @@ void vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
                         // strip selbst ist ein polygon
 
                         for (itr6 = strip.rbegin(); itr6 != strip.rend(); ++itr6) {
-                            divided[1].push_back(itr6->desc[1]);
+                            newPolys[1].push_back(itr6->desc[1]);
 
 #ifdef DEBUG
-                            std::cout << "add d[1] " << itr6->desc[1] << std::endl;
+                            std::cout << "adding " << itr6->desc[1] << " to 1" << std::endl;
 #endif
 
                         }
 
                     } else {
-                        int d = 0;
-                        for (itr5 = p.begin(); itr5 != p.end(); ++itr5) {
-                            divided[d].push_back(*itr5);
+                        std::size_t curr = 0;
+
+                        for (itr5 = next.begin(); itr5 != next.end(); ++itr5) {
+                            IdsType &poly = newPolys[curr];
+
+                            poly.push_back(*itr5);
 
 #ifdef DEBUG
-                            std::cout << "add d[" << d << "] " << *itr5 << std::endl;
+                            std::cout << "adding " << *itr5 << " to " << curr << std::endl;
 #endif
 
                             if (*itr5 == start.ref) {
                                 for (itr3 = strip.begin(); itr3 != strip.end(); ++itr3) {
-                                    divided[d].push_back(itr3->desc[0]);
+                                    poly.push_back(itr3->desc[0]);
 
 #ifdef DEBUG
-                                    std::cout << "add d[" << d << "] " << itr3->desc[0] << std::endl;
+                                    std::cout << "adding " << itr3->desc[0] << " to " << curr << std::endl;
 #endif
 
                                 }
-                                d++;
+
+                                curr = curr == 0 ? 1 : 0;
+
                             } else if (*itr5 == end.ref) {
                                 for (itr6 = strip.rbegin(); itr6 != strip.rend(); ++itr6) {
-                                    divided[d].push_back(itr6->desc[1]);
+                                    poly.push_back(itr6->desc[1]);
 
 #ifdef DEBUG
-                                    std::cout << "add d[" << d << "] " << itr6->desc[1] << std::endl;
+                                    std::cout << "adding " << itr6->desc[1] << " to " << curr << std::endl;
 #endif
 
                                 }
-                                d++;
+
+                                curr = curr == 0 ? 1 : 0;
                             }
 
-                            d %= 2;
                         }
                     }
                 }
 
-                if (divided[1].size() > 0) {
+                if (newPolys[1].size() > 0) {
 
                     // refs aktualisieren
 
                     auto idx = std::distance(strips.begin(), itr2);
 
 #ifdef DEBUG
-                    std::cout << "idx=" << idx << std::endl;
+                    std::cout << "idx " << idx << std::endl;
 #endif
 
                     for (itr4 = edges.begin(); itr4 != edges.end(); ++itr4) {
@@ -1647,50 +1637,45 @@ void vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
 
                     // doppelte punkte entfernen
 
-                    for (itr8 = divided.begin(); itr8 != divided.end(); ++itr8) {
-#ifdef DEBUG
-                        std::cout << "d[" << itr8-divided.begin() << "]" << std::endl;
-#endif
+                    double ptA[3], ptB[3];
 
-                        IdsType &div = *itr8;
+                    IdsType::const_iterator itrA, itrB;
 
-                        IdsType _div;
+                    for (auto &newPoly : newPolys) {
+                        IdsType _newPoly;
 
-                        int num = div.size();
+                        for (itrA = newPoly.begin(); itrA != newPoly.end(); ++itrA) {
+                            itrB = itrA+1;
 
-                        for (int i = 0; i < num; i++) {
-                            double ptA[3], ptB[3];
-                            pd->GetPoint(div[i], ptA);
-                            pd->GetPoint(div[(i+1)%num], ptB);
+                            if (itrB == newPoly.end()) {
+                                itrB = newPoly.begin();
+                            }
+
+                            pd->GetPoint(*itrA, ptA);
+                            pd->GetPoint(*itrB, ptB);
 
                             double d = GetD(ptA, ptB);
 
-#ifdef DEBUG
-                            std::cout << "edge (" << div[i] << ", "
-                                      << div[(i+1)%num] << "), d=" << d
-                                      << std::endl;
-#endif
-
                             if (d > 1e-6) {
-                                _div.push_back(div[i]);
+                                _newPoly.push_back(*itrA);
                             } else {
 #ifdef DEBUG
-                                std::cout << "rm " << div[i] << std::endl;
+                                std::cout << "removing " << *itrA << std::endl;
 #endif
                             }
                         }
 
-                        div = std::move(_div);
+                        newPoly.swap(_newPoly);
                     }
 
-                    // prüfen ob die erstellten polygone gültig sind
+                    // prüft, ob die erstellten polygone gültig sind
 
-                    if (divided[0].size() > 2) {
-                        polys.push_back(divided[0]);
+                    if (newPolys[0].size() > 2) {
+                        polys.push_back(newPolys[0]);
                     }
 
-                    if (HasArea(strip) && divided[1].size() > 2) {
-                        polys.push_back(divided[1]);
+                    if (HasArea(strip) && newPolys[1].size() > 2) {
+                        polys.push_back(newPolys[1]);
                     }
 
                     cycle = 0;
@@ -1698,17 +1683,11 @@ void vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
                     break;
 
                 } else {
-                    polys.push_back(p);
+                    polys.push_back(next);
 
                     cycle++;
                 }
 
-            }
-
-            i++;
-
-            if (i == 4) {
-                //break;
             }
 
         }
@@ -1765,7 +1744,7 @@ void vtkPolyDataBooleanFilter::CollapseCaptPoints (vtkPolyData *vtkNotUsed(pd), 
 
     struct Cmp {
         bool operator() (const StripPt &l, const StripPt &r) const {
-            const int x1 = static_cast<int>(l.cutPt[0]*1e5),
+            const long x1 = static_cast<int>(l.cutPt[0]*1e5),
                 y1 = static_cast<int>(l.cutPt[1]*1e5),
                 z1 = static_cast<int>(l.cutPt[2]*1e5),
                 x2 = static_cast<int>(r.cutPt[0]*1e5),
@@ -2660,9 +2639,9 @@ void vtkPolyDataBooleanFilter::MergePoints (vtkPolyData *pd, PolyStripsType &pol
 }
 
 enum class Congr {
-    a,
-    b,
-    c
+    EQUAL = 1,
+    OPPOSITE = 2,
+    NOT = 3
 };
 
 class PolyAtEdge {
@@ -2710,14 +2689,14 @@ public:
             if (ang > eps) {
                 if (cong > eps) {
                     // normalen sind gleich ausgerichtet
-                    return Congr::b;
+                    return Congr::EQUAL;
                 } else {
-                    return Congr::c;
+                    return Congr::OPPOSITE;
                 }
             }
         }
 
-        return Congr::a;
+        return Congr::NOT;
     }
 
 };
@@ -2740,14 +2719,14 @@ public:
                   << ", cB " << cB
                   << std::endl;
 
-        if (cA != Congr::a || cB != Congr::a) {
+        if (cA != Congr::NOT || cB != Congr::NOT) {
             assert(cA != cB);
         }
 
 #endif
 
-        if (cA == Congr::b || cA == Congr::c) {
-            if (cA == Congr::c) {
+        if (cA == Congr::EQUAL || cA == Congr::OPPOSITE) {
+            if (cA == Congr::OPPOSITE) {
                 // normalen sind entgegengesetzt gerichtet
 
                 if (mode == OPER_INTERSECTION) {
@@ -2762,8 +2741,8 @@ public:
                 pT.loc = LOC_OUTSIDE;
             }
 
-        } else if (cB == Congr::b || cB == Congr::c) {
-            if (cB == Congr::c) {
+        } else if (cB == Congr::EQUAL || cB == Congr::OPPOSITE) {
+            if (cB == Congr::OPPOSITE) {
                 // normalen sind entgegengesetzt gerichtet
 
                 if (mode == OPER_INTERSECTION) {
