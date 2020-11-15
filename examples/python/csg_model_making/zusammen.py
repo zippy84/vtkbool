@@ -199,7 +199,7 @@ if __name__ == '__main__':
 
     a13 = A.add_top(add_frame(repeat(create_rest(), 12), holds), a10)
 
-    A.write('band.vtk')
+    A.write('band.vtk', 'band.stl')
 
     os.makedirs('frames2', exist_ok=True)
 

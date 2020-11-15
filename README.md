@@ -41,7 +41,7 @@ You can support my project with [PayPal](https://paypal.me/zippy84).
 
 - CMake >= 3.1
 - VTK >= 6.1
-- GCC >= 4.7 or another compiler with C++11-support (MSVC for example)
+- C++11 compiler 
 
 ### Optional
 
@@ -169,8 +169,6 @@ writer.SetFileName('result.vtk')
 
 writer.Update()
 ```
-
-There are two complex examples in *python/examples*.
 
 ## Copyright
 

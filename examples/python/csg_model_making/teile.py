@@ -81,7 +81,7 @@ class Alignment:
 
         return tp
 
-    def write(self, file_name):
+    def write(self, *names):
         flts = [self.aligned[0]]
 
         for i, f in enumerate(self.aligned[1:]):
@@ -94,10 +94,15 @@ class Alignment:
         clean = vtk.vtkCleanPolyData()
         clean.SetInputConnection(flts[-1].GetOutputPort())
 
-        writer = vtk.vtkPolyDataWriter()
-        writer.SetInputConnection(clean.GetOutputPort())
-        writer.SetFileName(file_name)
-        writer.Update()
+        for name in names:
+            if name.endswith('stl'):
+                w = vtk.vtkSTLWriter()
+            else:
+                w = vtk.vtkPolyDataWriter()
+
+            w.SetInputConnection(clean.GetOutputPort())
+            w.SetFileName(name)
+            w.Update()
 
 def extrude(pts, h, z=0):
     cell = vtk.vtkIdList()
@@ -510,7 +515,7 @@ if __name__ == '__main__':
     a13 = A.add_right(mirror(p2), a11)
     a14 = A.add_top(p3, a13)
 
-    A.write('all.vtk')
+    A.write('all.vtk', 'all.stl')
 
     os.makedirs('frames', exist_ok=True)
 
