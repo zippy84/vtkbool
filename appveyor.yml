@@ -9,6 +9,8 @@ environment:
       a: 1
     - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu1804
       a: 2
+    - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu2004
+      a: 3
 for:
   - matrix:
       only:
@@ -69,6 +71,7 @@ for:
   - matrix:
       only:
         - a: 2
+        - a: 3
     install:
       - sudo apt-get update
       - sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
