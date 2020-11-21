@@ -342,7 +342,9 @@ void vtkPolyDataContactFilter::InterPolyLine (InterPtsType &interPts, vtkPolyDat
     // durchläuft die kanten und ermittelt die schnittpunkte
 
     double ptA[3],
-        ptB[3];
+        ptB[3],
+        dA,
+        dB;
 
     vtkIdType i, j;
 
@@ -472,6 +474,18 @@ void vtkPolyDataContactFilter::InterPolyLine (InterPtsType &interPts, vtkPolyDat
                         p.pop_back();
                     }
 
+                } else if (ends.count(before) == 0 && ends.count(after) == 0) {
+                    pd->GetPoint(poly[before], ptA);
+                    pd->GetPoint(poly[after], ptB);
+
+                    dA = vtkMath::Dot(m, ptA)-d;
+                    dB = vtkMath::Dot(m, ptB)-d;
+
+                    if (std::signbit(dA) != std::signbit(dB)) {
+                        p.pop_back();
+                    } else {
+                        // hier brauche ich mal ein beispiel
+                    }
                 }
             }
         }
