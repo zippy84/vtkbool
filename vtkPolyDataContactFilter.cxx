@@ -443,48 +443,73 @@ void vtkPolyDataContactFilter::InterPolyLine (InterPtsType &interPts, vtkPolyDat
             }
         }
 
+        double vA[3],
+            vB[3],
+            tA,
+            tB;
+
         vtkIdType before, after;
 
         for (auto &p : _paired) {
-            if (p.size() == 2) {
-                const InterPt &dupl = p.back();
+            const InterPt &dupl = p.back();
 
+            if (dupl.end != NO_USE) {
                 before = dupl.end == 0 ? num-1 : dupl.end-1;
                 after = dupl.end == num-1 ? 0 : dupl.end+1;
 
-                if (ends.count(after) == 0 && ends.count(before) == 1) {
-                    pd->GetPoint(poly[after], q);
-                    e = vtkMath::Dot(m, q)-d;
+                if (p.size() == 2) {
+                    if (ends.count(after) == 0 && ends.count(before) == 1) {
+                        pd->GetPoint(poly[after], q);
+                        e = vtkMath::Dot(m, q)-d;
 
-                    t = ends[before];
+                        t = ends[before];
 
-                    if ((dupl.t > t && e > 0) || (dupl.t < t && e < 0)) {
-                        // tasche
-                        p.pop_back();
+                        if ((dupl.t > t && e > 0) || (dupl.t < t && e < 0)) {
+                            // tasche
+                            p.pop_back();
+                        }
+
+                        continue;
+
+                    } else if (ends.count(before) == 0 && ends.count(after) == 1) {
+                        pd->GetPoint(poly[before], q);
+                        e = vtkMath::Dot(m, q)-d;
+
+                        t = ends[after];
+
+                        if ((dupl.t > t && e < 0) || (dupl.t < t && e > 0)) {
+                            // tasche
+                            p.pop_back();
+                        }
+
+                        continue;
+
                     }
+                }
 
-                } else if (ends.count(before) == 0 && ends.count(after) == 1) {
-                    pd->GetPoint(poly[before], q);
-                    e = vtkMath::Dot(m, q)-d;
-
-                    t = ends[after];
-
-                    if ((dupl.t > t && e < 0) || (dupl.t < t && e > 0)) {
-                        // tasche
-                        p.pop_back();
-                    }
-
-                } else if (ends.count(before) == 0 && ends.count(after) == 0) {
-                    pd->GetPoint(poly[before], ptA);
-                    pd->GetPoint(poly[after], ptB);
+                if (ends.count(before) == 0 && ends.count(after) == 0) {
+                    pd->GetPoint(poly[after], ptA);
+                    pd->GetPoint(poly[before], ptB);
 
                     dA = vtkMath::Dot(m, ptA)-d;
                     dB = vtkMath::Dot(m, ptB)-d;
 
                     if (std::signbit(dA) != std::signbit(dB)) {
-                        p.pop_back();
+                        if (p.size() == 2) {
+                            p.pop_back();
+                        }
+
                     } else {
-                        // hier brauche ich mal ein beispiel
+                        vtkMath::Subtract(ptA, pt, vA);
+                        vtkMath::Subtract(ptB, pt, vB);
+
+                        tA = vtkMath::Dot(vA, r);
+                        tB = vtkMath::Dot(vB, r);
+
+                        if ((tB > tA) == std::signbit(dA)) {
+                            p.clear();
+                        }
+
                     }
                 }
             }
