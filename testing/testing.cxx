@@ -23,11 +23,10 @@ limitations under the License.
 #include <vtkCellData.h>
 #include <vtkMath.h>
 #include <vtkTrivialProducer.h>
+#include <vtkLinearExtrusionFilter.h>
+#include <vtkPolyDataNormals.h>
 #include <vtkTriangleFilter.h>
 #include <vtkLinearSubdivisionFilter.h>
-#include <vtkVectorText.h>
-#include <vtkPolyDataNormals.h>
-#include <vtkLinearExtrusionFilter.h>
 #include <vtkPlaneSource.h>
 #include <vtkAppendPolyData.h>
 #include <vtkLineSource.h>
@@ -49,18 +48,14 @@ limitations under the License.
 
 #include "Utilities.h"
 
-// #define DD
-
-int Point::_tag = 0;
-
-typedef std::map<int, IdsType> LinksType;
+typedef std::map<vtkIdType, IdsType> LinksType;
 
 class Test {
     vtkPolyData *pd, *lines;
     vtkKdTreePointLocator *loc;
     vtkIdList *cells, *poly, *pts;
 
-    vtkIntArray *contsA, *contsB;
+    vtkIdTypeArray *contsA, *contsB;
 
 public:
     Test (vtkPolyData *pd, vtkPolyData *lines) : pd(pd), lines(lines) {
@@ -75,8 +70,8 @@ public:
         poly = vtkIdList::New();
         pts = vtkIdList::New();
 
-        contsA = vtkIntArray::SafeDownCast(lines->GetCellData()->GetArray("cA"));
-        contsB = vtkIntArray::SafeDownCast(lines->GetCellData()->GetArray("cB"));
+        contsA = vtkIdTypeArray::SafeDownCast(lines->GetCellData()->GetArray("cA"));
+        contsB = vtkIdTypeArray::SafeDownCast(lines->GetCellData()->GetArray("cB"));
     }
     ~Test () {
         loc->FreeSearchStructure();
@@ -88,12 +83,8 @@ public:
 
     int run () {
 
-#ifdef DEBUG
-        WriteVTK("merged.vtk", pd);
-#endif
-
-        vtkIntArray *origCellIdsA = vtkIntArray::SafeDownCast(pd->GetCellData()->GetArray("OrigCellIdsA"));
-        vtkIntArray *origCellIdsB = vtkIntArray::SafeDownCast(pd->GetCellData()->GetArray("OrigCellIdsB"));
+        vtkIdTypeArray *origCellIdsA = vtkIdTypeArray::SafeDownCast(pd->GetCellData()->GetArray("OrigCellIdsA"));
+        vtkIdTypeArray *origCellIdsB = vtkIdTypeArray::SafeDownCast(pd->GetCellData()->GetArray("OrigCellIdsB"));
 
         int errA = checkConnectivity(0, origCellIdsA);
         int errB = checkConnectivity(1, origCellIdsB);
@@ -103,13 +94,18 @@ public:
     }
 
 private:
-    int checkConnectivity (int input, vtkIntArray *origIds) {
+    int checkConnectivity (int input, vtkIdTypeArray *origIds) {
         std::cout << "Checking input " << input << std::endl;
+
+        vtkIdType numCells = pd->GetNumberOfCells(),
+            numLines = lines->GetNumberOfCells();
+
+        vtkIdType i, j, k, l, m;
 
         int err = 0;
 
-        for (int i = 0; i < pd->GetNumberOfCells() && err < 1; i++) {
-            if (origIds->GetValue(i) > -1) {
+        for (i = 0; i < numCells && err < 1; i++) {
+            if (origIds->GetValue(i) != NO_USE) {
                 pd->GetCellPoints(i, poly);
                 if (poly->GetNumberOfIds() < 3) {
                     std::cout << "poly " << i << " has too few points" << std::endl;
@@ -120,14 +116,11 @@ private:
         }
 
         if (err == 0) {
-
-            int numLines = lines->GetNumberOfCells();
-
             double ptA[3], ptB[3];
 
             vtkIdList *line = vtkIdList::New();
 
-            for (int i = 0; i < numLines; i++) {
+            for (i = 0; i < numLines; i++) {
 
                 lines->GetCellPoints(i, line);
 
@@ -142,11 +135,11 @@ private:
 
                 // bei einem normalen schnitt sollte jedes polygon zwei punkte haben
 
-                for (int j = 0; j < pts->GetNumberOfIds(); j++) {
+                for (j = 0; j < pts->GetNumberOfIds(); j++) {
                     pd->GetPointCells(pts->GetId(j), cells);
 
-                    for (int k = 0; k < cells->GetNumberOfIds(); k++) {
-                        if (origIds->GetValue(cells->GetId(k)) > -1) {
+                    for (k = 0; k < cells->GetNumberOfIds(); k++) {
+                        if (origIds->GetValue(cells->GetId(k)) != NO_USE) {
                             links[cells->GetId(k)].push_back(pts->GetId(j));
                         }
                     }
@@ -154,11 +147,11 @@ private:
 
                 FindPoints(loc, ptB, pts);
 
-                for (int j = 0; j < pts->GetNumberOfIds(); j++) {
+                for (j = 0; j < pts->GetNumberOfIds(); j++) {
                     pd->GetPointCells(pts->GetId(j), cells);
 
-                    for (int k = 0; k < cells->GetNumberOfIds(); k++) {
-                        if (origIds->GetValue(cells->GetId(k)) > -1) {
+                    for (k = 0; k < cells->GetNumberOfIds(); k++) {
+                        if (origIds->GetValue(cells->GetId(k)) != NO_USE) {
                             links[cells->GetId(k)].push_back(pts->GetId(j));
                         }
                     }
@@ -170,18 +163,34 @@ private:
 
                 for (itr = links.begin(); itr != links.end(); ++itr) {
                     const IdsType &pts = itr->second;
+
                     if (pts.size() > 1) {
-                        // gibt es doppelte punkte
+                        // gibt es doppelte punkte, die sich direkt nebeneinander befinden?
 
                         pd->GetCellPoints(itr->first, poly);
-                        int numPts = poly->GetNumberOfIds();
+                        vtkIdType numPts = poly->GetNumberOfIds();
 
-                        double a[3], b[3];
-                        for (int j = 0; j < numPts; j++) {
-                            pd->GetPoint(poly->GetId(j), a);
-                            pd->GetPoint(poly->GetId((j+1)%numPts), b);
+                        std::map<vtkIdType, Point3d> _pts;
 
-                            if (GetD(a, b) < 1e-6) {
+                        vtkIdType _id, idA, idB;
+
+                        double pt[3];
+
+                        for (j = 0; j < numPts; j++) {
+                            _id = poly->GetId(j);
+                            pd->GetPoint(_id, pt);
+
+                            _pts.emplace(_id, Point3d{pt[0], pt[1], pt[2]});
+                        }
+
+                        for (j = 0; j < numPts; j++) {
+                            idA = poly->GetId(j);
+                            idB = poly->GetId(j+1 == numPts ? 0 : j+1);
+
+                            auto _a = _pts.find(idA);
+                            auto _b = _pts.find(idB);
+
+                            if (_a->second == _b->second) {
                                 std::cout << "poly " << itr->first << " has duplicated points" << std::endl;
 
                                 err++;
@@ -198,17 +207,18 @@ private:
                 }
 
                 if (polys.size() == 2) {
-                    IdsType &f = links[polys[0]],
-                            &s = links[polys[1]];
+                    const IdsType &f = links[polys[0]],
+                        &s = links[polys[1]];
 
                     lines->GetPointCells(line->GetId(0), cells);
-                    int linkedA = cells->GetNumberOfIds();
+                    vtkIdType linkedA = cells->GetNumberOfIds();
 
                     lines->GetPointCells(line->GetId(1), cells);
-                    int linkedB = cells->GetNumberOfIds();
+                    vtkIdType linkedB = cells->GetNumberOfIds();
 
                     if (linkedA == linkedB) {
-                        std::set<int> all;
+                        std::set<vtkIdType> all;
+
                         all.insert(f.begin(), f.end());
                         all.insert(s.begin(), s.end());
 
@@ -231,7 +241,7 @@ private:
                     }
 
                 } else if (polys.size() == 1) {
-                    IdsType &f = links[polys[0]];
+                    const IdsType &f = links[polys[0]];
 
                     if (f.size() < 3) {
                         std::cout << "line " << i << " has too few neighbors" << std::endl;
@@ -249,36 +259,33 @@ private:
 
                 // sucht nach lücken
 
-                IdsType::const_iterator itr2, itr3;
-
-                for (int j = 0; j < 2 && err < 1; j++) {
+                for (j = 0; j < 2 && err < 1; j++) {
                     double pt[3];
                     lines->GetPoint(line->GetId(j), pt);
 
                     IdsType ids;
 
                     FindPoints(loc, pt, pts);
-                    int numPts = pts->GetNumberOfIds();
+                    vtkIdType numPtsA = pts->GetNumberOfIds();
 
-                    std::map<int, int> masked;
+                    std::map<vtkIdType, vtkIdType> masked;
 
-                    for (int k = 0; k < numPts; k++) {
+                    for (k = 0; k < numPtsA; k++) {
 
                         pd->GetPointCells(pts->GetId(k), cells);
-                        int numCells = cells->GetNumberOfIds();
+                        vtkIdType _numCells = cells->GetNumberOfIds();
 
-                        for (int l = 0; l < numCells; l++) {
-                            int cellId = cells->GetId(l);
+                        for (l = 0; l < _numCells; l++) {
+                            vtkIdType cellId = cells->GetId(l);
 
-                            if (origIds->GetValue(cellId) > -1) {
-
+                            if (origIds->GetValue(cellId) != NO_USE) {
                                 pd->GetCellPoints(cells->GetId(l), poly);
-                                int numPts_ = poly->GetNumberOfIds();
+                                vtkIdType numPtsB = poly->GetNumberOfIds();
 
-                                for (int m = 0; m < numPts_; m++) {
-                                    int ptId = poly->GetId(m);
+                                for (m = 0; m < numPtsB; m++) {
+                                    vtkIdType p = poly->GetId(m);
 
-                                    /* wenn ein polygon mehrfach die gleiche ptId verwendet,
+                                    /* wenn ein polygon mehrfach die gleiche p verwendet,
                                        dann erscheint die cellId auch mehrfach in cells
                                        => es sind dann auch 4 kanten zu verarbeiten
                                        => der betrachtete relative index wird dann zusammen mit der cellId in masked gespeichert */
@@ -287,10 +294,13 @@ private:
                                         continue;
                                     }
 
-                                    if (ptId == pts->GetId(k)) {
+                                    if (p == pts->GetId(k)) {
 
-                                        ids.push_back(poly->GetId((m+1)%numPts_));
-                                        ids.push_back(poly->GetId((m+numPts_-1)%numPts_));
+                                        vtkIdType idA = m == numPtsB-1 ? 0 : m+1,
+                                            idB = m == 0 ? numPtsB-1 : m-1;
+
+                                        ids.push_back(poly->GetId(idA));
+                                        ids.push_back(poly->GetId(idB));
 
                                         masked[cellId] = m;
 
@@ -305,33 +315,35 @@ private:
 
                     std::sort(ids.begin(), ids.end());
 
-                    IdsType ids2 = ids;
+                    IdsType ids2 = ids,
+                        ids3;
+
                     ids2.erase(std::unique(ids2.begin(), ids2.end()), ids2.end());
 
-                    IdsType ids3;
-                    for (itr2 = ids2.begin(); itr2 != ids2.end(); ++itr2) {
-                        if (std::count(ids.begin(), ids.end(), *itr2) == 1) {
-                            ids3.push_back(*itr2);
+                    for (vtkIdType id : ids2) {
+                        if (std::count(ids.begin(), ids.end(), id) == 1) {
+                            ids3.push_back(id);
                         }
                     }
 
-                    int c = 0;
+                    std::set<Point3d> uniquePts;
 
-                    for (itr2 = ids3.begin(); itr2 != ids3.end(); ++itr2) {
-                        for (itr3 = itr2+1; itr3 != ids3.end(); ++itr3) {
-                            double a[3], b[3];
-                            pd->GetPoint(*itr2, a);
-                            pd->GetPoint(*itr3, b);
+                    double _pt[3];
 
-                            if (GetD(a, b) < 1e-6) {
-                                c++;
-                            }
+                    std::size_t count {0};
+
+                    for (vtkIdType id : ids3) {
+                        pd->GetPoint(id, _pt);
+
+                        auto _ins = uniquePts.emplace(_pt[0], _pt[1], _pt[2]);
+
+                        if (!_ins.second) {
+                            count++;
                         }
                     }
 
-                    if (ids3.size() != 2*c) {
+                    if (count*2 != ids3.size()) {
                         std::cout << "line " << i << " has gaps at " << line->GetId(j) << std::endl;
-
                         err++;
                     }
 
@@ -354,13 +366,13 @@ public:
     bool hasError;
     std::string msg;
 
-    Observer() : hasError(false) {}
+    Observer () : hasError(false) {}
 
-    static Observer *New() {
+    static Observer *New () {
         return new Observer;
     }
 
-    virtual void Execute(vtkObject *vtkNotUsed(caller), unsigned long event, void *calldata) {
+    virtual void Execute (vtkObject *vtkNotUsed(caller), unsigned long event, void *calldata) {
         hasError = event == vtkCommand::ErrorEvent;
         msg = static_cast<char*>(calldata);
     }
@@ -389,22 +401,11 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, cu->GetOutputPort());
         bf->SetInputConnection(1, cyl->GetOutputPort());
-
-#ifndef DD
         bf->MergeRegsOn();
-#else
-        bf->SetOperModeToDifference();
-#endif
-
         bf->Update();
 
-#ifndef DD
         Test test(bf->GetOutput(0), bf->GetOutput(1));
         int ok = test.run();
-#else
-        int ok = 0;
-        WriteVTK("test0.vtk", bf->GetOutput(0));
-#endif
 
         bf->Delete();
         cyl->Delete();
@@ -424,22 +425,11 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, cu->GetOutputPort());
         bf->SetInputConnection(1, cyl->GetOutputPort());
-
-#ifndef DD
         bf->MergeRegsOn();
-#else
-        bf->SetOperModeToDifference();
-#endif
-
         bf->Update();
 
-#ifndef DD
         Test test(bf->GetOutput(0), bf->GetOutput(1));
         int ok = test.run();
-#else
-        int ok = 0;
-        WriteVTK("test1.vtk", bf->GetOutput(0));
-#endif
 
         bf->Delete();
         cyl->Delete();
@@ -458,22 +448,11 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, cu->GetOutputPort());
         bf->SetInputConnection(1, cyl->GetOutputPort());
-
-#ifndef DD
         bf->MergeRegsOn();
-#else
-        bf->SetOperModeToDifference();
-#endif
-
         bf->Update();
 
-#ifndef DD
         Test test(bf->GetOutput(0), bf->GetOutput(1));
         int ok = test.run();
-#else
-        int ok = 0;
-        WriteVTK("test2.vtk", bf->GetOutput(0));
-#endif
 
         bf->Delete();
         cyl->Delete();
@@ -492,22 +471,11 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, cubeA->GetOutputPort());
         bf->SetInputConnection(1, cubeB->GetOutputPort());
-
-#ifndef DD
         bf->MergeRegsOn();
-#else
-        bf->SetOperModeToDifference();
-#endif
-
         bf->Update();
 
-#ifndef DD
         Test test(bf->GetOutput(0), bf->GetOutput(1));
         int ok = test.run();
-#else
-        int ok = 0;
-        WriteVTK("test3.vtk", bf->GetOutput(0));
-#endif
 
         bf->Delete();
         cubeB->Delete();
@@ -524,22 +492,11 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, cubeA->GetOutputPort());
         bf->SetInputConnection(1, cubeB->GetOutputPort());
-
-#ifndef DD
         bf->MergeRegsOn();
-#else
-        bf->SetOperModeToDifference();
-#endif
-
         bf->Update();
 
-#ifndef DD
         Test test(bf->GetOutput(0), bf->GetOutput(1));
         int ok = test.run();
-#else
-        int ok = 0;
-        WriteVTK("test4.vtk", bf->GetOutput(0));
-#endif
 
         bf->Delete();
         cubeB->Delete();
@@ -570,11 +527,11 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         int ind = 0;
 
         for (int i = 0; i < 32; i++) {
-            double x0 = .5*std::cos(i*2*PI/32);
-            double z0 = .5*std::sin(i*2*PI/32);
+            double x0 = .5*std::cos(i*2*M_PI/32);
+            double z0 = .5*std::sin(i*2*M_PI/32);
 
-            double x1 = .5*std::cos((i+1)*2*PI/32);
-            double z1 = .5*std::sin((i+1)*2*PI/32);
+            double x1 = .5*std::cos((i+1)*2*M_PI/32);
+            double z1 = .5*std::sin((i+1)*2*M_PI/32);
 
             pts->SetPoint(ind, x0, .75, z0);
             top->SetId(i, ind++);
@@ -611,22 +568,11 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, cu->GetOutputPort());
         bf->SetInputConnection(1, prod->GetOutputPort());
-
-#ifndef DD
         bf->MergeRegsOn();
-#else
-        bf->SetOperModeToDifference();
-#endif
-
         bf->Update();
 
-#ifndef DD
         Test test(bf->GetOutput(0), bf->GetOutput(1));
         int ok = test.run();
-#else
-        int ok = 0;
-        WriteVTK("test5.vtk", bf->GetOutput(0));
-#endif
 
         bf->Delete();
         prod->Delete();
@@ -649,22 +595,11 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, cu->GetOutputPort());
         bf->SetInputConnection(1, sp->GetOutputPort());
-
-#ifndef DD
         bf->MergeRegsOn();
-#else
-        bf->SetOperModeToDifference();
-#endif
-
         bf->Update();
 
-#ifndef DD
         Test test(bf->GetOutput(0), bf->GetOutput(1));
         int ok = test.run();
-#else
-        int ok = 0;
-        WriteVTK("test6.vtk", bf->GetOutput(0));
-#endif
 
         bf->Delete();
         sp->Delete();
@@ -690,22 +625,11 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, spA->GetOutputPort());
         bf->SetInputConnection(1, spB->GetOutputPort());
-
-#ifndef DD
         bf->MergeRegsOn();
-#else
-        bf->SetOperModeToDifference();
-#endif
-
         bf->Update();
 
-#ifndef DD
         Test test(bf->GetOutput(0), bf->GetOutput(1));
         int ok = test.run();
-#else
-        int ok = 0;
-        WriteVTK("test7.vtk", bf->GetOutput(0));
-#endif
 
         bf->Delete();
         spB->Delete();
@@ -728,22 +652,11 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, spA->GetOutputPort());
         bf->SetInputConnection(1, spB->GetOutputPort());
-
-#ifndef DD
         bf->MergeRegsOn();
-#else
-        bf->SetOperModeToDifference();
-#endif
-
         bf->Update();
 
-#ifndef DD
         Test test(bf->GetOutput(0), bf->GetOutput(1));
         int ok = test.run();
-#else
-        int ok = 0;
-        WriteVTK("test8.vtk", bf->GetOutput(0));
-#endif
 
         bf->Delete();
         spB->Delete();
@@ -768,22 +681,11 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, spA->GetOutputPort());
         bf->SetInputConnection(1, spB->GetOutputPort());
-
-#ifndef DD
         bf->MergeRegsOn();
-#else
-        bf->SetOperModeToDifference();
-#endif
-
         bf->Update();
 
-#ifndef DD
         Test test(bf->GetOutput(0), bf->GetOutput(1));
         int ok = test.run();
-#else
-        int ok = 0;
-        WriteVTK("test9.vtk", bf->GetOutput(0));
-#endif
 
         bf->Delete();
         spB->Delete();
@@ -804,22 +706,11 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, cu->GetOutputPort());
         bf->SetInputConnection(1, cyl->GetOutputPort());
-
-#ifndef DD
         bf->MergeRegsOn();
-#else
-        bf->SetOperModeToDifference();
-#endif
-
         bf->Update();
 
-#ifndef DD
         Test test(bf->GetOutput(0), bf->GetOutput(1));
         int ok = test.run();
-#else
-        int ok = 0;
-        WriteVTK("test10.vtk", bf->GetOutput(0));
-#endif
 
         bf->Delete();
         cyl->Delete();
@@ -845,22 +736,11 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, sf->GetOutputPort());
         bf->SetInputConnection(1, cubeB->GetOutputPort());
-
-#ifndef DD
         bf->MergeRegsOn();
-#else
-        bf->SetOperModeToDifference();
-#endif
-
         bf->Update();
 
-#ifndef DD
         Test test(bf->GetOutput(0), bf->GetOutput(1));
         int ok = test.run();
-#else
-        int ok = 0;
-        WriteVTK("test11.vtk", bf->GetOutput(0));
-#endif
 
         bf->Delete();
         sf->Delete();
@@ -871,76 +751,6 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         return ok;
 
     } else if (t == 12) {
-        vtkVectorText *text = vtkVectorText::New();
-        text->SetText("zippy84");
-
-        vtkLinearExtrusionFilter *ef = vtkLinearExtrusionFilter::New();
-        ef->SetInputConnection(text->GetOutputPort());
-        ef->SetExtrusionTypeToNormalExtrusion();
-        ef->SetVector(0, 0, 1);
-
-        // TODO: vtkPolyDataBooleanFilter muss prüfen, ob polygone konsistent orientiert sind
-        // -> AddAdjacentPoints und CombineRegions funktionieren sonst nicht
-        vtkPolyDataNormals *nf = vtkPolyDataNormals::New();
-        nf->SetInputConnection(ef->GetOutputPort());
-        nf->FlipNormalsOn();
-        nf->ConsistencyOn();
-
-        nf->Update();
-
-        double ext[6];
-        nf->GetOutput()->GetPoints()->GetBounds(ext);
-
-        double dx = ext[0]+(ext[1]-ext[0])/2,
-            dy = ext[2]+(ext[3]-ext[2])/2;
-
-        vtkCubeSource *cube = vtkCubeSource::New();
-        cube->SetXLength(10);
-        cube->SetYLength(5);
-        cube->SetCenter(dx, dy, .5);
-
-        vtkTriangleFilter *tf = vtkTriangleFilter::New();
-        tf->SetInputConnection(cube->GetOutputPort());
-
-        vtkLinearSubdivisionFilter *sf = vtkLinearSubdivisionFilter::New();
-        sf->SetInputConnection(tf->GetOutputPort());
-        sf->SetNumberOfSubdivisions(3);
-
-        vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
-        bf->SetInputConnection(0, nf->GetOutputPort());
-
-        // ginge mit dem merger
-        bf->SetInputConnection(1, cube->GetOutputPort());
-
-        // bf->SetInputConnection(1, sf->GetOutputPort());
-
-#ifndef DD
-        bf->MergeRegsOn();
-#else
-        bf->SetOperModeToDifference2();
-#endif
-
-        bf->Update();
-
-#ifndef DD
-        Test test(bf->GetOutput(0), bf->GetOutput(1));
-        int ok = test.run();
-#else
-        int ok = 0;
-        WriteVTK("test12.vtk", bf->GetOutput(0));
-#endif
-
-        bf->Delete();
-        sf->Delete();
-        tf->Delete();
-        cube->Delete();
-        ef->Delete();
-        nf->Delete();
-        text->Delete();
-
-        return ok;
-
-    } else if (t == 13) {
         vtkSphereSource *sp = vtkSphereSource::New();
         sp->SetRadius(.5);
         sp->SetPhiResolution(8);
@@ -952,22 +762,11 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, sp->GetOutputPort());
         bf->SetInputConnection(1, pl->GetOutputPort());
-
-#ifndef DD
         bf->MergeRegsOn();
-#else
-        bf->SetOperModeToUnion();
-#endif
-
         bf->Update();
 
-#ifndef DD
         Test test(bf->GetOutput(0), bf->GetOutput(1));
         int ok = test.run();
-#else
-        int ok = 0;
-        WriteVTK("test13.vtk", bf->GetOutput(0));
-#endif
 
         bf->Delete();
         pl->Delete();
@@ -975,7 +774,7 @@ int main (int vtkNotUsed(argc), char *argv[]) {
 
         return ok;
 
-    } else if (t == 14) {
+    } else if (t == 13) {
         // testet den merger
 
         vtkCubeSource *cuA = vtkCubeSource::New();
@@ -987,22 +786,11 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, cuA->GetOutputPort());
         bf->SetInputConnection(1, cuB->GetOutputPort());
-
-#ifndef DD
         bf->MergeRegsOn();
-#else
-        bf->SetOperModeToDifference();
-#endif
-
         bf->Update();
 
-#ifndef DD
         Test test(bf->GetOutput(0), bf->GetOutput(1));
         int ok = test.run();
-#else
-        int ok = 0;
-        WriteVTK("test14.vtk", bf->GetOutput(0));
-#endif
 
         bf->Delete();
         cuB->Delete();
@@ -1010,7 +798,7 @@ int main (int vtkNotUsed(argc), char *argv[]) {
 
         return ok;
 
-    } else if (t == 15) {
+    } else if (t == 14) {
         vtkCubeSource *cuA = vtkCubeSource::New();
 
         vtkCubeSource *cuB = vtkCubeSource::New();
@@ -1030,22 +818,11 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, cuA->GetOutputPort());
         bf->SetInputConnection(1, app->GetOutputPort());
-
-#ifndef DD
         bf->MergeRegsOn();
-#else
-        bf->SetOperModeToDifference();
-#endif
-
         bf->Update();
 
-#ifndef DD
         Test test(bf->GetOutput(0), bf->GetOutput(1));
         int ok = test.run();
-#else
-        int ok = 0;
-        WriteVTK("test15.vtk", bf->GetOutput(0));
-#endif
 
         bf->Delete();
         app->Delete();
@@ -1055,7 +832,7 @@ int main (int vtkNotUsed(argc), char *argv[]) {
 
         return ok;
 
-    } else if (t == 16) {
+    } else if (t == 15) {
 
         vtkCubeSource *cu = vtkCubeSource::New();
 
@@ -1075,22 +852,11 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         vtkPolyDataBooleanFilter *bfB = vtkPolyDataBooleanFilter::New();
         bfB->SetInputConnection(0, cu->GetOutputPort());
         bfB->SetInputConnection(1, bfA->GetOutputPort());
-
-#ifndef DD
         bfB->MergeRegsOn();
-#else
-        bfB->SetOperModeToDifference();
-#endif
-
         bfB->Update();
 
-#ifndef DD
         Test test(bfB->GetOutput(0), bfB->GetOutput(1));
         int ok = test.run();
-#else
-        int ok = 0;
-        WriteVTK("test16.vtk", bfB->GetOutput(0));
-#endif
 
         bfB->Delete();
 
@@ -1101,9 +867,7 @@ int main (int vtkNotUsed(argc), char *argv[]) {
 
         return ok;
 
-    } else if (t == 17) {
-        // testet _Test()
-
+    } else if (t == 16) {
         double pA[] = {0.001, 10.122, 100.000};
         double pB[] = {-0.000, -10.128, 100.000};
 
@@ -1131,22 +895,11 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, tubeA->GetOutputPort());
         bf->SetInputConnection(1, tubeB->GetOutputPort());
-
-#ifndef DD
         bf->MergeRegsOn();
-#else
-        bf->SetOperModeToDifference();
-#endif
-
         bf->Update();
 
-#ifndef DD
         Test test(bf->GetOutput(0), bf->GetOutput(1));
         int ok = test.run();
-#else
-        int ok = 0;
-        WriteVTK("test17.vtk", bf->GetOutput(0));
-#endif
 
         bf->Delete();
         tubeB->Delete();
@@ -1156,7 +909,7 @@ int main (int vtkNotUsed(argc), char *argv[]) {
 
         return ok;
 
-    } else if (t == 18) {
+    } else if (t == 17) {
         // einfachste art sich überschneidender strips
 
         vtkCubeSource *cuA = vtkCubeSource::New();
@@ -1192,7 +945,7 @@ int main (int vtkNotUsed(argc), char *argv[]) {
 
         return ok;
 
-    } else if (t == 19) {
+    } else if (t == 18) {
         // hier überschneiden sich strips, die holes bilden
         // 4 tests in einem
 
@@ -1211,7 +964,7 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         bf->SetInputConnection(1, app->GetOutputPort());
         bf->AddObserver(vtkCommand::ErrorEvent, obs);
 
-        std::vector<std::array<double, 4>> data{
+        std::vector<std::array<double, 4>> data {
             {.8, .8, .2, 1},
             {.8, .5, .5, .8},
             {.5, .5, .5, 1},
@@ -1245,7 +998,7 @@ int main (int vtkNotUsed(argc), char *argv[]) {
 
         return ok;
 
-    }  else if (t == 20) {
+    }  else if (t == 19) {
         vtkSphereSource *spA = vtkSphereSource::New();
 
         vtkSphereSource *spB = vtkSphereSource::New();
@@ -1277,6 +1030,60 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         app->Delete();
         spB->Delete();
         spA->Delete();
+
+        return ok;
+
+    } else if (t == 20) {
+        vtkPolyData *pd = vtkPolyData::New();
+        pd->Allocate(1, 1);
+
+        vtkPoints *pts = vtkPoints::New();
+        pts->SetDataTypeToDouble();
+
+        vtkIdList *cell = vtkIdList::New();
+
+        std::vector<std::array<double, 2>> poly {{0, 0}, {1, -1}, {2, 0}, {3, -1}, {4, 0}, {5, 0}, {6, -1}, {7, 0}, {8, 1}, {9, 0}, {10, 0}, {11, 1}, {12, 0}, {13, 1}, {14, 0}, {14, 2}, {0, 2}};
+
+        for (auto &pt : poly) {
+            cell->InsertNextId(pts->InsertNextPoint(pt[0], pt[1], 0));
+        }
+
+        pd->SetPoints(pts);
+
+        pd->InsertNextCell(VTK_POLYGON, cell);
+
+        vtkTrivialProducer *prod = vtkTrivialProducer::New();
+        prod->SetOutput(pd);
+
+        vtkLinearExtrusionFilter *extr = vtkLinearExtrusionFilter::New();
+        extr->SetInputConnection(prod->GetOutputPort());
+        extr->SetVector(0, 0, 1);
+
+        vtkPolyDataNormals *norm = vtkPolyDataNormals::New();
+        norm->SetInputConnection(extr->GetOutputPort());
+        norm->AutoOrientNormalsOn();
+
+        vtkCubeSource *cube = vtkCubeSource::New();
+        cube->SetBounds(0, 14, -2, 0, 0, 1);
+
+        vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
+        bf->SetInputConnection(0, norm->GetOutputPort());
+        bf->SetInputConnection(1, cube->GetOutputPort());
+
+        bf->MergeRegsOn();
+        bf->Update();
+
+        Test test(bf->GetOutput(0), bf->GetOutput(1));
+        int ok = test.run();
+
+        bf->Delete();
+        cube->Delete();
+        norm->Delete();
+        extr->Delete();
+        prod->Delete();
+        cell->Delete();
+        pts->Delete();
+        pd->Delete();
 
         return ok;
 

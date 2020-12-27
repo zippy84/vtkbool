@@ -31,7 +31,7 @@ limitations under the License.
 #include <vtkIdList.h>
 #include <vtkPoints.h>
 #include <vtkMath.h>
-#include <vtkIntArray.h>
+#include <vtkIdTypeArray.h>
 #include <vtkCellData.h>
 #include <vtkPointData.h>
 #include <vtkCleanPolyData.h>
@@ -56,16 +56,16 @@ vtkPolyDataContactFilter::vtkPolyDataContactFilter () {
     contPts->SetDataTypeToDouble();
     contLines->SetPoints(contPts);
 
-    contA = vtkIntArray::New();
-    contB = vtkIntArray::New();
+    contA = vtkIdTypeArray::New();
+    contB = vtkIdTypeArray::New();
 
     contA->SetName("cA");
     contB->SetName("cB");
 
-    sourcesA = vtkIntArray::New();
+    sourcesA = vtkIdTypeArray::New();
     sourcesA->SetNumberOfComponents(2);
 
-    sourcesB = vtkIntArray::New();
+    sourcesB = vtkIdTypeArray::New();
     sourcesB->SetNumberOfComponents(2);
 
     sourcesA->SetName("sourcesA");
@@ -75,7 +75,6 @@ vtkPolyDataContactFilter::vtkPolyDataContactFilter () {
     SetNumberOfOutputPorts(3);
 
 }
-
 
 vtkPolyDataContactFilter::~vtkPolyDataContactFilter () {
 
@@ -155,9 +154,9 @@ int vtkPolyDataContactFilter::ProcessRequest (vtkInformation *request, vtkInform
 
         resultA->DeepCopy(clean->GetOutput());
 
-        vtkIdType numCellsA = resultA->GetNumberOfCells();
+        vtkIdType i, numCellsA = resultA->GetNumberOfCells();
 
-        for (vtkIdType i = 0; i < numCellsA; i++) {
+        for (i = 0; i < numCellsA; i++) {
             if (resultA->GetCellType(i) != VTK_LINE) {
                 resultA->DeleteCell(i);
             }
@@ -187,12 +186,12 @@ void vtkPolyDataContactFilter::PreparePolyData (vtkPolyData *pd) {
     pd->GetCellData()->Initialize();
     pd->GetPointData()->Initialize();
 
-    vtkIdType numCells = pd->GetNumberOfCells();
+    vtkIdType i, numCells = pd->GetNumberOfCells();
 
-    vtkIntArray *cellIds = vtkIntArray::New();
-    vtkIntArray *stripIds = vtkIntArray::New();
+    vtkIdTypeArray *cellIds = vtkIdTypeArray::New();
+    vtkIdTypeArray *stripIds = vtkIdTypeArray::New();
 
-    for (vtkIdType i = 0; i < numCells; i++) {
+    for (i = 0; i < numCells; i++) {
         cellIds->InsertNextValue(i);
 
         if (pd->GetCellType(i) == VTK_TRIANGLE_STRIP) {
@@ -207,7 +206,7 @@ void vtkPolyDataContactFilter::PreparePolyData (vtkPolyData *pd) {
     vtkIdType n;
     vtkIdType *pts;
 
-    vtkIdType i = 0;
+    i = 0;
 
     for (strips->InitTraversal(); strips->GetNextCell(n, pts);) {
         cells->Reset();
@@ -229,7 +228,7 @@ void vtkPolyDataContactFilter::PreparePolyData (vtkPolyData *pd) {
     }
 
     int type;
-    for (vtkIdType i = 0; i < numCells; i++) {
+    for (i = 0; i < numCells; i++) {
         type = pd->GetCellType(i);
 
         if (type != VTK_POLYGON && type != VTK_QUAD && type != VTK_TRIANGLE) {
@@ -545,8 +544,8 @@ void vtkPolyDataContactFilter::InterPolys (vtkIdType idA, vtkIdType idB) {
 
     double nA[3], nB[3], ptA[3], ptB[3], dA, dB;
 
-    ComputeNormal2(pdA, nA, numA, polyA);
-    ComputeNormal2(pdB, nB, numB, polyB);
+    ComputeNormal(pdA->GetPoints(), nA, numA, polyA);
+    ComputeNormal(pdB->GetPoints(), nB, numB, polyB);
 
     pdA->GetPoint(polyA[0], ptA);
     pdB->GetPoint(polyB[0], ptB);
@@ -570,7 +569,7 @@ void vtkPolyDataContactFilter::InterPolys (vtkIdType idA, vtkIdType idB) {
 
         int i = 0;
 
-         for (int j = 1; j < 3; j++) {
+        for (int j = 1; j < 3; j++) {
             if (std::abs(r[j]) > std::abs(r[i])) {
                 i = j;
             }

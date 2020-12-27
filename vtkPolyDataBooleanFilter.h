@@ -29,85 +29,88 @@ limitations under the License.
 
 #include "Utilities.h"
 
-#define LOC_NONE 0
-#define LOC_INSIDE 1
-#define LOC_OUTSIDE 2
-
 #define OPER_UNION 0
 #define OPER_INTERSECTION 1
 #define OPER_DIFFERENCE 2
 #define OPER_DIFFERENCE2 3
 
-#define CAPT_NOT 0
-#define CAPT_EDGE 1
-#define CAPT_A 2
-#define CAPT_B 3
+enum class Capt {
+    NOT,
+    EDGE,
+    A,
+    B
+};
 
-#define SIDE_START 0
-#define SIDE_END 1
+enum class Side {
+    NONE,
+    START,
+    END
+};
+
+enum class Loc {
+    NONE,
+    INSIDE,
+    OUTSIDE
+};
 
 class StripPt {
 public:
-    StripPt () : t(0), capt(CAPT_NOT), catched(true) {
+    StripPt () : t(0), capt(Capt::NOT), catched(true) {
         edge[0] = NO_USE;
         edge[1] = NO_USE;
     }
 
     double t;
-    int ind;
-    double pt[3];
-    int edge[2];
-    int capt;
+    Capt capt;
     double captPt[3];
 
+    vtkIdType ind, edge[2];
+
+    double pt[3];
     double cutPt[3];
 
     friend std::ostream& operator<< (std::ostream &out, const StripPt &s) {
-        out << "ind=" << s.ind
-            << ", edge=[" << s.edge[0] << ", " << s.edge[1] << "]"
-            << ", t=" << s.t
-            << ", capt=" << s.capt;
+        out << "ind " << s.ind
+            << ", edge [" << s.edge[0] << ", " << s.edge[1] << "]"
+            << ", t " << s.t
+            << ", capt " << s.capt
+            << ", polyId " << s.polyId;
         return out;
     }
 
     std::vector<Pair> history;
 
-    int polyId;
+    vtkIdType polyId;
 
-    int src;
+    vtkIdType src;
     bool catched;
 };
 
 class StripPtR {
 public:
-    StripPtR (int _ind) : ind(_ind)/*, desc{NO_USE, NO_USE}*/ {
-        strip = NO_USE;
-        side = NO_USE;
-        ref = NO_USE;
-
+    StripPtR (vtkIdType _ind) : ind(_ind), strip(NO_USE), ref(NO_USE), side(Side::NONE) {
         desc[0] = NO_USE;
         desc[1] = NO_USE;
     }
 
-    int ind;
-    int desc[2];
+    vtkIdType ind, desc[2];
 
     // nicht gesetzt bei CAPT_NOT
-    int strip;
-    int side;
-    int ref;
+    vtkIdType strip, ref;
+
+    Side side;
 
     friend std::ostream& operator<< (std::ostream &out, const StripPtR &s) {
-        out << "ind=" << s.ind
-            << ", desc=[" << s.desc[0] << ", " << s.desc[1] << "]"
-            << ", strip=" << s.strip
-            << ", side=" << s.side
-            << ", ref=" << s.ref;
+        out << "ind " << s.ind
+            << ", desc [" << s.desc[0] << ", " << s.desc[1] << "]"
+            << ", strip " << s.strip
+            << ", side " << s.side
+            << ", ref " << s.ref;
         return out;
     }
 };
 
-typedef std::map<int, StripPt> StripPtsType;
+typedef std::map<vtkIdType, StripPt> StripPtsType;
 typedef std::deque<StripPtR> StripType;
 typedef std::vector<StripType> StripsType;
 
@@ -120,110 +123,58 @@ public:
     StripsType strips;
 };
 
-typedef std::map<int, PStrips> PolyStripsType;
+typedef std::map<vtkIdType, PStrips> PolyStripsType;
 
 typedef std::vector<std::reference_wrapper<StripPtR>> RefsType;
 
-class StripPtL {
+class MergePt {
 public:
-    StripPtL (const StripPt &sp) : ind(sp.ind) {
-        Cpy(pt, sp.pt, 3);
-        Cpy(cutPt, sp.cutPt, 3);
-    }
+    MergePt (vtkIdType _polyId, vtkIdType _ind) : polyId(_polyId), ind(_ind) {}
+    vtkIdType polyId, ind;
+    bool operator== (const MergePt &other) const {
+        return polyId == other.polyId && ind == other.ind;
+    };
 
-    int ind;
-    double pt[3];
-    double cutPt[3];
-
-    bool operator< (const StripPtL &other) const {
-        return ind < other.ind;
-    }
-};
-
-class StripPtL2 {
-public:
-    StripPtL2 (const StripPt &sp) : ind(sp.ind), t(sp.t), history(sp.history) {
-        Cpy(pt, sp.pt, 3);
-        edge[0] = sp.edge[0];
-        edge[1] = sp.edge[1];
-    }
-
-    int ind;
-    int edge[2];
-    double pt[3];
-    double t;
-
-    bool operator< (const StripPtL2 &other) const {
-        return ind < other.ind;
-    }
-
-    std::vector<Pair> history;
-};
-
-class StripPtL3 {
-public:
-    StripPtL3 (const double *_pt, double _t, int _ind = NO_USE) : t(_t), ind(_ind) {
-        Cpy(pt, _pt, 3);
-    }
-    double t;
-    int ind;
-    double pt[3];
-
-    bool operator< (const StripPtL3 &other) const {
-        return t < other.t;
-    }
-
-    friend std::ostream& operator<< (std::ostream &out, const StripPtL3 &s) {
-        out << "ind=" << s.ind
-            << ", t=" << s.t
-            << ", pt=[" << s.pt[0] << ", " << s.pt[1] << ", " << s.pt[2] << "]";
+    friend std::ostream& operator<< (std::ostream &out, const MergePt &p) {
+        out << "ind " << p.ind
+            << ", polyId " << p.polyId;
         return out;
     }
 };
 
-class MergePt {
-public:
-    MergePt (int _polyInd, int _ind, double *_pt) : polyInd(_polyInd), ind(_ind) {
-        Cpy(pt, _pt, 3);
-    }
-    int polyInd;
-    int ind;
-    double pt[3];
-};
+// typedef std::vector<IdsType> HolesType;
 
-typedef std::vector<IdsType> HolesType;
+// class _Wrapper {
+//     vtkPolyData *pd;
+//     IdsType descIds;
+//     vtkIdType origId;
 
-class _Wrapper {
-    vtkPolyData *pd;
-    IdsType descIds;
-    int origId;
+//     Base base;
+//     HolesType holes;
+// public:
+//     _Wrapper (vtkPolyData* _pd, IdsType& _descIds, vtkIdType _origId)
+//         : pd(_pd), descIds(_descIds), origId(_origId) {}
 
-    Base base;
-    HolesType holes;
-public:
-    _Wrapper (vtkPolyData* _pd, IdsType& _descIds, int _origId)
-        : pd(_pd), descIds(_descIds), origId(_origId) {}
+//     void MergeAll ();
+//     void Add (IdsType &hole) {
+//         holes.push_back(hole);
+//     }
+// };
 
-    void MergeAll ();
-    void Add (IdsType &hole) {
-        holes.push_back(hole);
-    }
-};
-
-typedef std::set<int> InvolvedType;
+typedef std::set<vtkIdType> InvolvedType;
 
 enum class Rel {
     ORIG = 1,
     DEC = 2
 };
 
-typedef std::map<int, Rel> RelationsType;
+typedef std::map<vtkIdType, Rel> RelationsType;
 
 class VTK_EXPORT vtkPolyDataBooleanFilter : public vtkPolyDataAlgorithm {
     vtkPolyData *resultA, *resultB, *contLines;
     vtkPolyData *modPdA, *modPdB;
     vtkCellData *cellDataA, *cellDataB;
-    vtkIntArray *cellIdsA, *cellIdsB;
+    vtkIdTypeArray *cellIdsA, *cellIdsB;
 
     unsigned long timePdA, timePdB;
 
@@ -233,20 +184,19 @@ class VTK_EXPORT vtkPolyDataBooleanFilter : public vtkPolyDataAlgorithm {
 
     RelationsType relsA, relsB;
 
-    void GetStripPoints (vtkPolyData *pd, vtkIntArray *sources, PStrips &pStrips, IdsType &lines);
-    bool GetPolyStrips (vtkPolyData *pd, vtkIntArray *conts, vtkIntArray *sources, PolyStripsType &polyStrips);
+    void GetStripPoints (vtkPolyData *pd, vtkIdTypeArray *sources, PStrips &pStrips, IdsType &lines);
+    bool GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *conts, vtkIdTypeArray *sources, PolyStripsType &polyStrips);
     void RemoveDuplicates (IdsType &lines);
     void CompleteStrips (PStrips &pStrips);
-    bool HasArea (StripType &strip);
-    void CollapseCaptPoints (vtkPolyData *pd, PolyStripsType &polyStrips);
+    bool HasArea (const StripType &strip) const;
     void CutCells (vtkPolyData *pd, PolyStripsType &polyStrips);
     void RestoreOrigPoints (vtkPolyData *pd, PolyStripsType &polyStrips);
     void DisjoinPolys (vtkPolyData *pd, PolyStripsType &polyStrips);
-    void ResolveOverlaps (vtkPolyData *pd, vtkIntArray *conts, PolyStripsType &polyStrips);
-    void AddAdjacentPoints (vtkPolyData *pd, vtkIntArray *conts, PolyStripsType &polyStrips);
+    void ResolveOverlaps (vtkPolyData *pd, vtkIdTypeArray *conts, PolyStripsType &polyStrips);
+    void AddAdjacentPoints (vtkPolyData *pd, vtkIdTypeArray *conts, PolyStripsType &polyStrips);
     void MergePoints (vtkPolyData *pd, PolyStripsType &polyStrips);
-    void DecPolys_ (vtkPolyData *pd, InvolvedType &involved, RelationsType &rels);
-    void CombineRegions ();
+    // void DecPolys_ (vtkPolyData *pd, InvolvedType &involved, RelationsType &rels);
+    bool CombineRegions ();
     void MergeRegions ();
 
     int OperMode;

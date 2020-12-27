@@ -14,5 +14,5 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "Tools.h"
-int Point::_tag = 0;
+// #include "Tools.h"
+// int Point::_tag = 0;

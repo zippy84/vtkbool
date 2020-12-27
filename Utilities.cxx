@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "Utilities.h"
 
+#define _USE_MATH_DEFINES
 #include <cmath>
 
 #include <vtkPoints.h>
@@ -24,41 +25,39 @@ limitations under the License.
 #include <vtkPolyData.h>
 #include <vtkDataWriter.h>
 
-void ComputeNormal (vtkPoints *pts, double *n, vtkIdList *poly) {
+void ComputeNormal (vtkPoints *pts, double *n, vtkIdType num, const vtkIdType *poly) {
     n[0] = 0; n[1] = 0; n[2] = 0;
-    double p0[3], p1[3];
 
-    int numPts = pts->GetNumberOfPoints();
+    if (num == 3) {
+        double pA[3], pB[3], pC[3], a[3], b[3];
 
-    vtkIdList *_poly = poly;
+        pts->GetPoint(poly[0], pA);
+        pts->GetPoint(poly[1], pB);
+        pts->GetPoint(poly[2], pC);
 
-    if (poly == nullptr) {
-        _poly = vtkIdList::New();
-        _poly->SetNumberOfIds(numPts);
-        for (int i = 0; i < numPts; i++) {
-            _poly->SetId(i, i);
-        }
+        vtkMath::Subtract(pB, pA, a);
+        vtkMath::Subtract(pC, pA, b);
+
+        vtkMath::Cross(a, b, n);
     } else {
-        numPts = poly->GetNumberOfIds();
-    }
+        double pA[3], pB[3];
 
-    pts->GetPoint(_poly->GetId(0), p0);
+        vtkIdType i, a, b;
 
-    for (int i = 0; i < numPts; i++) {
-        pts->GetPoint(_poly->GetId((i+1)%numPts), p1);
+        for (i = 0; i < num; i++) {
+            a = poly[i];
+            b = poly[i+1 == num ? 0 : i+1];
 
-        n[0] += (p0[1]-p1[1])*(p0[2]+p1[2]);
-        n[1] += (p0[2]-p1[2])*(p0[0]+p1[0]);
-        n[2] += (p0[0]-p1[0])*(p0[1]+p1[1]);
+            pts->GetPoint(a, pA);
+            pts->GetPoint(b, pB);
 
-        Cpy(p0, p1, 3);
+            n[0] += (pA[1]-pB[1])*(pA[2]+pB[2]);
+            n[1] += (pA[2]-pB[2])*(pA[0]+pB[0]);
+            n[2] += (pA[0]-pB[0])*(pA[1]+pB[1]);
+        }
     }
 
     vtkMath::Normalize(n);
-
-    if (poly == nullptr) {
-        _poly->Delete();
-    }
 }
 
 void FindPoints (vtkKdTreePointLocator *pl, const double *pt, vtkIdList *pts, double tol) {
@@ -72,11 +71,11 @@ void FindPoints (vtkKdTreePointLocator *pl, const double *pt, vtkIdList *pts, do
     // arbeitet mit single-precision
     pl->FindPointsWithinRadius(std::max(1e-3, tol), pt, closest);
 
-    int numPts = closest->GetNumberOfIds();
+    vtkIdType i, numPts = closest->GetNumberOfIds();
 
     double c[3], v[3];
 
-    for (int i = 0; i < numPts; i++) {
+    for (i = 0; i < numPts; i++) {
         pd->GetPoint(closest->GetId(i), c);
         vtkMath::Subtract(pt, c, v);
 
@@ -93,7 +92,7 @@ void WriteVTK (const char *name, vtkPolyData *pd) {
 
     vtkPoints *pts = pd->GetPoints();
 
-    int numPts = pts->GetNumberOfPoints();
+    vtkIdType i, numPts = pts->GetNumberOfPoints();
 
     std::ofstream f(name);
     f << "# vtk DataFile Version 3.0\n"
@@ -105,7 +104,8 @@ void WriteVTK (const char *name, vtkPolyData *pd) {
     f << std::setprecision(8);
 
     double pt[3];
-    for (int i = 0; i < numPts; i++) {
+
+    for (i = 0; i < numPts; i++) {
         pts->GetPoint(i, pt);
         f << pt[0] << " " << pt[1] << " " << pt[2] << "\n";
     }
@@ -130,47 +130,37 @@ double GetAngle (double *vA, double *vB, double *n) {
     double ang = std::atan2(vtkMath::Dot(_vA, vB), vtkMath::Dot(vA, vB));
 
     if (ang < 0) {
-        ang += 2*PI;
+        ang += 2*M_PI;
     }
 
     return ang;
 }
 
-double GetD (double *ptA, double *ptB) {
-    double v[] = {ptA[0]-ptB[0], ptA[1]-ptB[1], ptA[2]-ptB[2]};
-    return std::sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
-}
-
-// ermöglicht mod mit neg. int
-double Mod (int a, int b) {
-    return (double) (((a%b)+b)%b);
-}
-
-Base::Base (vtkPoints *pts, vtkIdList *poly) {
-    ComputeNormal(pts, n, poly);
+Base::Base (vtkPoints *pts, vtkIdType num, vtkIdType *poly) {
+    ComputeNormal(pts, n, num, poly);
 
     double ptA[3],
         ptB[3];
 
-    pts->GetPoint(poly->GetId(0), ptA);
-    pts->GetPoint(poly->GetId(1), ptB);
+    pts->GetPoint(poly[0], ptA);
+    pts->GetPoint(poly[1], ptB);
 
     ei[0] = ptB[0]-ptA[0];
     ei[1] = ptB[1]-ptA[1];
     ei[2] = ptB[2]-ptA[2];
 
-    Normalize(ei, 3);
+    vtkMath::Normalize(ei);
 
     ej[0] = n[1]*ei[2]-n[2]*ei[1];
     ej[1] = -n[0]*ei[2]+n[2]*ei[0];
     ej[2] = n[0]*ei[1]-n[1]*ei[0];
 
-    Normalize(ej, 3);
+    vtkMath::Normalize(ej);
 
     d = n[0]*ptA[0]+n[1]*ptA[1]+n[2]*ptA[2];
 }
 
-void Transform (const double *in, double *out, Base &base) {
+void Transform (const double *in, double *out, const Base &base) {
     double x = base.ei[0]*in[0]+base.ei[1]*in[1]+base.ei[2]*in[2],
         y = base.ej[0]*in[0]+base.ej[1]*in[1]+base.ej[2]*in[2];
 
@@ -178,7 +168,7 @@ void Transform (const double *in, double *out, Base &base) {
     out[1] = y;
 }
 
-/*void BackTransform (const double *in, double *out, Base &base) {
+/*void BackTransform (const double *in, double *out, const Base &base) {
     double x = in[0]*base.ei[0]+in[1]*base.ej[0]+base.d*base.n[0],
         y = in[0]*base.ei[1]+in[1]*base.ej[1]+base.d*base.n[1],
         z = in[0]*base.ei[2]+in[1]*base.ej[2]+base.d*base.n[2];

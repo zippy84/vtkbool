@@ -25,7 +25,7 @@ if(MSVC)
     add_definitions(-D_SCL_SECURE_NO_WARNINGS)
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 else()
-    add_compile_options(-Wall -Wextra -Wno-sign-compare -fPIC)
+    add_compile_options(-Wall -Wextra -fPIC -Wconversion)
 endif()
 
 option(VTKBOOL_PARAVIEW "" OFF)
@@ -68,12 +68,12 @@ else()
     if(VTK_FOUND)
         include(${VTK_USE_FILE})
 
-        add_subdirectory(libs)
+        # add_subdirectory(libs)
 
-        include_directories(libs/merger libs/decomp libs/vp libs/aabb)
+        # include_directories(libs/merger libs/decomp libs/vp libs/aabb)
 
         add_library(${PROJECT_NAME} SHARED ${srcs})
-        target_link_libraries(${PROJECT_NAME} ${VTK_LIBRARIES} decomp merger)
+        # target_link_libraries(${PROJECT_NAME} ${VTK_LIBRARIES} decomp merger)
 
         if(VTK_INSTALL_PREFIX)
             set(_vtk ${VTK_INSTALL_PREFIX})

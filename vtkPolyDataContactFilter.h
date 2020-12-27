@@ -94,14 +94,14 @@ class VTK_EXPORT vtkPolyDataContactFilter : public vtkPolyDataAlgorithm {
     void InterPolys (vtkIdType idA, vtkIdType idB);
     static void OverlapLines (OverlapsType &ols, InterPtsType &intersA, InterPtsType &intersB);
 
-    vtkIntArray *contA, *contB;
+    vtkIdTypeArray *contA, *contB;
 
     vtkPolyData *contLines;
     vtkPoints *contPts;
 
     vtkPolyData *pdA, *pdB;
 
-    vtkIntArray *sourcesA, *sourcesB;
+    vtkIdTypeArray *sourcesA, *sourcesB;
 
 public:
     vtkTypeMacro(vtkPolyDataContactFilter, vtkPolyDataAlgorithm);
