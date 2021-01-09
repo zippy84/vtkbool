@@ -22,6 +22,7 @@ limitations under the License.
 #include <cmath>
 #include <functional>
 #include <queue>
+#include <memory>
 
 #include <chrono>
 #include <numeric>
@@ -424,17 +425,19 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, vtkIdTypeArray *
             if (pts.count(realInd) == 0) {
                 // lage analysieren
 
-                pts[realInd].ind = realInd;
+                StripPt sp;
+
+                sp.ind = realInd;
 
                 // die koordinaten
                 double pt[3];
                 contLines->GetPoint(realInd, pt);
 
-                Cpy(pts[realInd].pt, pt, 3);
+                Cpy(sp.pt, pt, 3);
 
                 vtkIdType src = sources->GetComponent(*itr, _i);
 
-                pts[realInd].src = src;
+                sp.src = src;
 
                 double lastD = DBL_MAX;
 
@@ -481,20 +484,20 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, vtkIdTypeArray *
                     if (d < tol && d < lastD && t > -tol && t < 1+tol) {
                         // liegt im toleranzbereich der kante
 
-                        pts[realInd].edge[0] = indA;
-                        pts[realInd].edge[1] = indB;
+                        sp.edge[0] = indA;
+                        sp.edge[1] = indB;
 
-                        pts[realInd].t = std::min(1., std::max(0., t));
+                        sp.t = std::min(1., std::max(0., t));
 
                         if (vtkMath::Norm(sA) < tol) {
-                            Cpy(pts[realInd].captPt, a, 3);
-                            pts[realInd].capt = Capt::A;
+                            Cpy(sp.captPt, a, 3);
+                            sp.capt = Capt::A;
 
                             break;
 
                         } else if (vtkMath::Norm(sB) < tol) {
-                            Cpy(pts[realInd].captPt, b, 3);
-                            pts[realInd].capt = Capt::B;
+                            Cpy(sp.captPt, b, 3);
+                            sp.capt = Capt::B;
 
                             break;
 
@@ -506,9 +509,9 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, vtkIdTypeArray *
                             vtkMath::Add(a, u, x);
 
                             // projektion
-                            Cpy(pts[realInd].captPt, x, 3);
+                            Cpy(sp.captPt, x, 3);
 
-                            pts[realInd].capt = Capt::EDGE;
+                            sp.capt = Capt::EDGE;
 
                             lastD = d;
                         }
@@ -517,9 +520,11 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, vtkIdTypeArray *
 
                 }
 
-                if (src != NO_USE && pts[realInd].edge[0] == NO_USE) {
-                    pts[realInd].catched = false;
+                if (src != NO_USE && sp.edge[0] == NO_USE) {
+                    sp.catched = false;
                 }
+
+                pts.emplace(realInd, std::move(sp));
 
             }
         }
@@ -554,7 +559,7 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, vtkIdTypeArray *
             Cpy(sp.cutPt, sp.pt, 3);
         }
 
-        sp.history.push_back({sp.edge[0], sp.edge[1]});
+        sp.history.emplace_back(sp.edge[0], sp.edge[1]);
 
     }
 
@@ -648,7 +653,7 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
                         Cpy(sp.captPt, corr.captPt, 3);
                         Cpy(sp.cutPt, sp.captPt, 3);
 
-                        sp.history.push_back({sp.edge[0], sp.edge[1]});
+                        sp.history.emplace_back(sp.edge[0], sp.edge[1]);
 
                         sp.catched = true;
 
@@ -688,7 +693,14 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
             }
         }
 
-        // ...
+        for (auto &_pts : equalPts) {
+            if (_pts.second.size() > 1) {
+                for (auto &p : _pts.second) {
+                    std::cout << p.get() << std::endl;
+                }
+            }
+        }
+
 
     }
 
@@ -747,8 +759,8 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
                 indB = linePts->GetId(1);
 
             if (strip.empty()) {
-                strip.push_back(StripPtR(indA));
-                strip.push_back(StripPtR(indB));
+                strip.emplace_back(indA);
+                strip.emplace_back(indB);
 
                 _lines.erase(_lines.begin());
             } else {
@@ -756,22 +768,22 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
                     &end = pts.at(strip.back().ind);
 
                 if (end.capt == Capt::NOT && end.ind == indA) {
-                    strip.push_back(StripPtR(indB));
+                    strip.emplace_back(indB);
                     _lines.erase(_lines.begin()+i);
                     i = 0;
 
                 } else if (end.capt == Capt::NOT && end.ind == indB) {
-                    strip.push_back(StripPtR(indA));
+                    strip.emplace_back(indA);
                     _lines.erase(_lines.begin()+i);
                     i = 0;
 
                 } else if (start.capt == Capt::NOT && start.ind == indA) {
-                    strip.push_front(StripPtR(indB));
+                    strip.emplace_front(indB);
                     _lines.erase(_lines.begin()+i);
                     i = 0;
 
                 } else if (start.capt == Capt::NOT && start.ind == indB) {
-                    strip.push_front(StripPtR(indA));
+                    strip.emplace_front(indA);
                     _lines.erase(_lines.begin()+i);
                     i = 0;
 

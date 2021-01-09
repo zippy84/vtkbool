@@ -377,7 +377,7 @@ public:
         msg = static_cast<char*>(calldata);
     }
 
-    void Clear() {
+    void Clear () {
         hasError = false;
         msg.clear();
     }
@@ -897,6 +897,11 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         bf->SetInputConnection(1, tubeB->GetOutputPort());
         bf->MergeRegsOn();
         bf->Update();
+
+        /*WriteVTK("tubeA.vtk", tubeA->GetOutput());
+        WriteVTK("tubeB.vtk", tubeB->GetOutput());
+
+        WriteVTK("lines16.vtk", bf->GetOutput(1));*/
 
         Test test(bf->GetOutput(0), bf->GetOutput(1));
         int ok = test.run();

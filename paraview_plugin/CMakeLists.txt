@@ -29,8 +29,8 @@ if(ParaView_FOUND)
         ../Utilities.cxx
         ../PyInit.cxx)
 
-    add_subdirectory(../libs libs_build)
-    include_directories(../libs/merger ../libs/decomp ../libs/vp ../libs/aabb)
+    #add_subdirectory(../libs libs_build)
+    #include_directories(../libs/merger ../libs/decomp ../libs/vp ../libs/aabb)
 
     add_paraview_plugin(
         PolyDataBooleanFilter
@@ -40,6 +40,6 @@ if(ParaView_FOUND)
         SERVER_SOURCES ${srcs}
     )
 
-    target_link_libraries(PolyDataBooleanFilter PRIVATE decomp merger)
+    #target_link_libraries(PolyDataBooleanFilter PRIVATE decomp merger)
 
 endif(ParaView_FOUND)
