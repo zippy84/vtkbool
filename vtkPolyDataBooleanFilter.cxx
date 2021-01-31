@@ -54,42 +54,30 @@ vtkStandardNewMacro(vtkPolyDataBooleanFilter);
 vtkPolyDataBooleanFilter::vtkPolyDataBooleanFilter () {
 
     SetNumberOfInputPorts(2);
-    SetNumberOfOutputPorts(2);
+    SetNumberOfOutputPorts(3);
 
     timePdA = 0;
     timePdB = 0;
 
-    contLines = vtkPolyData::New();
+    contLines = vtkSmartPointer<vtkPolyData>::New();
 
-    modPdA = vtkPolyData::New();
-    modPdB = vtkPolyData::New();
+    modPdA = vtkSmartPointer<vtkPolyData>::New();
+    modPdB = vtkSmartPointer<vtkPolyData>::New();
 
-    cellDataA = vtkCellData::New();
-    cellDataB = vtkCellData::New();
+    cellDataA = vtkSmartPointer<vtkCellData>::New();
+    cellDataB = vtkSmartPointer<vtkCellData>::New();
 
-    cellIdsA = vtkIdTypeArray::New();
-    cellIdsB = vtkIdTypeArray::New();
+    cellIdsA = vtkSmartPointer<vtkIdTypeArray>::New();
+    cellIdsB = vtkSmartPointer<vtkIdTypeArray>::New();
 
     OperMode = OPER_UNION;
 
-    MergeRegs = false;
-    DecPolys = true;
+    // DecPolys = true;
 
 }
 
 vtkPolyDataBooleanFilter::~vtkPolyDataBooleanFilter () {
-
-    cellIdsA->Delete();
-    cellIdsB->Delete();
-
-    cellDataB->Delete();
-    cellDataA->Delete();
-
-    modPdB->Delete();
-    modPdA->Delete();
-
-    contLines->Delete();
-
+    // nix mehr
 }
 
 int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInformationVector **inputVector, vtkInformationVector *outputVector) {
@@ -104,16 +92,17 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
         vtkInformation *outInfoA = outputVector->GetInformationObject(0);
         vtkInformation *outInfoB = outputVector->GetInformationObject(1);
+        vtkInformation *outInfoC = outputVector->GetInformationObject(2);
 
         resultA = vtkPolyData::SafeDownCast(outInfoA->Get(vtkDataObject::DATA_OBJECT()));
         resultB = vtkPolyData::SafeDownCast(outInfoB->Get(vtkDataObject::DATA_OBJECT()));
+        resultC = vtkPolyData::SafeDownCast(outInfoC->Get(vtkDataObject::DATA_OBJECT()));
 
         using clock = std::chrono::steady_clock;
         std::vector<clock::duration> times;
         clock::time_point start;
 
         if (pdA->GetMTime() > timePdA || pdB->GetMTime() > timePdB) {
-
             // eventuell vorhandene regionen vereinen
 
             vtkSmartPointer<vtkCleanPolyData> cleanA = vtkSmartPointer<vtkCleanPolyData>::New();
@@ -154,19 +143,19 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
             contLines->DeepCopy(cl->GetOutput());
 
+            modPdA->DeepCopy(cl->GetOutput(1));
+            modPdB->DeepCopy(cl->GetOutput(2));
+
 #ifdef DEBUG
             std::cout << "Exporting contLines.vtk" << std::endl;
             WriteVTK("contLines.vtk", contLines);
 
             std::cout << "Exporting modPdA_1.vtk" << std::endl;
-            WriteVTK("modPdA_1.vtk", cl->GetOutput(1));
+            WriteVTK("modPdA_1.vtk", modPdA);
 
             std::cout << "Exporting modPdB_1.vtk" << std::endl;
-            WriteVTK("modPdB_1.vtk", cl->GetOutput(2));
+            WriteVTK("modPdB_1.vtk", modPdB);
 #endif
-
-            modPdA->DeepCopy(cl->GetOutput(1));
-            modPdB->DeepCopy(cl->GetOutput(2));
 
             if (contLines->GetNumberOfCells() == 0) {
                 vtkErrorMacro("Inputs have no contact.");
@@ -365,14 +354,10 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
         start = clock::now();
 
-        if (MergeRegs) {
-            MergeRegions();
-        } else {
-            if (CombineRegions()) {
-                vtkErrorMacro("Boolean operation failed.");
+        if (CombineRegions()) {
+            vtkErrorMacro("Boolean operation failed.");
 
-                return 1;
-            }
+            return 1;
         }
 
         times.push_back(clock::now()-start);
@@ -2286,9 +2271,9 @@ void vtkPolyDataBooleanFilter::MergePoints (vtkPolyData *pd, PolyStripsType &pol
 }
 
 enum class Congr {
-    EQUAL = 1,
-    OPPOSITE = 2,
-    NOT = 3
+    EQUAL,
+    OPPOSITE,
+    NOT
 };
 
 class PolyAtEdge {
@@ -2543,15 +2528,15 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
     vtkPolyData *pdA = cfA->GetOutput();
     vtkPolyData *pdB = cfB->GetOutput();
 
-#ifdef DEBUG
-    std::cout << "Exporting modPdA_9.vtk" << std::endl;
-    WriteVTK("modPdA_9.vtk", cfA->GetOutput());
+    resultA->ShallowCopy(contLines);
 
-    std::cout << "Exporting modPdB_9.vtk" << std::endl;
-    WriteVTK("modPdB_9.vtk", cfB->GetOutput());
-#endif
+    if (OperMode == OPER_NONE) {
+        resultB->ShallowCopy(pdA);
+        resultC->ShallowCopy(pdB);
 
-    // locators erstellen
+        return false;
+    }
+
     vtkSmartPointer<vtkKdTreePointLocator> plA = vtkSmartPointer<vtkKdTreePointLocator>::New();
     plA->SetDataSet(pdA);
     plA->BuildLocator();
@@ -2824,13 +2809,12 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
 
     vtkPolyData *cfPd = cfApp->GetOutput();
 
-    // resultA ist erster output des filters
-    resultA->ShallowCopy(cfPd);
+    // resultC bleibt hier leer
 
-    resultA->GetCellData()->AddArray(newOrigCellIdsA);
-    resultA->GetCellData()->AddArray(newOrigCellIdsB);
+    resultB->ShallowCopy(cfPd);
 
-    resultB->ShallowCopy(contLines);
+    resultB->GetCellData()->AddArray(newOrigCellIdsA);
+    resultB->GetCellData()->AddArray(newOrigCellIdsB);
 
     // aufräumen
 
@@ -2845,85 +2829,6 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
     plA->FreeSearchStructure();
 
     return false;
-
-}
-
-
-void vtkPolyDataBooleanFilter::MergeRegions () {
-
-#ifdef DEBUG
-    std::cout << "MergeRegions()" << std::endl;
-#endif
-
-    vtkIdTypeArray *origCellIdsA = vtkIdTypeArray::New();
-    origCellIdsA->DeepCopy(modPdA->GetCellData()->GetScalars("OrigCellIds"));
-    origCellIdsA->SetName("OrigCellIdsA");
-
-    vtkIdTypeArray *origCellIdsB = vtkIdTypeArray::New();
-    origCellIdsB->DeepCopy(modPdB->GetCellData()->GetScalars("OrigCellIds"));
-    origCellIdsB->SetName("OrigCellIdsB");
-
-    vtkPolyData *pdA = vtkPolyData::New();
-    pdA->DeepCopy(modPdA);
-
-    vtkPolyData *pdB = vtkPolyData::New();
-    pdB->DeepCopy(modPdB);
-
-    pdA->GetCellData()->AddArray(origCellIdsA);
-    pdB->GetCellData()->AddArray(origCellIdsB);
-
-    origCellIdsA->Delete();
-    origCellIdsB->Delete();
-
-    vtkIdTypeArray *padIdsA = vtkIdTypeArray::New();
-    vtkIdTypeArray *padIdsB = vtkIdTypeArray::New();
-
-    vtkIdType i,
-        numCellsA = pdA->GetNumberOfCells(),
-        numCellsB = pdB->GetNumberOfCells();
-
-    for (i = 0; i < numCellsA; i++) {
-        padIdsA->InsertNextValue(-1);
-    }
-
-    for (i = 0; i < numCellsB; i++) {
-        padIdsB->InsertNextValue(-1);
-    }
-
-    padIdsA->SetName("OrigCellIdsB");
-    padIdsB->SetName("OrigCellIdsA");
-
-    pdA->GetCellData()->AddArray(padIdsA);
-    pdB->GetCellData()->AddArray(padIdsB);
-
-    padIdsA->Delete();
-    padIdsB->Delete();
-
-    vtkAppendPolyData *app = vtkAppendPolyData::New();
-    app->AddInputData(pdA);
-    app->AddInputData(pdB);
-
-    app->Update();
-
-    vtkPolyData *appPd = app->GetOutput();
-    appPd->GetCellData()->RemoveArray("OrigCellIds");
-
-    vtkCleanPolyData *clean = vtkCleanPolyData::New();
-    clean->PointMergingOff();
-    clean->SetInputData(appPd);
-
-    clean->Update();
-
-    vtkPolyData *cleanPd = clean->GetOutput();
-
-    resultA->ShallowCopy(cleanPd);
-    resultB->ShallowCopy(contLines);
-
-    clean->Delete();
-    app->Delete();
-
-    pdB->Delete();
-    pdA->Delete();
 
 }
 

@@ -34,6 +34,9 @@ limitations under the License.
 #include <vtkCommand.h>
 #include <vtkPolyDataConnectivityFilter.h>
 
+#include <vtkStaticCellLocator.h>
+#include <vtkCellIterator.h>
+
 #include <map>
 #include <vector>
 #include <set>
@@ -48,314 +51,84 @@ limitations under the License.
 
 #include "Utilities.h"
 
-typedef std::map<vtkIdType, IdsType> LinksType;
-
 class Test {
-    vtkPolyData *pd, *lines;
-    vtkKdTreePointLocator *loc;
-    vtkIdList *cells, *poly, *pts;
-
+    vtkPolyData *pdA, *pdB, *lines;
     vtkIdTypeArray *contsA, *contsB;
 
+    vtkIdTypeArray *origCellIdsA, *origCellIdsB;
+
 public:
-    Test (vtkPolyData *pd, vtkPolyData *lines) : pd(pd), lines(lines) {
-        loc = vtkKdTreePointLocator::New();
-        loc->SetDataSet(pd);
-        loc->BuildLocator();
+    Test (vtkPolyDataBooleanFilter *bf) {
+        bf->Update();
 
-        lines->BuildLinks();
-        pd->BuildLinks();
-
-        cells = vtkIdList::New();
-        poly = vtkIdList::New();
-        pts = vtkIdList::New();
+        lines = bf->GetOutput(0);
+        pdA = bf->GetOutput(1);
+        pdB = bf->GetOutput(2);
 
         contsA = vtkIdTypeArray::SafeDownCast(lines->GetCellData()->GetArray("cA"));
         contsB = vtkIdTypeArray::SafeDownCast(lines->GetCellData()->GetArray("cB"));
-    }
-    ~Test () {
-        loc->FreeSearchStructure();
-        loc->Delete();
-        cells->Delete();
-        poly->Delete();
-        pts->Delete();
+
+        lines->BuildLinks();
+
+        pdA->BuildLinks();
+        pdB->BuildLinks();
+
+        origCellIdsA = vtkIdTypeArray::SafeDownCast(pdA->GetCellData()->GetArray("OrigCellIds"));
+        origCellIdsB = vtkIdTypeArray::SafeDownCast(pdB->GetCellData()->GetArray("OrigCellIds"));
+
+        WriteVTK("pdA.vtk", pdA);
+        WriteVTK("pdB.vtk", pdB);
+        WriteVTK("lines.vtk", lines);
     }
 
     int run () {
+        bool errA = checkConnectivity(pdA, origCellIdsA);
+        bool errB = checkConnectivity(pdB, origCellIdsB);
 
-        vtkIdTypeArray *origCellIdsA = vtkIdTypeArray::SafeDownCast(pd->GetCellData()->GetArray("OrigCellIdsA"));
-        vtkIdTypeArray *origCellIdsB = vtkIdTypeArray::SafeDownCast(pd->GetCellData()->GetArray("OrigCellIdsB"));
-
-        int errA = checkConnectivity(0, origCellIdsA);
-        int errB = checkConnectivity(1, origCellIdsB);
-
-        return errA > 0 || errB > 0;
-
+        return errA || errB;
     }
 
 private:
-    int checkConnectivity (int input, vtkIdTypeArray *origIds) {
-        std::cout << "Checking input " << input << std::endl;
+    bool checkConnectivity (vtkPolyData *pd, vtkIdTypeArray *vtkNotUsed(origCellIds)) {
+        std::cout << "Checking connectivity" << std::endl;
 
-        vtkIdType numCells = pd->GetNumberOfCells(),
-            numLines = lines->GetNumberOfCells();
+        bool errored = false;
 
-        vtkIdType i, j, k, l, m;
+        vtkStaticCellLocator *loc = vtkStaticCellLocator::New();
+        loc->SetDataSet(pd);
+        loc->BuildLocator();
 
-        int err = 0;
+        double pA[3], pB[3];
 
-        for (i = 0; i < numCells && err < 1; i++) {
-            if (origIds->GetValue(i) != NO_USE) {
-                pd->GetCellPoints(i, poly);
-                if (poly->GetNumberOfIds() < 3) {
-                    std::cout << "poly " << i << " has too few points" << std::endl;
+        vtkIdList *neigs = vtkIdList::New();
 
-                    err++;
-                }
-            }
-        }
+        vtkCellIterator *itr = lines->NewCellIterator();
+        for (itr->InitTraversal(); !itr->IsDoneWithTraversal(); itr->GoToNextCell()) {
+            vtkIdList *pts = itr->GetPointIds();
 
-        if (err == 0) {
-            double ptA[3], ptB[3];
+            pd->GetPoint(pts->GetId(0), pA);
+            pd->GetPoint(pts->GetId(1), pB);
 
-            vtkIdList *line = vtkIdList::New();
+            loc->FindCellsAlongLine(pA, pB, 1e-6, neigs);
 
-            for (i = 0; i < numLines; i++) {
+            std::cout << itr->GetCellId() << " -> [";
 
-                lines->GetCellPoints(i, line);
+            vtkIdType i, numCells = neigs->GetNumberOfIds();
 
-                lines->GetPoint(line->GetId(0), ptA);
-                lines->GetPoint(line->GetId(1), ptB);
-
-                FindPoints(loc, ptA, pts);
-
-                LinksType links;
-
-                // sammelt polygone und deren punkte am jeweiligen ende der linie
-
-                // bei einem normalen schnitt sollte jedes polygon zwei punkte haben
-
-                for (j = 0; j < pts->GetNumberOfIds(); j++) {
-                    pd->GetPointCells(pts->GetId(j), cells);
-
-                    for (k = 0; k < cells->GetNumberOfIds(); k++) {
-                        if (origIds->GetValue(cells->GetId(k)) != NO_USE) {
-                            links[cells->GetId(k)].push_back(pts->GetId(j));
-                        }
-                    }
-                }
-
-                FindPoints(loc, ptB, pts);
-
-                for (j = 0; j < pts->GetNumberOfIds(); j++) {
-                    pd->GetPointCells(pts->GetId(j), cells);
-
-                    for (k = 0; k < cells->GetNumberOfIds(); k++) {
-                        if (origIds->GetValue(cells->GetId(k)) != NO_USE) {
-                            links[cells->GetId(k)].push_back(pts->GetId(j));
-                        }
-                    }
-                }
-
-                LinksType::const_iterator itr;
-
-                IdsType polys;
-
-                for (itr = links.begin(); itr != links.end(); ++itr) {
-                    const IdsType &pts = itr->second;
-
-                    if (pts.size() > 1) {
-                        // gibt es doppelte punkte, die sich direkt nebeneinander befinden?
-
-                        pd->GetCellPoints(itr->first, poly);
-                        vtkIdType numPts = poly->GetNumberOfIds();
-
-                        std::map<vtkIdType, Point3d> _pts;
-
-                        vtkIdType _id, idA, idB;
-
-                        double pt[3];
-
-                        for (j = 0; j < numPts; j++) {
-                            _id = poly->GetId(j);
-                            pd->GetPoint(_id, pt);
-
-                            _pts.emplace(_id, Point3d{pt[0], pt[1], pt[2]});
-                        }
-
-                        for (j = 0; j < numPts; j++) {
-                            idA = poly->GetId(j);
-                            idB = poly->GetId(j+1 == numPts ? 0 : j+1);
-
-                            auto _a = _pts.find(idA);
-                            auto _b = _pts.find(idB);
-
-                            if (_a->second == _b->second) {
-                                std::cout << "poly " << itr->first << " has duplicated points" << std::endl;
-
-                                err++;
-                                break;
-                            }
-                        }
-
-                        polys.push_back(itr->first);
-                    }
-                }
-
-                if (err > 0) {
-                    break;
-                }
-
-                if (polys.size() == 2) {
-                    const IdsType &f = links[polys[0]],
-                        &s = links[polys[1]];
-
-                    lines->GetPointCells(line->GetId(0), cells);
-                    vtkIdType linkedA = cells->GetNumberOfIds();
-
-                    lines->GetPointCells(line->GetId(1), cells);
-                    vtkIdType linkedB = cells->GetNumberOfIds();
-
-                    if (linkedA == linkedB) {
-                        std::set<vtkIdType> all;
-
-                        all.insert(f.begin(), f.end());
-                        all.insert(s.begin(), s.end());
-
-                        if (all.size() < 4) {
-                            err++;
-                        }
-                    } else if (linkedA == 4) {
-                        if (f[0] == s[0]) {
-                            err++;
-                        }
-                    } else {
-                        if (f[1] == s[1]) {
-                            err++;
-                        }
-                    }
-
-                    if (err > 0) {
-                        std::cout << "polys " << polys[0] << ", " << polys[1]
-                            << " are connected" << std::endl;
-                    }
-
-                } else if (polys.size() == 1) {
-                    const IdsType &f = links[polys[0]];
-
-                    if (f.size() < 3) {
-                        std::cout << "line " << i << " has too few neighbors" << std::endl;
-                        err++;
-                    } else {
-                        if (f[0] == f[1] || f[0] == f[2] || f[1] == f[2]) {
-                            std::cout << "poly " << polys[0] << " is self connected" << std::endl;
-                            err++;
-                        }
-                    }
-                } else if (polys.size() == 0) {
-                    std::cout << "line " << i << " has zero neighbors" << std::endl;
-                    err++;
-                }
-
-                // sucht nach lücken
-
-                for (j = 0; j < 2 && err < 1; j++) {
-                    double pt[3];
-                    lines->GetPoint(line->GetId(j), pt);
-
-                    IdsType ids;
-
-                    FindPoints(loc, pt, pts);
-                    vtkIdType numPtsA = pts->GetNumberOfIds();
-
-                    std::map<vtkIdType, vtkIdType> masked;
-
-                    for (k = 0; k < numPtsA; k++) {
-
-                        pd->GetPointCells(pts->GetId(k), cells);
-                        vtkIdType _numCells = cells->GetNumberOfIds();
-
-                        for (l = 0; l < _numCells; l++) {
-                            vtkIdType cellId = cells->GetId(l);
-
-                            if (origIds->GetValue(cellId) != NO_USE) {
-                                pd->GetCellPoints(cells->GetId(l), poly);
-                                vtkIdType numPtsB = poly->GetNumberOfIds();
-
-                                for (m = 0; m < numPtsB; m++) {
-                                    vtkIdType p = poly->GetId(m);
-
-                                    /* wenn ein polygon mehrfach die gleiche p verwendet,
-                                       dann erscheint die cellId auch mehrfach in cells
-                                       => es sind dann auch 4 kanten zu verarbeiten
-                                       => der betrachtete relative index wird dann zusammen mit der cellId in masked gespeichert */
-
-                                    if (masked.count(cellId) == 1 && masked[cellId] == m) {
-                                        continue;
-                                    }
-
-                                    if (p == pts->GetId(k)) {
-
-                                        vtkIdType idA = m == numPtsB-1 ? 0 : m+1,
-                                            idB = m == 0 ? numPtsB-1 : m-1;
-
-                                        ids.push_back(poly->GetId(idA));
-                                        ids.push_back(poly->GetId(idB));
-
-                                        masked[cellId] = m;
-
-                                        break;
-                                    }
-                                }
-
-                            }
-                        }
-
-                    }
-
-                    std::sort(ids.begin(), ids.end());
-
-                    IdsType ids2 = ids,
-                        ids3;
-
-                    ids2.erase(std::unique(ids2.begin(), ids2.end()), ids2.end());
-
-                    for (vtkIdType id : ids2) {
-                        if (std::count(ids.begin(), ids.end(), id) == 1) {
-                            ids3.push_back(id);
-                        }
-                    }
-
-                    std::set<Point3d> uniquePts;
-
-                    double _pt[3];
-
-                    std::size_t count {0};
-
-                    for (vtkIdType id : ids3) {
-                        pd->GetPoint(id, _pt);
-
-                        auto _ins = uniquePts.emplace(_pt[0], _pt[1], _pt[2]);
-
-                        if (!_ins.second) {
-                            count++;
-                        }
-                    }
-
-                    if (count*2 != ids3.size()) {
-                        std::cout << "line " << i << " has gaps at " << line->GetId(j) << std::endl;
-                        err++;
-                    }
-
-                }
-
+            for (i = 0; i < numCells; i++) {
+                std::cout << neigs->GetId(i) << ", ";
             }
 
-            line->Delete();
-
+            std::cout << "]" << std::endl;
         }
 
-        return err;
+        loc->FreeSearchStructure();
+        loc->Delete();
+
+        neigs->Delete();
+        itr->Delete();
+
+        return errored;
 
     }
 
@@ -401,10 +174,9 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, cu->GetOutputPort());
         bf->SetInputConnection(1, cyl->GetOutputPort());
-        bf->MergeRegsOn();
-        bf->Update();
+        bf->SetOperModeToNone();
 
-        Test test(bf->GetOutput(0), bf->GetOutput(1));
+        Test test(bf);
         int ok = test.run();
 
         bf->Delete();
@@ -425,10 +197,9 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, cu->GetOutputPort());
         bf->SetInputConnection(1, cyl->GetOutputPort());
-        bf->MergeRegsOn();
-        bf->Update();
+        bf->SetOperModeToNone();
 
-        Test test(bf->GetOutput(0), bf->GetOutput(1));
+        Test test(bf);
         int ok = test.run();
 
         bf->Delete();
@@ -448,10 +219,9 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, cu->GetOutputPort());
         bf->SetInputConnection(1, cyl->GetOutputPort());
-        bf->MergeRegsOn();
-        bf->Update();
+        bf->SetOperModeToNone();
 
-        Test test(bf->GetOutput(0), bf->GetOutput(1));
+        Test test(bf);
         int ok = test.run();
 
         bf->Delete();
@@ -471,10 +241,9 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, cubeA->GetOutputPort());
         bf->SetInputConnection(1, cubeB->GetOutputPort());
-        bf->MergeRegsOn();
-        bf->Update();
+        bf->SetOperModeToNone();
 
-        Test test(bf->GetOutput(0), bf->GetOutput(1));
+        Test test(bf);
         int ok = test.run();
 
         bf->Delete();
@@ -492,10 +261,9 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, cubeA->GetOutputPort());
         bf->SetInputConnection(1, cubeB->GetOutputPort());
-        bf->MergeRegsOn();
-        bf->Update();
+        bf->SetOperModeToNone();
 
-        Test test(bf->GetOutput(0), bf->GetOutput(1));
+        Test test(bf);
         int ok = test.run();
 
         bf->Delete();
@@ -568,10 +336,9 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, cu->GetOutputPort());
         bf->SetInputConnection(1, prod->GetOutputPort());
-        bf->MergeRegsOn();
-        bf->Update();
+        bf->SetOperModeToNone();
 
-        Test test(bf->GetOutput(0), bf->GetOutput(1));
+        Test test(bf);
         int ok = test.run();
 
         bf->Delete();
@@ -595,10 +362,9 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, cu->GetOutputPort());
         bf->SetInputConnection(1, sp->GetOutputPort());
-        bf->MergeRegsOn();
-        bf->Update();
+        bf->SetOperModeToNone();
 
-        Test test(bf->GetOutput(0), bf->GetOutput(1));
+        Test test(bf);
         int ok = test.run();
 
         bf->Delete();
@@ -625,10 +391,9 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, spA->GetOutputPort());
         bf->SetInputConnection(1, spB->GetOutputPort());
-        bf->MergeRegsOn();
-        bf->Update();
+        bf->SetOperModeToNone();
 
-        Test test(bf->GetOutput(0), bf->GetOutput(1));
+        Test test(bf);
         int ok = test.run();
 
         bf->Delete();
@@ -652,10 +417,9 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, spA->GetOutputPort());
         bf->SetInputConnection(1, spB->GetOutputPort());
-        bf->MergeRegsOn();
-        bf->Update();
+        bf->SetOperModeToNone();
 
-        Test test(bf->GetOutput(0), bf->GetOutput(1));
+        Test test(bf);
         int ok = test.run();
 
         bf->Delete();
@@ -681,10 +445,9 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, spA->GetOutputPort());
         bf->SetInputConnection(1, spB->GetOutputPort());
-        bf->MergeRegsOn();
-        bf->Update();
+        bf->SetOperModeToNone();
 
-        Test test(bf->GetOutput(0), bf->GetOutput(1));
+        Test test(bf);
         int ok = test.run();
 
         bf->Delete();
@@ -706,10 +469,9 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, cu->GetOutputPort());
         bf->SetInputConnection(1, cyl->GetOutputPort());
-        bf->MergeRegsOn();
-        bf->Update();
+        bf->SetOperModeToNone();
 
-        Test test(bf->GetOutput(0), bf->GetOutput(1));
+        Test test(bf);
         int ok = test.run();
 
         bf->Delete();
@@ -736,10 +498,9 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, sf->GetOutputPort());
         bf->SetInputConnection(1, cubeB->GetOutputPort());
-        bf->MergeRegsOn();
-        bf->Update();
+        bf->SetOperModeToNone();
 
-        Test test(bf->GetOutput(0), bf->GetOutput(1));
+        Test test(bf);
         int ok = test.run();
 
         bf->Delete();
@@ -762,10 +523,9 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, sp->GetOutputPort());
         bf->SetInputConnection(1, pl->GetOutputPort());
-        bf->MergeRegsOn();
-        bf->Update();
+        bf->SetOperModeToNone();
 
-        Test test(bf->GetOutput(0), bf->GetOutput(1));
+        Test test(bf);
         int ok = test.run();
 
         bf->Delete();
@@ -786,10 +546,9 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, cuA->GetOutputPort());
         bf->SetInputConnection(1, cuB->GetOutputPort());
-        bf->MergeRegsOn();
-        bf->Update();
+        bf->SetOperModeToNone();
 
-        Test test(bf->GetOutput(0), bf->GetOutput(1));
+        Test test(bf);
         int ok = test.run();
 
         bf->Delete();
@@ -818,10 +577,9 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, cuA->GetOutputPort());
         bf->SetInputConnection(1, app->GetOutputPort());
-        bf->MergeRegsOn();
-        bf->Update();
+        bf->SetOperModeToNone();
 
-        Test test(bf->GetOutput(0), bf->GetOutput(1));
+        Test test(bf);
         int ok = test.run();
 
         bf->Delete();
@@ -852,10 +610,9 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         vtkPolyDataBooleanFilter *bfB = vtkPolyDataBooleanFilter::New();
         bfB->SetInputConnection(0, cu->GetOutputPort());
         bfB->SetInputConnection(1, bfA->GetOutputPort());
-        bfB->MergeRegsOn();
-        bfB->Update();
+        bfB->SetOperModeToNone();
 
-        Test test(bfB->GetOutput(0), bfB->GetOutput(1));
+        Test test(bfB);
         int ok = test.run();
 
         bfB->Delete();
@@ -895,15 +652,9 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, tubeA->GetOutputPort());
         bf->SetInputConnection(1, tubeB->GetOutputPort());
-        bf->MergeRegsOn();
-        bf->Update();
+        bf->SetOperModeToNone();
 
-        /*WriteVTK("tubeA.vtk", tubeA->GetOutput());
-        WriteVTK("tubeB.vtk", tubeB->GetOutput());
-
-        WriteVTK("lines16.vtk", bf->GetOutput(1));*/
-
-        Test test(bf->GetOutput(0), bf->GetOutput(1));
+        Test test(bf);
         int ok = test.run();
 
         bf->Delete();
@@ -1024,7 +775,6 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         vtkPolyDataConnectivityFilter *cf = vtkPolyDataConnectivityFilter::New();
         cf->SetExtractionModeToAllRegions();
         cf->SetInputConnection(bf->GetOutputPort(0));
-
         cf->Update();
 
         int ok = cf->GetNumberOfExtractedRegions() != 3;
@@ -1074,11 +824,9 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
         bf->SetInputConnection(0, norm->GetOutputPort());
         bf->SetInputConnection(1, cube->GetOutputPort());
+        bf->SetOperModeToNone();
 
-        bf->MergeRegsOn();
-        bf->Update();
-
-        Test test(bf->GetOutput(0), bf->GetOutput(1));
+        Test test(bf);
         int ok = test.run();
 
         bf->Delete();

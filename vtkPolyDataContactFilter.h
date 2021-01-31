@@ -116,6 +116,8 @@ protected:
 
     int ProcessRequest (vtkInformation *request, vtkInformationVector **inputVector, vtkInformationVector *outputVector);
 
+    void PrintSelf (ostream&, vtkIndent) override {};
+
 private:
     vtkPolyDataContactFilter (const vtkPolyDataContactFilter&) = delete;
     void operator= (const vtkPolyDataContactFilter&) = delete;

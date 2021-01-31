@@ -29,31 +29,24 @@
                 </Documentation>
             </InputProperty>
 
-            <IntVectorProperty name="OperMode" command="SetOperMode" number_of_elements="1" default_values="0">
+            <IntVectorProperty name="OperMode" command="SetOperMode" number_of_elements="1" default_values="1">
                 <EnumerationDomain name="enum">
-                    <Entry value="0" text="Union"/>
-                    <Entry value="1" text="Intersection"/>
-                    <Entry value="2" text="Difference"/>
-                    <Entry value="3" text="Difference2"/>
+                    <Entry value="1" text="Union"/>
+                    <Entry value="2" text="Intersection"/>
+                    <Entry value="3" text="Difference"/>
+                    <Entry value="4" text="Difference2"/>
                 </EnumerationDomain>
                 <Documentation>
                     Sets the operation mode.
                 </Documentation>
             </IntVectorProperty>
 
-            <IntVectorProperty name="DecPolys" command="SetDecPolys" number_of_elements="1" default_values="0">
+            <!--<IntVectorProperty name="DecPolys" command="SetDecPolys" number_of_elements="1" default_values="0">
                 <BooleanDomain name="bool"/>
                 <Documentation>
                     Decompose non-convex polygons.
                 </Documentation>
-            </IntVectorProperty>
-
-            <IntVectorProperty name="MergeRegs" command="SetMergeRegs" number_of_elements="1" default_values="0">
-                <BooleanDomain name="bool"/>
-                <Documentation>
-                    Ignore operation mode and merge all divided regions into one output.
-                </Documentation>
-            </IntVectorProperty>
+            </IntVectorProperty>-->
 
             <Hints>
                 <ShowInMenu category="Extensions"/>

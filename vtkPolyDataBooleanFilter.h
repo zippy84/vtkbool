@@ -29,10 +29,11 @@ limitations under the License.
 
 #include "Utilities.h"
 
-#define OPER_UNION 0
-#define OPER_INTERSECTION 1
-#define OPER_DIFFERENCE 2
-#define OPER_DIFFERENCE2 3
+#define OPER_NONE 0
+#define OPER_UNION 1
+#define OPER_INTERSECTION 2
+#define OPER_DIFFERENCE 3
+#define OPER_DIFFERENCE2 4
 
 enum class Capt {
     NOT,
@@ -161,28 +162,30 @@ public:
 //     }
 // };
 
-typedef std::set<vtkIdType> InvolvedType;
+// typedef std::set<vtkIdType> InvolvedType;
 
-enum class Rel {
-    ORIG = 1,
-    DEC = 2
-};
+// enum class Rel {
+//     ORIG = 1,
+//     DEC = 2
+// };
 
-typedef std::map<vtkIdType, Rel> RelationsType;
+// typedef std::map<vtkIdType, Rel> RelationsType;
 
 class VTK_EXPORT vtkPolyDataBooleanFilter : public vtkPolyDataAlgorithm {
-    vtkPolyData *resultA, *resultB, *contLines;
-    vtkPolyData *modPdA, *modPdB;
-    vtkCellData *cellDataA, *cellDataB;
-    vtkIdTypeArray *cellIdsA, *cellIdsB;
+    vtkPolyData *resultA, *resultB, *resultC;
+
+    vtkSmartPointer<vtkPolyData> modPdA, modPdB, contLines;
+
+    vtkSmartPointer<vtkCellData> cellDataA, cellDataB;
+    vtkSmartPointer<vtkIdTypeArray> cellIdsA, cellIdsB;
 
     unsigned long timePdA, timePdB;
 
     PolyStripsType polyStripsA, polyStripsB;
 
-    InvolvedType involvedA, involvedB;
+    // InvolvedType involvedA, involvedB;
 
-    RelationsType relsA, relsB;
+    // RelationsType relsA, relsB;
 
     void GetStripPoints (vtkPolyData *pd, vtkIdTypeArray *sources, PStrips &pStrips, IdsType &lines);
     bool GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *conts, vtkIdTypeArray *sources, PolyStripsType &polyStrips);
@@ -197,36 +200,34 @@ class VTK_EXPORT vtkPolyDataBooleanFilter : public vtkPolyDataAlgorithm {
     void MergePoints (vtkPolyData *pd, PolyStripsType &polyStrips);
     // void DecPolys_ (vtkPolyData *pd, InvolvedType &involved, RelationsType &rels);
     bool CombineRegions ();
-    void MergeRegions ();
 
     int OperMode;
-    bool MergeRegs, DecPolys;
+    // bool DecPolys;
 
 public:
     vtkTypeMacro(vtkPolyDataBooleanFilter, vtkPolyDataAlgorithm);
     static vtkPolyDataBooleanFilter* New ();
 
-    vtkSetClampMacro(OperMode, int, OPER_UNION, OPER_DIFFERENCE2);
+    vtkSetClampMacro(OperMode, int, OPER_NONE, OPER_DIFFERENCE2);
     vtkGetMacro(OperMode, int);
 
+    void SetOperModeToNone () { OperMode = OPER_NONE; }
     void SetOperModeToUnion () { OperMode = OPER_UNION; }
     void SetOperModeToIntersection () { OperMode = OPER_INTERSECTION; }
     void SetOperModeToDifference () { OperMode = OPER_DIFFERENCE; }
     void SetOperModeToDifference2 () { OperMode = OPER_DIFFERENCE2; }
 
-    vtkSetMacro(MergeRegs, bool);
-    vtkGetMacro(MergeRegs, bool);
-    vtkBooleanMacro(MergeRegs, bool);
-
-    vtkSetMacro(DecPolys, bool);
-    vtkGetMacro(DecPolys, bool);
-    vtkBooleanMacro(DecPolys, bool);
+    // vtkSetMacro(DecPolys, bool);
+    // vtkGetMacro(DecPolys, bool);
+    // vtkBooleanMacro(DecPolys, bool);
 
 protected:
     vtkPolyDataBooleanFilter ();
     ~vtkPolyDataBooleanFilter ();
 
     int ProcessRequest (vtkInformation *request, vtkInformationVector **inputVector, vtkInformationVector *outputVector);
+
+    void PrintSelf (ostream&, vtkIndent) override {};
 
 private:
     vtkPolyDataBooleanFilter (const vtkPolyDataBooleanFilter&) = delete;

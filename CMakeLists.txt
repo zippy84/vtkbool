@@ -74,6 +74,7 @@ else()
 
         add_library(${PROJECT_NAME} SHARED ${srcs})
         # target_link_libraries(${PROJECT_NAME} ${VTK_LIBRARIES} decomp merger)
+        target_link_libraries(${PROJECT_NAME} ${VTK_LIBRARIES})
 
         if(VTK_INSTALL_PREFIX)
             set(_vtk ${VTK_INSTALL_PREFIX})

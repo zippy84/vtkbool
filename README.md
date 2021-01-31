@@ -41,7 +41,7 @@ You can support my project with [PayPal](https://paypal.me/zippy84).
 
 - CMake >= 3.1
 - VTK >= 6.1
-- C++11 compiler 
+- C++11 compiler
 
 ### Optional
 
@@ -54,18 +54,13 @@ To include vtkbool into your program, you have to compile it as a library. All y
 
 The usage of the library is very simple. Look at *testing.cxx* and you can see how. Upon creating the instance of the boolean-filter and connecting the two inputs with the pipeline, you can choose between different operation types, in different manners. You can set the operation mode by calling one of the named methods:
 
+- `SetOperModeToNone`
 - `SetOperModeToUnion`
 - `SetOperModeToIntersection`
 - `SetOperModeToDifference`
 - `SetOperModeToDifference2`
 
-The alternative is the more generic `SetOperMode`. The method must be called with the number of the desired operation, an integer between 0 and 3, with the same meaning as mentioned before. After updating the pipeline, the result is stored in the first output, typically accessable with `GetOutputPort()`. The second output, `GetOutputPort(1)`, contains the lines of contact between the inputs. The inputs must be outputs of filters or sources returning vtkPolyData. The outputs from this filter are of the same type.
-
-Other options are `MergeRegs` and `DecPolys`.
-
-The first option is used in testing and is deactivated by default. It ignors the `OperMode` and mergs all divided regions into the output. If you don't want to combine the regions yourself, don't use it.
-
-The second option controls whether non-convex polygons will be decomposed into convex polygons. Only the created polygons will be decomposed. The option is activated by default and it has to stay activated, if you want to triangulate the mesh with `vtkTriangleFilter`.
+The alternative is the more generic `SetOperMode`. The method must be called with the number of the desired operation, an integer between 0 and 4, with the same meaning as mentioned before. After updating the pipeline, the result is stored in the second output, typically accessable with `GetOutputPort(1)`. The first output (`GetOutputPort(0)`) contains the contact-lines between the inputs. The inputs must be outputs of filters or sources returning vtkPolyData. The outputs from this filter are of the same type.
 
 ### Example
 
@@ -76,33 +71,33 @@ Create a directory somewhere in your file system, download vtkbool and unpack it
 ```C++
 #include <vtkCubeSource.h>
 #include <vtkCylinderSource.h>
+#include <vtkSmartPointer.h>
 
 #include "vtkPolyDataBooleanFilter.h"
 
-int Point::_tag = 0; // important
-
 int main (int argc, char *argv[]) {
-    vtkCubeSource *cu = vtkCubeSource::New();
-    cu->SetYLength(.5);
+    vtkSmartPointer<vtkCubeSource> cube = vtkSmartPointer<vtkCubeSource>::New();
+    cube->SetYLength(.5);
 
-    vtkCylinderSource *cyl = vtkCylinderSource::New();
+    vtkSmartPointer<vtkCylinderSource> cyl = vtkSmartPointer<vtkCylinderSource>::New();
     cyl->SetResolution(32);
     cyl->SetHeight(.5);
     cyl->SetCenter(0, .5, 0);
 
-    vtkPolyDataBooleanFilter *bf = vtkPolyDataBooleanFilter::New();
-    bf->SetInputConnection(0, cu->GetOutputPort());
+    vtkSmartPointer<vtkPolyDataBooleanFilter> bf = vtkSmartPointer<vtkPolyDataBooleanFilter>::New();
+    bf->SetInputConnection(0, cube->GetOutputPort());
     bf->SetInputConnection(1, cyl->GetOutputPort());
     bf->SetOperModeToDifference();
-    bf->Update();
 
-    bf->Delete();
-    cyl->Delete();
-    cu->Delete();
+    vtkSmartPointer<vtkPolyDataWriter> writer = vtkSmartPointer<vtkPolyDataWriter>::New();
+    writer->SetInputConnection(bf->GetOutputPort(1))
+    writer->SetFileName("result.vtk");
+    writer->Update();
 
     return 0;
 }
 ```
+
 **CMakeLists.txt**
 
 ```CMake
@@ -124,6 +119,7 @@ include_directories(vtkbool-master/libs/vp)
 add_executable(exp exp.cxx)
 target_link_libraries(exp ${VTK_LIBRARIES} vtkbool)
 ```
+
 Also create a directory named build. If you are on Linux, open a terminal and enter this directory. Run `ccmake ..`, follow the instructions, and finally type `make`.
 
 ## ParaView Plugin
