@@ -819,7 +819,7 @@ void vtkPolyDataContactFilter::AddMissingLines (vtkPolyData *lines) {
                 << std::endl;
 // #endif
 
-            lonePts[{polyA, polyB}].emplace_back(i, _srcA, _srcB);
+            lonePts[{static_cast<int>(polyA), static_cast<int>(polyB)}].emplace_back(i, _srcA, _srcB);
         }
     }
 
