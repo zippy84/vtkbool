@@ -37,6 +37,7 @@ limitations under the License.
 #include <vtkCleanPolyData.h>
 #include <vtkTriangleStrip.h>
 #include <vtkDoubleArray.h>
+#include <vtkSmartPointer.h>
 
 #include <vtkCellArray.h>
 
@@ -637,11 +638,8 @@ void vtkPolyDataContactFilter::InterPolys (vtkIdType idA, vtkIdType idB) {
 
                 contLines->InsertNextCell(VTK_LINE, linePts);
 
-                const int tupleA[] = {f.srcA, s.srcA};
-                const int tupleB[] = {f.srcB, s.srcB};
-
-                sourcesA->InsertNextTypedTuple(tupleA);
-                sourcesB->InsertNextTypedTuple(tupleB);
+                sourcesA->InsertNextTuple2(f.srcA, s.srcA);
+                sourcesB->InsertNextTuple2(f.srcB, s.srcB);
 
                 linePts->Delete();
 
@@ -841,11 +839,8 @@ void vtkPolyDataContactFilter::AddMissingLines (vtkPolyData *lines) {
 
             lines->InsertNextCell(VTK_LINE, line);
 
-            const int tupleA[] = {pA.srcA, pB.srcA};
-            const int tupleB[] = {pA.srcB, pB.srcB};
-
-            _sourcesA->InsertNextTypedTuple(tupleA);
-            _sourcesB->InsertNextTypedTuple(tupleB);
+            _sourcesA->InsertNextTuple2(pA.srcA, pB.srcA);
+            _sourcesB->InsertNextTuple2(pA.srcB, pB.srcB);
 
             _contA->InsertNextValue(pp.first.f);
             _contB->InsertNextValue(pp.first.g);
