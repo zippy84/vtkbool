@@ -723,8 +723,8 @@ void vtkPolyDataContactFilter::AddMissingLines (vtkPolyData *lines) {
 
             _i = line->GetId(0) == i ? 0 : 1;
 
-            srcA = _sourcesA->GetTypedComponent(lineId, _i);
-            srcB = _sourcesB->GetTypedComponent(lineId, _i);
+            srcA = _sourcesA->GetComponent(lineId, _i);
+            srcB = _sourcesB->GetComponent(lineId, _i);
 
             // zweiten punkt der kante identifizieren
             // gibt es neben cA oder cB einen zweiten nachbar?
