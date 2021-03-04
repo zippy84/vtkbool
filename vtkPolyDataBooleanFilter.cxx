@@ -146,7 +146,7 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
             modPdA->DeepCopy(cl->GetOutput(1));
             modPdB->DeepCopy(cl->GetOutput(2));
 
-#ifdef DEBUG
+// #ifdef DEBUG
             std::cout << "Exporting contLines.vtk" << std::endl;
             WriteVTK("contLines.vtk", contLines);
 
@@ -155,7 +155,7 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
             std::cout << "Exporting modPdB_1.vtk" << std::endl;
             WriteVTK("modPdB_1.vtk", modPdB);
-#endif
+// #endif
 
             if (contLines->GetNumberOfCells() == 0) {
                 vtkErrorMacro("Inputs have no contact.");
@@ -420,7 +420,7 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, vtkIdTypeArray *
 
                 Cpy(sp.pt, pt, 3);
 
-                vtkIdType src = sources->GetComponent(*itr, _i);
+                vtkIdType src = sources->GetTypedComponent(*itr, _i);
 
                 sp.src = src;
 
@@ -2548,8 +2548,8 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
     pdA->BuildLinks();
     pdB->BuildLinks();
 
-    vtkDataArray *scalarsA = pdA->GetPointData()->GetScalars();
-    vtkDataArray *scalarsB = pdB->GetPointData()->GetScalars();
+    vtkIdTypeArray *scalarsA = vtkIdTypeArray::SafeDownCast(pdA->GetPointData()->GetScalars());
+    vtkIdTypeArray *scalarsB = vtkIdTypeArray::SafeDownCast(pdB->GetPointData()->GetScalars());
 
     vtkSmartPointer<vtkIdList> line = vtkSmartPointer<vtkIdList>::New();
 
@@ -2588,13 +2588,13 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
         vtkIdType notLocated = 0;
 
         for (j = 0; j < fptsA->GetNumberOfIds(); j++) {
-            if (locsA.count(scalarsA->GetTuple1(fptsA->GetId(j))) == 0) {
+            if (locsA.count(scalarsA->GetValue(fptsA->GetId(j))) == 0) {
                 notLocated++;
             }
         }
 
         for (j = 0; j < fptsB->GetNumberOfIds(); j++) {
-            if (locsB.count(scalarsB->GetTuple1(fptsB->GetId(j))) == 0) {
+            if (locsB.count(scalarsB->GetValue(fptsB->GetId(j))) == 0) {
                 notLocated++;
             }
         }
@@ -2619,11 +2619,11 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
             ppA->GetLoc(ppB->pA, OperMode);
             ppA->GetLoc(ppB->pB, OperMode);
 
-            vtkIdType fsA = scalarsA->GetTuple1(ppA->pA.ptIdA);
-            vtkIdType lsA = scalarsA->GetTuple1(ppA->pB.ptIdA);
+            vtkIdType fsA = scalarsA->GetValue(ppA->pA.ptIdA);
+            vtkIdType lsA = scalarsA->GetValue(ppA->pB.ptIdA);
 
-            vtkIdType fsB = scalarsB->GetTuple1(ppB->pA.ptIdA);
-            vtkIdType lsB = scalarsB->GetTuple1(ppB->pB.ptIdA);
+            vtkIdType fsB = scalarsB->GetValue(ppB->pA.ptIdA);
+            vtkIdType lsB = scalarsB->GetValue(ppB->pB.ptIdA);
 
 #ifdef DEBUG
             std::cout << "polyId " << ppA->pA.polyId << ", sA " << fsA << ", loc " << ppA->pA.loc << std::endl;
@@ -2720,13 +2720,13 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
     vtkPolyData *regsA = cfA->GetOutput();
     vtkPolyData *regsB = cfB->GetOutput();
 
-    scalarsA = regsA->GetPointData()->GetScalars();
-    scalarsB = regsB->GetPointData()->GetScalars();
+    scalarsA = vtkIdTypeArray::SafeDownCast(regsA->GetPointData()->GetScalars());
+    scalarsB = vtkIdTypeArray::SafeDownCast(regsB->GetPointData()->GetScalars());
 
     if (OperMode != OPER_INTERSECTION) {
         if (comb[0] == Loc::INSIDE) {
             for (i = 0; i < regsA->GetNumberOfCells(); i++) {
-                if (locsA.count(scalarsA->GetTuple1(i)) == 1) {
+                if (locsA.count(scalarsA->GetValue(i)) == 1) {
                     regsA->ReverseCell(i);
                 }
             }
@@ -2734,7 +2734,7 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
 
         if (comb[1] == Loc::INSIDE) {
             for (i = 0; i < regsB->GetNumberOfCells(); i++) {
-                if (locsB.count(scalarsB->GetTuple1(i)) == 1) {
+                if (locsB.count(scalarsB->GetValue(i)) == 1) {
                     regsB->ReverseCell(i);
                 }
             }
@@ -2943,7 +2943,7 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
 //     vtkIdList *cells = vtkIdList::New();
 
 //     for (vtkIdType i = 0; i < numCells; i++) {
-//         if (involved.count(origCellIds->GetTuple1(i)) == 1) {
+//         if (involved.count(origCellIds->GetValue(i)) == 1) {
 //             cells->InsertNextId(i);
 //         }
 //     }

@@ -164,6 +164,8 @@ int vtkPolyDataContactFilter::ProcessRequest (vtkInformation *request, vtkInform
 
         resultA->RemoveDeletedCells();
 
+        AddMissingLines(resultA);
+
         clean->Delete();
         mat->Delete();
         obbB->Delete();
@@ -635,8 +637,11 @@ void vtkPolyDataContactFilter::InterPolys (vtkIdType idA, vtkIdType idB) {
 
                 contLines->InsertNextCell(VTK_LINE, linePts);
 
-                sourcesA->InsertNextTuple2(f.srcA, s.srcA);
-                sourcesB->InsertNextTuple2(f.srcB, s.srcB);
+                const vtkIdType tupleA[] = {f.srcA, s.srcA};
+                const vtkIdType tupleB[] = {f.srcB, s.srcB};
+
+                sourcesA->InsertNextTypedTuple(tupleA);
+                sourcesB->InsertNextTypedTuple(tupleB);
 
                 linePts->Delete();
 
@@ -683,6 +688,172 @@ void vtkPolyDataContactFilter::OverlapLines (OverlapsType &ols, InterPtsType &in
         }
     }
 
+}
+
+void vtkPolyDataContactFilter::AddMissingLines (vtkPolyData *lines) {
+    vtkIdTypeArray *_contA = vtkIdTypeArray::SafeDownCast(lines->GetCellData()->GetScalars("cA"));
+    vtkIdTypeArray *_contB = vtkIdTypeArray::SafeDownCast(lines->GetCellData()->GetScalars("cB"));
+
+    vtkIdTypeArray *_sourcesA = vtkIdTypeArray::SafeDownCast(lines->GetCellData()->GetScalars("sourcesA"));
+    vtkIdTypeArray *_sourcesB = vtkIdTypeArray::SafeDownCast(lines->GetCellData()->GetScalars("sourcesB"));
+
+    pdA->BuildLinks();
+    pdB->BuildLinks();
+
+    LonePtsType lonePts;
+
+    vtkIdType i, numPts = lines->GetNumberOfPoints();
+
+    vtkSmartPointer<vtkIdList> cells = vtkSmartPointer<vtkIdList>::New(),
+        line = vtkSmartPointer<vtkIdList>::New(),
+        poly = vtkSmartPointer<vtkIdList>::New(),
+        neigh = vtkSmartPointer<vtkIdList>::New(),
+        neigsA = vtkSmartPointer<vtkIdList>::New(),
+        neigsB = vtkSmartPointer<vtkIdList>::New();
+
+    vtkIdType lineId, _numPts, _src, srcA, srcB, polyA, polyB, _srcA, _srcB, _j;
+
+    int _i;
+
+    for (i = 0; i < numPts; i++) {
+        lines->GetPointCells(i, cells);
+
+        if (cells->GetNumberOfIds() == 1) {
+            lineId = cells->GetId(0);
+
+            lines->GetCellPoints(lineId, line);
+
+            _i = line->GetId(0) == i ? 0 : 1;
+
+            srcA = _sourcesA->GetTypedComponent(lineId, _i);
+            srcB = _sourcesB->GetTypedComponent(lineId, _i);
+
+            // zweiten punkt der kante identifizieren
+            // gibt es neben cA oder cB einen zweiten nachbar?
+
+            polyA = _contA->GetValue(lineId);
+            polyB = _contB->GetValue(lineId);
+
+            _srcA = NO_USE;
+            _srcB = NO_USE;
+
+            if (srcA != NO_USE) {
+                pdA->GetCellPoints(polyA, poly);
+
+                _numPts = poly->GetNumberOfIds();
+
+                _src = srcA+1 == _numPts ? 0 : srcA+1;
+
+// #ifdef DEBUG
+                std::cout << "lineId " << lineId
+                    << ", polyA " << polyA
+                    << ", edge (" << srcA << ", " << _src << ")"
+                    << ", i " << i
+                    << std::endl;
+// #endif
+
+                pdA->GetCellEdgeNeighbors(polyA, poly->GetId(srcA), poly->GetId(_src), neigsA);
+
+                if (neigsA->GetNumberOfIds() > 0) {
+                    polyA = neigsA->GetId(0);
+
+                    // src für die neue linie in i ist _src
+
+                    pdA->GetCellPoints(polyA, neigh);
+                    // _srcA = neigh->FindIdLocation(poly->GetId(_src));
+
+                    for (_j = 0; _j < neigh->GetNumberOfIds(); _j++) {
+                        if (neigh->GetId(_j) == poly->GetId(_src)) {
+                            _srcA = _j;
+
+                            break;
+                        }
+                    }
+                }
+
+            }
+
+            if (srcB != NO_USE) {
+                pdB->GetCellPoints(polyB, poly);
+
+                _numPts = poly->GetNumberOfIds();
+
+                _src = srcB+1 == _numPts ? 0 : srcB+1;
+
+// #ifdef DEBUG
+                std::cout << "lineId " << lineId
+                    << ", polyB " << polyB
+                    << ", edge (" << srcB << ", " << _src << ")"
+                    << ", i " << i
+                    << std::endl;
+// #endif
+
+                pdB->GetCellEdgeNeighbors(polyB, poly->GetId(srcB), poly->GetId(_src), neigsB);
+
+                if (neigsB->GetNumberOfIds() > 0) {
+                    polyB = neigsB->GetId(0);
+
+                    // src für die neue linie in i ist _src
+
+                    pdB->GetCellPoints(polyB, neigh);
+                    // _srcB = neigh->FindIdLocation(poly->GetId(_src));
+
+                    for (_j = 0; _j < neigh->GetNumberOfIds(); _j++) {
+                        if (neigh->GetId(_j) == poly->GetId(_src)) {
+                            _srcB = _j;
+
+                            break;
+                        }
+                    }
+                }
+
+            }
+
+            // zw. polyA und polyB fehlt eine schnittlinie
+            // diese fängt in i an und endet in j
+            // j muss mit gleicher methode ermittelt werden
+            // der punkt in j existiert bereits in lines (kann nicht berechnet werden)
+
+// #ifdef DEBUG
+            std::cout << "Missing line between "
+                << polyA << " (src is " << _srcA << ") and "
+                << polyB << " (src is " << _srcB << ")."
+                << std::endl;
+// #endif
+
+            lonePts[{polyA, polyB}].emplace_back(i, _srcA, _srcB);
+        }
+    }
+
+    for (auto &pp : lonePts) {
+        if (pp.second.size() == 2) {
+            const LonePt &pA = *(pp.second.begin()),
+                &pB = *(pp.second.begin()+1);
+
+// #ifdef DEBUG
+            std::cout << "new line (" << pA.i << ", " << pB.i << ")" << std::endl;
+// #endif
+
+            line->Reset();
+
+            line->InsertNextId(pA.i);
+            line->InsertNextId(pB.i);
+
+            lines->InsertNextCell(VTK_LINE, line);
+
+            const vtkIdType tupleA[] = {pA.srcA, pB.srcA};
+            const vtkIdType tupleB[] = {pA.srcB, pB.srcB};
+
+            _sourcesA->InsertNextTypedTuple(tupleA);
+            _sourcesB->InsertNextTypedTuple(tupleB);
+
+            _contA->InsertNextValue(pp.first.f);
+            _contB->InsertNextValue(pp.first.g);
+
+        }
+    }
+
+    // wenn es jetzt noch punkte ohne mind. zwei linien gibt, dann wird der fehler im boolean-filter abgefangen
 }
 
 int vtkPolyDataContactFilter::InterOBBNodes (vtkOBBNode *nodeA, vtkOBBNode *nodeB, vtkMatrix4x4 *vtkNotUsed(mat), void *caller) {

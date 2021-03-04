@@ -85,6 +85,14 @@ typedef std::vector<InterPt> InterPtsType;
 
 typedef std::vector<std::pair<InterPt, InterPt>> OverlapsType;
 
+class LonePt {
+public:
+    LonePt (vtkIdType _i, vtkIdType _srcA, vtkIdType _srcB) : i(_i), srcA(_srcA), srcB(_srcB) {}
+    vtkIdType i, srcA, srcB;
+};
+
+typedef std::map<Pair, std::vector<LonePt>> LonePtsType;
+
 class VTK_EXPORT vtkPolyDataContactFilter : public vtkPolyDataAlgorithm {
 
     void PreparePolyData (vtkPolyData *pd);
@@ -93,6 +101,8 @@ class VTK_EXPORT vtkPolyDataContactFilter : public vtkPolyDataAlgorithm {
     static void InterPolyLine (InterPtsType &interPts, vtkPolyData *pd, vtkIdType num, const vtkIdType *poly, const double *r, const double *pt, Src src, const double *n);
     void InterPolys (vtkIdType idA, vtkIdType idB);
     static void OverlapLines (OverlapsType &ols, InterPtsType &intersA, InterPtsType &intersB);
+
+    void AddMissingLines (vtkPolyData *lines);
 
     vtkIdTypeArray *contA, *contB;
 
