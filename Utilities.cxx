@@ -188,3 +188,38 @@ void Transform (const double *in, double *out, Base &base) {
     out[2] = z;
 }
 */
+
+void ComputeNormal (vtkPoints *pts, double *n, vtkIdType num, const vtkIdType *poly) {
+    n[0] = 0; n[1] = 0; n[2] = 0;
+
+    if (num == 3) {
+        double pA[3], pB[3], pC[3], a[3], b[3];
+
+        pts->GetPoint(poly[0], pA);
+        pts->GetPoint(poly[1], pB);
+        pts->GetPoint(poly[2], pC);
+
+        vtkMath::Subtract(pB, pA, a);
+        vtkMath::Subtract(pC, pA, b);
+
+        vtkMath::Cross(a, b, n);
+    } else {
+        double pA[3], pB[3];
+
+        vtkIdType i, a, b;
+
+        for (i = 0; i < num; i++) {
+            a = poly[i];
+            b = poly[i+1 == num ? 0 : i+1];
+
+            pts->GetPoint(a, pA);
+            pts->GetPoint(b, pB);
+
+            n[0] += (pA[1]-pB[1])*(pA[2]+pB[2]);
+            n[1] += (pA[2]-pB[2])*(pA[0]+pB[0]);
+            n[2] += (pA[0]-pB[0])*(pA[1]+pB[1]);
+        }
+    }
+
+    vtkMath::Normalize(n);
+}
