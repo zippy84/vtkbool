@@ -481,6 +481,8 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         return ok;
 
     } else if (t == 11) {
+        // hier ist ein bug drin
+
         vtkCubeSource *cubeA = vtkCubeSource::New();
 
         vtkTriangleFilter *tf = vtkTriangleFilter::New();
@@ -625,6 +627,8 @@ int main (int vtkNotUsed(argc), char *argv[]) {
         return ok;
 
     } else if (t == 16) {
+        // geht auch nicht
+
         double pA[] = {0.001, 10.122, 100.000};
         double pB[] = {-0.000, -10.128, 100.000};
 

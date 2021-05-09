@@ -17,7 +17,13 @@ limitations under the License.
 #ifndef __vtkPolyDataContactFilter_h
 #define __vtkPolyDataContactFilter_h
 
+#include <map>
+#include <tuple>
+
 #include <vtkPolyDataAlgorithm.h>
+
+#include <vtkIdTypeArray.h>
+#include <vtkCharArray.h>
 
 #include "Utilities.h"
 
@@ -78,12 +84,11 @@ public:
     }
 
     Src src;
-
 };
 
 typedef std::vector<InterPt> InterPtsType;
 
-typedef std::vector<std::pair<InterPt, InterPt>> OverlapsType;
+typedef std::vector<std::tuple<InterPt, InterPt, vtkIdType, vtkIdType>> OverlapsType;
 
 class LonePt {
 public:
@@ -93,16 +98,19 @@ public:
 
 typedef std::map<Pair, std::vector<LonePt>> LonePtsType;
 
+typedef std::set<Pair> SpecialEdgesType;
+
 class VTK_EXPORT vtkPolyDataContactFilter : public vtkPolyDataAlgorithm {
 
-    void PreparePolyData (vtkPolyData *pd);
+    void PreparePolyData (vtkPolyData *pd, SpecialEdgesType &edges);
 
     static void InterEdgeLine (InterPtsType &interPts, const double *eA, const double *eB, const double *r, const double *pt);
     static void InterPolyLine (InterPtsType &interPts, vtkPolyData *pd, vtkIdType num, const vtkIdType *poly, const double *r, const double *pt, Src src, const double *n);
     void InterPolys (vtkIdType idA, vtkIdType idB);
-    static void OverlapLines (OverlapsType &ols, InterPtsType &intersA, InterPtsType &intersB);
+    void OverlapLines (OverlapsType &ols, InterPtsType &intersA, InterPtsType &intersB, const vtkIdType *polyA, const vtkIdType *polyB, vtkIdType idA, vtkIdType idB);
 
-    void AddMissingLines (vtkPolyData *lines);
+    void AddMissingLines ();
+    void _AddMissingLines (vtkPolyData *lines);
 
     vtkIdTypeArray *contA, *contB;
 
@@ -112,6 +120,12 @@ class VTK_EXPORT vtkPolyDataContactFilter : public vtkPolyDataAlgorithm {
     vtkPolyData *pdA, *pdB;
 
     vtkIdTypeArray *sourcesA, *sourcesB;
+
+    vtkIdTypeArray *neigsA, *neigsB;
+
+    SpecialEdgesType edgesA, edgesB;
+
+    bool invalidA, invalidB;
 
 public:
     vtkTypeMacro(vtkPolyDataContactFilter, vtkPolyDataAlgorithm);

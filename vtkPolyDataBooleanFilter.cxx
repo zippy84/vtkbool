@@ -179,11 +179,15 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
                 contLines->GetPointCells(i, cells);
 
                 if (cells->GetNumberOfIds() == 1) {
-                    break;
+                    std::cout << "Contact ends at " << i << " (line " << cells->GetId(0) << ")" << std::endl;
+
+                    // break;
                 }
             }
 
             cells->Delete();
+
+            // return EXIT_SUCCESS;
 
             if (i < numPts) {
                 vtkErrorMacro("Contact ends suddenly at point " << i << ".");
@@ -239,8 +243,6 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
             std::cout << "Exporting modPdB_2.vtk" << std::endl;
             WriteVTK("modPdB_2.vtk", modPdB);
 #endif
-
-            // return EXIT_SUCCESS;
 
             start = clock::now();
 
@@ -648,6 +650,10 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
 
         }
 
+        if (!sp.catched) {
+            std::cout << sp << std::endl;
+        }
+
         assert(sp.catched);
 
     }
@@ -686,8 +692,13 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
             }
         }
 
-
+        // ^^^ das ist wohl die methode, die ich hier mal entfernt habe (weil sie unschön war)
     }
+
+    vtkSmartPointer<vtkIdList> cells = vtkSmartPointer<vtkIdList>::New(),
+        line = vtkSmartPointer<vtkIdList>::New();
+
+    vtkIdType i, numCells;
 
     StripPtsType::const_iterator itr5;
 
@@ -703,13 +714,9 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
             const StripPt &pt = itr5->second;
 
             if (pt.capt == Capt::NOT) {
-
-                vtkIdList *cells = vtkIdList::New(),
-                    *line = vtkIdList::New();
-
                 contLines->GetPointCells(pt.ind, cells);
 
-                vtkIdType i, numCells = cells->GetNumberOfIds();
+                numCells = cells->GetNumberOfIds();
 
                 std::set<vtkIdType> ends;
 
@@ -718,9 +725,6 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
 
                     ends.insert(pt.ind == line->GetId(0) ? line->GetId(1) : line->GetId(0));
                 }
-
-                line->Delete();
-                cells->Delete();
 
                 if (ends.size() > 2) {
                     return true;
@@ -2527,6 +2531,14 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
 
     vtkPolyData *pdA = cfA->GetOutput();
     vtkPolyData *pdB = cfB->GetOutput();
+
+#ifdef DEBUG
+    std::cout << "Exporting modPdA_8.vtk" << std::endl;
+    WriteVTK("modPdA_8.vtk", pdA);
+
+    std::cout << "Exporting modPdB_8.vtk" << std::endl;
+    WriteVTK("modPdB_8.vtk", pdB);
+#endif
 
     resultA->ShallowCopy(contLines);
 
