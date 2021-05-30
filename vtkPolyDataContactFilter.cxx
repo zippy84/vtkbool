@@ -46,6 +46,12 @@ limitations under the License.
 
 // #undef DEBUG
 
+#if VTK_MAJOR_VERSION == 9
+typedef const vtkIdType *vtkPointsOutputPtr;
+#else
+typedef vtkIdType *vtkPointsOutputPtr;
+#endif
+
 vtkStandardNewMacro(vtkPolyDataContactFilter);
 
 vtkPolyDataContactFilter::vtkPolyDataContactFilter () {
@@ -207,7 +213,7 @@ void vtkPolyDataContactFilter::PreparePolyData (vtkPolyData *pd) {
     vtkCellArray *strips = pd->GetStrips();
 
     vtkIdType n;
-    vtkIdType *pts;
+    vtkPointsOutputPtr pts;
 
     i = 0;
 
@@ -538,7 +544,7 @@ void vtkPolyDataContactFilter::InterPolys (vtkIdType idA, vtkIdType idB) {
 #endif
 
     vtkIdType numA, numB;
-    vtkIdType *polyA, *polyB;
+    vtkPointsOutputPtr polyA, polyB;
 
     pdA->GetCellPoints(idA, numA, polyA);
     pdB->GetCellPoints(idB, numB, polyB);

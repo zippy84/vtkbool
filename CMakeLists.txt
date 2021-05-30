@@ -102,7 +102,7 @@ else()
 
         endif()
 
-        if(VTK_WRAP_PYTHON)
+        if(VTK_WRAP_PYTHON AND ${VTK_MAJOR_VERSION} LESS 9)
 
             if(${VTK_MAJOR_VERSION} GREATER 7)
                 set(MODULE_HIERARCHY_NAME ${PROJECT_NAME}Hierarchy)
