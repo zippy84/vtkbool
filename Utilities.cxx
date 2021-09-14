@@ -25,6 +25,8 @@ limitations under the License.
 #include <vtkPolyData.h>
 #include <vtkDataWriter.h>
 
+#include <vtkPolyDataWriter.h>
+
 void ComputeNormal (vtkPoints *pts, double *n, vtkIdType num, const vtkIdType *poly) {
     n[0] = 0; n[1] = 0; n[2] = 0;
 
@@ -88,14 +90,14 @@ void FindPoints (vtkKdTreePointLocator *pl, const double *pt, vtkIdList *pts, do
 }
 
 void WriteVTK (const char *name, vtkPolyData *pd) {
-    vtkDataWriter *w = vtkDataWriter::New();
+    /*vtkDataWriter *w = vtkDataWriter::New();
 
     vtkPoints *pts = pd->GetPoints();
 
     vtkIdType i, numPts = pts->GetNumberOfPoints();
 
     std::ofstream f(name);
-    f << "# vtk DataFile Version 3.0\n"
+    f << "# vtk DataFile Version 5.1\n"
       << "vtk output\n"
       << "ASCII\n"
       << "DATASET POLYDATA\n"
@@ -118,6 +120,12 @@ void WriteVTK (const char *name, vtkPolyData *pd) {
 
     f.close();
 
+    w->Delete();*/
+
+    vtkPolyDataWriter *w = vtkPolyDataWriter::New();
+    w->SetInputData(pd);
+    w->SetFileName(name);
+    w->Update();
     w->Delete();
 }
 

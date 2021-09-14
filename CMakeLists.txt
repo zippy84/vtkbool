@@ -43,11 +43,6 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND VTKBOOL_COVERAGE)
     set(CMAKE_SHARED_LINKER_FLAGS "-fprofile-arcs")
 endif()
 
-set(srcs
-    vtkPolyDataBooleanFilter.cxx
-    vtkPolyDataContactFilter.cxx
-    Utilities.cxx)
-
 include_directories(".")
 
 if(VTKBOOL_DEBUG)
@@ -63,159 +58,52 @@ else()
 
     #unset(VTK_DIR CACHE)
 
-    find_package(VTK REQUIRED COMPONENTS vtkFiltersSources vtkIOLegacy vtkFiltersExtraction vtkFiltersGeometry vtkFiltersModeling vtkRenderingFreeType OPTIONAL_COMPONENTS vtkWrappingPythonCore NO_MODULE)
+    find_package(VTK REQUIRED COMPONENTS FiltersSources IOLegacy FiltersExtraction FiltersGeometry FiltersModeling RenderingFreeType WrappingPythonCore OPTIONAL_COMPONENTS NO_MODULE)
 
     if(VTK_FOUND)
-        include(${VTK_USE_FILE})
 
-        # add_subdirectory(libs)
+        vtk_module_scan(
+            MODULE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/module/vtk.module"
+            REQUEST_MODULES vtkBool
+            PROVIDES_MODULES modules
+            ENABLE_TESTS ON)
 
-        # include_directories(libs/merger libs/decomp libs/vp libs/aabb)
+        set(BUILD_SHARED_LIBS ON)
 
-        add_library(${PROJECT_NAME} SHARED ${srcs})
-        # target_link_libraries(${PROJECT_NAME} ${VTK_LIBRARIES} decomp merger)
-        target_link_libraries(${PROJECT_NAME} ${VTK_LIBRARIES})
+        include(GNUInstallDirs)
 
-        if(VTK_INSTALL_PREFIX)
-            set(_vtk ${VTK_INSTALL_PREFIX})
-        else()
-            set(_vtk ${VTK_DIR})
-        endif()
+        vtk_module_build(MODULES ${modules})
 
-        if(WIN32)
-            string(REPLACE "/" "\\" _vtk_win ${_vtk})
-        endif()
+        vtk_module_wrap_python(
+            MODULES ${modules}
+            PYTHON_PACKAGE "vtkbool"
+            BUILD_STATIC OFF
+            INSTALL_HEADERS OFF)
 
-        if(VTKBOOL_TESTING)
-            enable_testing()
+        include(CTest)
 
-            add_executable(testing testing/testing.cxx)
-            target_link_libraries(testing ${PROJECT_NAME} ${VTK_LIBRARIES})
+        # get_cmake_property(vars VARIABLES)
+        # list(FILTER vars INCLUDE REGEX "^VTK")
+        # foreach(v ${vars})
+        #     message(STATUS "${v}=${${v}}")
+        # endforeach()
 
-            foreach(i RANGE 20)
-                add_test(NAME Test_${i} COMMAND testing ${i})
+        if(TARGET VTK::vtkpython)
 
-                if(WIN32)
-                    set_property(TEST Test_${i} PROPERTY ENVIRONMENT "PATH=${_vtk_win}\\bin")
-                endif()
+            add_test(NAME "import_vtkbool"
+                COMMAND
+                    "$<TARGET_FILE:VTK::vtkpython>"
+                    "${CMAKE_SOURCE_DIR}/testing/test_python.py")
 
-            endforeach()
+            set_property(TEST "import_vtkbool" APPEND PROPERTY ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/${VTK_PYTHONPATH}/vtkbool")
 
-        endif()
+            add_test(NAME "create_frieze_parts"
+                COMMAND
+                    "$<TARGET_FILE:VTK::vtkpython>"
+                    "${CMAKE_SOURCE_DIR}/testing/create_frieze_parts.py"
+                WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/testing")
 
-        if(VTK_WRAP_PYTHON)
-
-            if(${VTK_MAJOR_VERSION} GREATER 7)
-                set(MODULE_HIERARCHY_NAME ${PROJECT_NAME}Hierarchy)
-                set(${PROJECT_NAME}_WRAP_DEPENDS vtkCommonExecutionModel)
-
-                set(${PROJECT_NAME}_LINK_DEPENDS vtkCommonExecutionModel)
-
-                include(vtkWrapHierarchy)
-                vtk_wrap_hierarchy(${PROJECT_NAME} ${CMAKE_CURRENT_BINARY_DIR} vtkPolyDataBooleanFilter.h)
-                set(KIT_HIERARCHY_FILE ${CMAKE_CURRENT_BINARY_DIR}/${MODULE_HIERARCHY_NAME}.txt)
-                set(LIB_HIERARCHY_STAMP ${CMAKE_CURRENT_BINARY_DIR}/${MODULE_HIERARCHY_NAME}.stamp.txt)
-
-                if(${VTK_MAJOR_VERSION}.${VTK_MINOR_VERSION} EQUAL "8.1")
-                    configure_file(
-                        ${VTK_CMAKE_DIR}/vtkWrapperInit.data.in
-                        ${MODULE_HIERARCHY_NAME}.data
-                        @ONLY
-                    )
-
-                    set(OTHER_HIERARCHY_FILES)
-
-                    foreach(dep ${${PROJECT_NAME}_LINK_DEPENDS})
-                        list(APPEND OTHER_HIERARCHY_FILES "${${dep}_WRAP_HIERARCHY_FILE}")
-                    endforeach()
-
-                    add_custom_command(OUTPUT ${KIT_HIERARCHY_FILE}
-                            ${LIB_HIERARCHY_STAMP}
-                        COMMAND ${VTK_WRAP_HIERARCHY_EXE} -o ${KIT_HIERARCHY_FILE}
-                                ${MODULE_HIERARCHY_NAME}.data ${OTHER_HIERARCHY_FILES}
-                        COMMAND ${CMAKE_COMMAND} -E touch ${LIB_HIERARCHY_STAMP}
-                        DEPENDS ${VTK_WRAP_HIERARCHY_EXE}
-                            ${CMAKE_CURRENT_BINARY_DIR}/${MODULE_HIERARCHY_NAME}.data
-                            ${OTHER_HIERARCHY_FILES}
-                        VERBATIM)
-                endif()
-
-            endif()
-
-            set(ENV{LD_LIBRARY_PATH} "${_vtk}/lib")
-
-            execute_process(COMMAND "${_vtk}/bin/vtkpython" -c "import sys; sys.stdout.write('.'.join(map(str, sys.version_info[:2])))" OUTPUT_VARIABLE _py)
-
-            if(_py)
-                if(CMAKE_VERSION VERSION_LESS "3.12")
-                    find_package(PythonInterp ${_py} EXACT)
-                    find_package(PythonLibs ${_py} EXACT)
-
-                    if(PYTHONLIBS_FOUND)
-
-                        include_directories(${PYTHON_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR})
-
-                        include(vtkWrapPython)
-
-                        vtk_wrap_python3(${PROJECT_NAME}Python ${PROJECT_NAME}Python_srcs vtkPolyDataBooleanFilter.cxx)
-
-                        add_library(${PROJECT_NAME}PythonD ${${PROJECT_NAME}Python_srcs})
-                        target_link_libraries(${PROJECT_NAME}PythonD ${PROJECT_NAME} vtkWrappingPythonCore vtkCommonExecutionModelPythonD)
-
-                        python_add_module(${PROJECT_NAME}Python PyInit.cxx ${PROJECT_NAME}PythonInit.cxx)
-                        target_link_libraries(${PROJECT_NAME}Python PRIVATE ${PROJECT_NAME}PythonD)
-
-                        if(VTKBOOL_TESTING)
-                            add_test(NAME Test_Py COMMAND ${PYTHON_EXECUTABLE}
-                                ${CMAKE_SOURCE_DIR}/testing/test_py_module.py
-                                ${_vtk}/lib/python${_py}/site-packages
-                                ${CMAKE_BINARY_DIR}
-                                $<CONFIG>)
-
-                            if(WIN32)
-                                set_property(TEST Test_Py PROPERTY ENVIRONMENT "PATH=${_vtk_win}\\bin")
-                            else()
-                                set_property(TEST Test_Py PROPERTY ENVIRONMENT "LD_LIBRARY_PATH=${_vtk}/lib")
-                            endif()
-                        endif()
-
-                    endif()
-
-                else()
-                    find_package(Python ${_py} EXACT COMPONENTS Interpreter Development)
-
-                    if(Python_Development_FOUND)
-
-                        include_directories(${PYTHON_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR})
-
-                        include(vtkWrapPython)
-
-                        vtk_wrap_python3(${PROJECT_NAME}Python ${PROJECT_NAME}Python_srcs vtkPolyDataBooleanFilter.cxx)
-
-                        add_library(${PROJECT_NAME}PythonD ${${PROJECT_NAME}Python_srcs})
-                        target_link_libraries(${PROJECT_NAME}PythonD ${PROJECT_NAME} vtkWrappingPythonCore vtkCommonExecutionModelPythonD)
-
-                        Python_add_library(${PROJECT_NAME}Python MODULE PyInit.cxx ${PROJECT_NAME}PythonInit.cxx)
-                        target_link_libraries(${PROJECT_NAME}Python PRIVATE ${PROJECT_NAME}PythonD)
-
-                        if(VTKBOOL_TESTING)
-                            add_test(NAME Test_Py COMMAND ${Python_EXECUTABLE}
-                                ${CMAKE_SOURCE_DIR}/testing/test_py_module.py
-                                ${VTK_PYTHONPATH}
-                                ${CMAKE_BINARY_DIR}
-                                $<CONFIG>)
-
-                            if(WIN32)
-                                set_property(TEST Test_Py PROPERTY ENVIRONMENT "PATH=${_vtk_win}\\bin")
-                            else()
-                                set_property(TEST Test_Py PROPERTY ENVIRONMENT "LD_LIBRARY_PATH=${_vtk}/lib")
-                            endif()
-                        endif()
-                    endif()
-
-                endif()
-
-            endif()
+            set_property(TEST "create_frieze_parts" APPEND PROPERTY ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/${VTK_PYTHONPATH}/vtkbool")
 
         endif()
 

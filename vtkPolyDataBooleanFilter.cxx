@@ -146,7 +146,7 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
             modPdA->DeepCopy(cl->GetOutput(1));
             modPdB->DeepCopy(cl->GetOutput(2));
 
-// #ifdef DEBUG
+#ifdef DEBUG
             std::cout << "Exporting contLines.vtk" << std::endl;
             WriteVTK("contLines.vtk", contLines);
 
@@ -155,7 +155,7 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
             std::cout << "Exporting modPdB_1.vtk" << std::endl;
             WriteVTK("modPdB_1.vtk", modPdB);
-// #endif
+#endif
 
             if (contLines->GetNumberOfCells() == 0) {
                 vtkErrorMacro("Inputs have no contact.");
@@ -589,7 +589,9 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
 
         PStrips &pStrips = polyStrips[itr->first];
 
-        vtkIdType i, numPts, *polyPts;
+        const vtkIdType *polyPts;
+
+        vtkIdType i, numPts;
         pd->GetCellPoints(itr->first, numPts, polyPts);
 
         for (i = 0; i < numPts; i++) {
@@ -684,15 +686,43 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
             }
         }
 
-        for (auto &_pts : equalPts) {
-            if (_pts.second.size() > 1) {
-                for (auto &p : _pts.second) {
-                    std::cout << p.get() << std::endl;
+        vtkSmartPointer<vtkIdList> lines = vtkSmartPointer<vtkIdList>::New();
+
+        vtkIdType i, numLines;
+
+        decltype(equalPts)::const_iterator itr3;
+
+        for (itr3 = equalPts.begin(); itr3 != equalPts.end(); ++itr3) {
+            auto &pts = itr3->second;
+
+            if (pts.size() > 1) {
+                assert(pts.size() == 2);
+
+                const StripPt &spA = *(pts.begin()),
+                    &spB = *(std::next(pts.begin()));
+
+                // spA auf spB kopieren und die line dazwischen löschen
+
+#ifdef DEBUG
+                std::cout << "collapsing " << spB.ind << " -> " << spA.ind << std::endl;
+#endif
+
+                contLines->GetPointCells(spB.ind, lines);
+
+                numLines = lines->GetNumberOfIds();
+
+                for (i = 0; i < numLines; i++) {
+                    contLines->ReplaceCellPoint(lines->GetId(i), spB.ind, spA.ind);
+
+                    // aktualisiert die links
+                    contLines->RemoveReferenceToCell(spB.ind, lines->GetId(i));
+                    contLines->ResizeCellList(spA.ind, 1);
+                    contLines->AddReferenceToCell(spA.ind, lines->GetId(i));
                 }
+
             }
         }
 
-        // ^^^ das ist wohl die methode, die ich hier mal entfernt habe (weil sie unschön war)
     }
 
     vtkSmartPointer<vtkIdList> cells = vtkSmartPointer<vtkIdList>::New(),
@@ -2294,7 +2324,9 @@ public:
         vtkMath::Subtract(ptB, ptA, e);
         vtkMath::Normalize(e);
 
-        vtkIdType numPts, *poly;
+        const vtkIdType *poly;
+
+        vtkIdType numPts;
         pd->GetCellPoints(polyId, numPts, poly);
 
         ComputeNormal(pd->GetPoints(), n, numPts, poly);

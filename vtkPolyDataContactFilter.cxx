@@ -166,7 +166,7 @@ int vtkPolyDataContactFilter::ProcessRequest (vtkInformation *request, vtkInform
             return 1;
         }
 
-        AddMissingLines();
+        // AddMissingLines();
 
         contLines->GetCellData()->AddArray(contA);
         contLines->GetCellData()->AddArray(contB);
@@ -194,7 +194,7 @@ int vtkPolyDataContactFilter::ProcessRequest (vtkInformation *request, vtkInform
 
         resultA->RemoveDeletedCells();
 
-        _AddMissingLines(resultA);
+        // _AddMissingLines(resultA);
 
         clean->Delete();
         mat->Delete();
@@ -376,7 +376,7 @@ void vtkPolyDataContactFilter::PreparePolyData (vtkPolyData *pd, SpecialEdgesTyp
     vtkCellArray *strips = pd->GetStrips();
 
     vtkIdType n;
-    vtkIdType *pts;
+    const vtkIdType *pts;
 
     i = 0;
 
@@ -454,6 +454,8 @@ void vtkPolyDataContactFilter::PreparePolyData (vtkPolyData *pd, SpecialEdgesTyp
             edges.emplace(idB, idA);
 
         }
+
+        itr->Delete();
 
     }
 
@@ -745,7 +747,7 @@ void vtkPolyDataContactFilter::InterPolys (vtkIdType idA, vtkIdType idB) {
 #endif
 
     vtkIdType numA, numB;
-    vtkIdType *polyA, *polyB;
+    const vtkIdType *polyA, *polyB;
 
     pdA->GetCellPoints(idA, numA, polyA);
     pdB->GetCellPoints(idB, numB, polyB);

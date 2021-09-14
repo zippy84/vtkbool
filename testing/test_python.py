@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# *-* coding: UTF-8 *-*
+
 # Copyright 2012-2020 Ronald Römer
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,5 +15,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-add_subdirectory(decomp decomp_build)
-add_subdirectory(merger merger_build)
+import vtk
+import vtkBool
+
+cubeA = vtk.vtkCubeSource()
+cubeB = vtk.vtkCubeSource()
+
+bf = vtkBool.vtkPolyDataBooleanFilter()
+bf.SetInputConnection(0, cubeA.GetOutputPort())
+bf.SetInputConnection(1, cubeB.GetOutputPort())
+
+w = vtk.vtkPolyDataWriter()
+w.SetInputConnection(bf.GetOutputPort(1))
+w.SetFileName('test.vtk')
+w.Update()
