@@ -1,0 +1,10 @@
+NAME
+  vtkBool
+DEPENDS
+  VTK::CommonCore
+  VTK::CommonExecutionModel
+  VTK::FiltersPoints
+  VTK::IOLegacy
+TEST_DEPENDS
+  VTK::RenderingFreeType
+  VTK::FiltersSources

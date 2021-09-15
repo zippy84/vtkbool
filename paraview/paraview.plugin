@@ -1,0 +1,7 @@
+NAME
+  PolyDataBooleanFilter
+REQUIRES_MODULES
+  VTK::CommonCore
+  VTK::FiltersCore
+DESCRIPTION
+  This module contains classes to do polydata boolean operations.

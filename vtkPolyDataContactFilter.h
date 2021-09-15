@@ -109,9 +109,6 @@ class VTK_EXPORT vtkPolyDataContactFilter : public vtkPolyDataAlgorithm {
     void InterPolys (vtkIdType idA, vtkIdType idB);
     void OverlapLines (OverlapsType &ols, InterPtsType &intersA, InterPtsType &intersB, const vtkIdType *polyA, const vtkIdType *polyB, vtkIdType idA, vtkIdType idB);
 
-    void AddMissingLines ();
-    void _AddMissingLines (vtkPolyData *lines);
-
     vtkIdTypeArray *contA, *contB;
 
     vtkPolyData *contLines;

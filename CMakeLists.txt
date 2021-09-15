@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-cmake_minimum_required(VERSION 3.1)
-project(vtkbool VERSION 2.9)
+cmake_minimum_required(VERSION 3.8)
+project(vtkbool VERSION 3.0)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -50,15 +50,26 @@ if(VTKBOOL_DEBUG)
 endif()
 
 if(VTKBOOL_PARAVIEW)
-    set(VTKBOOL_TESTING OFF CACHE BOOL "" FORCE)
+    find_package(ParaView REQUIRED)
 
-    add_subdirectory(paraview_plugin ${CMAKE_BINARY_DIR}/paraview_plugin)
+    if(ParaView_FOUND)
+        paraview_plugin_scan(
+            PLUGIN_FILES "${CMAKE_CURRENT_SOURCE_DIR}/paraview/paraview.plugin"
+            PROVIDES_PLUGINS plugins
+            ENABLE_BY_DEFAULT ON)
+
+        set(BUILD_SHARED_LIBS ON)
+
+        include(GNUInstallDirs)
+
+        paraview_plugin_build(
+            PLUGINS ${plugins})
+
+    endif()
 
 else()
 
-    #unset(VTK_DIR CACHE)
-
-    find_package(VTK REQUIRED COMPONENTS FiltersSources IOLegacy FiltersExtraction FiltersGeometry FiltersModeling RenderingFreeType WrappingPythonCore OPTIONAL_COMPONENTS NO_MODULE)
+    find_package(VTK REQUIRED COMPONENTS FiltersSources IOLegacy FiltersExtraction FiltersGeometry FiltersModeling WrappingPythonCore OPTIONAL_COMPONENTS NO_MODULE)
 
     if(VTK_FOUND)
 
