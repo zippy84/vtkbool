@@ -30,11 +30,9 @@ endif()
 
 option(VTKBOOL_PARAVIEW "" OFF)
 option(VTKBOOL_DEBUG "" OFF)
-option(VTKBOOL_TESTING "" OFF)
 option(VTKBOOL_COVERAGE "" OFF)
 
 mark_as_advanced(VTKBOOL_DEBUG)
-mark_as_advanced(VTKBOOL_TESTING)
 mark_as_advanced(VTKBOOL_COVERAGE)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND VTKBOOL_COVERAGE)
@@ -93,6 +91,8 @@ else()
 
         include(CTest)
 
+        vtk_module_python_default_destination(python_default_destination)
+
         # get_cmake_property(vars VARIABLES)
         # list(FILTER vars INCLUDE REGEX "^VTK")
         # foreach(v ${vars})
@@ -106,7 +106,7 @@ else()
                     "$<TARGET_FILE:VTK::vtkpython>"
                     "${CMAKE_SOURCE_DIR}/testing/test_python.py")
 
-            set_property(TEST "import_vtkbool" APPEND PROPERTY ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/${VTK_PYTHONPATH}/vtkbool")
+            set_property(TEST "import_vtkbool" APPEND PROPERTY ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/${python_default_destination}/vtkbool")
 
             add_test(NAME "create_frieze_parts"
                 COMMAND
@@ -114,7 +114,7 @@ else()
                     "${CMAKE_SOURCE_DIR}/testing/create_frieze_parts.py"
                 WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/testing")
 
-            set_property(TEST "create_frieze_parts" APPEND PROPERTY ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/${VTK_PYTHONPATH}/vtkbool")
+            set_property(TEST "create_frieze_parts" APPEND PROPERTY ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/${python_default_destination}/vtkbool")
 
         endif()
 

@@ -48,6 +48,14 @@ public:
         pt[2] = z;
     }
 
+    InterPt (double _t, vtkIdType _end, double x, double y, double z, vtkIdType a, vtkIdType b, Src _src) : InterPt(_t, _end, x, y, z) {
+        assert(_end == a || _end == b);
+
+        edge[0] = a;
+        edge[1] = b;
+        src = _src;
+    }
+
     double t;
     bool onEdge;
 
@@ -108,6 +116,7 @@ class VTK_EXPORT vtkPolyDataContactFilter : public vtkPolyDataAlgorithm {
     static void InterPolyLine (InterPtsType &interPts, vtkPolyData *pd, vtkIdType num, const vtkIdType *poly, const double *r, const double *pt, Src src, const double *n);
     void InterPolys (vtkIdType idA, vtkIdType idB);
     void OverlapLines (OverlapsType &ols, InterPtsType &intersA, InterPtsType &intersB, const vtkIdType *polyA, const vtkIdType *polyB, vtkIdType idA, vtkIdType idB);
+    void AddContactLines (InterPtsType &intersA, InterPtsType &intersB, const vtkIdType *polyA, const vtkIdType *polyB, vtkIdType idA, vtkIdType idB);
 
     vtkIdTypeArray *contA, *contB;
 

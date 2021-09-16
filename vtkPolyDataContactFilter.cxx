@@ -681,63 +681,70 @@ void vtkPolyDataContactFilter::InterPolys (vtkIdType idA, vtkIdType idB) {
         if (intersA.size() != 0 && intersB.size() != 0
             && intersA.size()%2 == 0 && intersB.size()%2 == 0) {
 
-            OverlapsType overlaps;
-            OverlapLines(overlaps, intersA, intersB, polyA, polyB, idA, idB);
+            AddContactLines(intersA, intersB, polyA, polyB, idA, idB);
+        }
 
-            OverlapsType::const_iterator itr;
+    } else if (std::abs(dA-dB) < 1e-5) {
+        // parallel und auf der gleichen ebene
 
-            for (itr = overlaps.begin(); itr != overlaps.end(); ++itr) {
-                auto &f = std::get<0>(*itr),
-                    &s = std::get<1>(*itr);
+        // überschneidung ermitteln
+
+        // das vorhandensein dieser lines ist in bestimmten fällen wichtig
+
+        vtkIdType i, j;
+
+        double r[3], l;
+
+        for (i = 0; i < numA; i++) {
+            j = i+1 == numA ? 0 : i+1;
+
+            pdA->GetPoint(polyA[i], ptA);
+            pdA->GetPoint(polyA[j], ptB);
+
+            vtkMath::Subtract(ptB, ptA, r);
+            l = vtkMath::Normalize(r);
+
+            InterPtsType intersA{{0, i, ptA[0], ptA[1], ptA[2], i, j, Src::A},
+                {l, j, ptB[0], ptB[1], ptB[2], i, j, Src::A}},
+                intersB;
+
+            vtkPolyDataContactFilter::InterPolyLine(intersB, pdB, numB, polyB, r, ptA, Src::B, nB);
 
 #ifdef DEBUG
-                std::cout << "f " << f << std::endl;
-                std::cout << "s " << s << std::endl;
+            std::cout << "intersB " << intersB.size() << std::endl;
 #endif
 
-                // schnittpunkt liegt auf einer der non-manifolds von pdA
-
-                if ((f.src == Src::A && edgesA.count({polyA[f.edge[0]], polyA[f.edge[1]]}))
-                    || (s.src == Src::A && edgesA.count({polyA[s.edge[0]], polyA[s.edge[1]]}))) {
-
-                    invalidA = true;
-                }
-
-                // schnittpunkt liegt auf einer der non-manifolds von pdB
-
-                if ((f.src == Src::B && edgesB.count({polyB[f.edge[0]], polyB[f.edge[1]]}))
-                    || (s.src == Src::B && edgesB.count({polyB[s.edge[0]], polyB[s.edge[1]]}))) {
-
-                    invalidB = true;
-                }
-
-                vtkIdList *linePts = vtkIdList::New();
-
-                linePts->InsertNextId(contPts->InsertNextPoint(f.pt));
-                linePts->InsertNextId(contPts->InsertNextPoint(s.pt));
-
-                contLines->InsertNextCell(VTK_LINE, linePts);
-
-                const vtkIdType tupleA[] = {f.srcA, s.srcA};
-                const vtkIdType tupleB[] = {f.srcB, s.srcB};
-
-                sourcesA->InsertNextTypedTuple(tupleA);
-                sourcesB->InsertNextTypedTuple(tupleB);
-
-                linePts->Delete();
-
-                contA->InsertNextValue(idA);
-                contB->InsertNextValue(idB);
-
-                neigsA->InsertNextValue(std::get<2>(*itr));
-                neigsB->InsertNextValue(std::get<3>(*itr));
-
+            if (intersB.size() != 0 && intersB.size()%2 == 0) {
+                AddContactLines(intersA, intersB, polyA, polyB, idA, idB);
             }
 
         }
 
-    } else {
-        // ...
+        for (i = 0; i < numB; i++) {
+            j = i+1 == numB ? 0 : i+1;
+
+            pdB->GetPoint(polyB[i], ptA);
+            pdB->GetPoint(polyB[j], ptB);
+
+            vtkMath::Subtract(ptB, ptA, r);
+            l = vtkMath::Normalize(r);
+
+            InterPtsType intersA,
+                intersB{{0, i, ptA[0], ptA[1], ptA[2], i, j, Src::B},
+                {l, j, ptB[0], ptB[1], ptB[2], i, j, Src::B}};
+
+            vtkPolyDataContactFilter::InterPolyLine(intersA, pdA, numA, polyA, r, ptA, Src::A, nA);
+
+#ifdef DEBUG
+            std::cout << "intersA " << intersA.size() << std::endl;
+#endif
+
+            if (intersA.size() != 0 && intersA.size()%2 == 0) {
+                AddContactLines(intersA, intersB, polyA, polyB, idA, idB);
+            }
+
+        }
+
     }
 
 }
@@ -789,6 +796,63 @@ void vtkPolyDataContactFilter::OverlapLines (OverlapsType &ols, InterPtsType &in
                 }
             }
         }
+    }
+
+}
+
+void vtkPolyDataContactFilter::AddContactLines (InterPtsType &intersA, InterPtsType &intersB, const vtkIdType *polyA, const vtkIdType *polyB, vtkIdType idA, vtkIdType idB) {
+
+    OverlapsType overlaps;
+    OverlapLines(overlaps, intersA, intersB, polyA, polyB, idA, idB);
+
+    OverlapsType::const_iterator itr;
+
+    for (itr = overlaps.begin(); itr != overlaps.end(); ++itr) {
+        auto &f = std::get<0>(*itr),
+            &s = std::get<1>(*itr);
+
+#ifdef DEBUG
+        std::cout << "f " << f << std::endl;
+        std::cout << "s " << s << std::endl;
+#endif
+
+        // schnittpunkt liegt auf einer der non-manifolds von pdA
+
+        if ((f.src == Src::A && edgesA.count({polyA[f.edge[0]], polyA[f.edge[1]]}))
+            || (s.src == Src::A && edgesA.count({polyA[s.edge[0]], polyA[s.edge[1]]}))) {
+
+            invalidA = true;
+        }
+
+        // schnittpunkt liegt auf einer der non-manifolds von pdB
+
+        if ((f.src == Src::B && edgesB.count({polyB[f.edge[0]], polyB[f.edge[1]]}))
+            || (s.src == Src::B && edgesB.count({polyB[s.edge[0]], polyB[s.edge[1]]}))) {
+
+            invalidB = true;
+        }
+
+        vtkIdList *linePts = vtkIdList::New();
+
+        linePts->InsertNextId(contPts->InsertNextPoint(f.pt));
+        linePts->InsertNextId(contPts->InsertNextPoint(s.pt));
+
+        contLines->InsertNextCell(VTK_LINE, linePts);
+
+        const vtkIdType tupleA[] = {f.srcA, s.srcA};
+        const vtkIdType tupleB[] = {f.srcB, s.srcB};
+
+        sourcesA->InsertNextTypedTuple(tupleA);
+        sourcesB->InsertNextTypedTuple(tupleB);
+
+        linePts->Delete();
+
+        contA->InsertNextValue(idA);
+        contB->InsertNextValue(idB);
+
+        neigsA->InsertNextValue(std::get<2>(*itr));
+        neigsB->InsertNextValue(std::get<3>(*itr));
+
     }
 
 }

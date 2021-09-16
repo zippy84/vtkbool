@@ -187,8 +187,6 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
             cells->Delete();
 
-            // return EXIT_SUCCESS;
-
             if (i < numPts) {
                 vtkErrorMacro("Contact ends suddenly at point " << i << ".");
 

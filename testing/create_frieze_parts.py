@@ -302,8 +302,8 @@ class Frieze:
             for i in range(self.cfg['pins']):
                 mid = t+u*(1+i*2)
 
-                pin = extrude([ [-mid-2.5, self.cfg['b']], [-mid-2.5, self.cfg['b']+1.5],
-                    [-mid+2.5, self.cfg['b']+1.5], [-mid+2.5, self.cfg['b']] ], h, -h/2)
+                pin = extrude([ [-mid-2.3, self.cfg['b']], [-mid-2.3, self.cfg['b']+1.5],
+                    [-mid+2.3, self.cfg['b']+1.5], [-mid+2.3, self.cfg['b']] ], h, -h/2)
 
                 app1.AddInputConnection(pin.GetOutputPort())
 
@@ -311,7 +311,7 @@ class Frieze:
 
             _f = 1 if self.cfg['flip'] else -1
 
-            print('holds', [ (_f*mid, 2.5, 'top') for mid in mids ])
+            print('holds', [ (_f*mid, 2.3, 'top') for mid in mids ])
 
             bf6 = vtkBool.vtkPolyDataBooleanFilter()
             bf6.SetInputConnection(result.GetOutputPort(1))
