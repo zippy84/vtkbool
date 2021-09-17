@@ -122,6 +122,7 @@ public:
     IdsType poly;
     StripPtsType pts;
     StripsType strips;
+    vtkIdType numPts;
 };
 
 typedef std::map<vtkIdType, PStrips> PolyStripsType;

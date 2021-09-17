@@ -358,7 +358,9 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, vtkIdTypeArray *
     StripPtsType &pts = pStrips.pts;
     const IdsType &poly = pStrips.poly;
 
-    std::size_t i, j, numPts = poly.size();
+    const vtkIdType &numPts = pStrips.numPts;
+
+    vtkIdType i, j;
 
     double tol = 1e-5;
 
@@ -557,14 +559,14 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
 
         const vtkIdType *polyPts;
 
-        vtkIdType i, numPts;
-        pd->GetCellPoints(itr->first, numPts, polyPts);
+        vtkIdType i;
+        pd->GetCellPoints(itr->first, pStrips.numPts, polyPts);
 
-        for (i = 0; i < numPts; i++) {
+        for (i = 0; i < pStrips.numPts; i++) {
             pStrips.poly.push_back(polyPts[i]);
         }
 
-        ComputeNormal(pd->GetPoints(), pStrips.n, numPts, polyPts);
+        ComputeNormal(pd->GetPoints(), pStrips.n, pStrips.numPts, polyPts);
 
         GetStripPoints(pd, sources, pStrips, lines);
 
