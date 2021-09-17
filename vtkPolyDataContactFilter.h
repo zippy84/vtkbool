@@ -98,14 +98,6 @@ typedef std::vector<InterPt> InterPtsType;
 
 typedef std::vector<std::tuple<InterPt, InterPt, vtkIdType, vtkIdType>> OverlapsType;
 
-class LonePt {
-public:
-    LonePt (vtkIdType _i, vtkIdType _srcA, vtkIdType _srcB) : i(_i), srcA(_srcA), srcB(_srcB) {}
-    vtkIdType i, srcA, srcB;
-};
-
-typedef std::map<Pair, std::vector<LonePt>> LonePtsType;
-
 typedef std::set<Pair> SpecialEdgesType;
 
 class VTK_EXPORT vtkPolyDataContactFilter : public vtkPolyDataAlgorithm {

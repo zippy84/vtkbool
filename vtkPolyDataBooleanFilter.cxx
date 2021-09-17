@@ -72,8 +72,6 @@ vtkPolyDataBooleanFilter::vtkPolyDataBooleanFilter () {
 
     OperMode = OPER_UNION;
 
-    // DecPolys = true;
-
 }
 
 vtkPolyDataBooleanFilter::~vtkPolyDataBooleanFilter () {
@@ -181,7 +179,7 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
                 if (cells->GetNumberOfIds() == 1) {
                     std::cout << "Contact ends at " << i << " (line " << cells->GetId(0) << ")" << std::endl;
 
-                    // break;
+                    break;
                 }
             }
 
@@ -317,40 +315,10 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
             WriteVTK("modPdB_7.vtk", modPdB);
 #endif
 
-            /*involvedA.clear();
-            involvedB.clear();
-
-            vtkIdType numLines = contLines->GetNumberOfCells();
-
-            for (i = 0; i < numLines; i++) {
-                involvedA.insert(contsA->GetValue(i));
-                involvedB.insert(contsB->GetValue(i));
-            }
-
-            relsA.clear();
-            relsB.clear();*/
-
             timePdA = pdA->GetMTime();
             timePdB = pdB->GetMTime();
 
         }
-
-        /*
-        times.push_back(clock::now()-start);
-
-        DecPolys_(modPdA, involvedA, relsA);
-        DecPolys_(modPdB, involvedB, relsB);
-
-        times.push_back(clock::now()-start);
-
-#ifdef DEBUG
-        std::cout << "Exporting modPdA_8.vtk" << std::endl;
-        WriteVTK("modPdA_8.vtk", modPdA);
-
-        std::cout << "Exporting modPdB_8.vtk" << std::endl;
-        WriteVTK("modPdB_8.vtk", modPdB);
-#endif
-        */
 
         start = clock::now();
 
@@ -2963,122 +2931,5 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
 //     }
 
 //     cell->Delete();
-
-// }
-
-// void vtkPolyDataBooleanFilter::DecPolys_ (vtkPolyData *pd, InvolvedType &involved, RelationsType &rels) {
-
-// #ifdef DEBUG
-//     std::cout << "DecPolys_()" << std::endl;
-// #endif
-
-//     if (!DecPolys || !rels.empty()) {
-//         return;
-//     }
-
-//     vtkPoints *pdPts = pd->GetPoints();
-
-//     vtkIdTypeArray *origCellIds = vtkIdTypeArray::SafeDownCast(pd->GetCellData()->GetScalars("OrigCellIds"));
-
-//     vtkIdType numCells = pd->GetNumberOfCells();
-
-//     vtkIdList *cells = vtkIdList::New();
-
-//     for (vtkIdType i = 0; i < numCells; i++) {
-//         if (involved.count(origCellIds->GetValue(i)) == 1) {
-//             cells->InsertNextId(i);
-//         }
-//     }
-
-//     for (vtkIdType i = 0; i < cells->GetNumberOfIds(); i++) {
-
-//         vtkIdType cellId = cells->GetId(i),
-//             origId = origCellIds->GetValue(cellId);
-
-// #ifdef DEBUG
-//         std::cout << "cellId " << cellId << std::endl;
-// #endif
-
-//         // if (cellId != 12) {
-//         //     continue;
-//         // }
-
-//         auto _ps = (pd == modPdA ? polyStripsA : polyStripsB).at(origId);
-
-//         vtkIdList *cell = vtkIdList::New();
-
-//         pd->GetCellPoints(cellId, cell);
-
-//         Base base(pdPts, cell);
-
-//         vtkIdType numPts = cell->GetNumberOfIds();
-
-//         if (numPts > 3) {
-
-//             IdsType ptIds;
-
-//             for (vtkIdType k = 0; k < numPts; k++) {
-//                 ptIds.push_back(cell->GetId(k));
-//             }
-
-//             std::reverse(ptIds.begin(), ptIds.end());
-
-//             PolyType poly;
-
-//             vtkIdType j = 0;
-
-//             for (vtkIdType id : ptIds) {
-//                 double pt[3],
-//                     _pt[2];
-
-//                 pd->GetPoint(id, pt);
-//                 Transform(pt, _pt, base);
-
-//                 poly.push_back({_pt, j++});
-//             }
-
-//             assert(TestCW(poly));
-
-//             vtkIdList *newCell = vtkIdList::New();
-
-//             try {
-
-//                 Decomposer d(poly);
-
-//                 DecResType decs;
-//                 d.GetDecomposed(decs);
-
-//                 for (auto& dec : decs) {
-//                     newCell->Reset();
-
-//                     std::reverse(dec.begin(), dec.end());
-
-//                     for (vtkIdType id : dec) {
-//                         newCell->InsertNextId(ptIds[id]);
-//                     }
-
-//                     vtkIdType newId = pd->InsertNextCell(VTK_POLYGON, newCell);
-//                     origCellIds->InsertNextValue(origId);
-
-//                     rels[newId] = Rel::DEC;
-
-//                 }
-
-//                 rels[cellId] = Rel::ORIG;
-
-//             } catch (const std::exception &e) {
-//                 std::cerr << e.what()
-//                     << " on " << GetAbsolutePath(poly)
-//                     << std::endl;
-//             }
-
-//             newCell->Delete();
-
-//         }
-
-//         cell->Delete();
-//     }
-
-//     cells->Delete();
 
 // }

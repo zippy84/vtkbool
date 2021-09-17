@@ -162,15 +162,6 @@ public:
 //     }
 // };
 
-// typedef std::set<vtkIdType> InvolvedType;
-
-// enum class Rel {
-//     ORIG = 1,
-//     DEC = 2
-// };
-
-// typedef std::map<vtkIdType, Rel> RelationsType;
-
 class VTK_EXPORT vtkPolyDataBooleanFilter : public vtkPolyDataAlgorithm {
     vtkPolyData *resultA, *resultB, *resultC;
 
@@ -183,10 +174,6 @@ class VTK_EXPORT vtkPolyDataBooleanFilter : public vtkPolyDataAlgorithm {
 
     PolyStripsType polyStripsA, polyStripsB;
 
-    // InvolvedType involvedA, involvedB;
-
-    // RelationsType relsA, relsB;
-
     void GetStripPoints (vtkPolyData *pd, vtkIdTypeArray *sources, PStrips &pStrips, IdsType &lines);
     bool GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *conts, vtkIdTypeArray *sources, PolyStripsType &polyStrips);
     void RemoveDuplicates (IdsType &lines);
@@ -198,11 +185,9 @@ class VTK_EXPORT vtkPolyDataBooleanFilter : public vtkPolyDataAlgorithm {
     void ResolveOverlaps (vtkPolyData *pd, vtkIdTypeArray *conts, PolyStripsType &polyStrips);
     void AddAdjacentPoints (vtkPolyData *pd, vtkIdTypeArray *conts, PolyStripsType &polyStrips);
     void MergePoints (vtkPolyData *pd, PolyStripsType &polyStrips);
-    // void DecPolys_ (vtkPolyData *pd, InvolvedType &involved, RelationsType &rels);
     bool CombineRegions ();
 
     int OperMode;
-    // bool DecPolys;
 
 public:
     vtkTypeMacro(vtkPolyDataBooleanFilter, vtkPolyDataAlgorithm);
@@ -216,10 +201,6 @@ public:
     void SetOperModeToIntersection () { OperMode = OPER_INTERSECTION; }
     void SetOperModeToDifference () { OperMode = OPER_DIFFERENCE; }
     void SetOperModeToDifference2 () { OperMode = OPER_DIFFERENCE2; }
-
-    // vtkSetMacro(DecPolys, bool);
-    // vtkGetMacro(DecPolys, bool);
-    // vtkBooleanMacro(DecPolys, bool);
 
 protected:
     vtkPolyDataBooleanFilter ();
