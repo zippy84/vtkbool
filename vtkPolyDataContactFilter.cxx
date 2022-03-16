@@ -689,9 +689,7 @@ void vtkPolyDataContactFilter::InterPolys (vtkIdType idA, vtkIdType idB) {
 
         // überschneidung ermitteln
 
-        // das vorhandensein dieser lines ist in bestimmten fällen wichtig
-
-        vtkIdType i, j;
+        /*vtkIdType i, j;
 
         double r[3], l;
 
@@ -743,7 +741,7 @@ void vtkPolyDataContactFilter::InterPolys (vtkIdType idA, vtkIdType idB) {
                 AddContactLines(intersA, intersB, polyA, polyB, idA, idB);
             }
 
-        }
+        }*/
 
     }
 
