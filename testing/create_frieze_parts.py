@@ -15,6 +15,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# export LD_LIBRARY_PATH=/home/zippy/VTK9/lib
+
+import sys
+sys.path.extend(['/home/zippy/VTK9/lib/python3.10/site-packages',
+    '/home/zippy/vtkbool/build/lib/python3.10/site-packages/vtkbool'])
+
 import vtk
 import vtkBool
 
@@ -295,23 +301,24 @@ class Frieze:
 
             u = (fake_w-t)/self.cfg['pins']/2
 
-            h = self.cfg['q']+2*(self.cfg['r']+2*self.cfg['e'])
+            off = .2 # offset, sodass man die pins leichter hineinstecken kann
+
+            h = self.cfg['q']+2*self.cfg['r']-off
+            half_w = (5-off)/2
 
             mids = []
 
             for i in range(self.cfg['pins']):
                 mid = t+u*(1+i*2)
 
-                pin = extrude([ [-mid-2.3, self.cfg['b']], [-mid-2.3, self.cfg['b']+1.5],
-                    [-mid+2.3, self.cfg['b']+1.5], [-mid+2.3, self.cfg['b']] ], h, -h/2)
+                pin = extrude([ [-mid-half_w, self.cfg['b']], [-mid-half_w, self.cfg['b']+1.5],
+                    [-mid+half_w, self.cfg['b']+1.5], [-mid+half_w, self.cfg['b']] ], h, -h/2)
 
                 app1.AddInputConnection(pin.GetOutputPort())
 
                 mids.append(mid)
 
-            _f = 1 if self.cfg['flip'] else -1
-
-            print('holds', [ (_f*mid, 2.3, 'top') for mid in mids ])
+            print('mids', mids)
 
             bf6 = vtkBool.vtkPolyDataBooleanFilter()
             bf6.SetInputConnection(result.GetOutputPort(1))

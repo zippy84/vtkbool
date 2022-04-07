@@ -15,6 +15,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# export LD_LIBRARY_PATH=/home/zippy/VTK9/lib
+
+import sys
+sys.path.extend(['/home/zippy/VTK9/lib/python3.10/site-packages',
+    '/home/zippy/vtkbool/build/lib/python3.10/site-packages/vtkbool'])
+
 import vtk
 import vtkBool
 
