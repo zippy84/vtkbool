@@ -15,23 +15,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# export LD_LIBRARY_PATH=/home/zippy/VTK9/lib
-
 import sys
-sys.path.extend(['/home/zippy/VTK9/lib/python3.10/site-packages',
-    '/home/zippy/vtkbool/build/lib/python3.10/site-packages/vtkbool'])
+sys.path.extend(['/home/zippy/vtkbool/build/lib/python3.10/site-packages/vtkbool'])
 
-import vtk
-import vtkBool
+from vtkmodules.vtkFiltersSources import vtkCubeSource
+from vtkmodules.vtkIOLegacy import vtkPolyDataWriter
 
-cubeA = vtk.vtkCubeSource()
-cubeB = vtk.vtkCubeSource()
+from vtkBool import vtkPolyDataBooleanFilter
 
-bf = vtkBool.vtkPolyDataBooleanFilter()
+cubeA = vtkCubeSource()
+cubeB = vtkCubeSource()
+
+bf = vtkPolyDataBooleanFilter()
 bf.SetInputConnection(0, cubeA.GetOutputPort())
 bf.SetInputConnection(1, cubeB.GetOutputPort())
 
-w = vtk.vtkPolyDataWriter()
+w = vtkPolyDataWriter()
 w.SetInputConnection(bf.GetOutputPort(1))
 w.SetFileName('test.vtk')
 w.Update()

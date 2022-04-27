@@ -90,38 +90,6 @@ void FindPoints (vtkKdTreePointLocator *pl, const double *pt, vtkIdList *pts, do
 }
 
 void WriteVTK (const char *name, vtkPolyData *pd) {
-    /*vtkDataWriter *w = vtkDataWriter::New();
-
-    vtkPoints *pts = pd->GetPoints();
-
-    vtkIdType i, numPts = pts->GetNumberOfPoints();
-
-    std::ofstream f(name);
-    f << "# vtk DataFile Version 5.1\n"
-      << "vtk output\n"
-      << "ASCII\n"
-      << "DATASET POLYDATA\n"
-      << "POINTS " << numPts << " double\n";
-
-    f << std::setprecision(8);
-
-    double pt[3];
-
-    for (i = 0; i < numPts; i++) {
-        pts->GetPoint(i, pt);
-        f << pt[0] << " " << pt[1] << " " << pt[2] << "\n";
-    }
-
-    w->WriteCells(&f, pd->GetLines(), "LINES");
-    w->WriteCells(&f, pd->GetPolys(), "POLYGONS");
-    w->WriteCells(&f, pd->GetStrips(), "TRIANGLE_STRIPS");
-    w->WriteCellData(&f, pd);
-    w->WritePointData(&f, pd);
-
-    f.close();
-
-    w->Delete();*/
-
     vtkPolyDataWriter *w = vtkPolyDataWriter::New();
     w->SetInputData(pd);
     w->SetFileName(name);
@@ -144,7 +112,7 @@ double GetAngle (double *vA, double *vB, double *n) {
     return ang;
 }
 
-Base::Base (vtkPoints *pts, vtkIdType num, vtkIdType *poly) {
+Base::Base (vtkPoints *pts, vtkIdType num, const vtkIdType *poly) {
     ComputeNormal(pts, n, num, poly);
 
     double ptA[3],

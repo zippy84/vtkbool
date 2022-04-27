@@ -19,6 +19,7 @@ limitations under the License.
 
 #include <map>
 #include <tuple>
+#include <set>
 
 #include <vtkPolyDataAlgorithm.h>
 

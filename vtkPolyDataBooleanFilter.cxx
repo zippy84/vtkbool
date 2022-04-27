@@ -43,6 +43,8 @@ limitations under the License.
 #include <vtkCleanPolyData.h>
 #include <vtkPolyDataConnectivityFilter.h>
 #include <vtkSmartPointer.h>
+#include <vtkModifiedBSPTree.h>
+#include <vtkCellArrayIterator.h>
 
 #include "vtkPolyDataBooleanFilter.h"
 #include "vtkPolyDataContactFilter.h"
@@ -630,7 +632,9 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
 
     // einrasten von unterschiedlichen ind auf einen punkt auf der grenze des polygons
 
-    {
+    /*{
+        // dieser ganze abschnitt hier ist unvollständig
+
         struct Cmp {
             bool operator() (const StripPt &l, const StripPt &r) const {
                 return l.ind < r.ind;
@@ -691,14 +695,14 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
             }
         }
 
-    }
+    }*/
 
     vtkSmartPointer<vtkIdList> cells = vtkSmartPointer<vtkIdList>::New(),
         line = vtkSmartPointer<vtkIdList>::New();
 
     vtkIdType i, numCells;
 
-    StripPtsType::const_iterator itr5;
+    StripPtsType::const_iterator itr2;
 
     for (itr = polyLines.begin(); itr != polyLines.end(); ++itr) {
         PStrips &pStrips = polyStrips[itr->first];
@@ -706,10 +710,10 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
         const IdsType &lines = itr->second;
         const StripPtsType &pts = pStrips.pts;
 
-        for (itr5 = pts.begin(); itr5 != pts.end(); ++itr5) {
+        for (itr2 = pts.begin(); itr2 != pts.end(); ++itr2) {
             // ist der punkt auf einer kante, dürfen von ihm mehr als 2 linien ausgehen
 
-            const StripPt &pt = itr5->second;
+            const StripPt &pt = itr2->second;
 
             if (pt.capt == Capt::NOT) {
                 contLines->GetPointCells(pt.ind, cells);
@@ -802,84 +806,91 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
 
     }
 
-    // validierung
     // sucht nach schnitten zw. den strips
 
-    // PolyStripsType::const_iterator itr2;
-    // StripsType::const_iterator itr3;
-    // StripType::const_iterator itr4;
+    {
 
-    // for (itr2 = polyStrips.begin(); itr2 != polyStrips.end(); ++itr2) {
-    //     const PStrips &pStrips = itr2->second;
+        PolyStripsType::const_iterator itr;
+        StripType::const_iterator itr2;
 
-    //     const StripsType &strips = pStrips.strips;
-    //     const StripPtsType &pts = pStrips.pts;
+        for (itr = polyStrips.begin(); itr != polyStrips.end(); ++itr) {
+            const PStrips &pStrips = itr->second;
 
-    //     vtkIdList *cell = vtkIdList::New();
-    //     pd->GetCellPoints(itr2->first, cell);
+            const StripsType &strips = pStrips.strips;
+            const StripPtsType &pts = pStrips.pts;
 
-    //     Base base(pd->GetPoints(), cell);
+            vtkIdType num;
+            const vtkIdType *cell;
+            pd->GetCellPoints(itr->first, num, cell);
 
-    //     cell->Delete();
+            Base base(pd->GetPoints(), num, cell);
 
-    //     AABB tree;
+            vtkSmartPointer<vtkPoints> treePts = vtkSmartPointer<vtkPoints>::New();
 
-    //     std::vector<std::shared_ptr<Line>> lines;
+            vtkSmartPointer<vtkPolyData> treePd = vtkSmartPointer<vtkPolyData>::New();
+            treePd->Allocate(1);
 
-    //     for (itr3 = strips.begin(); itr3 != strips.end(); ++itr3) {
-    //         const StripType &strip = *itr3;
+            std::map<vtkIdType, vtkIdType> ptIds;
+            
+            double pt[2];
 
-    //         for (itr4 = strip.begin(); itr4 != strip.end()-1; ++itr4) {
-    //             const StripPt &spA = pts.at(itr4->ind),
-    //                 &spB = pts.at((itr4+1)->ind);
+            for (const auto &p : pts) {
+                Transform(p.second.pt, pt, base);
 
-    //             double ptA[2], ptB[2];
+                ptIds.emplace(p.first, treePts->InsertNextPoint(pt[0], pt[1], 0));
+            }
 
-    //             Transform(spA.pt, ptA, base);
-    //             Transform(spB.pt, ptB, base);
+            for (const StripType &strip : strips) {
+                for (itr2 = strip.begin(); itr2 != strip.end()-1; ++itr2) {
 
-    //             vtkIdType grp = itr3-strips.begin(); // falscher typ!
+                    vtkIdList *line = vtkIdList::New();
+                    line->InsertNextId(ptIds[itr2->ind]);
+                    line->InsertNextId(ptIds[(itr2+1)->ind]);
 
-    //             lines.emplace_back(new Line({ptA, itr4->ind}, {ptB, (itr4+1)->ind}, grp));
-    //         }
+                    treePd->InsertNextCell(VTK_LINE, line);
 
-    //     }
+                    line->Delete();
+                }
+            }
 
-    //     for (auto &line : lines) {
-    //         // std::cout << *line << std::endl;
+            treePd->SetPoints(treePts);
 
-    //         tree.InsertObj(line);
-    //     }
+            vtkSmartPointer<vtkModifiedBSPTree> tree = vtkSmartPointer<vtkModifiedBSPTree>::New();
+            tree->SetDataSet(treePd);
+            tree->BuildLocator();
 
-    //     Bnds bnds(-E, E, -E, E);
+            auto lineItr = vtk::TakeSmartPointer(treePd->GetLines()->NewIterator());
 
-    //     std::vector<std::shared_ptr<Line>>::const_iterator itr5;
-    //     std::vector<std::shared_ptr<Obj>>::const_iterator itr6;
+            for (lineItr->GoToFirstCell(); !lineItr->IsDoneWithTraversal(); lineItr->GoToNextCell()) {
+                lineItr->GetCurrentCell(num, cell);
 
-    //     for (itr5 = lines.begin(); itr5 != lines.end(); ++itr5) {
-    //         auto found = tree.Search(*itr5);
+                double ptA[3], ptB[3];
 
-    //         const Line &lA = **itr5;
+                treePts->GetPoint(cell[0], ptA);
+                treePts->GetPoint(cell[1], ptB);
 
-    //         for (itr6 = found.begin(); itr6 != found.end(); ++itr6) {
-    //             // std::cout << itr6->use_count() << std::endl;
+                vtkSmartPointer<vtkPoints> verts = vtkSmartPointer<vtkPoints>::New();
+                vtkSmartPointer<vtkIdList> cellIds = vtkSmartPointer<vtkIdList>::New();
 
-    //             const Line &lB = dynamic_cast<Line&>(**itr6);
+                tree->IntersectWithLine(ptA, ptB, 1e-5, verts, cellIds);
 
-    //             // die linien dürfen nicht zum gleichen strip gehören und sich nicht an den enden berühren
+                vtkIdType _num;
+                const vtkIdType *_cell;
 
-    //             if (lA.grp != lB.grp
-    //                 && lA.pA.id != lB.pA.id
-    //                 && lA.pA.id != lB.pB.id
-    //                 && lA.pB.id != lB.pA.id
-    //                 && lA.pB.id != lB.pB.id
-    //                 && Intersect2(lA.pA.pt, lA.pB.pt, lB.pA.pt, lB.pB.pt, bnds)) {
-    //                 return true;
-    //             }
-    //         }
-    //     }
+                for (vtkIdType i = 0; i < cellIds->GetNumberOfIds(); i++) {
+                    treePd->GetCellPoints(cellIds->GetId(i), _num, _cell);
 
-    // }
+                    if (_cell[0] != cell[0] && _cell[1] != cell[0] && _cell[0] != cell[1] && _cell[1] != cell[1]) {
+                        // schnitt gefunden
+
+                        return true;
+                    }
+                }
+            }
+
+        }
+
+    }
 
     return false;
 
@@ -2577,6 +2588,8 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
 
     vtkIdType i, j, numLines = contLines->GetNumberOfCells();
 
+    IdsType _failed;
+
     for (i = 0; i < numLines; i++) {
 
         if (contLines->GetCellType(i) == VTK_EMPTY_CELL) {
@@ -2668,9 +2681,20 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
             locsB.emplace(lsB, ppB->pB.loc);
 
         } else {
-            return true;
+            _failed.push_back(i);
+
+            // return true;
         }
 
+    }
+
+    if (_failed.size() > 0) {
+        for (auto i : _failed) {
+            std::cout << "failed at " << i
+                << std::endl;
+        }
+
+        return true;
     }
 
     // reale kombination der ermittelten regionen

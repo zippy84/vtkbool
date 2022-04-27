@@ -621,128 +621,69 @@ void vtkPolyDataContactFilter::InterPolys (vtkIdType idA, vtkIdType idB) {
     dA = vtkMath::Dot(nA, ptA);
     dB = vtkMath::Dot(nB, ptB);
 
-    // sind die ebenen parallel?
+    // richtungsvektor
 
-    double p = std::abs(vtkMath::Dot(nA, nB));
+    double r[3];
+    vtkMath::Cross(nA, nB, r);
+    vtkMath::Normalize(r);
 
-    if (p < 0.999999) {
+    // std::cout << r[0] << ", "
+    //      << r[1] << ", "
+    //       << r[2] << std::endl;
 
-        // richtungsvektor
+    // lsg. des lin. gls. mittels cramerscher regel
 
-        double r[3];
-        vtkMath::Cross(nA, nB, r);
-        vtkMath::Normalize(r);
+    int i = 0;
 
-        // lsg. des lin. gls. mittels cramerscher regel
-
-        int i = 0;
-
-        for (int j = 1; j < 3; j++) {
-            if (std::abs(r[j]) > std::abs(r[i])) {
-                i = j;
-            }
+    for (int j = 1; j < 3; j++) {
+        if (std::abs(r[j]) > std::abs(r[i])) {
+            i = j;
         }
+    }
 
-        int inds[] = {1, 2};
+    int inds[] = {1, 2};
 
-        if (i == 1) {
-            inds[0] = 0; inds[1] = 2;
-        } else if (i == 2) {
-            inds[0] = 0; inds[1] = 1;
-        }
+    if (i == 1) {
+        inds[0] = 0; inds[1] = 2;
+    } else if (i == 2) {
+        inds[0] = 0; inds[1] = 1;
+    }
 
-        double det = nA[inds[0]]*nB[inds[1]]-nB[inds[0]]*nA[inds[1]];
+    double det = nA[inds[0]]*nB[inds[1]]-nB[inds[0]]*nA[inds[1]];
 
-        // ein punkt auf der schnittgeraden der beiden ebenen
+    if (det == 0) {
+        return;
+    }
 
-        double s[3];
-        s[inds[0]] = (dA*nB[inds[1]]-dB*nA[inds[1]])/det;
-        s[inds[1]] = (nA[inds[0]]*dB-nB[inds[0]]*dA)/det;
-        s[i] = 0;
+    // ein punkt auf der schnittgeraden der beiden ebenen
+
+    double s[3];
+    s[inds[0]] = (dA*nB[inds[1]]-dB*nA[inds[1]])/det;
+    s[inds[1]] = (nA[inds[0]]*dB-nB[inds[0]]*dA)/det;
+    s[i] = 0;
 
 #ifdef DEBUG
-        std::cout << "r [" << r[0] << ", " << r[1] << ", " << r[2] << "]"
-            << ", s [" << s[0] << ", " << s[1] << ", " << s[2] << "]"
-            << std::endl;
+    std::cout << "r [" << r[0] << ", " << r[1] << ", " << r[2] << "]"
+        << ", s [" << s[0] << ", " << s[1] << ", " << s[2] << "]"
+        << std::endl;
 #endif
 
-        InterPtsType intersA, intersB;
+    InterPtsType intersA, intersB;
 
-        vtkPolyDataContactFilter::InterPolyLine(intersA, pdA, numA, polyA, r, s, Src::A, nA);
-        vtkPolyDataContactFilter::InterPolyLine(intersB, pdB, numB, polyB, r, s, Src::B, nB);
+    vtkPolyDataContactFilter::InterPolyLine(intersA, pdA, numA, polyA, r, s, Src::A, nA);
+    vtkPolyDataContactFilter::InterPolyLine(intersB, pdB, numB, polyB, r, s, Src::B, nB);
 
 #ifdef DEBUG
-        std::cout << "intersA " << intersA.size()
-            << ", intersB " << intersB.size()
-            << std::endl;
+    std::cout << "intersA " << intersA.size()
+        << ", intersB " << intersB.size()
+        << std::endl;
 #endif
 
 
-        if (intersA.size() != 0 && intersB.size() != 0
-            && intersA.size()%2 == 0 && intersB.size()%2 == 0) {
+    if (intersA.size() != 0 && intersB.size() != 0
+        && intersA.size()%2 == 0 && intersB.size()%2 == 0) {
 
-            AddContactLines(intersA, intersB, polyA, polyB, idA, idB);
-        }
-
-    } else if (std::abs(dA-dB) < 1e-5) {
-        // parallel und auf der gleichen ebene
-
-        // überschneidung ermitteln
-
-        /*vtkIdType i, j;
-
-        double r[3], l;
-
-        for (i = 0; i < numA; i++) {
-            j = i+1 == numA ? 0 : i+1;
-
-            pdA->GetPoint(polyA[i], ptA);
-            pdA->GetPoint(polyA[j], ptB);
-
-            vtkMath::Subtract(ptB, ptA, r);
-            l = vtkMath::Normalize(r);
-
-            InterPtsType intersA{{0, i, ptA[0], ptA[1], ptA[2], i, j, Src::A},
-                {l, j, ptB[0], ptB[1], ptB[2], i, j, Src::A}},
-                intersB;
-
-            vtkPolyDataContactFilter::InterPolyLine(intersB, pdB, numB, polyB, r, ptA, Src::B, nB);
-
-#ifdef DEBUG
-            std::cout << "intersB " << intersB.size() << std::endl;
-#endif
-
-            if (intersB.size() != 0 && intersB.size()%2 == 0) {
-                AddContactLines(intersA, intersB, polyA, polyB, idA, idB);
-            }
-
-        }
-
-        for (i = 0; i < numB; i++) {
-            j = i+1 == numB ? 0 : i+1;
-
-            pdB->GetPoint(polyB[i], ptA);
-            pdB->GetPoint(polyB[j], ptB);
-
-            vtkMath::Subtract(ptB, ptA, r);
-            l = vtkMath::Normalize(r);
-
-            InterPtsType intersA,
-                intersB{{0, i, ptA[0], ptA[1], ptA[2], i, j, Src::B},
-                {l, j, ptB[0], ptB[1], ptB[2], i, j, Src::B}};
-
-            vtkPolyDataContactFilter::InterPolyLine(intersA, pdA, numA, polyA, r, ptA, Src::A, nA);
-
-#ifdef DEBUG
-            std::cout << "intersA " << intersA.size() << std::endl;
-#endif
-
-            if (intersA.size() != 0 && intersA.size()%2 == 0) {
-                AddContactLines(intersA, intersB, polyA, polyB, idA, idB);
-            }
-
-        }*/
-
+        AddContactLines(intersA, intersB, polyA, polyB, idA, idB);
     }
 
 }

@@ -5,6 +5,7 @@ DEPENDS
   VTK::CommonExecutionModel
   VTK::FiltersPoints
   VTK::IOLegacy
+  VTK::FiltersFlowPaths
 TEST_DEPENDS
   VTK::RenderingFreeType
   VTK::FiltersSources

@@ -67,7 +67,7 @@ if(VTKBOOL_PARAVIEW)
 
 else()
 
-    find_package(VTK REQUIRED COMPONENTS FiltersSources IOLegacy FiltersExtraction FiltersGeometry FiltersModeling WrappingPythonCore OPTIONAL_COMPONENTS NO_MODULE)
+    find_package(VTK REQUIRED COMPONENTS FiltersSources IOLegacy FiltersExtraction FiltersGeometry FiltersModeling FiltersFlowPaths WrappingPythonCore OPTIONAL_COMPONENTS NO_MODULE)
 
     if(VTK_FOUND)
 
@@ -93,30 +93,23 @@ else()
 
         vtk_module_python_default_destination(python_default_destination)
 
-        # get_cmake_property(vars VARIABLES)
-        # list(FILTER vars INCLUDE REGEX "^VTK")
-        # foreach(v ${vars})
-        #     message(STATUS "${v}=${${v}}")
-        # endforeach()
+        add_test(NAME "import_vtkbool"
+            COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/testing/test_python.py)
 
-        if(TARGET VTK::vtkpython)
+        set_property(TEST "import_vtkbool" APPEND PROPERTY ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/${python_default_destination}/vtkbool")
 
-            add_test(NAME "import_vtkbool"
-                COMMAND
-                    "$<TARGET_FILE:VTK::vtkpython>"
-                    "${CMAKE_SOURCE_DIR}/testing/test_python.py")
+        add_test(NAME "generate_frieze"
+            COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/testing/generate_frieze.py
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/testing)
 
-            set_property(TEST "import_vtkbool" APPEND PROPERTY ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/${python_default_destination}/vtkbool")
+        set_property(TEST "generate_frieze" APPEND PROPERTY ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/${python_default_destination}/vtkbool")
 
-            add_test(NAME "create_frieze_parts"
-                COMMAND
-                    "$<TARGET_FILE:VTK::vtkpython>"
-                    "${CMAKE_SOURCE_DIR}/testing/create_frieze_parts.py"
-                WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/testing")
+        add_test(NAME "test_filter"
+            COMMAND ${Python3_EXECUTABLE} -m pytest
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/testing)
 
-            set_property(TEST "create_frieze_parts" APPEND PROPERTY ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/${python_default_destination}/vtkbool")
+        set_property(TEST "test_filter" APPEND PROPERTY ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/${python_default_destination}/vtkbool")
 
-        endif()
 
     endif(VTK_FOUND)
 

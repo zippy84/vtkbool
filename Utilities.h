@@ -93,7 +93,7 @@ T Mod (T a, U b) {
 class Base {
 public:
     Base () = delete;
-    Base (vtkPoints *pts, vtkIdType num, vtkIdType *poly);
+    Base (vtkPoints *pts, vtkIdType num, const vtkIdType *poly);
     double n[3], ei[3], ej[3], d;
 };
 
