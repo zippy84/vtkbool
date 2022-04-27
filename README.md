@@ -39,7 +39,7 @@ You can support my project with [PayPal](https://paypal.me/zippy84).
 
 ## Requirements
 
-- CMake >= 3.1
+- CMake >= 3.12
 - VTK >= 9.0
 - C++11 compiler
 
@@ -66,12 +66,13 @@ The alternative is the more generic `SetOperMode`. The method must be called wit
 
 Create a directory somewhere in your file system, download vtkbool and unpack it into that. Then create the following two files:
 
-**exp.cxx**
+**test.cxx**
 
 ```C++
+#include <vtkSmartPointer.h>
 #include <vtkCubeSource.h>
 #include <vtkCylinderSource.h>
-#include <vtkSmartPointer.h>
+#include <vtkPolyDataWriter.h>
 
 #include "vtkPolyDataBooleanFilter.h"
 
@@ -90,7 +91,7 @@ int main (int argc, char *argv[]) {
     bf->SetOperModeToDifference();
 
     vtkSmartPointer<vtkPolyDataWriter> writer = vtkSmartPointer<vtkPolyDataWriter>::New();
-    writer->SetInputConnection(bf->GetOutputPort(1))
+    writer->SetInputConnection(bf->GetOutputPort(1));
     writer->SetFileName("result.vtk");
     writer->Update();
 
@@ -101,23 +102,29 @@ int main (int argc, char *argv[]) {
 **CMakeLists.txt**
 
 ```CMake
-cmake_minimum_required(VERSION 3.1)
-project(exp)
+cmake_minimum_required(VERSION 3.12)
+project(test)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-include_directories(vtkbool-master)
+# find_package(VTK REQUIRED COMPONENTS FiltersSources IOLegacy)
 
-add_subdirectory(vtkbool-master)
+find_package(VTK REQUIRED COMPONENTS FiltersSources IOLegacy FiltersExtraction FiltersGeometry FiltersModeling FiltersFlowPaths WrappingPythonCore)
 
-find_package(VTK REQUIRED COMPONENTS vtkFiltersSources NO_MODULE)
-include(${VTK_USE_FILE})
+if(VTK_FOUND)
+    include_directories(vtkbool-refactoring)
+    add_subdirectory(vtkbool-refactoring)
 
-include_directories(vtkbool-master/libs/vp)
+    add_executable(test test.cxx)
+    target_link_libraries(test PRIVATE vtkBool ${VTK_LIBRARIES})
 
-add_executable(exp exp.cxx)
-target_link_libraries(exp ${VTK_LIBRARIES} vtkbool)
+    vtk_module_autoinit(
+        TARGETS test
+        MODULES ${VTK_LIBRARIES}
+    )
+endif(VTK_FOUND)
+
 ```
 
 Also create a directory named build. If you are on Linux, open a terminal and enter this directory. Run `ccmake ..`, follow the instructions, and finally type `make`.
@@ -126,7 +133,7 @@ Also create a directory named build. If you are on Linux, open a terminal and en
 
 To build the plugin you have to compile ParaView from source. Download the current version from <http://www.paraview.org> and follow the compilation instructions. As soon as ParaView is compiled, it may take a while, you can build the plugin by activating the **VTKBOOL_PARAVIEW** option within CMake. In CMake you also have to point to **ParaView_DIR** if CMake can't found it and it is not installed in a common location like */usr/lib* or */usr/local/lib*. Make sure **PARAVIEW_INSTALL_DEVELOPMENT_FILES** is set.
 
-When everything has been compiled successfully, you can install the plugin. For that purpose I made screenshots from the necessary steps. You can find them under *paraview\_plugin/install/*. There is also a screenshot of how to use it.
+When everything has been compiled successfully, you can install the plugin. ~~For that purpose I made screenshots from the necessary steps. You can find them under *paraview\_plugin/install/*. There is also a screenshot of how to use it.~~
 
 ## Python
 
@@ -140,7 +147,7 @@ After a successful compilation, the module can be used as follows:
 
 ```python
 import sys
-sys.path.append('/path/to/your/build/directory')
+sys.path.append('/path/to/your/build/directory') # also look at the python files of the testing directory
 
 from vtkmodules.vtkFiltersSources import vtkCubeSource, vtkSphereSource
 from vtkmodules.vtkIOLegacy import vtkPolyDataWriter
