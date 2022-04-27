@@ -1,6 +1,6 @@
 # vtkbool [![Travis CI Build Status](https://travis-ci.com/zippy84/vtkbool.svg?branch=master)](https://travis-ci.com/zippy84/vtkbool) [![Appveyor Build Status](https://ci.appveyor.com/api/projects/status/github/zippy84/vtkbool?branch=master&svg=true)](https://ci.appveyor.com/project/zippy84/vtkbool) [![Coverage Status](https://codecov.io/gh/zippy84/vtkbool/branch/master/graph/badge.svg)](https://codecov.io/gh/zippy84/vtkbool)
 
-![](https://raw.github.com/zippy84/vtkbool/master/cover.png)
+![](/cover.png)
 
 ## About
 
@@ -23,8 +23,8 @@ You can support my project with [PayPal](https://paypal.me/zippy84).
 - CellData is passed (attached by the rules of vtkAppendPolyData)
 - original cell ids are added to CellData (*OrigCellIdsA* and *OrigCellIdsB* as vtkIntArray)
 - contact lines are available
-- non-convex polygons are decomposed
-- the filter is able to embed holes
+- ~~ non-convex polygons are decomposed ~~
+- ~~ the filter is able to embed holes ~~
 - it is also a plugin for ParaView
 - Python wrapped
 
@@ -40,19 +40,19 @@ You can support my project with [PayPal](https://paypal.me/zippy84).
 ## Requirements
 
 - CMake >= 3.1
-- VTK >= 6.1
+- VTK >= 9.0
 - C++11 compiler
 
 ### Optional
 
 - ParaView >= 5.0
-- Python 2.7 or 3.x
+- Python 3.x
 
 ## Library
 
-To include vtkbool into your program, you have to compile it as a library. All you need is an installation of VTK with header files. If you have installed VTK over your package manager, CMake is able to find the required files. Otherwise you have to set **VTK\_DIR** manually. It must be a path like */home/zippy/VTK6/lib/cmake/vtk-6.3* or *C:/Users/zippy/VTK6/lib/cmake/vtk-6.3*.
+To include vtkbool into your program, you have to compile it as a library. All you need is an installation of VTK with header files. If you have installed VTK over your package manager, CMake is able to find the required files. Otherwise you have to set **VTK\_DIR** manually. It must be a path like */home/zippy/VTK9/lib/cmake/vtk-9.1* or *C:/Users/zippy/VTK9/lib/cmake/vtk-9.1*.
 
-The usage of the library is very simple. Look at *testing.cxx* and you can see how. Upon creating the instance of the boolean-filter and connecting the two inputs with the pipeline, you can choose between different operation types, in different manners. You can set the operation mode by calling one of the named methods:
+The usage of the library is very simple. Look at the example in the section below. You can set the operation mode by calling one of the named methods:
 
 - `SetOperModeToNone`
 - `SetOperModeToUnion`
@@ -133,7 +133,7 @@ When everything has been compiled successfully, you can install the plugin. For 
 The Python module will be generated automatically, if three conditions are met:
 
 - vtkbool is configured as a library
-- Python 2 or 3 is installed with header files
+- Python 3 is installed with header files
 - VTK itself is wrapped to Python
 
 After a successful compilation, the module can be used as follows:
@@ -142,24 +142,24 @@ After a successful compilation, the module can be used as follows:
 import sys
 sys.path.append('/path/to/your/build/directory')
 
-import vtk
-import vtkboolPython
+from vtkmodules.vtkFiltersSources import vtkCubeSource, vtkSphereSource
+from vtkBool import vtkPolyDataBooleanFilter
 
-cube = vtk.vtkCubeSource()
+cube = vtkCubeSource()
 
-sphere = vtk.vtkSphereSource()
+sphere = vtkSphereSource()
 sphere.SetCenter(.5, .5, .5)
 sphere.SetThetaResolution(20)
 sphere.SetPhiResolution(20)
 
-boolean = vtkboolPython.vtkPolyDataBooleanFilter()
+boolean = vtkPolyDataBooleanFilter()
 boolean.SetInputConnection(0, cube.GetOutputPort())
 boolean.SetInputConnection(1, sphere.GetOutputPort())
 boolean.SetOperModeToDifference()
 
 # write the result, if you want ...
 
-writer = vtk.vtkPolyDataWriter()
+writer = vtkPolyDataWriter()
 writer.SetInputConnection(boolean.GetOutputPort())
 writer.SetFileName('result.vtk')
 
@@ -168,7 +168,7 @@ writer.Update()
 
 ## Copyright
 
-2012-2020 Ronald Römer
+2012-2022 Ronald Römer
 
 ## License
 
