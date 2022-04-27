@@ -23,8 +23,8 @@ You can support my project with [PayPal](https://paypal.me/zippy84).
 - CellData is passed (attached by the rules of vtkAppendPolyData)
 - original cell ids are added to CellData (*OrigCellIdsA* and *OrigCellIdsB* as vtkIntArray)
 - contact lines are available
-- ~~ non-convex polygons are decomposed ~~
-- ~~ the filter is able to embed holes ~~
+- ~~non-convex polygons are decomposed~~
+- ~~the filter is able to embed holes~~
 - it is also a plugin for ParaView
 - Python wrapped
 
@@ -143,6 +143,7 @@ import sys
 sys.path.append('/path/to/your/build/directory')
 
 from vtkmodules.vtkFiltersSources import vtkCubeSource, vtkSphereSource
+from vtkmodules.vtkIOLegacy import vtkPolyDataWriter
 from vtkBool import vtkPolyDataBooleanFilter
 
 cube = vtkCubeSource()
