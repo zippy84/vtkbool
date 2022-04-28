@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
 project(vtkbool VERSION 3.0)
 
 set(CMAKE_CXX_STANDARD 11)
@@ -70,6 +70,10 @@ else()
     find_package(VTK REQUIRED COMPONENTS FiltersSources IOLegacy FiltersExtraction FiltersGeometry FiltersModeling FiltersFlowPaths WrappingPythonCore OPTIONAL_COMPONENTS NO_MODULE)
 
     if(VTK_FOUND)
+
+        if(VTK_VERSION VERSION_LESS "9.0.0")
+            message(FATAL_ERROR "vtkbool requires VTK 9.0.0 or newer.")
+        endif()
 
         vtk_module_scan(
             MODULE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/module/vtk.module"

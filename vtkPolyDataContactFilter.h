@@ -22,9 +22,7 @@ limitations under the License.
 #include <set>
 
 #include <vtkPolyDataAlgorithm.h>
-
 #include <vtkIdTypeArray.h>
-#include <vtkCharArray.h>
 
 #include "Utilities.h"
 
