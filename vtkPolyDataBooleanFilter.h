@@ -57,8 +57,8 @@ enum class Loc {
 class StripPt {
 public:
     StripPt () : t(0), capt(Capt::NOT), catched(true) {
-        edge[0] = NO_USE;
-        edge[1] = NO_USE;
+        edge[0] = NOTSET;
+        edge[1] = NOTSET;
     }
 
     double t;
@@ -89,9 +89,9 @@ public:
 
 class StripPtR {
 public:
-    StripPtR (vtkIdType _ind) : ind(_ind), strip(NO_USE), ref(NO_USE), side(Side::NONE) {
-        desc[0] = NO_USE;
-        desc[1] = NO_USE;
+    StripPtR (vtkIdType _ind) : ind(_ind), strip(NOTSET), ref(NOTSET), side(Side::NONE) {
+        desc[0] = NOTSET;
+        desc[1] = NOTSET;
     }
 
     vtkIdType ind, desc[2];
@@ -117,51 +117,43 @@ typedef std::vector<StripType> StripsType;
 
 class PStrips {
 public:
-    PStrips () {}
-    double n[3];
-    IdsType poly;
+    PStrips (vtkPolyData *pd, vtkIdType cellId) {
+        const vtkIdType *cell;
+
+        pd->GetCellPoints(cellId, numPts, cell);
+
+        for (vtkIdType i = 0; i < numPts; i++) {
+            poly.push_back(cell[i]);
+        }
+
+        ComputeNormal(pd->GetPoints(), n, numPts, cell);
+
+        base = Base(pd->GetPoints(), numPts, cell);
+    }
+
     StripPtsType pts;
     StripsType strips;
+
+    double n[3];
+    IdsType poly;
     vtkIdType numPts;
+    Base base;
 };
 
 typedef std::map<vtkIdType, PStrips> PolyStripsType;
 
 typedef std::vector<std::reference_wrapper<StripPtR>> RefsType;
 
-class MergePt {
+class Merger {
+    vtkPolyData *pd;
+    const PStrips &pStrips;
+    vtkIdType origId;
+
+    PolysType polys;
 public:
-    MergePt (vtkIdType _polyId, vtkIdType _ind) : polyId(_polyId), ind(_ind) {}
-    vtkIdType polyId, ind;
-    bool operator== (const MergePt &other) const {
-        return polyId == other.polyId && ind == other.ind;
-    };
-
-    friend std::ostream& operator<< (std::ostream &out, const MergePt &p) {
-        out << "ind " << p.ind
-            << ", polyId " << p.polyId;
-        return out;
-    }
+    Merger (vtkPolyData *pd, const PStrips &pStrips, const StripsType &strips, const IdsType &descIds, vtkIdType origId);
+    void run ();
 };
-
-// typedef std::vector<IdsType> HolesType;
-
-// class _Wrapper {
-//     vtkPolyData *pd;
-//     IdsType descIds;
-//     vtkIdType origId;
-
-//     Base base;
-//     HolesType holes;
-// public:
-//     _Wrapper (vtkPolyData* _pd, IdsType& _descIds, vtkIdType _origId)
-//         : pd(_pd), descIds(_descIds), origId(_origId) {}
-
-//     void MergeAll ();
-//     void Add (IdsType &hole) {
-//         holes.push_back(hole);
-//     }
-// };
 
 class VTK_EXPORT vtkPolyDataBooleanFilter : public vtkPolyDataAlgorithm {
     vtkPolyData *resultA, *resultB, *resultC;

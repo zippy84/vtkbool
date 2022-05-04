@@ -26,7 +26,7 @@ limitations under the License.
 #include <vtkIdList.h>
 #include <vtkMath.h>
 
-#define NO_USE -1
+#define NOTSET -1
 
 double GetAngle (double *vA, double *vB, double *n);
 
@@ -36,10 +36,12 @@ void FindPoints (vtkKdTreePointLocator *pl, const double *pt, vtkIdList *pts, do
 void WriteVTK (const char *name, vtkPolyData *pd);
 
 class Point3d {
-    const double x, y, z;
 public:
+    const double x, y, z;
+    vtkIdType id;
+
     Point3d () = delete;
-    Point3d (const double _x, const double _y, const double _z) : x(_x), y(_y), z(_z) {}
+    Point3d (const double _x, const double _y, const double _z, vtkIdType _id = NOTSET) : x(_x), y(_y), z(_z), id(_id) {}
     bool operator< (const Point3d &other) const {
         const long x1 = std::lround(x*1e5),
             y1 = std::lround(y*1e5),
@@ -92,13 +94,13 @@ T Mod (T a, U b) {
 
 class Base {
 public:
-    Base () = delete;
+    Base () {}
     Base (vtkPoints *pts, vtkIdType num, const vtkIdType *poly);
     double n[3], ei[3], ej[3], d;
 };
 
 void Transform (const double *in, double *out, const Base &base);
-// void BackTransform (const double *in, double *out, const Base &base);
+void BackTransform (const double *in, double *out, const Base &base);
 
 inline void Cpy (double *a, const double *b, const int n = 2) {
     std::copy_n(b, n, a);
@@ -108,5 +110,8 @@ template<typename T>
 std::ostream& operator<< (typename std::enable_if<std::is_enum<T>::value, std::ostream>::type& stream, const T& e) {
     return stream << static_cast<typename std::underlying_type<T>::type>(e);
 }
+
+typedef std::vector<Point3d> Poly;
+typedef std::vector<Poly> PolysType;
 
 #endif

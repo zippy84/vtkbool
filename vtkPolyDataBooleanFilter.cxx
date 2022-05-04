@@ -402,7 +402,7 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, vtkIdTypeArray *
                 for (i = 0; i < numPts; i++) {
                     j = i+1 == numPts ? 0 : i+1;
 
-                    if (src != NO_USE && !(i == src || j == src)) {
+                    if (src != NOTSET && !(i == src || j == src)) {
                         continue;
                     }
 
@@ -477,7 +477,7 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, vtkIdTypeArray *
 
                 }
 
-                if (src != NO_USE && sp.edge[0] == NO_USE) {
+                if (src != NOTSET && sp.edge[0] == NOTSET) {
                     sp.catched = false;
                 }
 
@@ -557,18 +557,11 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
         IdsType &lines = itr->second;
         RemoveDuplicates(lines);
 
-        PStrips &pStrips = polyStrips[itr->first];
+        polyStrips.emplace(std::piecewise_construct,
+            std::forward_as_tuple(itr->first),
+            std::forward_as_tuple(pd, itr->first));
 
-        const vtkIdType *polyPts;
-
-        vtkIdType i;
-        pd->GetCellPoints(itr->first, pStrips.numPts, polyPts);
-
-        for (i = 0; i < pStrips.numPts; i++) {
-            pStrips.poly.push_back(polyPts[i]);
-        }
-
-        ComputeNormal(pd->GetPoints(), pStrips.n, pStrips.numPts, polyPts);
+        PStrips &pStrips = polyStrips.at(itr->first);
 
         GetStripPoints(pd, sources, pStrips, lines);
 
@@ -596,7 +589,7 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
 
     for (StripPt &sp : notCatched) {
         for (itr = polyLines.begin(); itr != polyLines.end(); ++itr) {
-            const PStrips &pStrips = polyStrips[itr->first];
+            const PStrips &pStrips = polyStrips.at(itr->first);
 
             try {
                 const StripPt &corr = pStrips.pts.at(sp.ind);
@@ -605,7 +598,7 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
                     if (corr.capt == Capt::A) {
                         sp.capt = Capt::A;
                         sp.edge[0] = corr.edge[0];
-                        sp.edge[1] = Next(polyStrips[sp.polyId].poly, sp.edge[0]);
+                        sp.edge[1] = Next(polyStrips.at(sp.polyId).poly, sp.edge[0]);
 
                         sp.t = 0;
 
@@ -705,7 +698,7 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
     StripPtsType::const_iterator itr2;
 
     for (itr = polyLines.begin(); itr != polyLines.end(); ++itr) {
-        PStrips &pStrips = polyStrips[itr->first];
+        PStrips &pStrips = polyStrips.at(itr->first);
 
         const IdsType &lines = itr->second;
         const StripPtsType &pts = pStrips.pts;
@@ -818,12 +811,7 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
 
             const StripsType &strips = pStrips.strips;
             const StripPtsType &pts = pStrips.pts;
-
-            vtkIdType num;
-            const vtkIdType *cell;
-            pd->GetCellPoints(itr->first, num, cell);
-
-            Base base(pd->GetPoints(), num, cell);
+            const Base &base = pStrips.base;
 
             vtkSmartPointer<vtkPoints> treePts = vtkSmartPointer<vtkPoints>::New();
 
@@ -858,6 +846,9 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
             vtkSmartPointer<vtkModifiedBSPTree> tree = vtkSmartPointer<vtkModifiedBSPTree>::New();
             tree->SetDataSet(treePd);
             tree->BuildLocator();
+
+            vtkIdType num;
+            const vtkIdType *cell;
 
             auto lineItr = vtk::TakeSmartPointer(treePd->GetLines()->NewIterator());
 
@@ -1045,30 +1036,14 @@ void vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
         StripsType::iterator itr2;
         StripType::iterator itr3;
 
-        // holes sammeln
+        // holes sichern
+        StripsType holes;
 
-        // HolesType holes;
+        auto _itr = std::remove_if(strips.begin(), strips.end(), [&](const StripType &s) {
+            return pts[s.front().ind].capt == Capt::NOT && pts[s.back().ind].capt == Capt::NOT; });
 
-        // for (itr2 = strips.begin(); itr2 != strips.end(); ++itr2) {
-        //     StripType &s = *itr2;
-        //     if (pts[s.front().ind].capt == Capt::NOT && pts[s.back().ind].capt == Capt::NOT) {
-        //         IdsType hole;
-
-        //         for (auto& sp : s) {
-        //             hole.push_back(pdPts->InsertNextPoint(pts[sp.ind].pt));
-        //         }
-
-        //         // anfang und ende sind ja gleich
-        //         hole.pop_back();
-
-        //         holes.push_back(std::move(hole));
-
-        //     }
-        // }
-
-        // holes löschen
-        strips.erase(std::remove_if(strips.begin(), strips.end(), [&](const StripType &s) {
-            return pts[s.front().ind].capt == Capt::NOT && pts[s.back().ind].capt == Capt::NOT; }), strips.end());
+        std::copy(_itr, strips.end(), std::back_inserter(holes));
+        strips.erase(_itr, strips.end());
 
         for (itr2 = strips.begin(); itr2 != strips.end(); ++itr2) {
             StripType &strip = *itr2;
@@ -1625,17 +1600,8 @@ void vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
 
         pd->DeleteCell(polyInd);
 
-        // holes verarbeiten
-
-        // if (!holes.empty()) {
-        //     _Wrapper w(pd, descIds, origId);
-
-        //     for (auto& hole : holes) {
-        //         w.Add(hole);
-        //     }
-
-        //     w.MergeAll();
-        // }
+        // holes einbauen
+        Merger(pd, pStrips, holes, descIds, origId).run();
 
     }
 
@@ -2163,7 +2129,7 @@ void vtkPolyDataBooleanFilter::MergePoints (vtkPolyData *pd, PolyStripsType &pol
     for (itr3 = neighPts.begin(); itr3 != neighPts.end(); ++itr3) {
         const auto &inds = itr3->second;
 
-        std::map<Point3d, std::vector<MergePt>> pairs;
+        std::map<Point3d, std::vector<Pair>> pairs;
 
         contLines->GetPoint(itr3->first, pt);
 
@@ -2205,7 +2171,7 @@ void vtkPolyDataBooleanFilter::MergePoints (vtkPolyData *pd, PolyStripsType &pol
             }
         }
 
-        std::deque<std::deque<std::reference_wrapper<const MergePt>>> Pairs;
+        std::deque<std::deque<std::reference_wrapper<const Pair>>> Pairs;
 
         decltype(pairs)::const_iterator itr4;
 
@@ -2265,7 +2231,7 @@ void vtkPolyDataBooleanFilter::MergePoints (vtkPolyData *pd, PolyStripsType &pol
 
             if (itr5 == Pairs.end()) {
                 for (itr6 = group.begin()+1; itr6 != group.end(); ++itr6) {
-                    pd->ReplaceCellPoint(itr6->get().polyId, itr6->get().ind, group.front().get().ind);
+                    pd->ReplaceCellPoint(itr6->get().f, itr6->get().g, group.front().get().g);
                 }
 
                 group.clear();
@@ -2868,94 +2834,79 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
 
 }
 
-// void _Wrapper::MergeAll () {
-//     vtkPoints *pdPts = pd->GetPoints();
+Merger::Merger (vtkPolyData *pd, const PStrips &pStrips, const StripsType &strips, const IdsType &descIds, vtkIdType origId) : pd(pd), pStrips(pStrips), origId(origId) {
 
-//     vtkIdTypeArray *origCellIds = vtkIdTypeArray::SafeDownCast(pd->GetCellData()->GetScalars("OrigCellIds"));
+    const StripPtsType &pts = pStrips.pts;
+    const Base &base = pStrips.base;
 
-//     vtkIdList *cell = vtkIdList::New();
+    for (auto &strip : strips) {
+        Poly p;
 
-//     // descendants in holes einfügen
+        for (auto &sp : strip) {
+            const double *pt = pts.at(sp.ind).pt;
 
-//     vtkIdType i, numPts;
+            double proj[2];
+            Transform(pt, proj, base);
 
-//     std::set<vtkIdType> outerIds;
+            p.emplace_back(proj[0], proj[1], 0);
+        }
 
-//     for (vtkIdType id : descIds) {
-//         pd->GetCellPoints(id, cell);
-//         numPts = cell->GetNumberOfIds();
+        p.pop_back();
 
-//         IdsType hole;
+        polys.push_back(p);
+    }
 
-//         for (i = 0; i < numPts; i++) {
-//             hole.push_back(cell->GetId(i));
-//         }
+    vtkIdType i, num;
+    const vtkIdType *cell;
 
-//         outerIds.insert(hole.begin(), hole.end());
+    double pt[3];
 
-//         holes.push_back(std::move(hole));
+    for (auto id : descIds) {
+        pd->GetCellPoints(id, num, cell);
 
-//         // löscht
-//         pd->DeleteCell(id);
-//     }
+        Poly p;
 
-//     base = Base(pdPts, cell);
+        for (i = 0; i < num; i++) {
+            pd->GetPoint(cell[i], pt);
 
-//     double a[3], b[2];
+            double proj[2];
+            Transform(pt, proj, base);
 
-//     Merger m;
+            p.emplace_back(proj[0], proj[1], 0, cell[i]);
 
-//     for (const IdsType &hole : holes) {
-//         PolyType casted;
+        }
 
-//         for (vtkIdType id : hole) {
-//             pd->GetPoint(id, a);
+        polys.push_back(p);
+    }
 
-//             Transform(a, b, base);
+}
 
-//             casted.emplace_back(b, id);
-//         }
+void Merger::run () {
+    // mergen mit hilfe von vtkKdTree und vtkModifiedBSPTree
 
-//         if (TestCW(casted)) {
-//             std::reverse(casted.begin(), casted.end());
-//         }
+    vtkPoints *pdPts = pd->GetPoints();
+    vtkIdTypeArray *origCellIds = vtkIdTypeArray::SafeDownCast(pd->GetCellData()->GetScalars("OrigCellIds"));
 
-//         m.AddPoly(casted);
-//     }
+    const Base &base = pStrips.base;
 
-//     PolysType merged;
-//     m.GetMerged(merged);
+    PolysType merged;
 
-//     std::set<vtkIdType> usedIds;
+    for (auto &poly : merged) {
+        vtkSmartPointer<vtkIdList> newCell = vtkSmartPointer<vtkIdList>::New();
 
-//     for (auto &poly : merged) {
-//         cell->Reset();
+        for (auto &p : poly) {
+            double in[] = {p.x, p.y},
+                out[3];
 
-//         // poly ist immer ccw
+            BackTransform(in, out, base);
 
-//         std::map<vtkIdType, vtkIdType> repl;
+            vtkIdType id = p.id == NOTSET ? pdPts->InsertNextPoint(out) : p.id;
 
-//         for (auto &p : poly) {
-//             if (outerIds.count(p.id) == 1 || usedIds.count(p.id) == 0) {
-//                 repl.emplace(p.id, p.id);
-//             } else {
-//                 pd->GetPoint(p.id, a);
+            newCell->InsertNextId(id);
 
-//                 repl.emplace(p.id, pdPts->InsertNextPoint(a));
+        }
 
-//             }
-//         }
-
-//         for (auto &p : poly) {
-//             cell->InsertNextId(repl[p.id]);
-//             usedIds.insert(p.id);
-//         }
-
-//         pd->InsertNextCell(VTK_POLYGON, cell);
-//         origCellIds->InsertNextValue(origId);
-
-//     }
-
-//     cell->Delete();
-
-// }
+        pd->InsertNextCell(VTK_POLYGON, newCell);
+        origCellIds->InsertNextValue(origId);
+    }
+}

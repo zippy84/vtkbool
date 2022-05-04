@@ -348,7 +348,7 @@ void vtkPolyDataContactFilter::InterEdgeLine (InterPtsType &interPts, const doub
             if (s > -1e-6 && s < l+1e-6) {
                 double t = vtkMath::Determinant3x3(p, e, v)/(n*n);
 
-                vtkIdType end {NO_USE};
+                vtkIdType end {NOTSET};
 
                 if (s > -1e-6 && s < 1e-6) {
                     end = 0;
@@ -438,7 +438,7 @@ void vtkPolyDataContactFilter::InterPolyLine (InterPtsType &interPts, vtkPolyDat
                 p.edge[0] = i;
                 p.edge[1] = j;
 
-                if (p.end != NO_USE) {
+                if (p.end != NOTSET) {
                     p.end = p.end == 0 ? i : j;
                 }
 
@@ -476,7 +476,7 @@ void vtkPolyDataContactFilter::InterPolyLine (InterPtsType &interPts, vtkPolyDat
         for (auto &p : paired) {
             InterPtsType &pts = p.second;
 
-            if (pts.size() == 1 && pts.front().end != NO_USE) {
+            if (pts.size() == 1 && pts.front().end != NOTSET) {
                 // hier fehlt der zweite punkt
                 pts.push_back(pts.back());
             }
@@ -505,7 +505,7 @@ void vtkPolyDataContactFilter::InterPolyLine (InterPtsType &interPts, vtkPolyDat
         std::map<vtkIdType, double> ends;
 
         for (const auto &p : _paired) {
-            if (p.back().end != NO_USE) {
+            if (p.back().end != NOTSET) {
                 ends.emplace(p.back().end, p.back().t);
             }
         }
@@ -520,7 +520,7 @@ void vtkPolyDataContactFilter::InterPolyLine (InterPtsType &interPts, vtkPolyDat
         for (auto &p : _paired) {
             const InterPt &dupl = p.back();
 
-            if (dupl.end != NO_USE) {
+            if (dupl.end != NOTSET) {
                 before = dupl.end == 0 ? num-1 : dupl.end-1;
                 after = dupl.end == num-1 ? 0 : dupl.end+1;
 
@@ -701,7 +701,7 @@ void vtkPolyDataContactFilter::OverlapLines (OverlapsType &ols, InterPtsType &in
             return neigs->GetId(0);
         }
 
-        return NO_USE;
+        return NOTSET;
     };
 
     auto Add = [](InterPt &a, InterPt &b, InterPt &c, InterPt &d, vtkIdType neigA, vtkIdType neigB) {

@@ -28,9 +28,9 @@ import shutil
 import sys
 
 if __name__ == '__main__':
-    assert(os.environ.get('APPVEYOR') == 'True')
+    assert os.environ.get('APPVEYOR') == 'True'
 
-    assert(len(sys.argv) == 3)
+    assert len(sys.argv) == 3
 
     arg_zip = sys.argv[1]
     arg_dir = sys.argv[2]

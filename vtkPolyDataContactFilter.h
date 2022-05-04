@@ -36,7 +36,7 @@ enum class Src {
 
 class InterPt {
 public:
-    InterPt () : onEdge(false), end(NO_USE), srcA(NO_USE), srcB(NO_USE) {}
+    InterPt () : onEdge(false), end(NOTSET), srcA(NOTSET), srcB(NOTSET) {}
 
     InterPt (double _t, vtkIdType _end, double x, double y, double z) : InterPt() {
         t = _t;
@@ -76,16 +76,16 @@ public:
         assert(src != other.src);
 
         if (src == Src::A) {
-            srcA = end == NO_USE ? edge[0] : end;
+            srcA = end == NOTSET ? edge[0] : end;
         } else {
-            srcB = end == NO_USE ? edge[0] : end;
+            srcB = end == NOTSET ? edge[0] : end;
         }
 
         if (std::abs(other.t-t) < 1e-5) {
             if (other.src == Src::A) {
-                srcA = other.end == NO_USE ? other.edge[0] : other.end;
+                srcA = other.end == NOTSET ? other.edge[0] : other.end;
             } else {
-                srcB = other.end == NO_USE ? other.edge[0] : other.end;
+                srcB = other.end == NOTSET ? other.edge[0] : other.end;
             }
         }
     }

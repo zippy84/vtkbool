@@ -363,6 +363,64 @@ def test_same(tmp_path):
     write_result(bf, tmp_path)
     check_result(bf)
 
+# def test_disjoin(tmp_path):
+#     pts = [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0], [0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1], [.5, .5, 0], [.5, .5, 1]]
+#     polys = [
+#         [0, 1, 5, 4],
+#         [1, 2, 6, 5],
+#         [2, 3, 7, 6],
+#         [3, 0, 4, 7],
+#         [0, 8, 1],
+#         [1, 8, 2],
+#         [2, 8, 3],
+#         [3, 8, 0],
+#         [4, 5, 9],
+#         [5, 6, 9],
+#         [6, 7, 9],
+#         [7, 4, 9]
+#     ]
+
+#     _pts = vtkPoints()
+#     [ _pts.InsertNextPoint(*pt) for pt in pts ]
+
+#     pd = vtkPolyData()
+#     pd.Allocate(1)
+#     pd.SetPoints(_pts)
+
+#     for poly in polys:
+#         cell = vtkIdList()
+#         [ cell.InsertNextId(i) for i in poly ]
+#         pd.InsertNextCell(VTK_POLYGON, cell)
+
+#     cube = vtkCubeSource()
+#     cube.SetCenter(1, .5, .5)
+
+#     bf = vtkPolyDataBooleanFilter()
+#     bf.SetInputData(0, pd)
+#     bf.SetInputConnection(1, cube.GetOutputPort())
+#     bf.SetOperModeToNone()
+
+#     bf.Update()
+
+#     write_result(bf, tmp_path)
+#     check_result(bf)
+
+def test_merger(tmp_path):
+    cube = vtkCubeSource()
+
+    cyl = vtkCylinderSource()
+    cyl.SetRadius(.25)
+
+    bf = vtkPolyDataBooleanFilter()
+    bf.SetInputConnection(0, cube.GetOutputPort())
+    bf.SetInputConnection(1, cyl.GetOutputPort())
+    bf.SetOperModeToNone()
+
+    bf.Update()
+
+    write_result(bf, tmp_path)
+    check_result(bf)
+
 @pytest.mark.xfail
 def test_strips():
     cubeA = vtkCubeSource()
