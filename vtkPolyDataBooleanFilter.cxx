@@ -2853,6 +2853,16 @@ Merger::Merger (vtkPolyData *pd, const PStrips &pStrips, const StripsType &strip
 
         p.pop_back();
 
+        double n[3];
+        ComputeNormal(p, n);
+
+        std::cout << n[2] << std::endl;
+
+        if (n[2] < 0) {
+            Poly q(p.rbegin(), p.rend());
+            p.swap(q);
+        }
+
         polys.push_back(p);
     }
 
@@ -2888,6 +2898,16 @@ void Merger::run () {
     vtkIdTypeArray *origCellIds = vtkIdTypeArray::SafeDownCast(pd->GetCellData()->GetScalars("OrigCellIds"));
 
     const Base &base = pStrips.base;
+
+    PolysType::const_iterator itrA, itrB;
+
+    for (itrA = polys.begin(); itrA != polys.end(); ++itrA) {
+        for (itrB = polys.begin(); itrB != polys.end(); ++itrB) {
+            if (itrA != itrB && PointInPoly(*itrB, *itrA->begin())) {
+                // ...
+            }
+        }
+    }
 
     PolysType merged;
 

@@ -114,4 +114,7 @@ std::ostream& operator<< (typename std::enable_if<std::is_enum<T>::value, std::o
 typedef std::vector<Point3d> Poly;
 typedef std::vector<Poly> PolysType;
 
+void ComputeNormal (const Poly &poly, double *n);
+bool PointInPoly (const Poly &poly, const Point3d &p);
+
 #endif

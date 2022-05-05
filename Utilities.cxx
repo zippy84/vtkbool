@@ -153,3 +153,55 @@ void BackTransform (const double *in, double *out, const Base &base) {
     out[1] = y;
     out[2] = z;
 }
+
+void ComputeNormal (const Poly &poly, double *n) {
+    n[0] = 0; n[1] = 0; n[2] = 0;
+
+    Poly::const_iterator itrA, itrB;
+
+    for (itrA = poly.begin(); itrA != poly.end(); ++itrA) {
+        itrB = itrA+1;
+
+        if (itrB == poly.end()) {
+            itrB = poly.begin();
+        }
+
+        const Point3d &ptA = *itrA,
+            &ptB = *itrB;
+
+        n[0] += (ptA.y-ptB.y)*(ptA.z+ptB.z);
+        n[1] += (ptA.z-ptB.z)*(ptA.x+ptB.x);
+        n[2] += (ptA.x-ptB.x)*(ptA.y+ptB.y);
+    }
+
+    vtkMath::Normalize(n);
+}
+
+bool PointInPoly (const Poly &poly, const Point3d &p) {
+    bool in = false;
+
+    Poly::const_iterator itrA, itrB;
+
+    for (itrA = poly.begin(); itrA != poly.end(); ++itrA) {
+        itrB = itrA+1;
+
+        if (itrB == poly.end()) {
+            itrB = poly.begin();
+        }
+
+        const Point3d &ptA = *itrA,
+            &ptB = *itrB;
+
+        if ((ptA.x <= p.x || ptB.x <= p.x)
+            && ((ptA.y < p.y && ptB.y >= p.y)
+                || (ptB.y < p.y && ptA.y >= p.y))) {
+
+            // schnittpunkt mit bounding box und strahlensatz
+            if (ptA.x+(p.y-ptA.y)*(ptB.x-ptA.x)/(ptB.y-ptA.y) < p.x) {
+                in = !in;
+            }
+        }
+    }
+
+    return in;
+}
