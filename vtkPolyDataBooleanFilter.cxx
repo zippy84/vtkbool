@@ -1601,7 +1601,9 @@ void vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
         pd->DeleteCell(polyInd);
 
         // holes einbauen
-        Merger(pd, pStrips, holes, descIds, origId).run();
+        if (!holes.empty()) {
+            Merger(pd, pStrips, holes, descIds, origId).run();
+        }
 
     }
 
@@ -2839,6 +2841,29 @@ Merger::Merger (vtkPolyData *pd, const PStrips &pStrips, const StripsType &strip
     const StripPtsType &pts = pStrips.pts;
     const Base &base = pStrips.base;
 
+    vtkIdType i, num;
+    const vtkIdType *cell;
+
+    double pt[3];
+
+    for (auto id : descIds) {
+        pd->GetCellPoints(id, num, cell);
+
+        Poly p;
+
+        for (i = 0; i < num; i++) {
+            pd->GetPoint(cell[i], pt);
+
+            double proj[2];
+            Transform(pt, proj, base);
+
+            p.emplace_back(proj[0], proj[1], 0, cell[i]);
+
+        }
+
+        polys.push_back(p);
+    }
+
     for (auto &strip : strips) {
         Poly p;
 
@@ -2866,29 +2891,6 @@ Merger::Merger (vtkPolyData *pd, const PStrips &pStrips, const StripsType &strip
         polys.push_back(p);
     }
 
-    vtkIdType i, num;
-    const vtkIdType *cell;
-
-    double pt[3];
-
-    for (auto id : descIds) {
-        pd->GetCellPoints(id, num, cell);
-
-        Poly p;
-
-        for (i = 0; i < num; i++) {
-            pd->GetPoint(cell[i], pt);
-
-            double proj[2];
-            Transform(pt, proj, base);
-
-            p.emplace_back(proj[0], proj[1], 0, cell[i]);
-
-        }
-
-        polys.push_back(p);
-    }
-
 }
 
 void Merger::run () {
@@ -2899,15 +2901,25 @@ void Merger::run () {
 
     const Base &base = pStrips.base;
 
+    std::vector<std::vector<std::size_t>> groups(polys.size());
+
     PolysType::const_iterator itrA, itrB;
 
     for (itrA = polys.begin(); itrA != polys.end(); ++itrA) {
         for (itrB = polys.begin(); itrB != polys.end(); ++itrB) {
             if (itrA != itrB && PointInPoly(*itrB, *itrA->begin())) {
-                // ...
+                groups[itrB-polys.begin()].push_back(itrA-polys.begin());
             }
         }
     }
+
+    /*for (auto &childs : groups) {
+        std::cout << "[";
+        for (auto child : childs) {
+            std::cout << child << ", ";
+        }
+        std::cout << "]" << std::endl;
+    }*/
 
     PolysType merged;
 

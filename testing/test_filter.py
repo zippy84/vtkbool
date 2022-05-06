@@ -405,22 +405,6 @@ def test_same(tmp_path):
 #     write_result(bf, tmp_path)
 #     check_result(bf)
 
-def test_merger(tmp_path):
-    cube = vtkCubeSource()
-
-    cyl = vtkCylinderSource()
-    cyl.SetRadius(.25)
-
-    bf = vtkPolyDataBooleanFilter()
-    bf.SetInputConnection(0, cube.GetOutputPort())
-    bf.SetInputConnection(1, cyl.GetOutputPort())
-    bf.SetOperModeToNone()
-
-    bf.Update()
-
-    write_result(bf, tmp_path)
-    check_result(bf)
-
 @pytest.mark.xfail
 def test_strips():
     cubeA = vtkCubeSource()
@@ -534,3 +518,84 @@ def test_nearly_congruent(tmp_path):
     writerC.SetInputData(lines)
     writerC.SetFileName(tmp_path / 'lines.vtk')
     writerC.Update()
+
+def test_merger(tmp_path):
+    cube = vtkCubeSource()
+
+    cyl = vtkCylinderSource()
+    cyl.SetRadius(.25)
+
+    bf = vtkPolyDataBooleanFilter()
+    bf.SetInputConnection(0, cube.GetOutputPort())
+    bf.SetInputConnection(1, cyl.GetOutputPort())
+    bf.SetOperModeToNone()
+
+    bf.Update()
+
+    write_result(bf, tmp_path)
+    # check_result(bf)
+
+def test_merger_2(tmp_path):
+    cube = vtkCubeSource()
+
+    pts = [
+        [-.4, 0],
+        [0, -.4],
+        [.4, 0],
+        [0, .4],
+        [-.25, 0],
+        [-.15, -.1],
+        [-.05, 0],
+        [-.15, .1],
+        [.05, 0],
+        [.15, -.1],
+        [.25, 0],
+        [.15, .1]
+    ]
+
+    polys = [
+        [0, 2, 4, 20, 18, 16, 12, 10, 8],
+        [4, 6, 0, 8, 14, 12, 16, 22, 20],
+        [5, 3, 1, 9, 11, 13, 17, 19, 21],
+        [1, 7, 5, 21, 23, 17, 13, 15, 9],
+        [0, 1, 3, 2],
+        [2, 3, 5, 4],
+        [4, 5, 7, 6],
+        [6, 7, 1, 0],
+        [8, 10, 11, 9],
+        [10, 12, 13, 11],
+        [12, 14, 15, 13],
+        [14, 8, 9, 15],
+        [16, 18, 19, 17],
+        [18, 20, 21, 19],
+        [20, 22, 23, 21],
+        [22, 16, 17, 23]
+    ]
+
+    _pts = vtkPoints()
+
+    for pt in pts:
+        _pts.InsertNextPoint(*pt, .5)
+        _pts.InsertNextPoint(*pt, -.5)
+
+    pd = vtkPolyData()
+    pd.Allocate(1)
+    pd.SetPoints(_pts)
+
+    for poly in polys:
+        cell = vtkIdList()
+        [ cell.InsertNextId(i) for i in poly ]
+        pd.InsertNextCell(VTK_POLYGON, cell)
+
+    prod = vtkTrivialProducer()
+    prod.SetOutput(pd)
+
+    bf = vtkPolyDataBooleanFilter()
+    bf.SetInputConnection(0, cube.GetOutputPort())
+    bf.SetInputConnection(1, prod.GetOutputPort())
+    bf.SetOperModeToNone()
+
+    bf.Update()
+
+    write_result(bf, tmp_path)
+    # check_result(bf)
