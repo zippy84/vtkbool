@@ -45,6 +45,7 @@ limitations under the License.
 #include <vtkSmartPointer.h>
 #include <vtkModifiedBSPTree.h>
 #include <vtkCellArrayIterator.h>
+#include <vtkKdTree.h>
 
 #include "vtkPolyDataBooleanFilter.h"
 #include "vtkPolyDataContactFilter.h"
@@ -1602,7 +1603,7 @@ void vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
 
         // holes einbauen
         if (!holes.empty()) {
-            Merger(pd, pStrips, holes, descIds, origId).run();
+            Merger(pd, pStrips, holes, descIds, origId).Run();
         }
 
     }
@@ -2893,7 +2894,7 @@ Merger::Merger (vtkPolyData *pd, const PStrips &pStrips, const StripsType &strip
 
 }
 
-void Merger::run () {
+void Merger::Run () {
     // mergen mit hilfe von vtkKdTree und vtkModifiedBSPTree
 
     vtkPoints *pdPts = pd->GetPoints();
@@ -2901,7 +2902,7 @@ void Merger::run () {
 
     const Base &base = pStrips.base;
 
-    std::vector<std::vector<std::size_t>> groups(polys.size());
+    std::vector<GroupType> groups(polys.size());
 
     PolysType::const_iterator itrA, itrB;
 
@@ -2913,15 +2914,34 @@ void Merger::run () {
         }
     }
 
-    /*for (auto &childs : groups) {
+    PolysType merged;
+
+    std::size_t parent = 0;
+
+    for (auto &group : groups) {
+        GroupType parents;
+
+        for (auto &index : group) {
+            const GroupType &_group = groups[index];
+            parents.insert(parents.end(), _group.begin(), _group.end());
+        }
+
+        std::sort(group.begin(), group.end());
+        std::sort(parents.begin(), parents.end());
+
+        GroupType _group {parent++};
+        std::set_difference(group.begin(), group.end(), parents.begin(), parents.end(), std::back_inserter(_group));
+
+        _group.swap(group);
+
         std::cout << "[";
-        for (auto child : childs) {
-            std::cout << child << ", ";
+        for (auto &index : group) {
+            std::cout << index << ", ";
         }
         std::cout << "]" << std::endl;
-    }*/
 
-    PolysType merged;
+        MergeGroup(group, merged);
+    }
 
     for (auto &poly : merged) {
         vtkSmartPointer<vtkIdList> newCell = vtkSmartPointer<vtkIdList>::New();
@@ -2941,4 +2961,29 @@ void Merger::run () {
         pd->InsertNextCell(VTK_POLYGON, newCell);
         origCellIds->InsertNextValue(origId);
     }
+}
+
+void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
+    vtkPoints *pts = vtkPoints::New();
+
+    vtkPolyData *pd = vtkPolyData::New();
+    pd->Allocate(1);
+
+    for (auto &index : group) {
+        const Poly &poly = polys[index];
+
+        for (auto &p : poly) {
+            pts->InsertNextPoint(p.x, p.y, p.z);
+        }
+    }
+
+    pd->SetPoints(pts);
+
+    /*vtkSmartPointer<vtkKdTree> kdTree = vtkSmartPointer<vtkKdTree>::New();
+    kdTree->OmitZPartitioning();
+    kdTree->BuildLocatorFromPoints(pts);*/
+
+    pd->Delete();
+    pts->Delete();
+
 }

@@ -144,6 +144,8 @@ typedef std::map<vtkIdType, PStrips> PolyStripsType;
 
 typedef std::vector<std::reference_wrapper<StripPtR>> RefsType;
 
+typedef std::vector<std::size_t> GroupType;
+
 class Merger {
     vtkPolyData *pd;
     const PStrips &pStrips;
@@ -152,7 +154,8 @@ class Merger {
     PolysType polys;
 public:
     Merger (vtkPolyData *pd, const PStrips &pStrips, const StripsType &strips, const IdsType &descIds, vtkIdType origId);
-    void run ();
+    void Run ();
+    void MergeGroup (const GroupType &group, PolysType &merged);
 };
 
 class VTK_EXPORT vtkPolyDataBooleanFilter : public vtkPolyDataAlgorithm {
