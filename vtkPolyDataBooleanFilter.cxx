@@ -2814,7 +2814,7 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
 
     vtkPolyData *cfPd = cfApp->GetOutput();
 
-    // resultC bleibt hier leer
+    // resultB bleibt hier leer
 
     resultA->ShallowCopy(cfPd);
 

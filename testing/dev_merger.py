@@ -58,9 +58,11 @@ def write_vtk_2(pd, name):
 
 def draw(radius, step, x, y, rotate=0):
     pts = []
-    for phi in range(0, 360, int(360/step)):
-        _phi = math.radians(phi)
-        pts.append([radius*math.cos(_phi), radius*math.sin(_phi), 0])
+
+    phi = 2*math.pi/step
+
+    for i in range(step):
+        pts.append([radius*math.cos(i*phi), radius*math.sin(i*phi), 0])
 
     phi = math.radians(rotate)
 
@@ -145,7 +147,7 @@ def find_conns(ids=[]):
             found_pts = vtkIdList()
             kd_tree.FindClosestNPoints(n, pts[i], found_pts)
 
-            for _j in range(n-5, found_pts.GetNumberOfIds()):
+            for _j in range(found_pts.GetNumberOfIds()):
                 j = found_pts.GetId(_j)
 
                 src_a = sources[i]
@@ -182,10 +184,16 @@ def find_conns(ids=[]):
                         v = [pt_a[0]-pt_b[0], pt_a[1]-pt_b[1]]
                         d = v[0]*v[0]+v[1]*v[1]
 
-                        print((src_a, src_b))
+                        # print((src_a, src_b))
 
                         new_conns[(src_a, src_b)].append(Conn(d, i, j))
                         new_conns[(src_b, src_a)].append(Conn(d, j, i))
+
+    for i, conns in conns_per_poly.items():
+        if not ids \
+            or i in ids:
+
+            conns.clear()
 
     for k, v in new_conns.items():
         a, b = k
