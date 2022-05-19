@@ -2520,11 +2520,11 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
     WriteVTK("modPdB_8.vtk", pdB);
 #endif
 
-    resultA->ShallowCopy(contLines);
+    resultC->ShallowCopy(contLines);
 
     if (OperMode == OPER_NONE) {
-        resultB->ShallowCopy(pdA);
-        resultC->ShallowCopy(pdB);
+        resultA->ShallowCopy(pdA);
+        resultB->ShallowCopy(pdB);
 
         return false;
     }
@@ -2816,10 +2816,10 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
 
     // resultC bleibt hier leer
 
-    resultB->ShallowCopy(cfPd);
+    resultA->ShallowCopy(cfPd);
 
-    resultB->GetCellData()->AddArray(newOrigCellIdsA);
-    resultB->GetCellData()->AddArray(newOrigCellIdsB);
+    resultA->GetCellData()->AddArray(newOrigCellIdsA);
+    resultA->GetCellData()->AddArray(newOrigCellIdsB);
 
     // aufräumen
 

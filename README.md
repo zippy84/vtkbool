@@ -23,7 +23,6 @@ You can support my project with [PayPal](https://paypal.me/zippy84).
 - CellData is passed (attached by the rules of vtkAppendPolyData)
 - original cell ids are added to CellData (*OrigCellIdsA* and *OrigCellIdsB* as vtkIntArray)
 - contact lines are available
-- ~~non-convex polygons are decomposed~~
 - ~~the filter is able to embed holes~~
 - it is also a plugin for ParaView
 - Python wrapped
@@ -60,7 +59,7 @@ The usage of the library is very simple. Look at the example in the section belo
 - `SetOperModeToDifference`
 - `SetOperModeToDifference2`
 
-The alternative is the more generic `SetOperMode`. The method must be called with the number of the desired operation, an integer between 0 and 4, with the same meaning as mentioned before. After updating the pipeline, the result is stored in the second output, typically accessable with `GetOutputPort(1)`. The first output (`GetOutputPort(0)`) contains the contact-lines between the inputs. The inputs must be outputs of filters or sources returning vtkPolyData. The outputs from this filter are of the same type.
+The alternative is the more generic `SetOperMode`. The method must be called with the number of the desired operation, an integer between 0 and 4, with the same meaning as mentioned before.
 
 ### Example
 
@@ -91,7 +90,7 @@ int main (int argc, char *argv[]) {
     bf->SetOperModeToDifference();
 
     vtkSmartPointer<vtkPolyDataWriter> writer = vtkSmartPointer<vtkPolyDataWriter>::New();
-    writer->SetInputConnection(bf->GetOutputPort(1));
+    writer->SetInputConnection(bf->GetOutputPort());
     writer->SetFileName("result.vtk");
     writer->Update();
 

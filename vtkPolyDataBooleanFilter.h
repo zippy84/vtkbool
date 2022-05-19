@@ -155,6 +155,8 @@ class Merger {
 public:
     Merger (vtkPolyData *pd, const PStrips &pStrips, const StripsType &strips, const IdsType &descIds, vtkIdType origId);
     void Run ();
+
+private:
     void MergeGroup (const GroupType &group, PolysType &merged);
 };
 

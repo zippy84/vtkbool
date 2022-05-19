@@ -31,6 +31,6 @@ bf.SetInputConnection(0, cubeA.GetOutputPort())
 bf.SetInputConnection(1, cubeB.GetOutputPort())
 
 w = vtkPolyDataWriter()
-w.SetInputConnection(bf.GetOutputPort(1))
+w.SetInputConnection(bf.GetOutputPort())
 w.SetFileName('test.vtk')
 w.Update()

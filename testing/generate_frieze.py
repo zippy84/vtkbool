@@ -238,8 +238,8 @@ class Frieze:
         bf1.SetInputConnection(1, extr3.GetOutputPort())
 
         app = vtkAppendPolyData()
-        app.AddInputConnection(bf.GetOutputPort(1))
-        app.AddInputConnection(bf1.GetOutputPort(1))
+        app.AddInputConnection(bf.GetOutputPort())
+        app.AddInputConnection(bf1.GetOutputPort())
 
         bf2 = vtkPolyDataBooleanFilter()
         bf2.SetInputConnection(app.GetOutputPort())
@@ -260,7 +260,7 @@ class Frieze:
         plane.SetResolution(2, 2)
 
         bf3 = vtkPolyDataBooleanFilter()
-        bf3.SetInputConnection(bf2.GetOutputPort(1))
+        bf3.SetInputConnection(bf2.GetOutputPort())
         bf3.SetInputConnection(1, plane.GetOutputPort())
         bf3.SetOperModeToDifference()
 
@@ -279,7 +279,7 @@ class Frieze:
             plane1.SetResolution(2, 2)
 
             bf4 = vtkPolyDataBooleanFilter()
-            bf4.SetInputConnection(result.GetOutputPort(1))
+            bf4.SetInputConnection(result.GetOutputPort())
             bf4.SetInputConnection(1, plane1.GetOutputPort())
             bf4.SetOperModeToDifference()
 
@@ -294,7 +294,7 @@ class Frieze:
             plane2.SetResolution(2, 2)
 
             bf5 = vtkPolyDataBooleanFilter()
-            bf5.SetInputConnection(result.GetOutputPort(1))
+            bf5.SetInputConnection(result.GetOutputPort())
             bf5.SetInputConnection(1, plane2.GetOutputPort())
             bf5.SetOperModeToDifference()
 
@@ -328,7 +328,7 @@ class Frieze:
             print('mids', mids)
 
             bf6 = vtkPolyDataBooleanFilter()
-            bf6.SetInputConnection(result.GetOutputPort(1))
+            bf6.SetInputConnection(result.GetOutputPort())
             bf6.SetInputConnection(1, app1.GetOutputPort())
 
             result = bf6
@@ -338,7 +338,7 @@ class Frieze:
             tra.Scale(-1, 1, 1)
 
             tf = vtkTransformPolyDataFilter()
-            tf.SetInputConnection(result.GetOutputPort(1))
+            tf.SetInputConnection(result.GetOutputPort())
             tf.SetTransform(tra)
 
             rf = vtkReverseSense()
@@ -346,13 +346,13 @@ class Frieze:
 
             rf.Update()
 
-            bnds = Bnds(*rf.GetOutput(0).GetBounds())
+            bnds = Bnds(*rf.GetOutput().GetBounds())
 
             tra2 = vtkTransform()
             tra2.Translate(0, 0, -bnds.z1)
 
             tf2 = vtkTransformPolyDataFilter()
-            tf2.SetInputConnection(rf.GetOutputPort(0))
+            tf2.SetInputConnection(rf.GetOutputPort())
             tf2.SetTransform(tra2)
 
             clean = vtkCleanPolyData()
@@ -365,13 +365,13 @@ class Frieze:
 
         else:
             result.Update()
-            bnds = Bnds(*result.GetOutput(1).GetBounds())
+            bnds = Bnds(*result.GetOutput().GetBounds())
 
             tra2 = vtkTransform()
             tra2.Translate(0, 0, -bnds.z1)
 
             tf2 = vtkTransformPolyDataFilter()
-            tf2.SetInputConnection(result.GetOutputPort(1))
+            tf2.SetInputConnection(result.GetOutputPort())
             tf2.SetTransform(tra2)
 
             clean = vtkCleanPolyData()

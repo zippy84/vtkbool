@@ -35,14 +35,14 @@ bf.SetInputConnection(1, readerB.GetOutputPort())
 
 writer_ = vtkPolyDataWriter()
 writer_.SetFileName('_test/lines.vtk')
-writer_.SetInputConnection(bf.GetOutputPort(0))
+writer_.SetInputConnection(bf.GetOutputPort(2))
 writer_.Update()
 
 # das ursprüngliche problem war bei cell 151227
 
 writer0 = vtkPolyDataWriter()
 writer0.SetFileName('_test/result0.vtk')
-writer0.SetInputConnection(bf.GetOutputPort(1))
+writer0.SetInputConnection(bf.GetOutputPort())
 writer0.Update()
 
 # writer1 = vtkPolyDataWriter()

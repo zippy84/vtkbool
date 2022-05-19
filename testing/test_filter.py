@@ -40,12 +40,12 @@ def get_next(id_, poly):
     return 0 if id_+1 == poly.GetNumberOfIds() else id_+1
 
 def check_result(bf):
-    lines = bf.GetOutput(0)
+    lines = bf.GetOutput(2)
 
     lines.BuildLinks()
 
-    pdA = bf.GetOutput(1)
-    pdB = bf.GetOutput(2)
+    pdA = bf.GetOutput(0)
+    pdB = bf.GetOutput(1)
 
     pdA.BuildLinks()
     pdB.BuildLinks()
@@ -237,7 +237,7 @@ def check_result(bf):
             it.GoToNextCell()
 
 def write_result(bf, d):
-    for i, name in enumerate(['lines', 'pdA', 'pdB']):
+    for i, name in enumerate(['pdA', 'pdB', 'lines']):
         writer = vtkPolyDataWriter()
         writer.SetFileName(d / f'{name}.vtk')
         writer.SetInputConnection(bf.GetOutputPort(i))
