@@ -651,7 +651,7 @@ void vtkPolyDataContactFilter::InterPolys (vtkIdType idA, vtkIdType idB) {
 
     double det = nA[inds[0]]*nB[inds[1]]-nB[inds[0]]*nA[inds[1]];
 
-    if (det == 0) {
+    if (std::abs(det) < 1e-12) {
         return;
     }
 
