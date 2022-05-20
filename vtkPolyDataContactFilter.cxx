@@ -673,6 +673,12 @@ void vtkPolyDataContactFilter::InterPolys (vtkIdType idA, vtkIdType idB) {
     vtkPolyDataContactFilter::InterPolyLine(intersA, pdA, numA, polyA, r, s, Src::A, nA);
     vtkPolyDataContactFilter::InterPolyLine(intersB, pdB, numB, polyB, r, s, Src::B, nB);
 
+    // probe, ob die schnittpunkte auf den kanten liegen
+    // bei ungenauen normalen ist das manchmal nicht der fall
+
+    vtkPolyDataContactFilter::CheckInters(intersA, pdA, polyA, idA, idB);
+    vtkPolyDataContactFilter::CheckInters(intersB, pdB, polyB, idA, idB);
+
 #ifdef DEBUG
     std::cout << "intersA " << intersA.size()
         << ", intersB " << intersB.size()
@@ -818,4 +824,41 @@ int vtkPolyDataContactFilter::InterOBBNodes (vtkOBBNode *nodeA, vtkOBBNode *node
     }
 
     return 0;
+}
+
+void vtkPolyDataContactFilter::CheckInters (const InterPtsType &interPts, vtkPolyData *pd, const vtkIdType *poly, vtkIdType idA, vtkIdType idB) {
+    double ptA[3],
+        ptB[3],
+        v[3],
+        w[3],
+        k,
+        l,
+        alpha,
+        d;
+
+    for (const auto &p : interPts) {
+        pd->GetPoint(poly[p.edge[0]], ptA);
+        pd->GetPoint(poly[p.edge[1]], ptB);
+
+        vtkMath::Subtract(ptA, ptB, v);
+        vtkMath::Normalize(v);
+        vtkMath::Subtract(ptA, p.pt, w);
+
+        k = vtkMath::Norm(w);
+        l = vtkMath::Dot(v, w);
+        alpha = std::acos(l/k);
+
+        if (std::isnan(alpha)) {
+            continue;
+        }
+
+        d = std::sin(alpha)*k;
+
+        if (d < 1e-5) {
+            continue;
+        }
+
+        std::cout << idA << ", " << idB << ": " << alpha*180/M_PI << ", " << d << std::endl;
+    }
+
 }

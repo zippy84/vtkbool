@@ -67,7 +67,7 @@ def draw(radius, step, x, y, rotate=0):
     phi = math.radians(rotate)
 
     for pt in pts:
-        pt[:2] = [math.cos(phi)*pt[0]-math.sin(phi)*pt[1], math.sin(phi)*pt[0]+math.cos(phi)*pt[1],]
+        pt[:2] = [math.cos(phi)*pt[0]-math.sin(phi)*pt[1], math.sin(phi)*pt[0]+math.cos(phi)*pt[1]]
 
         pt[0] += x
         pt[1] += y
@@ -250,10 +250,7 @@ while len(connected) < len(polys):
 
     if not found_one:
         if not find_conns():
-            break
-
-if len(connected) != len(polys):
-    sys.exit('merging failed')
+            sys.exit('merging failed')
 
 write_vtk_2(lines_2, 'lines_before')
 

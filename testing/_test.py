@@ -31,7 +31,7 @@ bf = vtkPolyDataBooleanFilter()
 bf.SetInputConnection(0, readerA.GetOutputPort())
 bf.SetInputConnection(1, readerB.GetOutputPort())
 
-# bf.SetOperModeToNone()
+bf.SetOperModeToNone()
 
 writer_ = vtkPolyDataWriter()
 writer_.SetFileName('_test/lines.vtk')
@@ -45,10 +45,10 @@ writer0.SetFileName('_test/result0.vtk')
 writer0.SetInputConnection(bf.GetOutputPort())
 writer0.Update()
 
-# writer1 = vtkPolyDataWriter()
-# writer1.SetFileName('_test/result1.vtk')
-# writer1.SetInputConnection(bf.GetOutputPort(2))
-# writer1.Update()
+writer1 = vtkPolyDataWriter()
+writer1.SetFileName('_test/result1.vtk')
+writer1.SetInputConnection(bf.GetOutputPort(2))
+writer1.Update()
 
 # fehler bei 544,545,546,547,548,690,691,692,693
 # sind lines in holes

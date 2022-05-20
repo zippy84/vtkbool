@@ -109,6 +109,8 @@ class VTK_EXPORT vtkPolyDataContactFilter : public vtkPolyDataAlgorithm {
     void OverlapLines (OverlapsType &ols, InterPtsType &intersA, InterPtsType &intersB, const vtkIdType *polyA, const vtkIdType *polyB, vtkIdType idA, vtkIdType idB);
     void AddContactLines (InterPtsType &intersA, InterPtsType &intersB, const vtkIdType *polyA, const vtkIdType *polyB, vtkIdType idA, vtkIdType idB);
 
+    static void CheckInters (const InterPtsType &interPts, vtkPolyData *pd, const vtkIdType *poly, vtkIdType idA, vtkIdType idB);
+
     vtkIdTypeArray *contA, *contB;
 
     vtkPolyData *contLines;
