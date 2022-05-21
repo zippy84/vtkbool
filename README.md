@@ -1,4 +1,4 @@
-# vtkbool [![travis](https://app.travis-ci.com/zippy84/docker_test.svg?branch=master)](https://app.travis-ci.com/zippy84/docker_test) [![codecov](https://codecov.io/gh/zippy84/docker_test/branch/master/graph/badge.svg?token=EUV9QKEW1M)](https://codecov.io/gh/zippy84/docker_test)
+# vtkbool [![travis](https://app.travis-ci.com/zippy84/vtkbool.svg?branch=master)](https://app.travis-ci.com/zippy84/vtkbool) [![codecov](https://codecov.io/gh/zippy84/vtkbool/branch/master/graph/badge.svg?token=EUV9QKEW1M)](https://codecov.io/gh/zippy84/vtkbool)
 
 ![](/cover.png)
 

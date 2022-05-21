@@ -1,6 +1,6 @@
 FROM archlinux:latest
 RUN pacman -Syyu --noconfirm
-RUN pacman -S git cmake vtk make gcc libjpeg-turbo libpng libtiff python-pytest openmpi fmt python gcovr --noconfirm
+RUN pacman -S cmake vtk make gcc libjpeg-turbo libpng libtiff python-pytest openmpi fmt python gcovr --noconfirm
 WORKDIR /refactoring
 COPY . .
 RUN ls -alh
@@ -14,8 +14,7 @@ FROM ubuntu:latest
 RUN apt-get update
 RUN apt-get -y upgrade
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata
-RUN apt-get -y install libvtk9-dev python3-vtk9 cmake python3-pytest git
-RUN git clone --branch refactoring https://github.com/zippy84/vtkbool.git refactoring
+RUN apt-get -y install libvtk9-dev python3-vtk9 cmake python3-pytest
 WORKDIR /refactoring
 COPY . .
 RUN ls -alh
