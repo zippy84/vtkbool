@@ -36,9 +36,9 @@ mark_as_advanced(VTKBOOL_DEBUG)
 mark_as_advanced(VTKBOOL_COVERAGE)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND VTKBOOL_COVERAGE)
-    add_compile_options(-fprofile-arcs -ftest-coverage)
-    set(CMAKE_EXE_LINKER_FLAGS "-fprofile-arcs")
-    set(CMAKE_SHARED_LINKER_FLAGS "-fprofile-arcs")
+    set(CMAKE_C_FLAGS_PROFILE --coverage)
+    set(CMAKE_CXX_FLAGS_PROFILE --coverage)
+    add_link_options("--coverage")
 endif()
 
 include_directories(".")
