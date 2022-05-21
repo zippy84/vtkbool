@@ -1,24 +1,17 @@
-language: cpp
-compiler:
-  - gcc
-  - clang
-dist: xenial
-branches:
-  only:
-    - master
+language: minimal
+dist: focal
+services:
+  - docker
 before_install:
+  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+  - sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
   - sudo apt-get update
-  - sudo apt-get remove -y --auto-remove mysql-*
-  - sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
-  - sudo apt-get install -y libvtk6.2 libvtk6-dev python-vtk6
-script:
-  - mkdir build
-  - cd build
-  - cmake -DVTKBOOL_TESTING=ON -DVTKBOOL_COVERAGE=ON -DCMAKE_BUILD_TYPE=Release ..
-  - make VERBOSE=1
-  - ctest
+  - sudo apt-get -y -o Dpkg::Options::="--force-confnew" install docker-ce
 install:
   - sudo pip install codecov
-after_success:
-  - gcov ../testing/testing.cxx -i -o CMakeFiles/testing.dir/testing/
+script:
+  - docker build -t test .
+  - id=$(docker run -t -d test)
+  - docker cp $id:/refactoring/build/coverage.xml .
+  - docker stop -t 0 $id
   - codecov
