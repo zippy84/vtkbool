@@ -3017,6 +3017,11 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
 
     FindConns(pd, kdTree, bspTree, polyConns, indexedPolys, sources);
 
+    PolyConnsType connected {{0, {}}};
+    IdsType restricted;
+
+    // ...
+
     pd->Delete();
     pts->Delete();
 
@@ -3038,7 +3043,7 @@ bool Merger::FindConns (vtkPolyData *lines, vtkSmartPointer<vtkKdTree> kdTree, v
 
     vtkIdType i, numPts;
 
-    vtkIdType indexB;
+    vtkIdType idB;
 
     vtkSmartPointer<vtkIdList> lineIds = vtkSmartPointer<vtkIdList>::New();
 
@@ -3047,28 +3052,29 @@ bool Merger::FindConns (vtkPolyData *lines, vtkSmartPointer<vtkKdTree> kdTree, v
     bool good;
 
     vtkIdType j;
+    vtkIdType _idA, _idB;
 
     vtkSmartPointer<vtkIdList> line = vtkSmartPointer<vtkIdList>::New();
 
     for (const auto &poly : indexedPolys) {
-        for (vtkIdType indexA : poly) {
-            pts->GetPoint(indexA, ptA);
+        for (vtkIdType idA : poly) {
+            pts->GetPoint(idA, ptA);
 
             kdTree->FindClosestNPoints(10, ptA, foundPts);
 
             numPts = foundPts->GetNumberOfIds();
 
             for (i = 0; i < numPts; i++) {
-                indexB = foundPts->GetId(i);
+                idB = foundPts->GetId(i);
 
-                auto srcA = sources.at(indexA),
-                    srcB = sources.at(indexB);
+                auto srcA = sources.at(idA),
+                    srcB = sources.at(idB);
 
                 if (srcA == srcB) {
                     continue;
                 }
 
-                pts->GetPoint(indexB, ptB);
+                pts->GetPoint(idB, ptB);
 
                 good = true;
 
@@ -3076,10 +3082,11 @@ bool Merger::FindConns (vtkPolyData *lines, vtkSmartPointer<vtkKdTree> kdTree, v
                     for (j = 0; j < lineIds->GetNumberOfIds(); j++) {
                         lines->GetCellPoints(lineIds->GetId(j), line);
 
-                        if (line->GetId(0) != indexA
-                            && line->GetId(1) != indexA
-                            && line->GetId(0) != indexB
-                            && line->GetId(1) != indexB) {
+                        _idA = line->GetId(0);
+                        _idB = line->GetId(1);
+
+                        if (_idA != idA && _idA != idB
+                            && _idB != idA && _idB != idB) {
 
                             good = false;
                             break;
@@ -3092,8 +3099,8 @@ bool Merger::FindConns (vtkPolyData *lines, vtkSmartPointer<vtkKdTree> kdTree, v
                     vtkMath::Subtract(ptA, ptB, v);
                     double d = vtkMath::Norm(v);
 
-                    polyConns[srcA].emplace_back(d, indexA, indexB);
-                    polyConns[srcB].emplace_back(d, indexB, indexA);
+                    polyConns[srcA].emplace_back(d, idA, idB);
+                    polyConns[srcB].emplace_back(d, idB, idA);
                 }
             }
         }
