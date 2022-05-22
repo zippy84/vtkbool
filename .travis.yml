@@ -10,8 +10,9 @@ before_install:
 install:
   - sudo pip install codecov
 script:
-  - docker build -t test .
-  - id=$(docker run -t -d test)
+  - docker build -t vtkbool_coverage -f Dockerfile.archlinux .
+  - id=$(docker run -t -d vtkbool_coverage)
   - docker cp $id:/refactoring/build/coverage.xml .
   - docker stop -t 0 $id
   - codecov
+  - docker build -t vtkbool_release -f Dockerfile.ubuntu .
