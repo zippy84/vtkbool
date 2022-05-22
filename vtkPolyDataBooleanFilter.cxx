@@ -848,31 +848,27 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
             tree->SetDataSet(treePd);
             tree->BuildLocator();
 
-            vtkIdType num;
-            const vtkIdType *cell;
+            vtkIdType numA, numB;
+            const vtkIdType *lineA, *lineB;
 
             auto lineItr = vtk::TakeSmartPointer(treePd->GetLines()->NewIterator());
 
             for (lineItr->GoToFirstCell(); !lineItr->IsDoneWithTraversal(); lineItr->GoToNextCell()) {
-                lineItr->GetCurrentCell(num, cell);
+                lineItr->GetCurrentCell(numA, lineA);
 
                 double ptA[3], ptB[3];
 
-                treePts->GetPoint(cell[0], ptA);
-                treePts->GetPoint(cell[1], ptB);
+                treePts->GetPoint(lineA[0], ptA);
+                treePts->GetPoint(lineA[1], ptB);
 
-                vtkSmartPointer<vtkPoints> verts = vtkSmartPointer<vtkPoints>::New();
-                vtkSmartPointer<vtkIdList> cellIds = vtkSmartPointer<vtkIdList>::New();
+                vtkSmartPointer<vtkIdList> lineIds = vtkSmartPointer<vtkIdList>::New();
 
-                tree->IntersectWithLine(ptA, ptB, 1e-5, verts, cellIds);
+                tree->IntersectWithLine(ptA, ptB, 1e-5, nullptr, lineIds);
 
-                vtkIdType _num;
-                const vtkIdType *_cell;
+                for (vtkIdType i = 0; i < lineIds->GetNumberOfIds(); i++) {
+                    treePd->GetCellPoints(lineIds->GetId(i), numB, lineB);
 
-                for (vtkIdType i = 0; i < cellIds->GetNumberOfIds(); i++) {
-                    treePd->GetCellPoints(cellIds->GetId(i), _num, _cell);
-
-                    if (_cell[0] != cell[0] && _cell[1] != cell[0] && _cell[0] != cell[1] && _cell[1] != cell[1]) {
+                    if (lineB[0] != lineA[0] && lineB[1] != lineA[0] && lineB[0] != lineA[1] && lineB[1] != lineA[1]) {
                         // schnitt gefunden
 
                         return true;
@@ -2966,24 +2962,147 @@ void Merger::Run () {
 void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
     vtkPoints *pts = vtkPoints::New();
 
-    vtkPolyData *pd = vtkPolyData::New();
-    pd->Allocate(1);
+    IndexedPolysType indexedPolys;
+
+    SourcesType sources;
+    std::size_t src = 0;
 
     for (auto &index : group) {
         const Poly &poly = polys[index];
 
+        IdsType ids;
+
         for (auto &p : poly) {
-            pts->InsertNextPoint(p.x, p.y, p.z);
+            vtkIdType id = pts->InsertNextPoint(p.x, p.y, p.z);
+
+            ids.push_back(id);
+            sources.emplace(id, src);
+        }
+
+        indexedPolys.push_back(std::move(ids));
+        src++;
+    }
+
+    vtkSmartPointer<vtkKdTree> kdTree = vtkSmartPointer<vtkKdTree>::New();
+    kdTree->OmitZPartitioning();
+    kdTree->BuildLocatorFromPoints(pts);
+
+    vtkPolyData *pd = vtkPolyData::New();
+    pd->SetPoints(pts);
+    pd->Allocate(1);
+
+    IdsType::const_iterator itrA, itrB;
+
+    for (const auto &poly : indexedPolys) {
+        for (itrA = poly.begin(); itrA != poly.end(); ++itrA) {
+            itrB = itrA+1;
+            if (itrB == poly.end()) {
+                itrB = poly.begin();
+            }
+
+            vtkIdList *line = vtkIdList::New();
+            line->InsertNextId(*itrA);
+            line->InsertNextId(*itrB);
+
+            pd->InsertNextCell(VTK_LINE, line);
+
+            line->Delete();
         }
     }
 
-    pd->SetPoints(pts);
+    vtkSmartPointer<vtkModifiedBSPTree> bspTree = vtkSmartPointer<vtkModifiedBSPTree>::New();
+    bspTree->SetDataSet(pd);
 
-    /*vtkSmartPointer<vtkKdTree> kdTree = vtkSmartPointer<vtkKdTree>::New();
-    kdTree->OmitZPartitioning();
-    kdTree->BuildLocatorFromPoints(pts);*/
+    PolyConnsType polyConns;
+
+    FindConns(pd, kdTree, bspTree, polyConns, indexedPolys, sources);
 
     pd->Delete();
     pts->Delete();
 
+}
+
+bool Merger::FindConns (vtkPolyData *lines, vtkSmartPointer<vtkKdTree> kdTree, vtkSmartPointer<vtkModifiedBSPTree> bspTree, PolyConnsType &polyConns, const IndexedPolysType &indexedPolys, const SourcesType &sources) {
+
+    vtkPoints *pts = lines->GetPoints();
+
+    PolyConnsType::iterator itr;
+
+    for (itr = polyConns.begin(); itr != polyConns.end(); ++itr) {
+        ConnsType &conns = itr->second;
+
+        conns.clear();
+    }
+
+    vtkSmartPointer<vtkIdList> foundPts = vtkSmartPointer<vtkIdList>::New();
+
+    vtkIdType i, numPts;
+
+    vtkIdType indexB;
+
+    vtkSmartPointer<vtkIdList> lineIds = vtkSmartPointer<vtkIdList>::New();
+
+    double ptA[3], ptB[3];
+
+    bool good;
+
+    vtkIdType j;
+
+    vtkSmartPointer<vtkIdList> line = vtkSmartPointer<vtkIdList>::New();
+
+    for (const auto &poly : indexedPolys) {
+        for (vtkIdType indexA : poly) {
+            pts->GetPoint(indexA, ptA);
+
+            kdTree->FindClosestNPoints(10, ptA, foundPts);
+
+            numPts = foundPts->GetNumberOfIds();
+
+            for (i = 0; i < numPts; i++) {
+                indexB = foundPts->GetId(i);
+
+                auto srcA = sources.at(indexA),
+                    srcB = sources.at(indexB);
+
+                if (srcA == srcB) {
+                    continue;
+                }
+
+                pts->GetPoint(indexB, ptB);
+
+                good = true;
+
+                if (bspTree->IntersectWithLine(ptA, ptB, 1e-5, nullptr, lineIds) == 1) {
+                    for (j = 0; j < lineIds->GetNumberOfIds(); j++) {
+                        lines->GetCellPoints(lineIds->GetId(j), line);
+
+                        if (line->GetId(0) != indexA
+                            && line->GetId(1) != indexA
+                            && line->GetId(0) != indexB
+                            && line->GetId(1) != indexB) {
+
+                            good = false;
+                            break;
+                        }
+                    }
+                }
+
+                if (good) {
+                    double v[3];
+                    vtkMath::Subtract(ptA, ptB, v);
+                    double d = vtkMath::Norm(v);
+
+                    polyConns[srcA].emplace_back(d, indexA, indexB);
+                    polyConns[srcB].emplace_back(d, indexB, indexA);
+                }
+            }
+        }
+    }
+
+    for (itr = polyConns.begin(); itr != polyConns.end(); ++itr) {
+        ConnsType &conns = itr->second;
+        std::sort(conns.begin(), conns.end());
+    }
+
+    return true;
 }

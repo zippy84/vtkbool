@@ -25,7 +25,8 @@ limitations under the License.
 #include <iostream>
 
 #include <vtkPolyDataAlgorithm.h>
-#include <vtkKdTreePointLocator.h>
+#include <vtkKdTree.h>
+#include <vtkModifiedBSPTree.h>
 
 #include "Utilities.h"
 
@@ -144,7 +145,28 @@ typedef std::map<vtkIdType, PStrips> PolyStripsType;
 
 typedef std::vector<std::reference_wrapper<StripPtR>> RefsType;
 
+// Merger
+
 typedef std::vector<std::size_t> GroupType;
+typedef std::vector<IdsType> IndexedPolysType;
+typedef std::map<vtkIdType, std::size_t> SourcesType;
+
+class Conn {
+public:
+    Conn () = delete;
+    Conn (double d, vtkIdType i, vtkIdType j) : d(d), i(i), j(j) {}
+
+    double d;
+    vtkIdType i, j;
+
+    bool operator< (const Conn &other) const {
+        return d < other.d;
+    }
+
+};
+
+typedef std::vector<Conn> ConnsType;
+typedef std::map<std::size_t, ConnsType> PolyConnsType;
 
 class Merger {
     vtkPolyData *pd;
@@ -158,6 +180,7 @@ public:
 
 private:
     void MergeGroup (const GroupType &group, PolysType &merged);
+    bool FindConns (vtkPolyData *lines, vtkSmartPointer<vtkKdTree> kdTree, vtkSmartPointer<vtkModifiedBSPTree> bspTree, PolyConnsType &polyConns, const IndexedPolysType &indexedPolys, const SourcesType &sources);
 };
 
 class VTK_EXPORT vtkPolyDataBooleanFilter : public vtkPolyDataAlgorithm {

@@ -119,7 +119,6 @@ for i, poly in enumerate(polys):
 
 tree = vtkModifiedBSPTree()
 tree.SetDataSet(lines)
-tree.BuildLocator()
 
 n = 0
 
