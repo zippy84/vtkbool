@@ -17,100 +17,100 @@ limitations under the License.
 #include "vtkPolyDataBooleanFilter.h"
 
 Poly Draw (double r, vtkIdType step, double x, double y, double rotate = 0) {
-	Poly poly;
+    Poly poly;
 
-	double phi = 2*M_PI/static_cast<double>(step);
+    double phi = 2*M_PI/static_cast<double>(step);
 
-	vtkIdType i;
+    vtkIdType i;
 
-	double x1, y1, x2, y2;
+    double x1, y1, x2, y2;
 
-	double alpha = rotate*M_PI/180;
+    double alpha = rotate*M_PI/180;
 
-	for (i = 0; i < step; i++) {
-		double _i = static_cast<double>(i);
+    for (i = 0; i < step; i++) {
+        double _i = static_cast<double>(i);
 
-		x1 = r*std::cos(_i*phi);
-		y1 = r*std::sin(_i*phi);
+        x1 = r*std::cos(_i*phi);
+        y1 = r*std::sin(_i*phi);
 
-		x2 = std::cos(alpha)*x1-std::sin(alpha)*y1;
-		y2 = std::sin(alpha)*x1+std::cos(alpha)*y1;
+        x2 = std::cos(alpha)*x1-std::sin(alpha)*y1;
+        y2 = std::sin(alpha)*x1+std::cos(alpha)*y1;
 
-		poly.emplace_back(x2+x, y2+y, 0);
-	}
+        poly.emplace_back(x2+x, y2+y, 0);
+    }
 
-	return poly;
+    return poly;
 }
 
 int main(int argc, char const *argv[]) {
-	vtkSmartPointer<vtkPoints> pts = vtkSmartPointer<vtkPoints>::New();
+    vtkSmartPointer<vtkPoints> pts = vtkSmartPointer<vtkPoints>::New();
 
-	vtkSmartPointer<vtkPolyData> pd = vtkSmartPointer<vtkPolyData>::New();
-	pd->SetPoints(pts);
-	pd->Allocate(1);
+    vtkSmartPointer<vtkPolyData> pd = vtkSmartPointer<vtkPolyData>::New();
+    pd->SetPoints(pts);
+    pd->Allocate(1);
 
-	PolysType polys {
-		Draw(8, 18, 0, 0),
-		Draw(.25, 6, 3.5, 0),
-		Draw(.25, 6, -3.5, 0),
+    PolysType polys {
+        Draw(8, 18, 0, 0),
+        Draw(.25, 6, 3.5, 0),
+        Draw(.25, 6, -3.5, 0),
 
-		Draw(.5, 6, 1, 0),
-	    Draw(.5, 6, -1, 0),
-	    Draw(.5, 6, 0, 1, 30),
-	    Draw(.5, 6, 0, -1, 30)
-	};
+        Draw(.5, 6, 1, 0),
+        Draw(.5, 6, -1, 0),
+        Draw(.5, 6, 0, 1, 30),
+        Draw(.5, 6, 0, -1, 30)
+    };
 
-	vtkSmartPointer<vtkIdList> cell = vtkSmartPointer<vtkIdList>::New();
+    vtkSmartPointer<vtkIdList> cell = vtkSmartPointer<vtkIdList>::New();
 
-	for (const auto &p : polys[0]) {
-		cell->InsertNextId(pts->InsertNextPoint(p.x, p.y, p.z));
-	}
+    for (const auto &p : polys[0]) {
+        cell->InsertNextId(pts->InsertNextPoint(p.x, p.y, p.z));
+    }
 
-	pd->InsertNextCell(VTK_POLYGON, cell);
+    pd->InsertNextCell(VTK_POLYGON, cell);
 
-	PStrips pStrips {pd, 0};
+    PStrips pStrips {pd, 0};
 
-	Base &base = pStrips.base;
+    Base &base = pStrips.base;
 
-	base.ei[0] = 1; base.ei[1] = 0; base.ei[2] = 0;
-	base.ej[0] = 0; base.ej[1] = 1; base.ej[2] = 0;
-	base.n[0] = 0; base.n[1] = 0; base.n[2] = 1;
-	base.d = 0;
+    base.ei[0] = 1; base.ei[1] = 0; base.ei[2] = 0;
+    base.ej[0] = 0; base.ej[1] = 1; base.ej[2] = 0;
+    base.n[0] = 0; base.n[1] = 0; base.n[2] = 1;
+    base.d = 0;
 
-	StripsType holes;
+    StripsType holes;
 
-	vtkIdType ind = 0;
+    vtkIdType ind = 0;
 
-	PolysType::iterator itr;
-	for (itr = polys.begin()+1; itr != polys.end(); ++itr) {
-		StripType strip;
+    PolysType::iterator itr;
+    for (itr = polys.begin()+1; itr != polys.end(); ++itr) {
+        StripType strip;
 
-		Poly &poly = *itr;
+        Poly &poly = *itr;
 
-		poly.push_back(poly.front());
+        poly.push_back(poly.front());
 
-		for (const auto &p : poly) {
-			StripPt sp;
-			sp.ind = ind;
-			sp.polyId = 0;
+        for (const auto &p : poly) {
+            StripPt sp;
+            sp.ind = ind;
+            sp.polyId = 0;
 
-			sp.pt[0] = p.x;
-			sp.pt[1] = p.y;
-			sp.pt[2] = p.z;
+            sp.pt[0] = p.x;
+            sp.pt[1] = p.y;
+            sp.pt[2] = p.z;
 
-			pStrips.pts.emplace(ind, sp);
+            pStrips.pts.emplace(ind, std::move(sp));
 
-			strip.emplace_back(ind);
+            strip.emplace_back(ind);
 
-			ind++;
-		}
+            ind++;
+        }
 
-		holes.push_back(strip);
-	}
+        holes.push_back(strip);
+    }
 
-	IdsType descIds {0};
+    IdsType descIds {0};
 
-	Merger(pd, pStrips, holes, descIds, 0).Run();
+    Merger(pd, pStrips, holes, descIds, 0).Run();
 
-	return 0;
+    return 0;
 }
