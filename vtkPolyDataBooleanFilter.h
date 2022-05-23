@@ -163,10 +163,61 @@ public:
         return d < other.d;
     }
 
+    friend std::ostream& operator<< (std::ostream &out, const Conn &c) {
+        out << "Conn(d=" << c.d
+            << ", i=" << c.i
+            << ", j=" << c.j
+            << ")";
+        return out;
+    }
+
 };
 
 typedef std::vector<Conn> ConnsType;
 typedef std::map<std::size_t, ConnsType> PolyConnsType;
+
+std::ostream& operator<< (std::ostream &out, const PolyConnsType& polyConns) {
+    PolyConnsType::const_iterator itr;
+
+    for (itr = polyConns.begin(); itr != polyConns.end(); ++itr) {
+        out << itr->first << ": [";
+        for (auto &conn : itr->second) {
+            out << conn << ", ";
+        }
+        out << "]" << std::endl;
+    }
+
+    return out;
+}
+
+class Prio {
+public:
+    Prio () = delete;
+    Prio (const Conn &conn, const std::set<std::size_t> &solvable, double d) : conn(conn), solvable(solvable), d(d) {}
+
+    Conn conn;
+    std::set<std::size_t> solvable;
+    double d;
+
+    friend std::ostream& operator<< (std::ostream &out, const Prio &p) {
+        out << "Prio(conn=" << p.conn
+            << ", d=" << p.d
+            << ")";
+        return out;
+    }
+};
+
+struct Cmp {
+    bool operator() (const Prio &a, const Prio &b) const {
+        const auto _a = a.solvable.size(),
+            _b = b.solvable.size();
+        return std::tie(_a, a.d) < std::tie(_b, b.d);
+    }
+};
+
+typedef std::set<Prio, Cmp> PriosType;
+
+typedef std::map<vtkIdType, Prio> PolyPriosType;
 
 class Merger {
     vtkPolyData *pd;
@@ -180,7 +231,7 @@ public:
 
 private:
     void MergeGroup (const GroupType &group, PolysType &merged);
-    bool FindConns (vtkPolyData *lines, vtkSmartPointer<vtkKdTree> kdTree, vtkSmartPointer<vtkModifiedBSPTree> bspTree, PolyConnsType &polyConns, const IndexedPolysType &indexedPolys, const SourcesType &sources);
+    bool FindConns (vtkPolyData *lines, vtkSmartPointer<vtkKdTree> kdTree, vtkSmartPointer<vtkModifiedBSPTree> bspTree, PolyConnsType &polyConns, const IndexedPolysType &indexedPolys, const SourcesType &sources, int &n);
 };
 
 class VTK_EXPORT vtkPolyDataBooleanFilter : public vtkPolyDataAlgorithm {

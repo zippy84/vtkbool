@@ -158,12 +158,11 @@ def find_conns(ids=[]):
                 if src_a != src_b:
                     # print(i, j)
 
-                    _pts = vtkPoints()
                     _cells = vtkIdList()
 
                     good = True
 
-                    if tree.IntersectWithLine(pt_a, pt_b, 1e-5, _pts, _cells) == 1:
+                    if tree.IntersectWithLine(pt_a, pt_b, 1e-5, None, _cells) == 1:
                         for k in range(_cells.GetNumberOfIds()):
                             line = vtkIdList()
                             lines.GetCellPoints(_cells.GetId(k), line)
