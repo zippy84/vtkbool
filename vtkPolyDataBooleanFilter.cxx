@@ -3146,7 +3146,13 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
 
     // stage 1
 
-    ConnsType usedConns;
+    struct Cmp {
+        bool operator() (const Conn &a, const Conn &b) const {
+            return std::tie(a.i, a.j) < std::tie(b.i, b.j);
+        }
+    };
+
+    std::set<Conn, Cmp> usedConns;
 
     IndexedPoly polyA {indexedPolys.front()};
 
@@ -3180,23 +3186,96 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
 
         polyA.swap(newPoly);
 
+        usedConns.insert(first);
+
     }
 
-    // temp
+    // stage 2
+
+    std::set<Conn, Cmp> leftConns;
+
+    for (itrC = connected.begin(); itrC != connected.end(); ++itrC) {
+        if (itrC->first == 0) {
+            continue;
+        }
+
+        auto &conns = itrC->second;
+
+        ConnsType::const_iterator itr;
+
+        for (itr = conns.begin()+1; itr != conns.end(); ++itr) {
+            Conn conn(0, itr->j, itr->i);
+
+            if (usedConns.find(conn) == usedConns.end()) {
+                if (itr->i < itr->j) {
+                    leftConns.emplace(0, itr->i, itr->j);
+                } else {
+                    leftConns.insert(std::move(conn));
+                }
+            }
+        }
+
+    }
+
+    std::cout << "leftConns: [";
+    for (auto &conn : leftConns) {
+        std::cout << conn << ", ";
+    }
+    std::cout << "]" << std::endl;
+
+    IndexedPolysType splitted {polyA};
+
+    for (auto &conn : leftConns) {
+        IndexedPolysType::iterator itr;
+
+        for (itr = splitted.begin(); itr != splitted.end(); ++itr) {
+            auto &poly = *itr;
+
+            auto itrA = std::find(poly.begin(), poly.end(), conn.i);
+
+            if (itrA != poly.end()) {
+                std::rotate(poly.begin(), itrA, poly.end());
+
+                auto itrB = std::find(poly.begin(), poly.end(), conn.j);
+
+                IndexedPoly newPolyA(poly.begin(), itrB+1);
+                IndexedPoly newPolyB(itrB, poly.end());
+
+                newPolyA.push_back(*itrB);
+                newPolyB.push_back(poly.front());
+
+                splitted.erase(itr);
+
+                splitted.push_back(std::move(newPolyA));
+                splitted.push_back(std::move(newPolyB));
+
+                break;
+            }
+        }
+    }
+
+    IndexedPolysType::const_iterator itrE;
+
+    for (itrE = indexedPolys.begin()+1; itrE != indexedPolys.end(); ++itrE) {
+        splitted.push_back(*itrE);
+    }
 
     PolysType newPolys;
-    Poly newPoly;
 
     double pt[3];
 
-    for (auto &id : polyA) {
-        pts->GetPoint(id, pt);
-        newPoly.emplace_back(pt[0], pt[1], pt[2]);
+    for (const auto &poly : splitted) {
+        Poly newPoly;
+
+        for (auto &id : poly) {
+            pts->GetPoint(id, pt);
+            newPoly.emplace_back(pt[0], pt[1], pt[2]);
+        }
+
+        newPolys.push_back(std::move(newPoly));
     }
 
-    newPolys.push_back(std::move(newPoly));
-
-    WritePolys("stage1.vtk", newPolys);
+    WritePolys("stage2.vtk", newPolys);
 
     pts->Delete();
 
