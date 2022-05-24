@@ -55,6 +55,14 @@ public:
     bool operator== (const Point3d &other) const {
         return !(*this < other) && !(other < *this);
     }
+
+    friend std::ostream& operator<< (std::ostream &out, const Point3d &p) {
+        out << "Point3d(x=" << p.x
+            << ", y=" << p.y
+            << ", z=" << p.z
+            << ", id=" << p.id << ")";
+        return out;
+    }
 };
 
 typedef std::vector<vtkIdType> IdsType;

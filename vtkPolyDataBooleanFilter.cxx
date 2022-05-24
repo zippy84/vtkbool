@@ -2827,6 +2827,8 @@ void Merger::Run () {
     vtkPoints *pdPts = pd->GetPoints();
     vtkIdTypeArray *origCellIds = vtkIdTypeArray::SafeDownCast(pd->GetCellData()->GetScalars("OrigCellIds"));
 
+    assert(origCellIds != nullptr);
+
     const Base &base = pStrips.base;
 
     std::vector<GroupType> groups(polys.size());
@@ -2900,6 +2902,8 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
 
     IndexedPolysType indexedPolys;
 
+    std::map<vtkIdType, std::reference_wrapper<const Point3d>> origPts;
+
     SourcesType sources;
     std::size_t src = 0;
 
@@ -2913,6 +2917,8 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
 
             ids.push_back(id);
             sources.emplace(id, src);
+
+            origPts.emplace(id, p);
         }
 
         indexedPolys.push_back(std::move(ids));
@@ -3262,20 +3268,19 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
 
     PolysType newPolys;
 
-    double pt[3];
-
     for (const auto &poly : splitted) {
         Poly newPoly;
 
         for (auto &id : poly) {
-            pts->GetPoint(id, pt);
-            newPoly.emplace_back(pt[0], pt[1], pt[2]);
+            newPoly.push_back(origPts.at(id));
         }
 
         newPolys.push_back(std::move(newPoly));
     }
 
     WritePolys("stage2.vtk", newPolys);
+
+    std::move(newPolys.begin(), newPolys.end(), std::back_inserter(merged));
 
     pts->Delete();
 

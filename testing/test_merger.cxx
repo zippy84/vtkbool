@@ -14,6 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <vtkCellData.h>
+#include <vtkCellArrayIterator.h>
+
 #include "vtkPolyDataBooleanFilter.h"
 
 Poly Draw (double r, vtkIdType step, double x, double y, double rotate = 0) {
@@ -68,6 +71,11 @@ int main(int argc, char const *argv[]) {
 
     pd->InsertNextCell(VTK_POLYGON, cell);
 
+    vtkSmartPointer<vtkIdTypeArray> cellIds = vtkSmartPointer<vtkIdTypeArray>::New();
+    cellIds->SetName("OrigCellIds");
+    cellIds->InsertNextValue(0);
+    pd->GetCellData()->SetScalars(cellIds);
+
     PStrips pStrips {pd, 0};
 
     Base &base = pStrips.base;
@@ -111,6 +119,31 @@ int main(int argc, char const *argv[]) {
     IdsType descIds {0};
 
     Merger(pd, pStrips, holes, descIds, 0).Run();
+
+    {
+        vtkIdType i, num;
+        const vtkIdType *cell;
+
+        double pt[3];
+
+        auto cellItr = vtk::TakeSmartPointer(pd->GetLines()->NewIterator());
+
+        for (cellItr->GoToFirstCell(); !cellItr->IsDoneWithTraversal(); cellItr->GoToNextCell()) {
+            cellItr->GetCurrentCell(num, cell);
+
+            std::set<Point3d> poly;
+
+            for (i = 0; i < num; i++) {
+                pd->GetPoint(cell[i], pt);
+                assert(poly.emplace(pt[0], pt[1], pt[2]).second); // schlägt fehl, wenn bereits vorhanden
+            }
+
+        }
+    }
+
+    WriteVTK("merged.vtk", pd);
+
+    // assert(pd->GetNumberOfCells() == 10);
 
     return 0;
 }
