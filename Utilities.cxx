@@ -24,6 +24,7 @@ limitations under the License.
 #include <vtkMath.h>
 #include <vtkPolyData.h>
 #include <vtkDataWriter.h>
+#include <vtkSmartPointer.h>
 
 #include <vtkPolyDataWriter.h>
 
@@ -204,4 +205,24 @@ bool PointInPoly (const Poly &poly, const Point3d &p) {
     }
 
     return in;
+}
+
+void WritePolys (const char *name, const PolysType &polys) {
+    vtkSmartPointer<vtkPoints> pts = vtkSmartPointer<vtkPoints>::New();
+
+    vtkSmartPointer<vtkPolyData> pd = vtkSmartPointer<vtkPolyData>::New();
+    pd->SetPoints(pts);
+    pd->Allocate(1);
+
+    for (auto &poly : polys) {
+        vtkSmartPointer<vtkIdList> cell = vtkSmartPointer<vtkIdList>::New();
+
+        for (auto &p : poly) {
+            cell->InsertNextId(pts->InsertNextPoint(p.x, p.y, p.z));
+        }
+
+        pd->InsertNextCell(VTK_POLYGON, cell);
+    }
+
+    WriteVTK(name, pd);
 }

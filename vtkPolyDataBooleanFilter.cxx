@@ -2906,7 +2906,7 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
     for (auto &index : group) {
         const Poly &poly = polys.at(index);
 
-        IdsType ids;
+        IndexedPoly ids;
 
         for (auto &p : poly) {
             vtkIdType id = pts->InsertNextPoint(p.x, p.y, p.z);
@@ -2927,7 +2927,7 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
     linesA->SetPoints(pts);
     linesA->Allocate(1);
 
-    IdsType::const_iterator itrA, itrB;
+    IndexedPoly::const_iterator itrA, itrB;
 
     for (const auto &ids : indexedPolys) {
         for (itrA = ids.begin(); itrA != ids.end(); ++itrA) {
@@ -2958,7 +2958,7 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
     FindConns(linesA, kdTree, bspTreeA, polyConns, indexedPolys, sources, n);
 
     PolyConnsType connected {{0, {}}};
-    std::set<vtkIdType> restricted;
+    std::set<vtkIdType> restricted; // keine der conns darf im gleichen punkt beginnen
 
     vtkPolyData *linesB = vtkPolyData::New();
     linesB->SetPoints(pts);
@@ -2988,6 +2988,8 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
 
                         if (bspTreeB->IntersectWithLine(ptA, ptB, 1e-5, nullptr, nullptr) == 0) {
                             connected[sources.at(conn.i)].push_back(conn);
+
+                            // das andere poly auch aktualisieren
                             connected[sources.at(conn.j)].emplace_back(conn.d, conn.j, conn.i);
 
                             restricted.insert(conn.i);
@@ -3077,10 +3079,12 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
                         std::set<std::size_t> _chainA(chainA.begin(), chainA.end()),
                             _chainB(chainB.begin(), chainB.end());
 
+                        // gemeinsame eltern
                         std::set<std::size_t> shared;
 
                         std::set_intersection(_chainA.begin(), _chainA.end(), _chainB.begin(), _chainB.end(), std::inserter(shared, shared.end()));
 
+                        // gemeinsame eltern müssen sich alle in solved befinden
                         if (std::includes(solved.begin(), solved.end(), shared.begin(), shared.end())) {
                             std::set<std::size_t> solvable;
 
@@ -3095,11 +3099,7 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
                 }
             }
 
-            if (polyPrios.empty()) {
-                if (!FindConns(linesA, kdTree, bspTreeA, polyConns, indexedPolys, sources, n)) {
-                    break;
-                }
-            } else {
+            if (!polyPrios.empty()) {
                 PriosType prios;
 
                 PolyPriosType::const_iterator itr;
@@ -3132,6 +3132,10 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
 
                 break;
 
+            } else {
+                if (!FindConns(linesA, kdTree, bspTreeA, polyConns, indexedPolys, sources, n)) {
+                    break;
+                }
             }
         }
     }
@@ -3139,6 +3143,60 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
     std::cout << connected;
 
     WriteVTK("linesB.vtk", linesB);
+
+    // stage 1
+
+    ConnsType usedConns;
+
+    IndexedPoly polyA {indexedPolys.front()};
+
+    for (itrC = connected.begin(); itrC != connected.end(); ++itrC) {
+        if (itrC->first == 0) {
+            continue;
+        }
+
+        auto &conns = itrC->second;
+
+        auto &first = conns.front();
+
+        auto itrA = std::find(polyA.begin(), polyA.end(), first.j);
+
+        assert(itrA != polyA.end());
+
+        auto &polyB = indexedPolys.at(sources.at(first.i));
+
+        auto itrB = std::find(polyB.begin(), polyB.end(), first.i);
+
+        assert(itrB != polyB.end());
+
+        std::rotate(polyA.begin(), itrA, polyA.end());
+        std::rotate(polyB.begin(), itrB, polyB.end());
+
+        IndexedPoly newPoly {polyA};
+        newPoly.push_back(polyA.front());
+        newPoly.push_back(polyB.front());
+
+        newPoly.insert(newPoly.end(), polyB.rbegin(), polyB.rend());
+
+        polyA.swap(newPoly);
+
+    }
+
+    // temp
+
+    PolysType newPolys;
+    Poly newPoly;
+
+    double pt[3];
+
+    for (auto &id : polyA) {
+        pts->GetPoint(id, pt);
+        newPoly.emplace_back(pt[0], pt[1], pt[2]);
+    }
+
+    newPolys.push_back(std::move(newPoly));
+
+    WritePolys("stage1.vtk", newPolys);
 
     pts->Delete();
 

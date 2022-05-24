@@ -117,4 +117,6 @@ typedef std::vector<Poly> PolysType;
 void ComputeNormal (const Poly &poly, double *n);
 bool PointInPoly (const Poly &poly, const Point3d &p);
 
+void WritePolys (const char *name, const PolysType &polys);
+
 #endif

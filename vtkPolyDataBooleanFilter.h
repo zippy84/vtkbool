@@ -148,7 +148,10 @@ typedef std::vector<std::reference_wrapper<StripPtR>> RefsType;
 // Merger
 
 typedef std::vector<std::size_t> GroupType;
-typedef std::vector<IdsType> IndexedPolysType;
+
+typedef std::deque<vtkIdType> IndexedPoly;
+typedef std::vector<IndexedPoly> IndexedPolysType;
+
 typedef std::map<vtkIdType, std::size_t> SourcesType;
 
 class Conn {
