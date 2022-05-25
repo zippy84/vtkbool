@@ -533,7 +533,7 @@ def test_merger(tmp_path):
     bf.Update()
 
     write_result(bf, tmp_path)
-    # check_result(bf)
+    check_result(bf)
 
 def test_merger_2(tmp_path):
     cube = vtkCubeSource()
@@ -598,4 +598,4 @@ def test_merger_2(tmp_path):
     bf.Update()
 
     write_result(bf, tmp_path)
-    # check_result(bf)
+    check_result(bf)

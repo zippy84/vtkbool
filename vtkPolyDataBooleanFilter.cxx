@@ -2792,6 +2792,8 @@ Merger::Merger (vtkPolyData *pd, const PStrips &pStrips, const StripsType &strip
         }
 
         polys.push_back(p);
+
+        pd->DeleteCell(id);
     }
 
     for (auto &strip : strips) {
@@ -2869,11 +2871,7 @@ void Merger::Run () {
         }
         std::cout << "]" << std::endl;
 
-        if (group.size() > 1) {
-            MergeGroup(group, merged);
-        } else {
-            // ...
-        }
+        MergeGroup(group, merged);
 
     }
 
@@ -2898,6 +2896,12 @@ void Merger::Run () {
 }
 
 void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
+    if (group.size() == 1) {
+        merged.push_back(polys.at(group.back()));
+
+        return;
+    }
+
     vtkPoints *pts = vtkPoints::New();
 
     IndexedPolysType indexedPolys;
@@ -3260,12 +3264,6 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
         }
     }
 
-    IndexedPolysType::const_iterator itrE;
-
-    for (itrE = indexedPolys.begin()+1; itrE != indexedPolys.end(); ++itrE) {
-        splitted.push_back(*itrE);
-    }
-
     PolysType newPolys;
 
     for (const auto &poly : splitted) {
@@ -3277,8 +3275,6 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
 
         newPolys.push_back(std::move(newPoly));
     }
-
-    WritePolys("stage2.vtk", newPolys);
 
     std::move(newPolys.begin(), newPolys.end(), std::back_inserter(merged));
 

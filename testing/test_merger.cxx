@@ -120,7 +120,12 @@ int main(int argc, char const *argv[]) {
 
     Merger(pd, pStrips, holes, descIds, 0).Run();
 
+    // dafür ist der Merger nicht zuständig
+    pd->RemoveDeletedCells();
+
     {
+        // schneiden sich die einzelnen polygone selbst?
+
         vtkIdType i, num;
         const vtkIdType *cell;
 
@@ -143,7 +148,7 @@ int main(int argc, char const *argv[]) {
 
     WriteVTK("merged.vtk", pd);
 
-    // assert(pd->GetNumberOfCells() == 10);
+    assert(pd->GetNumberOfCells() == 10);
 
     return 0;
 }
