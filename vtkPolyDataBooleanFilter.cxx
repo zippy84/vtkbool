@@ -230,8 +230,13 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
             start = clock::now();
 
-            CutCells(modPdA, polyStripsA);
-            CutCells(modPdB, polyStripsB);
+            if (CutCells(modPdA, polyStripsA) ||
+                CutCells(modPdB, polyStripsB)) {
+
+                vtkErrorMacro("CutCells failed.");
+
+                return 1;
+            }
 
             times.push_back(clock::now()-start);
 
@@ -924,7 +929,7 @@ void ComputeNormal (const StripPtsType &pts, const RefsType &poly, double *n) {
     vtkMath::Normalize(n);
 }
 
-void vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polyStrips) {
+bool vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polyStrips) {
 #ifdef DEBUG
     std::cout << "CutCells()" << std::endl;
 #endif
@@ -1532,13 +1537,19 @@ void vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
 
         // holes einbauen
         if (!holes.empty()) {
-            Merger(pd, pStrips, holes, descIds, origId).Run();
+            try {
+                Merger(pd, pStrips, holes, descIds, origId).Run();
+            } catch (const std::runtime_error &e) {
+                return true;
+            }
         }
 
     }
 
     pd->RemoveDeletedCells();
     pd->BuildCells();
+
+    return false;
 
 }
 
@@ -2902,7 +2913,7 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
         return;
     }
 
-    vtkPoints *pts = vtkPoints::New();
+    vtkSmartPointer<vtkPoints> pts = vtkSmartPointer<vtkPoints>::New();
 
     IndexedPolysType indexedPolys;
 
@@ -2933,7 +2944,7 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
     kdTree->OmitZPartitioning();
     kdTree->BuildLocatorFromPoints(pts);
 
-    vtkPolyData *linesA = vtkPolyData::New();
+    vtkSmartPointer<vtkPolyData> linesA = vtkSmartPointer<vtkPolyData>::New();
     linesA->SetPoints(pts);
     linesA->Allocate(1);
 
@@ -2970,7 +2981,7 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
     PolyConnsType connected {{0, {}}};
     std::set<vtkIdType> restricted; // keine der conns darf im gleichen punkt beginnen
 
-    vtkPolyData *linesB = vtkPolyData::New();
+    vtkSmartPointer<vtkPolyData> linesB = vtkSmartPointer<vtkPolyData>::New();
     linesB->SetPoints(pts);
     linesB->Allocate(1);
 
@@ -3027,7 +3038,7 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
 
         if (!foundOne) {
             if (!FindConns(linesA, kdTree, bspTreeA, polyConns, indexedPolys, sources, n)) {
-                break;
+                throw std::runtime_error("Merging failed.");
             }
         }
     }
@@ -3144,7 +3155,7 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
 
             } else {
                 if (!FindConns(linesA, kdTree, bspTreeA, polyConns, indexedPolys, sources, n)) {
-                    break;
+                    throw std::runtime_error("Merging failed.");
                 }
             }
         }
@@ -3277,11 +3288,6 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
     }
 
     std::move(newPolys.begin(), newPolys.end(), std::back_inserter(merged));
-
-    pts->Delete();
-
-    linesA->Delete();
-    linesB->Delete();
 
 }
 

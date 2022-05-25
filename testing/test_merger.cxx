@@ -118,7 +118,11 @@ int main(int argc, char const *argv[]) {
 
     IdsType descIds {0};
 
-    Merger(pd, pStrips, holes, descIds, 0).Run();
+    try {
+        Merger(pd, pStrips, holes, descIds, 0).Run();
+    } catch (const std::runtime_error &e) {
+        // throw e;
+    }
 
     // dafür ist der Merger nicht zuständig
     pd->RemoveDeletedCells();

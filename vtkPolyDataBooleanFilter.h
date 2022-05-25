@@ -254,7 +254,7 @@ class VTK_EXPORT vtkPolyDataBooleanFilter : public vtkPolyDataAlgorithm {
     void RemoveDuplicates (IdsType &lines);
     void CompleteStrips (PStrips &pStrips);
     bool HasArea (const StripType &strip) const;
-    void CutCells (vtkPolyData *pd, PolyStripsType &polyStrips);
+    bool CutCells (vtkPolyData *pd, PolyStripsType &polyStrips);
     void RestoreOrigPoints (vtkPolyData *pd, PolyStripsType &polyStrips);
     void DisjoinPolys (vtkPolyData *pd, PolyStripsType &polyStrips);
     void ResolveOverlaps (vtkPolyData *pd, vtkIdTypeArray *conts, PolyStripsType &polyStrips);
