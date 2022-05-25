@@ -135,7 +135,7 @@ int main(int argc, char const *argv[]) {
 
         double pt[3];
 
-        auto cellItr = vtk::TakeSmartPointer(pd->GetLines()->NewIterator());
+        auto cellItr = vtk::TakeSmartPointer(pd->GetPolys()->NewIterator());
 
         for (cellItr->GoToFirstCell(); !cellItr->IsDoneWithTraversal(); cellItr->GoToNextCell()) {
             cellItr->GetCurrentCell(num, cell);

@@ -3262,7 +3262,6 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
                 IndexedPoly newPolyA(poly.begin(), itrB+1);
                 IndexedPoly newPolyB(itrB, poly.end());
 
-                newPolyA.push_back(*itrB);
                 newPolyB.push_back(poly.front());
 
                 splitted.erase(itr);
