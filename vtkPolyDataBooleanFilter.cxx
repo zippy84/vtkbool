@@ -2856,8 +2856,6 @@ void Merger::Run () {
         }
     }
 
-    PolysType merged;
-
     std::size_t parent = 0;
 
     for (auto &group : groups) {
@@ -2882,28 +2880,44 @@ void Merger::Run () {
         }
         std::cout << "]" << std::endl;
 
+        PolysType merged;
+
         MergeGroup(group, merged);
 
-    }
+        std::map<Point3d, vtkIdType> newIds;
 
-    for (auto &poly : merged) {
-        vtkSmartPointer<vtkIdList> newCell = vtkSmartPointer<vtkIdList>::New();
+        for (auto &poly : merged) {
+            vtkSmartPointer<vtkIdList> newCell = vtkSmartPointer<vtkIdList>::New();
 
-        for (auto &p : poly) {
-            double in[] = {p.x, p.y},
-                out[3];
+            for (auto &p : poly) {
+                double in[] = {p.x, p.y},
+                    out[3];
 
-            BackTransform(in, out, base);
+                BackTransform(in, out, base);
 
-            vtkIdType id = p.id == NOTSET ? pdPts->InsertNextPoint(out) : p.id;
+                vtkIdType id = p.id;
 
-            newCell->InsertNextId(id);
+                if (id == NOTSET) {
+                    auto itr = newIds.find(p);
 
+                    if (itr == newIds.end()) {
+                        id = pdPts->InsertNextPoint(out);
+                        newIds.emplace(p, id);
+                    } else {
+                        id = itr->second;
+                    }
+                }
+
+                newCell->InsertNextId(id);
+
+            }
+
+            pd->InsertNextCell(VTK_POLYGON, newCell);
+            origCellIds->InsertNextValue(origId);
         }
 
-        pd->InsertNextCell(VTK_POLYGON, newCell);
-        origCellIds->InsertNextValue(origId);
     }
+
 }
 
 void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
