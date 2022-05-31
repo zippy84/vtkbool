@@ -19,6 +19,10 @@ limitations under the License.
 
 #include <iostream>
 #include <type_traits>
+#include <functional>
+#include <vector>
+#include <deque>
+#include <map>
 
 #include <vtkPolyData.h>
 #include <vtkKdTreePointLocator.h>
@@ -126,5 +130,12 @@ void ComputeNormal (const Poly &poly, double *n);
 bool PointInPoly (const Poly &poly, const Point3d &p);
 
 void WritePolys (const char *name, const PolysType &polys);
+
+typedef std::deque<vtkIdType> IndexedPoly;
+typedef std::vector<IndexedPoly> IndexedPolysType;
+
+typedef std::map<vtkIdType, std::reference_wrapper<const Point3d>> ReferencedPointsType;
+
+void GetPolys (const ReferencedPointsType &pts, const IndexedPolysType &indexedPolys, PolysType &polys);
 
 #endif

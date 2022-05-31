@@ -226,3 +226,15 @@ void WritePolys (const char *name, const PolysType &polys) {
 
     WriteVTK(name, pd);
 }
+
+void GetPolys (const ReferencedPointsType &pts, const IndexedPolysType &indexedPolys, PolysType &polys) {
+    for (const auto &poly : indexedPolys) {
+        Poly newPoly;
+
+        for (auto &id : poly) {
+            newPoly.push_back(pts.at(id));
+        }
+
+        polys.push_back(std::move(newPoly));
+    }
+}

@@ -2931,7 +2931,7 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
 
     IndexedPolysType indexedPolys;
 
-    std::map<vtkIdType, std::reference_wrapper<const Point3d>> origPts;
+    ReferencedPointsType refPts;
 
     SourcesType sources;
     std::size_t src = 0;
@@ -2947,7 +2947,7 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
             ids.push_back(id);
             sources.emplace(id, src);
 
-            origPts.emplace(id, p);
+            refPts.emplace(id, p);
         }
 
         indexedPolys.push_back(std::move(ids));
@@ -3225,6 +3225,11 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
 
     }
 
+    PolysType newPolysA;
+    GetPolys(refPts, {polyA}, newPolysA);
+
+    WritePolys("merged_stage1.vtk", newPolysA);
+
     // stage 2
 
     std::set<Conn, Cmp> leftConns;
@@ -3288,19 +3293,12 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
         }
     }
 
-    PolysType newPolys;
+    PolysType newPolysB;
+    GetPolys(refPts, splitted, newPolysB);
 
-    for (const auto &poly : splitted) {
-        Poly newPoly;
+    WritePolys("merged_stage2.vtk", newPolysB);
 
-        for (auto &id : poly) {
-            newPoly.push_back(origPts.at(id));
-        }
-
-        newPolys.push_back(std::move(newPoly));
-    }
-
-    std::move(newPolys.begin(), newPolys.end(), std::back_inserter(merged));
+    std::move(newPolysB.begin(), newPolysB.end(), std::back_inserter(merged));
 
 }
 
