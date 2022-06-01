@@ -278,7 +278,7 @@ protected:
     vtkPolyDataBooleanFilter ();
     ~vtkPolyDataBooleanFilter ();
 
-    int ProcessRequest (vtkInformation *request, vtkInformationVector **inputVector, vtkInformationVector *outputVector);
+    int ProcessRequest (vtkInformation *request, vtkInformationVector **inputVector, vtkInformationVector *outputVector) override;
 
     void PrintSelf (ostream&, vtkIndent) override {};
 

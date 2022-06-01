@@ -25,11 +25,14 @@ import pytest
 
 from vtkmodules.vtkCommonCore import vtkIdList, vtkIdTypeArray, vtkPoints
 from vtkmodules.vtkCommonDataModel import vtkPolyData, VTK_POLYGON
-from vtkmodules.vtkFiltersSources import vtkCubeSource, vtkCylinderSource, vtkSphereSource
+from vtkmodules.vtkFiltersSources import vtkCubeSource, vtkCylinderSource, vtkSphereSource, vtkPolyLineSource
 from vtkmodules.vtkCommonDataModel import vtkKdTreePointLocator
 from vtkmodules.vtkFiltersCore import vtkAppendPolyData
 from vtkmodules.vtkIOLegacy import vtkPolyDataWriter
 from vtkmodules.vtkCommonExecutionModel import vtkTrivialProducer
+from vtkmodules.vtkFiltersModeling import vtkRotationalExtrusionFilter
+from vtkmodules.vtkFiltersGeneral import vtkTransformPolyDataFilter
+from vtkmodules.vtkCommonTransforms import vtkTransform
 
 from vtkBool import vtkPolyDataBooleanFilter, vtkPolyDataContactFilter
 
@@ -593,6 +596,59 @@ def test_merger_2(tmp_path):
     bf = vtkPolyDataBooleanFilter()
     bf.SetInputConnection(0, cube.GetOutputPort())
     bf.SetInputConnection(1, prod.GetOutputPort())
+    bf.SetOperModeToNone()
+
+    bf.Update()
+
+    write_result(bf, tmp_path)
+    check_result(bf)
+
+def test_quads(tmp_path):
+    sphereA = vtkSphereSource()
+    sphereA.LatLongTessellationOn()
+    sphereA.SetCenter(-.25, 0, 0)
+
+    sphereB = vtkSphereSource()
+    sphereB.LatLongTessellationOn()
+    sphereB.SetCenter(.25, 0, 0)
+
+    bf = vtkPolyDataBooleanFilter()
+    bf.SetInputConnection(0, sphereA.GetOutputPort())
+    bf.SetInputConnection(1, sphereB.GetOutputPort())
+    bf.SetOperModeToNone()
+
+    bf.Update()
+
+    write_result(bf, tmp_path)
+    check_result(bf)
+
+def test_triangle_strips(tmp_path):
+    line = vtkPolyLineSource()
+    line.SetNumberOfPoints(19)
+
+    phi = math.pi/18
+
+    for i in range(19):
+        line.SetPoint(i, 0, math.cos(i*phi), math.sin(i*phi))
+
+    extr = vtkRotationalExtrusionFilter()
+    extr.SetInputConnection(line.GetOutputPort())
+    extr.SetResolution(18)
+    extr.SetRotationAxis(0, 1, 0)
+
+    sphere = vtkSphereSource()
+    sphere.SetRadius(1)
+
+    tra = vtkTransform()
+    tra.RotateX(90)
+
+    tf = vtkTransformPolyDataFilter()
+    tf.SetInputConnection(sphere.GetOutputPort())
+    tf.SetTransform(tra)
+
+    bf = vtkPolyDataBooleanFilter()
+    bf.SetInputConnection(0, extr.GetOutputPort())
+    bf.SetInputConnection(1, tf.GetOutputPort())
     bf.SetOperModeToNone()
 
     bf.Update()

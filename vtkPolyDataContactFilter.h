@@ -97,11 +97,11 @@ typedef std::vector<InterPt> InterPtsType;
 
 typedef std::vector<std::tuple<InterPt, InterPt, vtkIdType, vtkIdType>> OverlapsType;
 
-typedef std::set<Pair> SpecialEdgesType;
+typedef std::set<Pair> NonManifoldEdgesType;
 
 class VTK_EXPORT vtkPolyDataContactFilter : public vtkPolyDataAlgorithm {
 
-    void PreparePolyData (vtkPolyData *pd, SpecialEdgesType &edges);
+    void PreparePolyData (vtkPolyData *pd, NonManifoldEdgesType &edges);
 
     static void InterEdgeLine (InterPtsType &interPts, const double *eA, const double *eB, const double *r, const double *pt);
     static void InterPolyLine (InterPtsType &interPts, vtkPolyData *pd, vtkIdType num, const vtkIdType *poly, const double *r, const double *pt, Src src, const double *n);
@@ -122,7 +122,7 @@ class VTK_EXPORT vtkPolyDataContactFilter : public vtkPolyDataAlgorithm {
 
     vtkIdTypeArray *neigsA, *neigsB;
 
-    SpecialEdgesType edgesA, edgesB;
+    NonManifoldEdgesType edgesA, edgesB;
 
     bool invalidA, invalidB;
 
@@ -137,7 +137,7 @@ protected:
     vtkPolyDataContactFilter ();
     ~vtkPolyDataContactFilter ();
 
-    int ProcessRequest (vtkInformation *request, vtkInformationVector **inputVector, vtkInformationVector *outputVector);
+    int ProcessRequest (vtkInformation *request, vtkInformationVector **inputVector, vtkInformationVector *outputVector) override;
 
     void PrintSelf (ostream&, vtkIndent) override {};
 

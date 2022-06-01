@@ -40,6 +40,7 @@ limitations under the License.
 #include <vtkPolyDataConnectivityFilter.h>
 #include <vtkFeatureEdges.h>
 #include <vtkCellIterator.h>
+#include <vtkCellArrayIterator.h>
 
 #include <vtkCellArray.h>
 
@@ -209,72 +210,79 @@ int vtkPolyDataContactFilter::ProcessRequest (vtkInformation *request, vtkInform
 
 }
 
-void vtkPolyDataContactFilter::PreparePolyData (vtkPolyData *pd, SpecialEdgesType &edges) {
+void vtkPolyDataContactFilter::PreparePolyData (vtkPolyData *pd, NonManifoldEdgesType &edges) {
 
     pd->GetCellData()->Initialize();
     pd->GetPointData()->Initialize();
 
-    vtkIdType i, numCells = pd->GetNumberOfCells();
-
     vtkIdTypeArray *cellIds = vtkIdTypeArray::New();
-    vtkIdTypeArray *stripIds = vtkIdTypeArray::New();
 
-    for (i = 0; i < numCells; i++) {
-        cellIds->InsertNextValue(i);
-
-        if (pd->GetCellType(i) == VTK_TRIANGLE_STRIP) {
-            stripIds->InsertNextValue(i);
-        }
+    vtkCellIterator *cellItr = pd->NewCellIterator();
+    for (cellItr->InitTraversal(); !cellItr->IsDoneWithTraversal(); cellItr->GoToNextCell()) {
+        cellIds->InsertNextValue(cellItr->GetCellId());
     }
 
-    vtkCellArray *cells = vtkCellArray::New();
+    vtkIdType cellId;
 
-    vtkCellArray *strips = pd->GetStrips();
+    cellItr = pd->NewCellIterator();
+    for (cellItr->InitTraversal(); !cellItr->IsDoneWithTraversal(); cellItr->GoToNextCell()) {
+        cellId = cellItr->GetCellId();
 
-    vtkIdType n;
-    const vtkIdType *pts;
+        if (cellItr->GetCellType() == VTK_QUAD) {
+            vtkIdList *ptIds = cellItr->GetPointIds();
 
-    i = 0;
+            vtkIdList *newCellA = vtkIdList::New();
+            newCellA->SetNumberOfIds(3);
+            newCellA->SetId(0, ptIds->GetId(0));
+            newCellA->SetId(1, ptIds->GetId(1));
+            newCellA->SetId(2, ptIds->GetId(2));
+            pd->InsertNextCell(VTK_TRIANGLE, newCellA);
+            newCellA->Delete();
+            cellIds->InsertNextValue(cellId);
 
-    for (strips->InitTraversal(); strips->GetNextCell(n, pts);) {
-        cells->Reset();
+            vtkIdList *newCellB = vtkIdList::New();
+            newCellB->SetNumberOfIds(3);
+            newCellB->SetId(0, ptIds->GetId(0));
+            newCellB->SetId(1, ptIds->GetId(2));
+            newCellB->SetId(2, ptIds->GetId(3));
+            pd->InsertNextCell(VTK_TRIANGLE, newCellB);
+            newCellB->Delete();
+            cellIds->InsertNextValue(cellId);
 
-        vtkTriangleStrip::DecomposeStrip(n, pts, cells);
+            pd->DeleteCell(cellId);
+        } else if (cellItr->GetCellType() == VTK_TRIANGLE_STRIP) {
+            vtkIdList *ptIds = cellItr->GetPointIds();
 
-        for (cells->InitTraversal(); cells->GetNextCell(n, pts);) {
-            if (pts[0] != pts[1] && pts[1] != pts[2] && pts[2] != pts[0]) {
-                pd->InsertNextCell(VTK_TRIANGLE, n, pts);
-                cellIds->InsertNextValue(stripIds->GetValue(i));
+            vtkCellArray *cells = vtkCellArray::New();
 
-                numCells++;
+            vtkTriangleStrip::DecomposeStrip(cellItr->GetNumberOfPoints(), ptIds->GetPointer(0), cells);
+
+            vtkIdType n;
+            const vtkIdType *pts;
+
+            for (cells->InitTraversal(); cells->GetNextCell(n, pts);) {
+                if (pts[0] != pts[1] && pts[1] != pts[2] && pts[2] != pts[0]) {
+                    pd->InsertNextCell(VTK_TRIANGLE, n, pts);
+                    cellIds->InsertNextValue(cellId);
+                }
+
             }
 
+            cells->Delete();
+
+            pd->DeleteCell(cellId);
+
+        } else if (cellItr->GetCellType() != VTK_TRIANGLE && cellItr->GetCellType() != VTK_POLYGON) {
+            pd->DeleteCell(cellId);
         }
-
-        i++;
-
-    }
-
-    int type;
-    for (i = 0; i < numCells; i++) {
-        type = pd->GetCellType(i);
-
-        if (type != VTK_POLYGON && type != VTK_QUAD && type != VTK_TRIANGLE) {
-            pd->DeleteCell(i);
-        }
-
     }
 
     cellIds->SetName("OrigCellIds");
-
     pd->GetCellData()->SetScalars(cellIds);
 
-    cells->Delete();
-    stripIds->Delete();
     cellIds->Delete();
 
     pd->RemoveDeletedCells();
-
     pd->BuildLinks();
 
     {
