@@ -129,8 +129,8 @@ int vtkPolyDataContactFilter::ProcessRequest (vtkInformation *request, vtkInform
         pdB = vtkPolyData::New();
         pdB->DeepCopy(_pdB);
 
-        PreparePolyData(pdA, edgesA);
-        PreparePolyData(pdB, edgesB);
+        PreparePolyData(pdA);
+        PreparePolyData(pdB);
 
         if (pdA->GetNumberOfCells() == 0 || pdB->GetNumberOfCells() == 0) {
             vtkErrorMacro("One of the inputs does not contain any supported cells.");
@@ -138,8 +138,8 @@ int vtkPolyDataContactFilter::ProcessRequest (vtkInformation *request, vtkInform
             return 1;
         }
 
-        // pdA->BuildLinks();
-        // pdB->BuildLinks();
+        GetInvalidEdges(pdA, edgesA);
+        GetInvalidEdges(pdB, edgesB);
 
         // anlegen der obb-trees
 
@@ -158,12 +158,12 @@ int vtkPolyDataContactFilter::ProcessRequest (vtkInformation *request, vtkInform
         obbA->IntersectWithOBBTree(obbB, mat, InterOBBNodes, this);
 
         if (invalidA) {
-            vtkErrorMacro("First input has non-manifold edges which are involved in the intersection.");
+            vtkErrorMacro("First input has non-manifold edges.");
             return 1;
         }
 
         if (invalidB) {
-            vtkErrorMacro("Second input has non-manifold edges which are involved in the intersection.");
+            vtkErrorMacro("Second input has non-manifold edges.");
             return 1;
         }
 
@@ -210,7 +210,7 @@ int vtkPolyDataContactFilter::ProcessRequest (vtkInformation *request, vtkInform
 
 }
 
-void vtkPolyDataContactFilter::PreparePolyData (vtkPolyData *pd, NonManifoldEdgesType &edges) {
+void vtkPolyDataContactFilter::PreparePolyData (vtkPolyData *pd) {
 
     pd->GetCellData()->Initialize();
     pd->GetPointData()->Initialize();
@@ -231,25 +231,54 @@ void vtkPolyDataContactFilter::PreparePolyData (vtkPolyData *pd, NonManifoldEdge
         if (cellItr->GetCellType() == VTK_QUAD) {
             vtkIdList *ptIds = cellItr->GetPointIds();
 
-            vtkIdList *newCellA = vtkIdList::New();
-            newCellA->SetNumberOfIds(3);
-            newCellA->SetId(0, ptIds->GetId(0));
-            newCellA->SetId(1, ptIds->GetId(1));
-            newCellA->SetId(2, ptIds->GetId(2));
-            pd->InsertNextCell(VTK_TRIANGLE, newCellA);
-            newCellA->Delete();
-            cellIds->InsertNextValue(cellId);
+            vtkPoints *pts = cellItr->GetPoints();
 
-            vtkIdList *newCellB = vtkIdList::New();
-            newCellB->SetNumberOfIds(3);
-            newCellB->SetId(0, ptIds->GetId(0));
-            newCellB->SetId(1, ptIds->GetId(2));
-            newCellB->SetId(2, ptIds->GetId(3));
-            pd->InsertNextCell(VTK_TRIANGLE, newCellB);
-            newCellB->Delete();
-            cellIds->InsertNextValue(cellId);
+            double n[3];
 
-            pd->DeleteCell(cellId);
+            ComputeNormal(pd->GetPoints(), n, 4, ptIds->GetPointer(0));
+
+            double dA = vtkMath::Dot(n, pts->GetPoint(0)),
+                dB = vtkMath::Dot(n, pts->GetPoint(1))-dA;
+
+            if (std::abs(dB) > 1e-6) {
+                // nur wenn nicht auf einer ebene
+
+                dA = vtkMath::Distance2BetweenPoints(pts->GetPoint(0), pts->GetPoint(2));
+                dB = vtkMath::Distance2BetweenPoints(pts->GetPoint(1), pts->GetPoint(3));
+
+                vtkSmartPointer<vtkIdList> newCellA = vtkSmartPointer<vtkIdList>::New();
+                vtkSmartPointer<vtkIdList> newCellB = vtkSmartPointer<vtkIdList>::New();
+
+                newCellA->SetNumberOfIds(3);
+                newCellB->SetNumberOfIds(3);
+
+                if (dA < dB) {
+                    newCellA->SetId(0, ptIds->GetId(1));
+                    newCellA->SetId(1, ptIds->GetId(2));
+                    newCellA->SetId(2, ptIds->GetId(3));
+
+                    newCellB->SetId(0, ptIds->GetId(3));
+                    newCellB->SetId(1, ptIds->GetId(0));
+                    newCellB->SetId(2, ptIds->GetId(1));
+                } else {
+                    newCellA->SetId(0, ptIds->GetId(0));
+                    newCellA->SetId(1, ptIds->GetId(1));
+                    newCellA->SetId(2, ptIds->GetId(2));
+
+                    newCellB->SetId(0, ptIds->GetId(2));
+                    newCellB->SetId(1, ptIds->GetId(3));
+                    newCellB->SetId(2, ptIds->GetId(0));
+                }
+
+                pd->InsertNextCell(VTK_TRIANGLE, newCellA);
+                cellIds->InsertNextValue(cellId);
+
+                pd->InsertNextCell(VTK_TRIANGLE, newCellB);
+                cellIds->InsertNextValue(cellId);
+
+                pd->DeleteCell(cellId);
+            }
+
         } else if (cellItr->GetCellType() == VTK_TRIANGLE_STRIP) {
             vtkIdList *ptIds = cellItr->GetPointIds();
 
@@ -277,6 +306,8 @@ void vtkPolyDataContactFilter::PreparePolyData (vtkPolyData *pd, NonManifoldEdge
         }
     }
 
+    cellItr->Delete();
+
     cellIds->SetName("OrigCellIds");
     pd->GetCellData()->SetScalars(cellIds);
 
@@ -285,44 +316,43 @@ void vtkPolyDataContactFilter::PreparePolyData (vtkPolyData *pd, NonManifoldEdge
     pd->RemoveDeletedCells();
     pd->BuildLinks();
 
-    {
-        // sucht nach non-manifold edges
+}
 
-        vtkSmartPointer<vtkFeatureEdges> feat = vtkSmartPointer<vtkFeatureEdges>::New();
-        feat->SetInputData(pd);
+void vtkPolyDataContactFilter::GetInvalidEdges (vtkPolyData *pd, InvalidEdgesType &edges) {
+    vtkSmartPointer<vtkFeatureEdges> features = vtkSmartPointer<vtkFeatureEdges>::New();
+    features->SetInputData(pd);
 
-        feat->BoundaryEdgesOff();
-        feat->FeatureEdgesOff();
-        feat->ManifoldEdgesOff();
-        feat->NonManifoldEdgesOn();
+    features->BoundaryEdgesOff();
+    features->FeatureEdgesOff();
+    features->ManifoldEdgesOff();
+    features->NonManifoldEdgesOn();
 
-        feat->Update();
+    features->Update();
 
-        vtkPolyData *featPd = feat->GetOutput();
+    vtkPolyData *lines = features->GetOutput();
 
-        double pA[3], pB[3];
+    vtkIdType num;
+    const vtkIdType *line;
 
-        vtkIdType idA, idB;
+    double ptA[3], ptB[3];
 
-        vtkCellIterator *itr = featPd->NewCellIterator();
-        for (itr->InitTraversal(); !itr->IsDoneWithTraversal(); itr->GoToNextCell()) {
-            vtkIdList *pts = itr->GetPointIds();
+    vtkIdType idA, idB;
 
-            featPd->GetPoint(pts->GetId(0), pA);
-            featPd->GetPoint(pts->GetId(1), pB);
+    auto lineItr = vtk::TakeSmartPointer(lines->GetLines()->NewIterator());
 
-            idA = pd->FindPoint(pA);
-            idB = pd->FindPoint(pB);
+    for (lineItr->GoToFirstCell(); !lineItr->IsDoneWithTraversal(); lineItr->GoToNextCell()) {
+        lineItr->GetCurrentCell(num, line);
 
-            edges.emplace(idA, idB);
-            edges.emplace(idB, idA);
+        lines->GetPoint(line[0], ptA);
+        lines->GetPoint(line[1], ptB);
 
-        }
+        idA = pd->FindPoint(ptA);
+        idB = pd->FindPoint(ptB);
 
-        itr->Delete();
+        edges.emplace(idA, idB);
+        edges.emplace(idB, idA);
 
     }
-
 }
 
 void vtkPolyDataContactFilter::InterEdgeLine (InterPtsType &interPts, const double *eA, const double *eB, const double *r, const double *ptA) {
@@ -769,20 +799,36 @@ void vtkPolyDataContactFilter::AddContactLines (InterPtsType &intersA, InterPtsT
         std::cout << "s " << s << std::endl;
 #endif
 
-        // schnittpunkt liegt auf einer der non-manifolds von pdA
+        if (f.src == Src::A) {
+            Pair edge {polyA[f.edge[0]], polyA[f.edge[1]]};
 
-        if ((f.src == Src::A && edgesA.count({polyA[f.edge[0]], polyA[f.edge[1]]}))
-            || (s.src == Src::A && edgesA.count({polyA[s.edge[0]], polyA[s.edge[1]]}))) {
-
-            invalidA = true;
+            if (edgesA.count(edge) == 1) {
+                invalidA = true;
+            }
         }
 
-        // schnittpunkt liegt auf einer der non-manifolds von pdB
+        if (s.src == Src::A) {
+            Pair edge {polyA[s.edge[0]], polyA[s.edge[1]]};
 
-        if ((f.src == Src::B && edgesB.count({polyB[f.edge[0]], polyB[f.edge[1]]}))
-            || (s.src == Src::B && edgesB.count({polyB[s.edge[0]], polyB[s.edge[1]]}))) {
+            if (edgesA.count(edge) == 1) {
+                invalidA = true;
+            }
+        }
 
-            invalidB = true;
+        if (f.src == Src::B) {
+            Pair edge {polyB[f.edge[0]], polyB[f.edge[1]]};
+
+            if (edgesB.count(edge) == 1) {
+                invalidB = true;
+            }
+        }
+
+        if (s.src == Src::B) {
+            Pair edge {polyB[s.edge[0]], polyB[s.edge[1]]};
+
+            if (edgesB.count(edge) == 1) {
+                invalidB = true;
+            }
         }
 
         vtkIdList *linePts = vtkIdList::New();

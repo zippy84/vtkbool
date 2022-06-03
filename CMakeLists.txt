@@ -67,7 +67,7 @@ if(VTKBOOL_PARAVIEW)
 
 else()
 
-    find_package(VTK REQUIRED COMPONENTS FiltersSources IOLegacy FiltersExtraction FiltersGeometry FiltersModeling FiltersFlowPaths WrappingPythonCore OPTIONAL_COMPONENTS NO_MODULE)
+    find_package(VTK REQUIRED COMPONENTS FiltersSources IOLegacy FiltersExtraction FiltersGeometry FiltersModeling FiltersFlowPaths OPTIONAL_COMPONENTS WrappingPythonCore NO_MODULE)
 
     if(VTK_FOUND)
 
@@ -83,49 +83,53 @@ else()
 
         set(BUILD_SHARED_LIBS ON)
 
-        include(GNUInstallDirs)
-
         vtk_module_build(MODULES ${modules})
 
-        vtk_module_wrap_python(
-            MODULES ${modules}
-            PYTHON_PACKAGE "vtkbool"
-            BUILD_STATIC OFF
-            INSTALL_HEADERS OFF)
+        if (VTK_WrappingPythonCore_FOUND)
 
-        include(CTest)
+            vtk_module_wrap_python(
+                MODULES ${modules}
+                PYTHON_PACKAGE "vtkbool"
+                BUILD_STATIC OFF
+                INSTALL_HEADERS OFF)
 
-        vtk_module_python_default_destination(python_default_destination)
+            include(CTest)
 
-        add_test(NAME "import_vtkbool"
-            COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/testing/test_python.py)
+            include(GNUInstallDirs)
 
-        set_property(TEST "import_vtkbool" APPEND PROPERTY ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/${python_default_destination}/vtkbool")
+            vtk_module_python_default_destination(python_default_destination)
 
-        add_test(NAME "generate_frieze"
-            COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/testing/generate_frieze.py
-            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/testing)
+            add_test(NAME "import_vtkbool"
+                COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/testing/test_python.py)
 
-        set_property(TEST "generate_frieze" APPEND PROPERTY ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/${python_default_destination}/vtkbool")
+            set_property(TEST "import_vtkbool" APPEND PROPERTY ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/${python_default_destination}/vtkbool")
 
-        add_test(NAME "test_filter"
-            COMMAND ${Python3_EXECUTABLE} -m pytest
-            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/testing)
+            add_test(NAME "generate_frieze"
+                COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/testing/generate_frieze.py
+                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/testing)
 
-        set_property(TEST "test_filter" APPEND PROPERTY ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/${python_default_destination}/vtkbool")
+            set_property(TEST "generate_frieze" APPEND PROPERTY ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/${python_default_destination}/vtkbool")
 
-        add_executable(test_merger testing/test_merger.cxx)
-        target_link_libraries(test_merger PRIVATE vtkBool ${VTK_LIBRARIES})
+            add_test(NAME "test_filter"
+                COMMAND ${Python3_EXECUTABLE} -m pytest
+                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/testing)
 
-        vtk_module_autoinit(
-            TARGETS test_merger
-            MODULES ${VTK_LIBRARIES}
-        )
+            set_property(TEST "test_filter" APPEND PROPERTY ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/${python_default_destination}/vtkbool")
 
-        add_test(NAME "test_merger"
-            COMMAND test_merger
-            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/testing)
+            add_executable(test_merger testing/test_merger.cxx)
+            target_link_libraries(test_merger PRIVATE vtkBool ${VTK_LIBRARIES})
 
-    endif(VTK_FOUND)
+            vtk_module_autoinit(
+                TARGETS test_merger
+                MODULES ${VTK_LIBRARIES}
+            )
+
+            add_test(NAME "test_merger"
+                COMMAND test_merger
+                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/testing)
+
+        endif()
+
+    endif()
 
 endif()
