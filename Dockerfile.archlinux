@@ -1,4 +1,4 @@
-FROM archlinux:latest
+FROM archlinux:latest AS coverage
 RUN pacman -Syyu --noconfirm
 RUN pacman -S cmake vtk make gcc libjpeg-turbo libpng libtiff python-pytest openmpi fmt python gcovr --noconfirm
 WORKDIR /refactoring
@@ -9,3 +9,12 @@ RUN cmake -DCMAKE_BUILD_TYPE=PROFILE -DVTKBOOL_COVERAGE=ON ..
 RUN make
 RUN ctest --output-on-failure
 RUN gcovr -r .. . --cobertura-pretty -o coverage.xml
+
+FROM coverage
+RUN pacman -S clang openmp --noconfirm
+WORKDIR /refactoring2
+COPY . .
+RUN ls -alh
+WORKDIR /refactoring2/build
+RUN CXX=clang++ CC=clang cmake -DCMAKE_BUILD_TYPE=RELEASE ..
+RUN make

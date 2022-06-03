@@ -224,7 +224,6 @@ void vtkPolyDataContactFilter::PreparePolyData (vtkPolyData *pd) {
 
     vtkIdType cellId;
 
-    cellItr = pd->NewCellIterator();
     for (cellItr->InitTraversal(); !cellItr->IsDoneWithTraversal(); cellItr->GoToNextCell()) {
         cellId = cellItr->GetCellId();
 
