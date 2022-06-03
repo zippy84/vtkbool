@@ -83,6 +83,8 @@ else()
 
         set(BUILD_SHARED_LIBS ON)
 
+        include(GNUInstallDirs)
+
         vtk_module_build(MODULES ${modules})
 
         if (VTK_WrappingPythonCore_FOUND)
@@ -94,8 +96,6 @@ else()
                 INSTALL_HEADERS OFF)
 
             include(CTest)
-
-            include(GNUInstallDirs)
 
             vtk_module_python_default_destination(python_default_destination)
 
