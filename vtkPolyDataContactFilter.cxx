@@ -132,9 +132,13 @@ int vtkPolyDataContactFilter::ProcessRequest (vtkInformation *request, vtkInform
         PreparePolyData(pdA);
         PreparePolyData(pdB);
 
-        if (pdA->GetNumberOfCells() == 0 || pdB->GetNumberOfCells() == 0) {
-            vtkErrorMacro("One of the inputs does not contain any supported cells.");
+        if (pdA->GetNumberOfCells() == 0) {
+            vtkErrorMacro("First input does not contain any supported cells.");
+            return 1;
+        }
 
+        if (pdB->GetNumberOfCells() == 0) {
+            vtkErrorMacro("Second input does not contain any supported cells.");
             return 1;
         }
 

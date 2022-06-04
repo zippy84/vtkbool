@@ -18,3 +18,4 @@ RUN ls -alh
 WORKDIR /refactoring2/build
 RUN CXX=clang++ CC=clang cmake -DCMAKE_BUILD_TYPE=RELEASE ..
 RUN make
+RUN ctest --output-on-failure

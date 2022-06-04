@@ -86,7 +86,7 @@ class Frieze:
         elif self.cfg['end'] == 'D':
             self.cfg.update({ 'o_a': -self.cfg['a'], 'o_b': 2*self.cfg['a'], 'o_c': 0 })
 
-    def draw_bricks (self, seq, end_seq):
+    def draw_bricks(self, seq, end_seq):
         seq = list(seq)
 
         pts = []
@@ -174,7 +174,7 @@ class Frieze:
 
         return pts
 
-    def draw_zz_bricks (self):
+    def draw_zz_bricks(self):
         j = int(self.cfg['shift']//self.cfg['c'])+1
 
         self.cfg['shift'] = self.cfg['shift']%self.cfg['c']
@@ -205,7 +205,7 @@ class Frieze:
 
         return pts
 
-    def draw_spacer (self):
+    def draw_spacer(self):
         pts = [[-self.cfg['w']+self.cfg['o_a'], 2*self.cfg['e']],
             [-self.cfg['w']+self.cfg['o_a'], self.cfg['b']],
             [self.cfg['a'], self.cfg['b']],
@@ -218,7 +218,7 @@ class Frieze:
 
         return pts
 
-    def export (self, name):
+    def export(self, name):
         extr = extrude(self.draw_bricks(self.cfg['seqs'][0], self.cfg['end_seqs'][0]), self.cfg['r'], self.cfg['q']/2)
         extr1 = extrude(self.draw_spacer(), 2*self.cfg['e'], self.cfg['q']/2+self.cfg['r'])
 

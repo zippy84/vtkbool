@@ -36,13 +36,7 @@ from vtkmodules.vtkCommonTransforms import vtkTransform
 
 from vtkBool import vtkPolyDataBooleanFilter, vtkPolyDataContactFilter
 
-def find_pts(loc, pt, pts):
-    loc.FindPointsWithinRadius(1e-5, pt, pts)
-
-def get_next(id_, poly):
-    return 0 if id_+1 == poly.GetNumberOfIds() else id_+1
-
-def check_result(bf):
+def check_result(bf, expected_regs=None):
     lines = bf.GetOutput(2)
 
     lines.BuildLinks()
@@ -58,6 +52,19 @@ def check_result(bf):
 
     assert isinstance(contsA, vtkIdTypeArray)
     assert isinstance(contsB, vtkIdTypeArray)
+
+    regionsA = pdA.GetPointData().GetArray('RegionId')
+    regionsB = pdB.GetPointData().GetArray('RegionId')
+
+    assert isinstance(regionsA, vtkIdTypeArray)
+    assert isinstance(regionsB, vtkIdTypeArray)
+
+    if isinstance(expected_regs, list):
+        valuesA = set(regionsA.GetValue(i) for i in range(regionsA.GetNumberOfValues()))
+        valuesB = set(regionsB.GetValue(i) for i in range(regionsB.GetNumberOfValues()))
+
+        assert len(valuesA) == expected_regs[0]
+        assert len(valuesB) == expected_regs[1]
 
     for pd in [pdA, pdB]:
         print('checking pd')
@@ -86,17 +93,17 @@ def check_result(bf):
             _linkedA = linkedA.GetNumberOfIds()
             _linkedB = linkedB.GetNumberOfIds()
 
-            pA = lines.GetPoint(idA)
-            pB = lines.GetPoint(idB)
+            ptA = lines.GetPoint(idA)
+            ptB = lines.GetPoint(idB)
 
-            # print(pA)
-            # print(pB)
+            # print(ptA)
+            # print(ptB)
 
             ptsA = vtkIdList()
             ptsB = vtkIdList()
 
-            find_pts(loc, pA, ptsA)
-            find_pts(loc, pB, ptsB)
+            loc.FindPointsWithinRadius(1e-5, ptA, ptsA)
+            loc.FindPointsWithinRadius(1e-5, ptB, ptsB)
 
             neigs = defaultdict(list)
 
@@ -126,6 +133,8 @@ def check_result(bf):
                         poly = vtkIdList()
                         pd.GetCellPoints(poly_id, poly)
 
+                        next_inds = [ i+1 for i in range(poly.GetNumberOfIds()-1) ] + [0]
+
                         groups_ = [ [ (id_, poly.IsId(id_)) for id_ in group ] for group in groups ]
 
                         for group in groups_:
@@ -141,7 +150,7 @@ def check_result(bf):
 
                                 for a, b in zip(it_a, it_b):
                                     # benachbart?
-                                    c = get_next(a, poly)
+                                    c = next_inds[a]
                                     assert c != b
 
                         group_a, group_b = groups_
@@ -154,8 +163,8 @@ def check_result(bf):
                             id_i, i = a
                             id_j, j = b
 
-                            next_i = get_next(i, poly)
-                            next_j = get_next(j, poly)
+                            next_i = next_inds[i]
+                            next_j = next_inds[j]
 
                             if next_i == j \
                                 or next_j == i:
@@ -263,7 +272,7 @@ def test_simple(tmp_path):
     bf.Update()
 
     write_result(bf, tmp_path)
-    check_result(bf)
+    check_result(bf, [2, 2])
 
 def test_simple_2(tmp_path):
     cube = vtkCubeSource()
@@ -282,7 +291,7 @@ def test_simple_2(tmp_path):
     bf.Update()
 
     write_result(bf, tmp_path)
-    check_result(bf)
+    check_result(bf, [2, 2])
 
 def test_simple_3(tmp_path):
     cube = vtkCubeSource()
@@ -300,7 +309,7 @@ def test_simple_3(tmp_path):
     bf.Update()
 
     write_result(bf, tmp_path)
-    check_result(bf)
+    check_result(bf, [6, 6])
 
 def test_simple_4(tmp_path):
     cube = vtkCubeSource()
@@ -351,7 +360,7 @@ def test_simple_4(tmp_path):
     bf.Update()
 
     write_result(bf, tmp_path)
-    check_result(bf)
+    check_result(bf, [2, 2])
 
 def test_same(tmp_path):
     sphere = vtkSphereSource()
@@ -364,7 +373,7 @@ def test_same(tmp_path):
     bf.Update()
 
     write_result(bf, tmp_path)
-    check_result(bf)
+    check_result(bf, [88, 88])
 
 # def test_disjoin(tmp_path):
 #     pts = [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0], [0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1], [.5, .5, 0], [.5, .5, 1]]
@@ -449,7 +458,7 @@ def test_touch(tmp_path):
     bf.Update()
 
     write_result(bf, tmp_path)
-    check_result(bf)
+    check_result(bf, [3, 3])
 
 def test_nearly_congruent(tmp_path):
     phi = math.radians(.0005) 
@@ -536,7 +545,7 @@ def test_merger(tmp_path):
     bf.Update()
 
     write_result(bf, tmp_path)
-    check_result(bf)
+    check_result(bf, [3, 3])
 
 def test_merger_2(tmp_path):
     cube = vtkCubeSource()
@@ -601,7 +610,7 @@ def test_merger_2(tmp_path):
     bf.Update()
 
     write_result(bf, tmp_path)
-    check_result(bf)
+    check_result(bf, [7, 5])
 
 def test_quads(tmp_path):
     sphereA = vtkSphereSource()
@@ -620,7 +629,7 @@ def test_quads(tmp_path):
     bf.Update()
 
     write_result(bf, tmp_path)
-    check_result(bf)
+    check_result(bf, [2, 2])
 
 def test_triangle_strips(tmp_path):
     line = vtkPolyLineSource()
@@ -654,4 +663,4 @@ def test_triangle_strips(tmp_path):
     bf.Update()
 
     write_result(bf, tmp_path)
-    check_result(bf)
+    check_result(bf, [49, 49])
