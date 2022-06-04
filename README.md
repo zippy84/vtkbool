@@ -13,28 +13,23 @@ You can support my project with [PayPal](https://paypal.me/zippy84).
 ## Features
 
 - no extra libraries required
+- 4 operation types available (union, intersection, difference and difference2 - difference with interchanged operands)
 - triangulation is not needed
-- non-convex polygons are allowed
-- only the involved polygons are modified
-- meshes can be stacked (coplanar polygons are right handled)
-- 4 operation types (union, intersection, difference and difference2 - difference with interchanged operands)
 - all types of polygonal cells are supported (triangles, quads, polygons, triangle-strips)
+- triangle-strips and quads will be transformed into triangles (quads only if points are not on the same plane)
+- non-convex polygons are allowed
+- meshes can be stacked (coplanar polygons are right handled)
 - the meshes don’t need to be closed
 - CellData is passed (attached by the rules of vtkAppendPolyData)
-- original cell ids are added to CellData (*OrigCellIdsA* and *OrigCellIdsB* as vtkIntArray)
-- contact lines are available
-- ~~the filter is able to embed holes~~
-- it is also a plugin for ParaView
+- contact-lines are available in the 3th output
+- the filter is able to embed holes
+- compileable as ParaView plugin
 - Python wrapped
 
 ## Limitations
 
-- correctness depends on the polygon-defining normals (use vtkPolyDataNormals if you have problems with incorrect orientations)
-- PointData is not preserved - you have to do your own mapping
-
-## Todo
-
-- the filter needs a mesh optimizer for sharp-angled triangles and non-planar polygons
+- the filter assumes well defined triangles, quads and polygons
+- PointData is not preserved - you have to do your own mapping (use *OrigCellIdsA* and *OrigCellIdsB*)
 
 ## Requirements
 
@@ -59,7 +54,7 @@ The usage of the library is very simple. Look at the example in the section belo
 - `SetOperModeToDifference`
 - `SetOperModeToDifference2`
 
-The alternative is the more generic `SetOperMode`. The method must be called with the number of the desired operation, an integer between 0 and 4, with the same meaning as mentioned before.
+The alternative is the more generic `SetOperMode`. The method must be called with the number of the desired operation, an integer between 0 and 4, with the same meaning as mentioned before. The default is Union.
 
 ### Example
 
@@ -132,7 +127,7 @@ Also create a directory named build. If you are on Linux, open a terminal and en
 
 To build the plugin you have to compile ParaView from source. Download the current version from <http://www.paraview.org> and follow the compilation instructions. As soon as ParaView is compiled, it may take a while, you can build the plugin by activating the **VTKBOOL_PARAVIEW** option within CMake. In CMake you also have to point to **ParaView_DIR** if CMake can't found it and it is not installed in a common location like */usr/lib* or */usr/local/lib*. Make sure **PARAVIEW_INSTALL_DEVELOPMENT_FILES** is set.
 
-When everything has been compiled successfully, you can install the plugin. ~~For that purpose I made screenshots from the necessary steps. You can find them under *paraview\_plugin/install/*. There is also a screenshot of how to use it.~~
+When everything has been compiled successfully, you can install the plugin.
 
 ## Python
 
