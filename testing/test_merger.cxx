@@ -16,6 +16,7 @@ limitations under the License.
 
 #include <vtkCellData.h>
 #include <vtkCellArrayIterator.h>
+#include <vtkIdTypeArray.h>
 
 #include "vtkPolyDataBooleanFilter.h"
 
