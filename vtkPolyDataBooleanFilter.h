@@ -176,7 +176,7 @@ public:
 typedef std::vector<Conn> ConnsType;
 typedef std::map<std::size_t, ConnsType> PolyConnsType;
 
-std::ostream& operator<< (std::ostream &out, const PolyConnsType& polyConns) {
+inline std::ostream& operator<< (std::ostream &out, const PolyConnsType& polyConns) {
     PolyConnsType::const_iterator itr;
 
     for (itr = polyConns.begin(); itr != polyConns.end(); ++itr) {
