@@ -268,11 +268,11 @@ public:
     vtkSetClampMacro(OperMode, int, OPER_NONE, OPER_DIFFERENCE2);
     vtkGetMacro(OperMode, int);
 
-    void SetOperModeToNone () { OperMode = OPER_NONE; }
-    void SetOperModeToUnion () { OperMode = OPER_UNION; }
-    void SetOperModeToIntersection () { OperMode = OPER_INTERSECTION; }
-    void SetOperModeToDifference () { OperMode = OPER_DIFFERENCE; }
-    void SetOperModeToDifference2 () { OperMode = OPER_DIFFERENCE2; }
+    void SetOperModeToNone () { OperMode = OPER_NONE; Modified(); }
+    void SetOperModeToUnion () { OperMode = OPER_UNION; Modified(); }
+    void SetOperModeToIntersection () { OperMode = OPER_INTERSECTION; Modified(); }
+    void SetOperModeToDifference () { OperMode = OPER_DIFFERENCE; Modified(); }
+    void SetOperModeToDifference2 () { OperMode = OPER_DIFFERENCE2; Modified(); }
 
 protected:
     vtkPolyDataBooleanFilter ();

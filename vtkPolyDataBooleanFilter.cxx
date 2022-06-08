@@ -3004,6 +3004,8 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
     vtkSmartPointer<vtkModifiedBSPTree> bspTreeB = vtkSmartPointer<vtkModifiedBSPTree>::New();
     bspTreeB->SetDataSet(linesB);
 
+    ConnsType firstConns;
+
     std::size_t i, numPolys = indexedPolys.size();
 
     double ptA[3], ptB[3];
@@ -3043,6 +3045,8 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
                             bspTreeB->Modified();
 
                             foundOne = true;
+
+                            firstConns.push_back(conn);
 
                             break;
                         }
@@ -3086,15 +3090,25 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
 
     std::set<std::size_t> solved {0};
 
+    std::deque<std::size_t> searchInds;
+
     for (i = 1; i < numPolys; i++) {
-        auto &conns = connected.at(i);
+        if (connected.at(i).size() == 1) {
+            searchInds.push_back(i);
+        }
+    }
 
-        while (conns.size() < 2) {
-            Conn &first = conns.back();
+    while (!searchInds.empty()) {
+        PriosType prios;
 
+        for (auto ind : searchInds) {
             PolyPriosType polyPrios;
 
-            for (auto &conn : polyConns.at(i)) {
+            std::cout << "ind " << ind << std::endl;
+
+            const Conn &first = connected.at(ind).back();
+
+            for (auto &conn : polyConns.at(ind)) {
                 auto &src = sources.at(conn.j);
 
                 if (polyPrios.count(src) == 1) { // * hier
@@ -3110,7 +3124,7 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
                     pts->GetPoint(conn.j, ptB);
 
                     if (bspTreeB->IntersectWithLine(ptA, ptB, 1e-5, nullptr, nullptr) == 0) {
-                        auto &chainA = chains.at(i),
+                        auto &chainA = chains.at(ind),
                             &chainB = chains.at(src);
 
                         std::set<std::size_t> _chainA(chainA.begin(), chainA.end()),
@@ -3136,43 +3150,48 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
                 }
             }
 
-            if (!polyPrios.empty()) {
-                PriosType prios;
+            PolyPriosType::const_iterator itr;
+            for (itr = polyPrios.begin(); itr != polyPrios.end(); ++itr) {
+                prios.insert(itr->second);
+            }
+        }
 
-                PolyPriosType::const_iterator itr;
-                for (itr = polyPrios.begin(); itr != polyPrios.end(); ++itr) {
-                    prios.insert(itr->second);
+        if (!prios.empty()) {
+            auto &prio = *prios.rbegin();
 
-                    std::cout << itr->first << ": " << itr->second << std::endl;
-                }
+            std::cout << "found " << prio << std::endl;
 
-                auto &prio = *prios.rbegin();
+            auto &conns = connected.at(sources.at(prio.conn.i));
 
-                conns.push_back(prio.conn);
+            conns.push_back(prio.conn);
 
-                connected.at(sources.at(prio.conn.j)).emplace_back(prio.conn.d, prio.conn.j, prio.conn.i);
+            connected.at(sources.at(prio.conn.j)).emplace_back(prio.conn.d, prio.conn.j, prio.conn.i);
 
-                restricted.insert(prio.conn.i);
-                restricted.insert(prio.conn.j);
+            restricted.insert(prio.conn.i);
+            restricted.insert(prio.conn.j);
 
-                vtkIdList *line = vtkIdList::New();
-                line->InsertNextId(prio.conn.i);
-                line->InsertNextId(prio.conn.j);
+            vtkIdList *line = vtkIdList::New();
+            line->InsertNextId(prio.conn.i);
+            line->InsertNextId(prio.conn.j);
 
-                linesB->InsertNextCell(VTK_LINE, line);
+            linesB->InsertNextCell(VTK_LINE, line);
 
-                line->Delete();
+            line->Delete();
 
-                bspTreeB->Modified();
+            bspTreeB->Modified();
 
-                solved.insert(prio.solvable.begin(), prio.solvable.end());
+            solved.insert(prio.solvable.begin(), prio.solvable.end());
 
-                break;
+            searchInds.erase(std::find(searchInds.begin(), searchInds.end(), sources.at(prio.conn.i)));
 
-            } else {
-                if (!FindConns(linesA, kdTree, bspTreeA, polyConns, indexedPolys, sources, n)) {
-                    throw std::runtime_error("Merging failed.");
-                }
+            auto itr = std::find(searchInds.begin(), searchInds.end(), sources.at(prio.conn.j));
+
+            if (itr != searchInds.end()) {
+                searchInds.erase(itr);
+            }
+        } else {
+            if (!FindConns(linesA, kdTree, bspTreeA, polyConns, indexedPolys, sources, n)) {
+                throw std::runtime_error("Merging failed.");
             }
         }
     }
@@ -3193,15 +3212,7 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
 
     IndexedPoly polyA {indexedPolys.front()};
 
-    for (itrC = connected.begin(); itrC != connected.end(); ++itrC) {
-        if (itrC->first == 0) {
-            continue;
-        }
-
-        auto &conns = itrC->second;
-
-        auto &first = conns.front();
-
+    for (const auto &first : firstConns) {
         auto itrA = std::find(polyA.begin(), polyA.end(), first.j);
 
         assert(itrA != polyA.end());
@@ -3312,7 +3323,7 @@ bool Merger::FindConns (vtkPolyData *lines, vtkSmartPointer<vtkKdTree> kdTree, v
         return false;
     }
 
-    n += 5;
+    n += 10;
 
     PolyConnsType::iterator itr;
 
