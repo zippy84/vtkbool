@@ -2874,8 +2874,6 @@ void Merger::Run () {
         GroupType _group {parent++};
         std::set_difference(group.begin(), group.end(), parents.begin(), parents.end(), std::back_inserter(_group));
 
-        _group.swap(group);
-
         std::cout << "[";
         for (auto &index : group) {
             std::cout << index << ", ";
@@ -2884,7 +2882,7 @@ void Merger::Run () {
 
         PolysType merged;
 
-        MergeGroup(group, merged);
+        MergeGroup(_group, merged);
 
         std::map<Point3d, vtkIdType> newIds;
 
