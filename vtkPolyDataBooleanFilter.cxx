@@ -2875,7 +2875,7 @@ void Merger::Run () {
         std::set_difference(group.begin(), group.end(), parents.begin(), parents.end(), std::back_inserter(_group));
 
         std::cout << "[";
-        for (auto &index : group) {
+        for (auto &index : _group) {
             std::cout << index << ", ";
         }
         std::cout << "]" << std::endl;
@@ -3323,14 +3323,6 @@ bool Merger::FindConns (vtkPolyData *lines, vtkSmartPointer<vtkKdTree> kdTree, v
 
     n += 10;
 
-    PolyConnsType::iterator itr;
-
-    for (itr = polyConns.begin(); itr != polyConns.end(); ++itr) {
-        ConnsType &conns = itr->second;
-
-        conns.clear();
-    }
-
     vtkSmartPointer<vtkIdList> foundPts = vtkSmartPointer<vtkIdList>::New();
 
     vtkIdType i, numPts;
@@ -3345,6 +3337,8 @@ bool Merger::FindConns (vtkPolyData *lines, vtkSmartPointer<vtkKdTree> kdTree, v
 
     vtkIdType j;
     vtkIdType _idA, _idB;
+
+    std::map<std::size_t, std::set<Conn, ConnCmp>> _polyConns;
 
     vtkSmartPointer<vtkIdList> line = vtkSmartPointer<vtkIdList>::New();
 
@@ -3387,20 +3381,25 @@ bool Merger::FindConns (vtkPolyData *lines, vtkSmartPointer<vtkKdTree> kdTree, v
                 }
 
                 if (good) {
-                    double v[3];
-                    vtkMath::Subtract(ptA, ptB, v);
-                    double d = vtkMath::Norm(v);
+                    double d = vtkMath::Distance2BetweenPoints(ptA, ptB);
 
-                    polyConns[srcA].emplace_back(d, idA, idB);
-                    polyConns[srcB].emplace_back(d, idB, idA);
+                    _polyConns[srcA].emplace(d, idA, idB);
+                    _polyConns[srcB].emplace(d, idB, idA);
                 }
             }
         }
     }
 
-    for (itr = polyConns.begin(); itr != polyConns.end(); ++itr) {
-        ConnsType &conns = itr->second;
+    decltype(_polyConns)::const_iterator itr;
+
+    for (itr = _polyConns.begin(); itr != _polyConns.end(); ++itr) {
+        auto &_conns = itr->second;
+
+        ConnsType conns(_conns.begin(), _conns.end());
         std::sort(conns.begin(), conns.end());
+
+        polyConns[itr->first].swap(conns);
+
     }
 
     return true;

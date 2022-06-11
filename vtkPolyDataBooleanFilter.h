@@ -173,6 +173,12 @@ public:
 
 };
 
+struct ConnCmp {
+    bool operator() (const Conn &a, const Conn &b) const {
+        return std::tie(a.i, a.j) < std::tie(b.i, b.j);
+    }
+};
+
 typedef std::vector<Conn> ConnsType;
 typedef std::map<std::size_t, ConnsType> PolyConnsType;
 
