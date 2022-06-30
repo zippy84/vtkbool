@@ -30,42 +30,36 @@ class vtkOBBNode;
 class vtkMatrix4x4;
 
 enum class Src {
-    A = 1,
-    B = 2
+    A,
+    B
+};
+
+enum class End {
+    NONE,
+    BEGIN,
+    END
 };
 
 class InterPt {
 public:
-    InterPt () : onEdge(false), end(NOTSET), srcA(NOTSET), srcB(NOTSET) {}
+    InterPt () = delete;
 
-    InterPt (double _t, vtkIdType _end, double x, double y, double z) : InterPt() {
-        t = _t;
-        onEdge = true;
-        end = _end;
+    InterPt (double x, double y, double z, double t, vtkIdType a, vtkIdType b, End end, Src src) : t(t), edge(a, b), end(end), src(src), srcA(NOTSET), srcB(NOTSET) {
         pt[0] = x;
         pt[1] = y;
         pt[2] = z;
     }
 
-    InterPt (double _t, vtkIdType _end, double x, double y, double z, vtkIdType a, vtkIdType b, Src _src) : InterPt(_t, _end, x, y, z) {
-        assert(_end == a || _end == b);
-
-        edge[0] = a;
-        edge[1] = b;
-        src = _src;
-    }
-
-    double t;
-    bool onEdge;
-
-    vtkIdType edge[2], end, srcA, srcB;
-
-    double pt[3];
+    double pt[3], t;
+    Pair edge;
+    End end;
+    Src src;
+    vtkIdType srcA, srcB;
 
     friend std::ostream& operator<< (std::ostream &out, const InterPt &s) {
         out << "pt [" << s.pt[0] << ", " << s.pt[1] << ", " << s.pt[2] << "]"
             << ", t " << s.t
-            << ", edge [" << s.edge[0] << ", " << s.edge[1] << "]"
+            << ", edge " << s.edge
             << ", end " << s.end
             << ", src " << s.src;
 
@@ -76,21 +70,20 @@ public:
         assert(src != other.src);
 
         if (src == Src::A) {
-            srcA = end == NOTSET ? edge[0] : end;
+            srcA = end == End::END ? edge.g : edge.f;
         } else {
-            srcB = end == NOTSET ? edge[0] : end;
+            srcB = end == End::END ? edge.g : edge.f;
         }
 
         if (std::abs(other.t-t) < 1e-5) {
             if (other.src == Src::A) {
-                srcA = other.end == NOTSET ? other.edge[0] : other.end;
+                srcA = other.end == End::END ? other.edge.g : other.edge.f;
             } else {
-                srcB = other.end == NOTSET ? other.edge[0] : other.end;
+                srcB = other.end == End::END ? other.edge.g : other.edge.f;
             }
         }
     }
 
-    Src src;
 };
 
 typedef std::vector<InterPt> InterPtsType;
@@ -103,13 +96,13 @@ class VTK_EXPORT vtkPolyDataContactFilter : public vtkPolyDataAlgorithm {
 
     void PreparePolyData (vtkPolyData *pd);
 
-    static void InterEdgeLine (InterPtsType &interPts, const double *eA, const double *eB, const double *r, const double *pt);
+    static void InterEdgeLine (InterPtsType &interPts, vtkPolyData *pd, vtkIdType idA, vtkIdType idB, const double *r, const double *pt, Src src);
     static void InterPolyLine (InterPtsType &interPts, vtkPolyData *pd, vtkIdType num, const vtkIdType *poly, const double *r, const double *pt, Src src, const double *n);
     void InterPolys (vtkIdType idA, vtkIdType idB);
-    void OverlapLines (OverlapsType &ols, InterPtsType &intersA, InterPtsType &intersB, const vtkIdType *polyA, const vtkIdType *polyB, vtkIdType idA, vtkIdType idB);
-    void AddContactLines (InterPtsType &intersA, InterPtsType &intersB, const vtkIdType *polyA, const vtkIdType *polyB, vtkIdType idA, vtkIdType idB);
+    void OverlapLines (OverlapsType &ols, InterPtsType &intersA, InterPtsType &intersB, vtkIdType idA, vtkIdType idB);
+    void AddContactLines (InterPtsType &intersA, InterPtsType &intersB, vtkIdType idA, vtkIdType idB);
 
-    static void CheckInters (const InterPtsType &interPts, vtkPolyData *pd, const vtkIdType *poly, vtkIdType idA, vtkIdType idB);
+    static void CheckInters (const InterPtsType &interPts, vtkPolyData *pd, vtkIdType idA, vtkIdType idB);
 
     vtkIdTypeArray *contA, *contB;
 

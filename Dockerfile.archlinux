@@ -1,6 +1,7 @@
-FROM archlinux:latest AS coverage
+FROM archlinux:latest
 RUN pacman -Syyu --noconfirm
-RUN pacman -S cmake vtk make gcc libjpeg-turbo libpng libtiff python-pytest openmpi fmt python gcovr --noconfirm
+RUN pacman -S cmake vtk make gcc libjpeg-turbo libpng libtiff python-pytest openmpi fmt python gcovr clang openmp --noconfirm
+
 WORKDIR /refactoring
 COPY . .
 RUN ls -alh
@@ -10,8 +11,6 @@ RUN make
 RUN ctest --output-on-failure
 RUN gcovr -r .. . --cobertura-pretty -o coverage.xml
 
-FROM coverage
-RUN pacman -S clang openmp --noconfirm
 WORKDIR /refactoring2
 COPY . .
 RUN ls -alh

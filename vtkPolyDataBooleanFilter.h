@@ -84,7 +84,6 @@ public:
 
     vtkIdType polyId;
 
-    vtkIdType src;
     bool catched;
 };
 
@@ -120,6 +119,7 @@ class PStrips {
 public:
     PStrips (vtkPolyData *pd, vtkIdType cellId) {
         const vtkIdType *cell;
+        vtkIdType numPts;
 
         pd->GetCellPoints(cellId, numPts, cell);
 
@@ -137,7 +137,6 @@ public:
 
     double n[3];
     IdsType poly;
-    vtkIdType numPts;
     Base base;
 };
 
@@ -247,6 +246,8 @@ class VTK_EXPORT vtkPolyDataBooleanFilter : public vtkPolyDataAlgorithm {
 
     vtkSmartPointer<vtkCellData> cellDataA, cellDataB;
     vtkSmartPointer<vtkIdTypeArray> cellIdsA, cellIdsB;
+
+    vtkIdTypeArray *contsA, *contsB;
 
     unsigned long timePdA, timePdB;
 

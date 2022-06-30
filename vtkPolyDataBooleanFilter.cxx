@@ -166,8 +166,8 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
             // in den CellDatas steht drin, welche polygone einander schneiden
 
-            vtkIdTypeArray *contsA = vtkIdTypeArray::SafeDownCast(contLines->GetCellData()->GetScalars("cA"));
-            vtkIdTypeArray *contsB = vtkIdTypeArray::SafeDownCast(contLines->GetCellData()->GetScalars("cB"));
+            contsA = vtkIdTypeArray::SafeDownCast(contLines->GetCellData()->GetScalars("cA"));
+            contsB = vtkIdTypeArray::SafeDownCast(contLines->GetCellData()->GetScalars("cB"));
 
             vtkIdTypeArray *sourcesA = vtkIdTypeArray::SafeDownCast(contLines->GetCellData()->GetScalars("sourcesA"));
             vtkIdTypeArray *sourcesB = vtkIdTypeArray::SafeDownCast(contLines->GetCellData()->GetScalars("sourcesB"));
@@ -366,134 +366,114 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, vtkIdTypeArray *
     StripPtsType &pts = pStrips.pts;
     const IdsType &poly = pStrips.poly;
 
-    const vtkIdType &numPts = pStrips.numPts;
+    double a[3], b[3], sA[3], sB[3], u[3], v[3], w[3], n, t, d;
 
-    vtkIdType i, j;
+    std::map<vtkIdType, vtkIdType> allPts;
 
-    double tol = 1e-5;
+    vtkSmartPointer<vtkIdList> line = vtkSmartPointer<vtkIdList>::New();
 
-    vtkIdList *linePts = vtkIdList::New();
+    for (auto lineId : lines) {
+        contLines->GetCellPoints(lineId, line);
 
-    IdsType::const_iterator itr;
+        // std::cout << "? " << contsA->GetValue(lineId)
+        //     << ", " << contsB->GetValue(lineId)
+        //     << ", [" << line->GetId(0)
+        //     << ", " << line->GetId(1)
+        //     << "]"
+        //     << std::endl;
 
-    for (itr = lines.begin(); itr != lines.end(); itr++) {
-        contLines->GetCellPoints(*itr, linePts);
-
-        // diese punkte durchlaufen
-
-        for (int _i : {0, 1}) {
-
-            vtkIdType realInd = linePts->GetId(_i);
-
-            if (pts.count(realInd) == 0) {
-                // lage analysieren
-
-                StripPt sp;
-
-                sp.ind = realInd;
-
-                // die koordinaten
-                double pt[3];
-                contLines->GetPoint(realInd, pt);
-
-                Cpy(sp.pt, pt, 3);
-
-                vtkIdType src = sources->GetTypedComponent(*itr, _i);
-
-                sp.src = src;
-
-                double lastD = DBL_MAX;
-
-                // jetzt muss man die kanten durchlaufen
-                for (i = 0; i < numPts; i++) {
-                    j = i+1 == numPts ? 0 : i+1;
-
-                    if (src != NOTSET && !(i == src || j == src)) {
-                        continue;
-                    }
-
-                    vtkIdType indA, indB;
-                    double a[3], b[3];
-
-                    indA = poly[i]; // * hier
-                    indB = poly[j]; // * hier
-
-                    pd->GetPoint(indA, a);
-                    pd->GetPoint(indB, b);
-
-                    double sA[3], sB[3];
-                    vtkMath::Subtract(a, pt, sA);
-                    vtkMath::Subtract(b, pt, sB);
-
-                    // richtungsvektor und länge der kante
-
-                    double u[3];
-                    vtkMath::Subtract(b, a, u);
-
-                    double n = vtkMath::Norm(u);
-
-                    // d und t zur kante
-
-                    double v[3];
-                    vtkMath::Subtract(pt, a, v);
-
-                    double t = vtkMath::Dot(v, u)/(n*n);
-
-                    double w[3];
-                    vtkMath::Cross(v, u, w);
-
-                    double d = vtkMath::Norm(w)/n;
-
-                    if (d < tol && d < lastD && t > -tol && t < 1+tol) {
-                        // liegt im toleranzbereich der kante
-
-                        sp.edge[0] = indA;
-                        sp.edge[1] = indB;
-
-                        sp.t = std::min(1., std::max(0., t));
-
-                        if (vtkMath::Norm(sA) < tol) {
-                            Cpy(sp.captPt, a, 3);
-                            sp.capt = Capt::A;
-
-                            break;
-
-                        } else if (vtkMath::Norm(sB) < tol) {
-                            Cpy(sp.captPt, b, 3);
-                            sp.capt = Capt::B;
-
-                            break;
-
-                        } else {
-                            // u ist nicht normiert
-                            vtkMath::MultiplyScalar(u, t);
-
-                            double x[3];
-                            vtkMath::Add(a, u, x);
-
-                            // projektion
-                            Cpy(sp.captPt, x, 3);
-
-                            sp.capt = Capt::EDGE;
-
-                            lastD = d;
-                        }
-
-                    }
-
-                }
-
-                if (src != NOTSET && sp.edge[0] == NOTSET) {
-                    sp.catched = false;
-                }
-
-                pts.emplace(realInd, std::move(sp));
-
-            }
-        }
+        allPts.emplace(line->GetId(0), sources->GetTypedComponent(lineId, 0));
+        allPts.emplace(line->GetId(1), sources->GetTypedComponent(lineId, 1));
     }
 
-    linePts->Delete();
+    decltype(allPts)::const_iterator itr;
+
+    for (itr = allPts.begin(); itr != allPts.end(); ++itr) {
+        StripPt sp;
+        sp.ind = itr->first;
+
+        // die koordinaten
+        double pt[3];
+        contLines->GetPoint(sp.ind, pt);
+
+        Cpy(sp.pt, pt, 3);
+
+        IdsType::const_iterator itrA, itrB;
+
+        for (itrA = poly.begin(); itrA != poly.end(); ++itrA) {
+            itrB = itrA+1;
+
+            if (itrB == poly.end()) {
+                itrB = poly.begin();
+            }
+
+            if (itr->second != NOTSET && *itrA != itr->second) {
+                continue;
+            }
+
+            pd->GetPoint(*itrA, a);
+            pd->GetPoint(*itrB, b);
+
+            vtkMath::Subtract(a, pt, sA);
+            vtkMath::Subtract(b, pt, sB);
+
+            // richtungsvektor und länge der kante
+
+            vtkMath::Subtract(b, a, u);
+            n = vtkMath::Norm(u);
+
+            // d und t zur kante
+
+            vtkMath::Subtract(pt, a, v);
+            t = vtkMath::Dot(v, u)/(n*n);
+
+            vtkMath::Cross(v, u, w);
+            d = vtkMath::Norm(w)/n;
+
+            if (d < 1e-5 && t > -1e-5 && t < 1+1e-5) {
+                sp.edge[0] = *itrA;
+                sp.edge[1] = *itrB;
+
+                sp.t = std::min(1., std::max(0., t));
+
+                if (vtkMath::Norm(sA) < 1e-5) {
+                    Cpy(sp.captPt, a, 3);
+                    sp.capt = Capt::A;
+
+                } else if (vtkMath::Norm(sB) < 1e-5) {
+                    Cpy(sp.captPt, b, 3);
+                    sp.capt = Capt::B;
+
+                } else {
+                    // u ist nicht normiert
+                    vtkMath::MultiplyScalar(u, t);
+
+                    double x[3];
+                    vtkMath::Add(a, u, x);
+
+                    // projektion
+                    Cpy(sp.captPt, x, 3);
+
+                    sp.capt = Capt::EDGE;
+
+                }
+            }
+
+            // std::cout << "? "
+            //     << sp.ind
+            //     << ", " << d
+            //     << ", " << t
+            //     << ", " << sp.capt
+            //     << std::endl;
+        }
+
+        if (itr->second != NOTSET && sp.edge[0] == NOTSET) {
+            sp.catched = false;
+        }
+
+        pts.emplace(sp.ind, std::move(sp));
+
+    }
 
     StripPtsType::iterator itr2;
 
@@ -506,9 +486,14 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, vtkIdTypeArray *
 
                 sp.edge[0] = sp.edge[1];
 
-                vtkIdType i = std::find(poly.begin(), poly.end(), sp.edge[0])-poly.begin(); // * hier
+                auto itrA = std::find(poly.begin(), poly.end(), sp.edge[0]),
+                    itrB = itrA+1;
 
-                sp.edge[1] = poly[i+1 == numPts ? 0 : i+1]; // * hier
+                if (itrB == poly.end()) {
+                    itrB = poly.begin();
+                }
+
+                sp.edge[1] = *itrB;
 
                 sp.capt = Capt::A;
 

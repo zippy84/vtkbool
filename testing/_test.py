@@ -30,13 +30,7 @@ readerB.SetFileName('_test/InferiorAir.vtk')
 bf = vtkPolyDataBooleanFilter()
 bf.SetInputConnection(0, readerA.GetOutputPort())
 bf.SetInputConnection(1, readerB.GetOutputPort())
-
 bf.SetOperModeToNone()
-
-writer_ = vtkPolyDataWriter()
-writer_.SetFileName('_test/lines.vtk')
-writer_.SetInputConnection(bf.GetOutputPort(2))
-writer_.Update()
 
 # das ursprüngliche problem war bei cell 151227
 
@@ -47,8 +41,13 @@ writer0.Update()
 
 writer1 = vtkPolyDataWriter()
 writer1.SetFileName('_test/result1.vtk')
-writer1.SetInputConnection(bf.GetOutputPort(2))
+writer1.SetInputConnection(bf.GetOutputPort(1))
 writer1.Update()
+
+writer2 = vtkPolyDataWriter()
+writer2.SetFileName('_test/lines.vtk')
+writer2.SetInputConnection(bf.GetOutputPort(2))
+writer2.Update()
 
 # fehler bei 544,545,546,547,548,690,691,692,693
 # sind lines in holes
