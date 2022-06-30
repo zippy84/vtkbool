@@ -35,8 +35,6 @@ import math
 import os
 import re
 
-import glob
-
 from collections import namedtuple
 
 Bnds = namedtuple('Bounds', 'x1 x2 y1 y2 z1 z2')
@@ -402,21 +400,25 @@ if __name__ == '__main__':
     ]
 
     os.makedirs('einzeln', exist_ok=True)
+    os.makedirs('stl', exist_ok=True)
+
+    cell_counts = [524, 98, 576, 264, 1274, 1866, 582, 98, 472, 194, 1048, 272, 56, 284, 284]
 
     for i, cfg in enumerate(cfgs):
         print(f'~~ {i} ~~')
-        Frieze(cfg).export(f'einzeln/test{i}.vtk')
 
-    os.makedirs('stl', exist_ok=True)
+        f = f'einzeln/test{i}.vtk'
+        Frieze(cfg).export(f)
 
-    for f in glob.glob('einzeln/*.vtk'):
-        name = f.split('/')[1][:-4]
+        assert os.path.exists(f)
 
         reader = vtkPolyDataReader()
         reader.SetFileName(f)
 
         writer = vtkSTLWriter()
         writer.SetInputConnection(reader.GetOutputPort())
-        writer.SetFileName(f'stl/{name}.stl')
+        writer.SetFileName(f'stl/test{i}.stl')
 
         writer.Update()
+
+        assert reader.GetOutput().GetNumberOfCells() == cell_counts[i]

@@ -36,6 +36,8 @@ from vtkmodules.vtkCommonTransforms import vtkTransform
 
 from vtkBool import vtkPolyDataBooleanFilter, vtkPolyDataContactFilter
 
+from generate_frieze import extrude
+
 def check_result(bf, expected_regs=None):
     lines = bf.GetOutput(2)
 
@@ -664,3 +666,37 @@ def test_triangle_strips(tmp_path):
 
     write_result(bf, tmp_path)
     check_result(bf, [49, 49])
+
+def test_special(tmp_path):
+    cubeA = vtkCubeSource()
+    cubeA.SetBounds(-5, 5, -10, 0, 0, 10)
+
+    pts = [
+        [0, 0],
+        [1, 0],
+        [2, -1],
+        [3, 0],
+        [4, -1],
+        [5, 0],
+        [5, 10],
+        [-5, 10],
+        [-5, 0],
+        [-4, 1],
+        [-3, 0],
+        [-2, 1],
+        [-1, 0]
+    ]
+
+    cubeB = extrude(pts, 10)
+
+    bf = vtkPolyDataBooleanFilter()
+    bf.SetInputConnection(0, cubeA.GetOutputPort())
+    bf.SetInputConnection(1, cubeB.GetOutputPort())
+    bf.SetOperModeToNone()
+
+    bf.Update()
+
+    write_result(bf, tmp_path)
+    # check_result(bf, [10, 8])
+
+    assert bf.GetOutput(2).GetNumberOfCells() == 32
