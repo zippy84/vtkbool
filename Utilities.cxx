@@ -16,7 +16,6 @@ limitations under the License.
 
 #include "Utilities.h"
 
-#define _USE_MATH_DEFINES
 #include <cmath>
 
 #include <vtkPoints.h>

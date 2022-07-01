@@ -89,16 +89,16 @@ public:
 
 class StripPtR {
 public:
-    StripPtR (vtkIdType _ind) : ind(_ind), strip(NOTSET), ref(NOTSET), side(Side::NONE) {
+    StripPtR () = delete;
+
+    StripPtR (vtkIdType ind, std::size_t strip) : ind(ind), strip(strip), ref(NOTSET), side(Side::NONE) {
         desc[0] = NOTSET;
         desc[1] = NOTSET;
     }
 
-    vtkIdType ind, desc[2];
-
-    // nicht gesetzt bei CAPT_NOT
-    vtkIdType strip, ref;
-
+    vtkIdType ind;
+    std::size_t strip;
+    vtkIdType ref, desc[2];
     Side side;
 
     friend std::ostream& operator<< (std::ostream &out, const StripPtR &s) {
@@ -222,7 +222,7 @@ struct Cmp {
 
 typedef std::set<Prio, Cmp> PriosType;
 
-typedef std::map<vtkIdType, Prio> PolyPriosType;
+typedef std::map<std::size_t, Prio> PolyPriosType;
 
 class Merger {
     vtkPolyData *pd;

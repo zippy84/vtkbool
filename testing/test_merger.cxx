@@ -88,7 +88,8 @@ int main() {
 
     StripsType holes;
 
-    vtkIdType ind = 0;
+    vtkIdType ind {0};
+    std::size_t stripId {0};
 
     PolysType::iterator itr;
     for (itr = polys.begin()+1; itr != polys.end(); ++itr) {
@@ -109,12 +110,14 @@ int main() {
 
             pStrips.pts.emplace(ind, std::move(sp));
 
-            strip.emplace_back(ind);
+            strip.emplace_back(ind, stripId);
 
             ind++;
         }
 
         holes.push_back(strip);
+
+        stripId++;
     }
 
     IdsType descIds {0};
