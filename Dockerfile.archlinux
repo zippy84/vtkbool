@@ -1,6 +1,6 @@
 FROM archlinux:latest
 RUN pacman -Syyu --noconfirm
-RUN pacman -S cmake vtk make gcc libjpeg-turbo libpng libtiff python-pytest openmpi fmt python gcovr clang openmp --noconfirm
+RUN pacman -S cmake vtk make gcc libjpeg-turbo libpng libtiff python-pytest openmpi fmt python gcovr clang openmp python-pygments --noconfirm
 
 WORKDIR /refactoring
 COPY . .
@@ -9,7 +9,8 @@ WORKDIR /refactoring/build
 RUN cmake -DCMAKE_BUILD_TYPE=PROFILE -DVTKBOOL_COVERAGE=ON ..
 RUN make
 RUN ctest --output-on-failure
-RUN gcovr -r .. . --cobertura-pretty -o coverage.xml
+RUN gcovr -r .. . --exclude-throw-branches --cobertura-pretty -o coverage.xml
+# RUN gcovr -r .. . --exclude-throw-branches --html-details -o coverage.html
 
 WORKDIR /refactoring2
 COPY . .
