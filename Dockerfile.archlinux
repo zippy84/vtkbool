@@ -10,7 +10,7 @@ RUN cmake -DCMAKE_BUILD_TYPE=PROFILE -DVTKBOOL_COVERAGE=ON ..
 RUN make
 RUN ctest --output-on-failure
 RUN gcovr -r .. . --exclude-throw-branches --cobertura-pretty -o coverage.xml
-# RUN gcovr -r .. . --exclude-throw-branches --html-details -o coverage.html
+RUN gcovr -r .. . --exclude-throw-branches --html-details -o coverage.html
 
 WORKDIR /refactoring2
 COPY . .
