@@ -37,7 +37,6 @@ limitations under the License.
 #include <vtkPointData.h>
 #include <vtkMath.h>
 #include <vtkIdList.h>
-#include <vtkCell.h>
 #include <vtkAppendPolyData.h>
 #include <vtkKdTreePointLocator.h>
 #include <vtkCleanPolyData.h>
@@ -1435,7 +1434,10 @@ bool vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
 
                         for (vtkIdType id : newPoly) {
                             pd->GetPoint(id, pt);
-                            _pts.emplace(id, Point3d{pt[0], pt[1], pt[2]});
+
+                            _pts.emplace(std::piecewise_construct,
+                                std::forward_as_tuple(id),
+                                std::forward_as_tuple(pt[0], pt[1], pt[2]));
                         }
 
                         IdsType::const_iterator itrA, itrB;
@@ -3079,7 +3081,7 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
             for (auto &conn : polyConns.at(ind)) {
                 auto &src = sources.at(conn.j);
 
-                if (polyPrios.count(src) == 1) { // * hier
+                if (polyPrios.count(src) == 1) {
                     continue;
                 }
 
