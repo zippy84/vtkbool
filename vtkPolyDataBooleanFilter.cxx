@@ -168,29 +168,27 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
             contsA = vtkIdTypeArray::SafeDownCast(contLines->GetCellData()->GetScalars("cA"));
             contsB = vtkIdTypeArray::SafeDownCast(contLines->GetCellData()->GetScalars("cB"));
 
+            vtkIdTypeArray *accuracy = vtkIdTypeArray::SafeDownCast(contLines->GetPointData()->GetScalars("accuracy"));
+
             vtkIdTypeArray *sourcesA = vtkIdTypeArray::SafeDownCast(contLines->GetCellData()->GetScalars("sourcesA"));
             vtkIdTypeArray *sourcesB = vtkIdTypeArray::SafeDownCast(contLines->GetCellData()->GetScalars("sourcesB"));
 
             vtkIdType i, numPts = contLines->GetNumberOfPoints();
 
-            vtkIdList *cells = vtkIdList::New();
+            vtkSmartPointer<vtkIdList> cells = vtkSmartPointer<vtkIdList>::New();
 
             for (i = 0; i < numPts; i++) {
                 contLines->GetPointCells(i, cells);
 
                 if (cells->GetNumberOfIds() == 1) {
-                    std::cout << "Contact ends at " << i << " (line " << cells->GetId(0) << ")" << std::endl;
-
-                    break;
+                    vtkErrorMacro("Contact ends suddenly.");
+                    return 1;
                 }
-            }
 
-            cells->Delete();
-
-            if (i < numPts) {
-                vtkErrorMacro("Contact ends suddenly at point " << i << ".");
-
-                return 1;
+                if (accuracy->GetValue(i) == 1) {
+                    vtkErrorMacro("Contact goes through a cell with a bad shape.");
+                    return 1;
+                }
             }
 
             // sichert die OrigCellIds

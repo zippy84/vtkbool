@@ -86,6 +86,9 @@ vtkPolyDataContactFilter::vtkPolyDataContactFilter () {
 
     invalidA = false;
     invalidB = false;
+
+    accuracy = vtkIdTypeArray::New();
+    accuracy->SetName("accuracy");
 }
 
 vtkPolyDataContactFilter::~vtkPolyDataContactFilter () {
@@ -100,6 +103,8 @@ vtkPolyDataContactFilter::~vtkPolyDataContactFilter () {
 
     contPts->Delete();
     contLines->Delete();
+
+    accuracy->Delete();
 
 }
 
@@ -176,6 +181,8 @@ int vtkPolyDataContactFilter::ProcessRequest (vtkInformation *request, vtkInform
 
         contLines->GetCellData()->AddArray(sourcesA);
         contLines->GetCellData()->AddArray(sourcesB);
+
+        contLines->GetPointData()->AddArray(accuracy);
 
         contLines->RemoveDeletedCells();
 
@@ -823,6 +830,9 @@ void vtkPolyDataContactFilter::AddContactLines (InterPtsType &intersA, InterPtsT
         neigsA->InsertNextValue(std::get<2>(*itr));
         neigsB->InsertNextValue(std::get<3>(*itr));
 
+        accuracy->InsertNextValue(f.inaccurate);
+        accuracy->InsertNextValue(s.inaccurate);
+
     }
 
 }
@@ -851,7 +861,7 @@ int vtkPolyDataContactFilter::InterOBBNodes (vtkOBBNode *nodeA, vtkOBBNode *node
     return 0;
 }
 
-void vtkPolyDataContactFilter::CheckInters (const InterPtsType &interPts, vtkPolyData *pd, vtkIdType idA, vtkIdType idB) {
+void vtkPolyDataContactFilter::CheckInters (InterPtsType &interPts, vtkPolyData *pd, vtkIdType idA, vtkIdType idB) {
     double ptA[3],
         ptB[3],
         v[3],
@@ -861,7 +871,7 @@ void vtkPolyDataContactFilter::CheckInters (const InterPtsType &interPts, vtkPol
         alpha,
         d;
 
-    for (const auto &p : interPts) {
+    for (auto &p : interPts) {
         pd->GetPoint(p.edge.f, ptA);
         pd->GetPoint(p.edge.g, ptB);
 
@@ -883,18 +893,20 @@ void vtkPolyDataContactFilter::CheckInters (const InterPtsType &interPts, vtkPol
             continue;
         }
 
-        if (p.src == Src::A) {
-            std::cout << "? A ";
-        } else {
-            std::cout << "? B ";
-        }
+        // if (p.src == Src::A) {
+        //     std::cout << "? A ";
+        // } else {
+        //     std::cout << "? B ";
+        // }
 
-        std::cout << idA << ", " << idB << ": "
-            << std::fixed
-            << d
-            << ", [" << p.pt[0] << ", " << p.pt[1] << ", " << p.pt[2] << "], "
-            << p.edge
-            << std::endl;
+        // std::cout << idA << ", " << idB << ": "
+        //     << std::fixed
+        //     << d
+        //     << ", [" << p.pt[0] << ", " << p.pt[1] << ", " << p.pt[2] << "], "
+        //     << p.edge
+        //     << std::endl;
+
+        p.inaccurate = true;
     }
 
 }
