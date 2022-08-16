@@ -93,7 +93,7 @@ public:
 
 typedef std::vector<InterPt> InterPtsType;
 
-typedef std::vector<std::tuple<InterPt, InterPt, vtkIdType, vtkIdType>> OverlapsType;
+typedef std::vector<std::tuple<InterPt, InterPt>> OverlapsType;
 
 typedef std::set<Pair> InvalidEdgesType;
 
@@ -117,8 +117,6 @@ class VTK_EXPORT vtkPolyDataContactFilter : public vtkPolyDataAlgorithm {
     vtkPolyData *pdA, *pdB;
 
     vtkIdTypeArray *sourcesA, *sourcesB;
-
-    vtkIdTypeArray *neigsA, *neigsB;
 
     bool invalidA, invalidB;
     InvalidEdgesType edgesA, edgesB;

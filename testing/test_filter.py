@@ -28,7 +28,7 @@ from vtkmodules.vtkCommonDataModel import vtkPolyData, VTK_POLYGON
 from vtkmodules.vtkFiltersSources import vtkCubeSource, vtkCylinderSource, vtkSphereSource, vtkPolyLineSource
 from vtkmodules.vtkCommonDataModel import vtkKdTreePointLocator
 from vtkmodules.vtkFiltersCore import vtkAppendPolyData
-from vtkmodules.vtkIOLegacy import vtkPolyDataWriter
+from vtkmodules.vtkIOLegacy import vtkPolyDataWriter, vtkPolyDataReader
 from vtkmodules.vtkCommonExecutionModel import vtkTrivialProducer
 from vtkmodules.vtkFiltersModeling import vtkRotationalExtrusionFilter
 from vtkmodules.vtkFiltersGeneral import vtkTransformPolyDataFilter
@@ -700,3 +700,22 @@ def test_special(tmp_path):
     # check_result(bf, [10, 8])
 
     assert bf.GetOutput(2).GetNumberOfCells() == 32
+
+@pytest.mark.xfail
+def test_non_manifolds():
+    reader = vtkPolyDataReader()
+    reader.SetFileName('data/test.vtk')
+
+    cyl = vtkCylinderSource()
+    cyl.SetCenter(.75, 0, 0)
+    cyl.SetRadius(.75)
+    cyl.SetResolution(18)
+
+    bf = vtkPolyDataBooleanFilter()
+    bf.SetInputConnection(0, reader.GetOutputPort())
+    bf.SetInputConnection(1, cyl.GetOutputPort())
+    bf.SetOperModeToNone()
+
+    bf.Update()
+
+    check_result(bf)

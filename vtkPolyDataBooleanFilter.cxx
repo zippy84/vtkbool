@@ -2951,7 +2951,7 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
         }
     }
 
-    WriteVTK("linesA.vtk", linesA);
+    // WriteVTK("linesA.vtk", linesA);
 
     vtkSmartPointer<vtkModifiedBSPTree> bspTreeA = vtkSmartPointer<vtkModifiedBSPTree>::New();
     bspTreeA->SetDataSet(linesA);
@@ -3166,7 +3166,7 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
 
     std::cout << connected;
 
-    WriteVTK("linesB.vtk", linesB);
+    // WriteVTK("linesB.vtk", linesB);
 
     // stage 1
 
@@ -3209,7 +3209,7 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
     PolysType newPolysA;
     GetPolys(refPts, {polyA}, newPolysA);
 
-    WritePolys("merged_stage1.vtk", newPolysA);
+    // WritePolys("merged_stage1.vtk", newPolysA);
 
     // stage 2
 
@@ -3277,7 +3277,7 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
     PolysType newPolysB;
     GetPolys(refPts, splitted, newPolysB);
 
-    WritePolys("merged_stage2.vtk", newPolysB);
+    // WritePolys("merged_stage2.vtk", newPolysB);
 
     std::move(newPolysB.begin(), newPolysB.end(), std::back_inserter(merged));
 

@@ -154,7 +154,7 @@ int main() {
         }
     }
 
-    WriteVTK("merged.vtk", pd);
+    // WriteVTK("merged.vtk", pd);
 
     assert(pd->GetNumberOfCells() == 10);
 

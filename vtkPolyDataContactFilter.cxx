@@ -75,12 +75,6 @@ vtkPolyDataContactFilter::vtkPolyDataContactFilter () {
     sourcesA->SetName("sourcesA");
     sourcesB->SetName("sourcesB");
 
-    neigsA = vtkIdTypeArray::New();
-    neigsB = vtkIdTypeArray::New();
-
-    neigsA->SetName("neigsA");
-    neigsB->SetName("neigsB");
-
     SetNumberOfInputPorts(2);
     SetNumberOfOutputPorts(3);
 
@@ -92,8 +86,6 @@ vtkPolyDataContactFilter::vtkPolyDataContactFilter () {
 }
 
 vtkPolyDataContactFilter::~vtkPolyDataContactFilter () {
-    neigsB->Delete();
-    neigsA->Delete();
 
     sourcesB->Delete();
     sourcesA->Delete();
@@ -704,11 +696,18 @@ void vtkPolyDataContactFilter::InterPolys (vtkIdType idA, vtkIdType idB) {
     vtkPolyDataContactFilter::CheckInters(intersB, pdB, idA, idB);
 
 #ifdef DEBUG
-    std::cout << "intersA " << intersA.size()
-        << ", intersB " << intersB.size()
-        << std::endl;
-#endif
+    std::cout << "intersA" << std::endl;
 
+    for (auto inter : intersA) {
+        std::cout << inter << std::endl;
+    }
+
+    std::cout << "intersB" << std::endl;
+
+    for (auto inter : intersB) {
+        std::cout << "B " << inter << std::endl;
+    }
+#endif
 
     if (intersA.size() != 0 && intersB.size() != 0
         && intersA.size()%2 == 0 && intersB.size()%2 == 0) {
@@ -718,50 +717,30 @@ void vtkPolyDataContactFilter::InterPolys (vtkIdType idA, vtkIdType idB) {
 
 }
 
-void vtkPolyDataContactFilter::OverlapLines (OverlapsType &ols, InterPtsType &intersA, InterPtsType &intersB, vtkIdType idA, vtkIdType idB) {
+void vtkPolyDataContactFilter::OverlapLines (OverlapsType &ols, InterPtsType &intersA, InterPtsType &intersB, vtkIdType vtkNotUsed(idA), vtkIdType vtkNotUsed(idB)) {
 
-    auto GetNeig = [](const InterPt &pA, const InterPt &pB, vtkPolyData *pd, vtkIdType polyId) -> vtkIdType {
-        if (pA.edge == pB.edge) {
-            vtkSmartPointer<vtkIdList> neigs = vtkSmartPointer<vtkIdList>::New();
-
-            pd->GetCellEdgeNeighbors(polyId, pA.edge.f, pA.edge.g, neigs);
-
-            assert(neigs->GetNumberOfIds() == 1);
-
-            return neigs->GetId(0);
-        }
-
-        return NOTSET;
-    };
-
-    auto Add = [](InterPt &a, InterPt &b, InterPt &c, InterPt &d, vtkIdType neigA, vtkIdType neigB) {
+    auto Add = [](InterPt &a, InterPt &b, InterPt &c, InterPt &d) {
         a.Merge(c);
         b.Merge(d);
 
-        return std::make_tuple(a, b, neigA, neigB);
+        return std::make_tuple(a, b);
     };
 
     InterPtsType::iterator itr, itr2;
 
-    vtkIdType neigA, neigB;
-
     for (itr = intersA.begin(); itr != intersA.end(); itr += 2) {
-        neigA = GetNeig(*itr, *(itr+1), pdA, idA);
-
         for (itr2 = intersB.begin(); itr2 != intersB.end(); itr2 += 2) {
-            neigB = GetNeig(*itr2, *(itr2+1), pdB, idB);
-
             if (itr->t <= itr2->t && (itr+1)->t > itr2->t) {
                 if ((itr2+1)->t < (itr+1)->t) {
-                    ols.push_back(Add(*itr2, *(itr2+1), *itr, *(itr+1), neigA, neigB));
+                    ols.push_back(Add(*itr2, *(itr2+1), *itr, *(itr+1)));
                 } else {
-                    ols.push_back(Add(*itr2, *(itr+1), *itr, *(itr2+1), neigA, neigB));
+                    ols.push_back(Add(*itr2, *(itr+1), *itr, *(itr2+1)));
                 }
             } else if (itr2->t <= itr->t && (itr2+1)->t > itr->t) {
                 if ((itr+1)->t < (itr2+1)->t) {
-                    ols.push_back(Add(*itr, *(itr+1), *itr2, *(itr2+1), neigA, neigB));
+                    ols.push_back(Add(*itr, *(itr+1), *itr2, *(itr2+1)));
                 } else {
-                    ols.push_back(Add(*itr, *(itr2+1), *itr2, *(itr+1), neigA, neigB));
+                    ols.push_back(Add(*itr, *(itr2+1), *itr2, *(itr+1)));
                 }
             }
         }
@@ -827,9 +806,6 @@ void vtkPolyDataContactFilter::AddContactLines (InterPtsType &intersA, InterPtsT
         contA->InsertNextValue(idA);
         contB->InsertNextValue(idB);
 
-        neigsA->InsertNextValue(std::get<2>(*itr));
-        neigsB->InsertNextValue(std::get<3>(*itr));
-
         accuracy->InsertNextValue(f.inaccurate);
         accuracy->InsertNextValue(s.inaccurate);
 
@@ -861,7 +837,7 @@ int vtkPolyDataContactFilter::InterOBBNodes (vtkOBBNode *nodeA, vtkOBBNode *node
     return 0;
 }
 
-void vtkPolyDataContactFilter::CheckInters (InterPtsType &interPts, vtkPolyData *pd, vtkIdType idA, vtkIdType idB) {
+void vtkPolyDataContactFilter::CheckInters (InterPtsType &interPts, vtkPolyData *pd, vtkIdType vtkNotUsed(idA), vtkIdType vtkNotUsed(idB)) {
     double ptA[3],
         ptB[3],
         v[3],
