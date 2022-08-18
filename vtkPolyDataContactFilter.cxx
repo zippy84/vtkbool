@@ -340,6 +340,13 @@ void vtkPolyDataContactFilter::GetInvalidEdges (vtkPolyData *pd, InvalidEdgesTyp
 
     vtkIdType idA, idB;
 
+    auto cellsA = vtkSmartPointer<vtkIdList>::New();
+    auto cellsB = vtkSmartPointer<vtkIdList>::New();
+
+    auto cell = vtkSmartPointer<vtkIdList>::New();
+
+    vtkIdType i, j, indexA, indexB, indexA_, indexB_;
+
     auto lineItr = vtk::TakeSmartPointer(lines->GetLines()->NewIterator());
 
     for (lineItr->GoToFirstCell(); !lineItr->IsDoneWithTraversal(); lineItr->GoToNextCell()) {
@@ -351,8 +358,40 @@ void vtkPolyDataContactFilter::GetInvalidEdges (vtkPolyData *pd, InvalidEdgesTyp
         idA = pd->FindPoint(ptA);
         idB = pd->FindPoint(ptB);
 
-        edges.emplace(idA, idB);
-        edges.emplace(idB, idA);
+        pd->GetPointCells(idA, cellsA);
+        pd->GetPointCells(idB, cellsB);
+
+        cellsA->IntersectWith(cellsB);
+
+        j = 0;
+
+        for (i = 0; i < cellsA->GetNumberOfIds(); i++) {
+            pd->GetCellPoints(cellsA->GetId(i), cell);
+
+            indexA = cell->IsId(idA);
+            indexB = cell->IsId(idB);
+
+            indexA_ = indexA+1;
+
+            if (indexA_ == cell->GetNumberOfIds()) {
+                indexA_ = 0;
+            }
+
+            indexB_ = indexB+1;
+
+            if (indexB_ == cell->GetNumberOfIds()) {
+                indexB_ = 0;
+            }
+
+            if (cell->GetId(indexA_) == idB || cell->GetId(indexB_) == idA) {
+                j++;
+            }
+        }
+
+        if (j > 2) {
+            edges.emplace(idA, idB);
+            edges.emplace(idB, idA);
+        }
 
     }
 }

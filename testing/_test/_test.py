@@ -22,10 +22,10 @@ from vtkmodules.vtkIOLegacy import vtkPolyDataReader, vtkPolyDataWriter
 from vtkBool import vtkPolyDataBooleanFilter
 
 readerA = vtkPolyDataReader()
-readerA.SetFileName('_test/AnteriorToInferiorModelSequence.vtk')
+readerA.SetFileName('AnteriorToInferiorModelSequence.vtk')
 
 readerB = vtkPolyDataReader()
-readerB.SetFileName('_test/InferiorAir.vtk')
+readerB.SetFileName('InferiorAir.vtk')
 
 bf = vtkPolyDataBooleanFilter()
 bf.SetInputConnection(0, readerA.GetOutputPort())
@@ -35,17 +35,17 @@ bf.SetOperModeToNone()
 # das ursprüngliche problem war bei cell 151227
 
 writer0 = vtkPolyDataWriter()
-writer0.SetFileName('_test/result0.vtk')
+writer0.SetFileName('result0.vtk')
 writer0.SetInputConnection(bf.GetOutputPort())
 writer0.Update()
 
 writer1 = vtkPolyDataWriter()
-writer1.SetFileName('_test/result1.vtk')
+writer1.SetFileName('result1.vtk')
 writer1.SetInputConnection(bf.GetOutputPort(1))
 writer1.Update()
 
 writer2 = vtkPolyDataWriter()
-writer2.SetFileName('_test/lines.vtk')
+writer2.SetFileName('lines.vtk')
 writer2.SetInputConnection(bf.GetOutputPort(2))
 writer2.Update()
 
