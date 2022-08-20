@@ -719,3 +719,20 @@ def test_non_manifolds():
     bf.Update()
 
     check_result(bf)
+
+def test_adjacent_pts(tmp_path):
+    readerA = vtkPolyDataReader()
+    readerA.SetFileName('data/milling/sphere1.vtk')
+
+    readerB = vtkPolyDataReader()
+    readerB.SetFileName('data/milling/tube1.vtk')
+
+    bf = vtkPolyDataBooleanFilter()
+    bf.SetInputConnection(0, readerA.GetOutputPort())
+    bf.SetInputConnection(1, readerB.GetOutputPort())
+    bf.SetOperModeToNone()
+
+    bf.Update()
+
+    write_result(bf, tmp_path)
+    check_result(bf, [3, 3])

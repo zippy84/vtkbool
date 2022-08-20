@@ -1815,17 +1815,29 @@ void vtkPolyDataBooleanFilter::AddAdjacentPoints (vtkPolyData *pd, vtkIdTypeArra
         }
     };
 
-    vtkKdTreePointLocator *loc = vtkKdTreePointLocator::New();
+    auto loc = vtkSmartPointer<vtkKdTreePointLocator>::New();
     loc->SetDataSet(pd);
     loc->BuildLocator();
 
-    vtkIdList *cells = vtkIdList::New(),
-        *ptsA = vtkIdList::New(),
-        *ptsB = vtkIdList::New(),
-        *poly = vtkIdList::New(),
-        *newPoly = vtkIdList::New();
+    auto lines = vtkSmartPointer<vtkIdList>::New();
 
-    vtkIdType i, j, numCells, numPtsA, numPtsB, numPts, idA, idB;
+    vtkIdType i, j, numLines;
+
+    auto ptsA = vtkSmartPointer<vtkIdList>::New();
+    auto ptsB = vtkSmartPointer<vtkIdList>::New();
+
+    vtkIdType numPtsA, numPtsB;
+
+    auto cells = vtkSmartPointer<vtkIdList>::New();
+
+    vtkIdType numCells;
+
+    auto poly = vtkSmartPointer<vtkIdList>::New();
+    auto newPoly = vtkSmartPointer<vtkIdList>::New();
+
+    vtkIdType numPts;
+
+    vtkIdType idA, idB;
 
     PolyStripsType::const_iterator itr;
     StripPtsType::const_iterator itr2;
@@ -1870,21 +1882,23 @@ void vtkPolyDataBooleanFilter::AddAdjacentPoints (vtkPolyData *pd, vtkIdTypeArra
                 itrB = itrA+1;
 
                 while (itrB != _pts.end()-1) {
-                    contLines->GetPointCells(itrB->get().ind, cells);
-                    numCells = cells->GetNumberOfIds();
+                    contLines->GetPointCells(itrB->get().ind, lines);
+                    numLines = lines->GetNumberOfIds();
 
-                    // std::cout << "[";
-                    // for (i = 0; i < numCells; i++) {
-                    //     std::cout << conts->GetValue(cells->GetId(i)) << ", ";
-                    // }
-                    // std::cout << "]" << std::endl;
+                    std::set<vtkIdType> involved;
 
-                    // break;
+                    for (i = 0; i < numLines; i++) {
+                        involved.emplace(conts->GetValue(lines->GetId(i)));
+                    }
+
+                    if (involved.size() > 1) {
+                        break;
+                    }
 
                     ++itrB;
                 }
 
-                if (std::distance(itrA, itrB) > 1) {
+                if (itrA+1 != itrB) {
                     FindPoints(loc, itrA->get().pt, ptsA);
                     FindPoints(loc, itrB->get().pt, ptsB);
 
@@ -1928,11 +1942,11 @@ void vtkPolyDataBooleanFilter::AddAdjacentPoints (vtkPolyData *pd, vtkIdTypeArra
 
                                 newPoly->Reset();
 
-                                for (j = 0; j < numPts; j++) {
-                                    newPoly->InsertNextId(poly->GetId(j));
+                                for (i = 0; i < numPts; i++) {
+                                    newPoly->InsertNextId(poly->GetId(i));
 
-                                    idA = poly->GetId(j);
-                                    idB = j+1 == numPts ? poly->GetId(0) : poly->GetId(j+1);
+                                    idA = poly->GetId(i);
+                                    idB = i+1 == numPts ? poly->GetId(0) : poly->GetId(i+1);
 
                                     if (pA.g == idA
                                         && pB.g == idB) {
@@ -1967,14 +1981,7 @@ void vtkPolyDataBooleanFilter::AddAdjacentPoints (vtkPolyData *pd, vtkIdTypeArra
         }
     }
 
-    cells->Delete();
-    ptsA->Delete();
-    ptsB->Delete();
-    poly->Delete();
-    newPoly->Delete();
-
     loc->FreeSearchStructure();
-    loc->Delete();
 
     pd->RemoveDeletedCells();
 
