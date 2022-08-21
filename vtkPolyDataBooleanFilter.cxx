@@ -2577,10 +2577,12 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
     }
 
     if (_failed.size() > 0) {
+#ifdef DEBUG
         for (auto i : _failed) {
             std::cout << "failed at " << i
                 << std::endl;
         }
+#endif
 
         return true;
     }

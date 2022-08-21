@@ -683,8 +683,8 @@ void vtkPolyDataContactFilter::InterPolys (vtkIdType idA, vtkIdType idB) {
     vtkMath::Normalize(r);
 
     // std::cout << r[0] << ", "
-    //      << r[1] << ", "
-    //       << r[2] << std::endl;
+    //     << r[1] << ", "
+    //     << r[2] << std::endl;
 
     // lsg. des lin. gls. mittels cramerscher regel
 

@@ -27,7 +27,7 @@ from vtkmodules.vtkCommonCore import vtkIdList, vtkIdTypeArray, vtkPoints
 from vtkmodules.vtkCommonDataModel import vtkPolyData, VTK_POLYGON
 from vtkmodules.vtkFiltersSources import vtkCubeSource, vtkCylinderSource, vtkSphereSource, vtkPolyLineSource
 from vtkmodules.vtkCommonDataModel import vtkKdTreePointLocator
-from vtkmodules.vtkFiltersCore import vtkAppendPolyData
+from vtkmodules.vtkFiltersCore import vtkAppendPolyData, vtkCleanPolyData
 from vtkmodules.vtkIOLegacy import vtkPolyDataWriter, vtkPolyDataReader
 from vtkmodules.vtkCommonExecutionModel import vtkTrivialProducer
 from vtkmodules.vtkFiltersModeling import vtkRotationalExtrusionFilter
@@ -736,3 +736,19 @@ def test_adjacent_pts(tmp_path):
 
     write_result(bf, tmp_path)
     check_result(bf, [3, 3])
+
+@pytest.mark.xfail
+def test_strips_2():
+    reader = vtkPolyDataReader()
+    reader.SetFileName('data/pearls.vtk')
+
+    cube = vtkCubeSource()
+    cube.SetBounds(-.3283653157, .3283653157, -.5, .5, -3, 0)
+
+    bf = vtkPolyDataBooleanFilter()
+    bf.SetInputConnection(0, cube.GetOutputPort())
+    bf.SetInputConnection(1, reader.GetOutputPort())
+    bf.SetOperModeToNone()
+    bf.Update()
+
+    check_result(bf)
