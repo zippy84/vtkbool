@@ -52,9 +52,15 @@ The usage of the library is very simple. Look at the example in the section belo
 
 The alternative is the more generic `SetOperMode`. The method must be called with the number of the desired operation, an integer between 0 and 4, with the same meaning as mentioned before. The default is Union.
 
-### Example
+### C++ Example
 
-Create a directory somewhere in your file system, download vtkbool and unpack it into that. Then create the following two files:
+Create a directory somewhere in your file system, download vtkbool and unpack it into that.
+```
+mkdir example
+cd example
+git clone https://github.com/zippy84/vtkbool.git
+```
+Then create the following two files:
 
 **test.cxx**
 
@@ -103,8 +109,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(VTK REQUIRED COMPONENTS FiltersSources IOLegacy FiltersExtraction FiltersGeometry FiltersModeling FiltersFlowPaths WrappingPythonCore)
 
 if(VTK_FOUND)
-    include_directories(vtkbool-master)
-    add_subdirectory(vtkbool-master)
+    include_directories(vtkbool)
+    add_subdirectory(vtkbool)
 
     add_executable(test test.cxx)
     target_link_libraries(test PRIVATE vtkBool ${VTK_LIBRARIES})
@@ -117,7 +123,21 @@ endif(VTK_FOUND)
 
 ```
 
-Also create a directory named build. If you are on Linux, open a terminal and enter this directory. Run `ccmake ..`, follow the instructions, and finally type `make`.
+Inside the `example` directory, create a subdirectory called `build` and `cd` into it. You should have a directory structure that looks something like this:
+```bash
+example
+├── build
+├── CMakeLists.txt
+├── test.cxx
+└── vtkbool
+    ├── CMakeLists.txt
+    ├── ...
+    └── vtkPolyDataContactFilter.h
+```
+
+From inside the `build` directory, run `ccmake ..`, follow the instructions, and finally type `make`.
+
+Running `./test` will now produce the `result.vtk` file.
 
 ## ParaView Plugin
 
