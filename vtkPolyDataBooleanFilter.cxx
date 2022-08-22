@@ -390,10 +390,7 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, vtkIdTypeArray *
         sp.ind = itr->first;
 
         // die koordinaten
-        double pt[3];
-        contLines->GetPoint(sp.ind, pt);
-
-        Cpy(sp.pt, pt, 3);
+        contLines->GetPoint(sp.ind, sp.pt);
 
         IdsType::const_iterator itrA, itrB;
 
@@ -411,8 +408,8 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, vtkIdTypeArray *
             pd->GetPoint(*itrA, a);
             pd->GetPoint(*itrB, b);
 
-            vtkMath::Subtract(a, pt, sA);
-            vtkMath::Subtract(b, pt, sB);
+            vtkMath::Subtract(a, sp.pt, sA);
+            vtkMath::Subtract(b, sp.pt, sB);
 
             // richtungsvektor und länge der kante
 
@@ -421,7 +418,7 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, vtkIdTypeArray *
 
             // d und t zur kante
 
-            vtkMath::Subtract(pt, a, v);
+            vtkMath::Subtract(sp.pt, a, v);
             t = vtkMath::Dot(v, u)/(n*n);
 
             vtkMath::Cross(v, u, w);

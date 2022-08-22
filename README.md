@@ -124,7 +124,8 @@ endif(VTK_FOUND)
 ```
 
 Inside the `example` directory, create a subdirectory called `build` and `cd` into it. You should have a directory structure that looks something like this:
-```bash
+
+```
 example
 ├── build
 ├── CMakeLists.txt
