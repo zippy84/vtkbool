@@ -377,48 +377,6 @@ def test_same(tmp_path):
     write_result(bf, tmp_path)
     check_result(bf, [88, 88])
 
-# def test_disjoin(tmp_path):
-#     pts = [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0], [0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1], [.5, .5, 0], [.5, .5, 1]]
-#     polys = [
-#         [0, 1, 5, 4],
-#         [1, 2, 6, 5],
-#         [2, 3, 7, 6],
-#         [3, 0, 4, 7],
-#         [0, 8, 1],
-#         [1, 8, 2],
-#         [2, 8, 3],
-#         [3, 8, 0],
-#         [4, 5, 9],
-#         [5, 6, 9],
-#         [6, 7, 9],
-#         [7, 4, 9]
-#     ]
-
-#     _pts = vtkPoints()
-#     [ _pts.InsertNextPoint(*pt) for pt in pts ]
-
-#     pd = vtkPolyData()
-#     pd.Allocate(1)
-#     pd.SetPoints(_pts)
-
-#     for poly in polys:
-#         cell = vtkIdList()
-#         [ cell.InsertNextId(i) for i in poly ]
-#         pd.InsertNextCell(VTK_POLYGON, cell)
-
-#     cube = vtkCubeSource()
-#     cube.SetCenter(1, .5, .5)
-
-#     bf = vtkPolyDataBooleanFilter()
-#     bf.SetInputData(0, pd)
-#     bf.SetInputConnection(1, cube.GetOutputPort())
-#     bf.SetOperModeToNone()
-
-#     bf.Update()
-
-#     write_result(bf, tmp_path)
-#     check_result(bf)
-
 @pytest.mark.xfail
 def test_strips():
     cubeA = vtkCubeSource()
@@ -463,7 +421,7 @@ def test_touch(tmp_path):
     check_result(bf, [3, 3])
 
 def test_nearly_congruent(tmp_path):
-    phi = math.radians(.0005) 
+    phi = math.radians(.0005)
 
     z = math.tan(phi)*.5
 
@@ -737,13 +695,45 @@ def test_adjacent_pts(tmp_path):
     write_result(bf, tmp_path)
     check_result(bf, [3, 3])
 
-@pytest.mark.xfail
-def test_strips_2():
+def test_branched(tmp_path):
     reader = vtkPolyDataReader()
-    reader.SetFileName('data/pearls.vtk')
+    reader.SetFileName('data/branched.vtk')
 
     cube = vtkCubeSource()
-    cube.SetBounds(-.3283653157, .3283653157, -.5, .5, -3, 0)
+    cube.SetBounds(-.3283653157, .3283653157, -.5, .5, -.375, .375)
+
+    bf = vtkPolyDataBooleanFilter()
+    bf.SetInputConnection(0, cube.GetOutputPort())
+    bf.SetInputConnection(1, reader.GetOutputPort())
+    bf.SetOperModeToNone()
+    bf.Update()
+
+    write_result(bf, tmp_path)
+    check_result(bf, [4, 4])
+
+def test_branched_2(tmp_path):
+    reader = vtkPolyDataReader()
+    reader.SetFileName('data/branched.vtk')
+
+    cube = vtkCubeSource()
+    cube.SetBounds(-.3283653157, .3283653157, -.5, .5, -.75, .75)
+
+    bf = vtkPolyDataBooleanFilter()
+    bf.SetInputConnection(0, cube.GetOutputPort())
+    bf.SetInputConnection(1, reader.GetOutputPort())
+    bf.SetOperModeToNone()
+    bf.Update()
+
+    write_result(bf, tmp_path)
+    check_result(bf, [8, 8])
+
+@pytest.mark.xfail
+def test_branched_3():
+    reader = vtkPolyDataReader()
+    reader.SetFileName('data/branched3.vtk')
+
+    cube = vtkCubeSource()
+    cube.SetBounds(-.3283653157, .3283653157, -.5, .5, -.75, .75)
 
     bf = vtkPolyDataBooleanFilter()
     bf.SetInputConnection(0, cube.GetOutputPort())
@@ -752,3 +742,69 @@ def test_strips_2():
     bf.Update()
 
     check_result(bf)
+
+def test_branched_4(tmp_path):
+    reader = vtkPolyDataReader()
+    reader.SetFileName('data/branched4.vtk')
+
+    cube = vtkCubeSource()
+    cube.SetBounds(-.3283653157, .3283653157, -.5, .5, -.375, .375)
+
+    bf = vtkPolyDataBooleanFilter()
+    bf.SetInputConnection(0, cube.GetOutputPort())
+    bf.SetInputConnection(1, reader.GetOutputPort())
+    bf.SetOperModeToNone()
+    bf.Update()
+
+    write_result(bf, tmp_path)
+    check_result(bf, [6, 7])
+
+def test_branched_5(tmp_path):
+    reader = vtkPolyDataReader()
+    reader.SetFileName('data/branched.vtk')
+
+    traA = vtkTransform()
+    traA.Translate(0, -.5, 0)
+
+    tfA = vtkTransformPolyDataFilter()
+    tfA.SetInputConnection(reader.GetOutputPort())
+    tfA.SetTransform(traA)
+
+    traB = vtkTransform()
+    traB.Translate(0, .5, 0)
+
+    tfB = vtkTransformPolyDataFilter()
+    tfB.SetInputConnection(reader.GetOutputPort())
+    tfB.SetTransform(traB)
+
+    app = vtkAppendPolyData()
+    app.AddInputConnection(tfA.GetOutputPort())
+    app.AddInputConnection(tfB.GetOutputPort())
+
+    cube = vtkCubeSource()
+    cube.SetBounds(-.3283653157, .3283653157, -1, 1, -.375, .375)
+
+    bf = vtkPolyDataBooleanFilter()
+    bf.SetInputConnection(0, cube.GetOutputPort())
+    bf.SetInputConnection(1, app.GetOutputPort())
+    bf.SetOperModeToNone()
+    bf.Update()
+
+    write_result(bf, tmp_path)
+    check_result(bf, [7, 8])
+
+def test_branched_6(tmp_path):
+    reader = vtkPolyDataReader()
+    reader.SetFileName('data/branched6.vtk')
+
+    cube = vtkCubeSource()
+    cube.SetBounds(-.3283653157, .3283653157, -1, 1, -.33371031284, .33371031284)
+
+    bf = vtkPolyDataBooleanFilter()
+    bf.SetInputConnection(0, cube.GetOutputPort())
+    bf.SetInputConnection(1, reader.GetOutputPort())
+    bf.SetOperModeToNone()
+    bf.Update()
+
+    write_result(bf, tmp_path)
+    check_result(bf, [6, 5])

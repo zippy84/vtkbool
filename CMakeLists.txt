@@ -17,7 +17,7 @@ project(vtkbool
     VERSION 3.0
     HOMEPAGE_URL https://github.com/zippy84/vtkbool)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_CXX_OUTPUT_EXTENSION_REPLACE 1)

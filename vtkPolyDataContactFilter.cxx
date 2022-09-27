@@ -81,8 +81,8 @@ vtkPolyDataContactFilter::vtkPolyDataContactFilter () {
     invalidA = false;
     invalidB = false;
 
-    accuracy = vtkIdTypeArray::New();
-    accuracy->SetName("accuracy");
+    // accuracy = vtkIdTypeArray::New();
+    // accuracy->SetName("accuracy");
 }
 
 vtkPolyDataContactFilter::~vtkPolyDataContactFilter () {
@@ -96,7 +96,7 @@ vtkPolyDataContactFilter::~vtkPolyDataContactFilter () {
     contPts->Delete();
     contLines->Delete();
 
-    accuracy->Delete();
+    // accuracy->Delete();
 
 }
 
@@ -174,7 +174,7 @@ int vtkPolyDataContactFilter::ProcessRequest (vtkInformation *request, vtkInform
         contLines->GetCellData()->AddArray(sourcesA);
         contLines->GetCellData()->AddArray(sourcesB);
 
-        contLines->GetPointData()->AddArray(accuracy);
+        // contLines->GetPointData()->AddArray(accuracy);
 
         contLines->RemoveDeletedCells();
 
@@ -248,8 +248,8 @@ void vtkPolyDataContactFilter::PreparePolyData (vtkPolyData *pd) {
                 dA = vtkMath::Distance2BetweenPoints(pts->GetPoint(0), pts->GetPoint(2));
                 dB = vtkMath::Distance2BetweenPoints(pts->GetPoint(1), pts->GetPoint(3));
 
-                vtkSmartPointer<vtkIdList> newCellA = vtkSmartPointer<vtkIdList>::New();
-                vtkSmartPointer<vtkIdList> newCellB = vtkSmartPointer<vtkIdList>::New();
+                auto newCellA = vtkSmartPointer<vtkIdList>::New();
+                auto newCellB = vtkSmartPointer<vtkIdList>::New();
 
                 newCellA->SetNumberOfIds(3);
                 newCellB->SetNumberOfIds(3);
@@ -321,7 +321,7 @@ void vtkPolyDataContactFilter::PreparePolyData (vtkPolyData *pd) {
 }
 
 void vtkPolyDataContactFilter::GetInvalidEdges (vtkPolyData *pd, InvalidEdgesType &edges) {
-    vtkSmartPointer<vtkFeatureEdges> features = vtkSmartPointer<vtkFeatureEdges>::New();
+    auto features = vtkSmartPointer<vtkFeatureEdges>::New();
     features->SetInputData(pd);
 
     features->BoundaryEdgesOff();
@@ -845,8 +845,8 @@ void vtkPolyDataContactFilter::AddContactLines (InterPtsType &intersA, InterPtsT
         contA->InsertNextValue(idA);
         contB->InsertNextValue(idB);
 
-        accuracy->InsertNextValue(f.inaccurate);
-        accuracy->InsertNextValue(s.inaccurate);
+        // accuracy->InsertNextValue(f.inaccurate);
+        // accuracy->InsertNextValue(s.inaccurate);
 
     }
 
@@ -921,7 +921,7 @@ void vtkPolyDataContactFilter::CheckInters (InterPtsType &interPts, vtkPolyData 
         //     << p.edge
         //     << std::endl;
 
-        p.inaccurate = true;
+        // p.inaccurate = true;
     }
 
 }

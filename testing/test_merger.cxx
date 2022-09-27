@@ -47,9 +47,9 @@ Poly Draw (double r, vtkIdType step, double x, double y, double rotate = 0) {
 }
 
 int main() {
-    vtkSmartPointer<vtkPoints> pts = vtkSmartPointer<vtkPoints>::New();
+    auto pts = vtkSmartPointer<vtkPoints>::New();
 
-    vtkSmartPointer<vtkPolyData> pd = vtkSmartPointer<vtkPolyData>::New();
+    auto pd = vtkSmartPointer<vtkPolyData>::New();
     pd->SetPoints(pts);
     pd->Allocate(1);
 
@@ -64,7 +64,7 @@ int main() {
         Draw(.5, 6, 0, -1, 30)
     };
 
-    vtkSmartPointer<vtkIdList> cell = vtkSmartPointer<vtkIdList>::New();
+    auto cell = vtkSmartPointer<vtkIdList>::New();
 
     for (const auto &p : polys[0]) {
         cell->InsertNextId(pts->InsertNextPoint(p.x, p.y, p.z));
@@ -72,7 +72,7 @@ int main() {
 
     pd->InsertNextCell(VTK_POLYGON, cell);
 
-    vtkSmartPointer<vtkIdTypeArray> cellIds = vtkSmartPointer<vtkIdTypeArray>::New();
+    auto cellIds = vtkSmartPointer<vtkIdTypeArray>::New();
     cellIds->SetName("OrigCellIds");
     cellIds->InsertNextValue(0);
     pd->GetCellData()->SetScalars(cellIds);

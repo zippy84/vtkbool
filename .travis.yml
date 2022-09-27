@@ -1,5 +1,8 @@
 language: minimal
 dist: focal
+branches:
+  only:
+    - master
 services:
   - docker
 before_install:

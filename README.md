@@ -31,7 +31,7 @@ This is an extension of the graphics library VTK. The goal of the extension is t
 
 - CMake >= 3.12
 - VTK >= 9.0
-- C++11 compiler
+- C++17 compiler
 
 ### Optional
 
@@ -55,11 +55,13 @@ The alternative is the more generic `SetOperMode`. The method must be called wit
 ### C++ Example
 
 Create a directory somewhere in your file system, download vtkbool and unpack it into that.
+
 ```
 mkdir example
 cd example
 git clone https://github.com/zippy84/vtkbool.git
 ```
+
 Then create the following two files:
 
 **test.cxx**
@@ -73,20 +75,20 @@ Then create the following two files:
 #include "vtkPolyDataBooleanFilter.h"
 
 int main (int argc, char *argv[]) {
-    vtkSmartPointer<vtkCubeSource> cube = vtkSmartPointer<vtkCubeSource>::New();
+    auto cube = vtkSmartPointer<vtkCubeSource>::New();
     cube->SetYLength(.5);
 
-    vtkSmartPointer<vtkCylinderSource> cyl = vtkSmartPointer<vtkCylinderSource>::New();
+    auto cyl = vtkSmartPointer<vtkCylinderSource>::New();
     cyl->SetResolution(32);
     cyl->SetHeight(.5);
     cyl->SetCenter(0, .5, 0);
 
-    vtkSmartPointer<vtkPolyDataBooleanFilter> bf = vtkSmartPointer<vtkPolyDataBooleanFilter>::New();
+    auto bf = vtkSmartPointer<vtkPolyDataBooleanFilter>::New();
     bf->SetInputConnection(0, cube->GetOutputPort());
     bf->SetInputConnection(1, cyl->GetOutputPort());
     bf->SetOperModeToDifference();
 
-    vtkSmartPointer<vtkPolyDataWriter> writer = vtkSmartPointer<vtkPolyDataWriter>::New();
+    auto writer = vtkSmartPointer<vtkPolyDataWriter>::New();
     writer->SetInputConnection(bf->GetOutputPort());
     writer->SetFileName("result.vtk");
     writer->Update();
@@ -101,7 +103,7 @@ int main (int argc, char *argv[]) {
 cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
 project(test)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # find_package(VTK REQUIRED COMPONENTS FiltersSources IOLegacy)
@@ -120,7 +122,6 @@ if(VTK_FOUND)
         MODULES ${VTK_LIBRARIES}
     )
 endif(VTK_FOUND)
-
 ```
 
 Inside the `example` directory, create a subdirectory called `build` and `cd` into it. You should have a directory structure that looks something like this:

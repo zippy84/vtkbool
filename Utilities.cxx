@@ -207,14 +207,14 @@ bool PointInPoly (const Poly &poly, const Point3d &p) {
 }
 
 void WritePolys (const char *name, const PolysType &polys) {
-    vtkSmartPointer<vtkPoints> pts = vtkSmartPointer<vtkPoints>::New();
+    auto pts = vtkSmartPointer<vtkPoints>::New();
 
-    vtkSmartPointer<vtkPolyData> pd = vtkSmartPointer<vtkPolyData>::New();
+    auto pd = vtkSmartPointer<vtkPolyData>::New();
     pd->SetPoints(pts);
     pd->Allocate(1);
 
     for (auto &poly : polys) {
-        vtkSmartPointer<vtkIdList> cell = vtkSmartPointer<vtkIdList>::New();
+        auto cell = vtkSmartPointer<vtkIdList>::New();
 
         for (auto &p : poly) {
             cell->InsertNextId(pts->InsertNextPoint(p.x, p.y, p.z));

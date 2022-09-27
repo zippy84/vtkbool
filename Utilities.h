@@ -93,17 +93,6 @@ public:
 // typedef _Pair<vtkIdType> Pair;
 using Pair = _Pair<vtkIdType>;
 
-template<typename T,
-    typename U,
-    typename std::enable_if<std::is_integral<T>::value
-        && std::is_integral<U>::value
-        && std::is_signed<T>::value, bool>::type = true>
-T Mod (T a, U b) {
-    T _b = static_cast<T>(b);
-
-    return ((a%_b)+_b)%_b;
-}
-
 class Base {
 public:
     Base () {}

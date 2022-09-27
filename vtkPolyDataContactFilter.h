@@ -84,9 +84,9 @@ public:
             }
         }
 
-        if (other.inaccurate) {
-            inaccurate = true;
-        }
+        // if (other.inaccurate) {
+        //     inaccurate = true;
+        // }
     }
 
 };
@@ -123,7 +123,7 @@ class VTK_EXPORT vtkPolyDataContactFilter : public vtkPolyDataAlgorithm {
 
     void GetInvalidEdges (vtkPolyData *pd, InvalidEdgesType &edges);
 
-    vtkIdTypeArray *accuracy;
+    // vtkIdTypeArray *accuracy;
 
 public:
     vtkTypeMacro(vtkPolyDataContactFilter, vtkPolyDataAlgorithm);

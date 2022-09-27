@@ -23,6 +23,7 @@ limitations under the License.
 #include <set>
 #include <utility>
 #include <iostream>
+#include <type_traits>
 
 #include <vtkPolyDataAlgorithm.h>
 #include <vtkKdTree.h>
@@ -37,11 +38,23 @@ limitations under the License.
 #define OPER_DIFFERENCE2 4
 
 enum class Capt {
-    NOT,
-    EDGE,
-    A,
-    B
+    NOT = 1 << 0,
+    EDGE = 1 << 1,
+    A = 1 << 2,
+    B = 1 << 3,
+    BRANCHED = 1 << 4,
+    BOUNDARY = 0xe
 };
+
+// inline std::underlying_type_t<Capt> operator| (Capt lhs, Capt rhs) {
+//     return static_cast<std::underlying_type_t<Capt>>(lhs) |
+//         static_cast<std::underlying_type_t<Capt>>(rhs);
+// }
+
+inline std::underlying_type_t<Capt> operator& (Capt lhs, Capt rhs) {
+    return static_cast<std::underlying_type_t<Capt>>(lhs) &
+        static_cast<std::underlying_type_t<Capt>>(rhs);
+}
 
 enum class Side {
     NONE,
@@ -143,6 +156,7 @@ public:
 typedef std::map<vtkIdType, PStrips> PolyStripsType;
 
 typedef std::vector<std::reference_wrapper<StripPtR>> RefsType;
+typedef std::vector<std::reference_wrapper<const StripPtR>> ConstRefsType;
 
 // Merger
 

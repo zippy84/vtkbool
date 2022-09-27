@@ -57,7 +57,7 @@ tf = vtkTransformPolyDataFilter()
 tf.SetInputConnection(tube.GetOutputPort())
 tf.SetTransform(transform)
 
-moves = [(-.5, 0), (-.5, 0)]
+moves = [(-.5, 0), (-.5, 0), (-.5, 0), (-.5, 0), (-.5, 0), (-.5, 0), (-.5, 0), (-.5, 0), (-.5, 0)]
 
 # moves = [(.5, 0), (.5, 0), (.5, 0), (.5, 0),
 #     (0, -.5), (0, -.5), (0, -.5), (0, -.5),
