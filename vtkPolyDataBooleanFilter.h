@@ -128,6 +128,8 @@ typedef std::map<vtkIdType, StripPt> StripPtsType;
 typedef std::deque<StripPtR> StripType;
 typedef std::vector<StripType> StripsType;
 
+typedef std::vector<std::reference_wrapper<StripType>> _StripsType;
+
 class PStrips {
 public:
     PStrips (vtkPolyData *pd, vtkIdType cellId) {
