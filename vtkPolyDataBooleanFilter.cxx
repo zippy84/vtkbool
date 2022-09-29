@@ -990,8 +990,8 @@ bool vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
         for (auto &strip : strips) {
 #ifdef DEBUG
             std::cout << "strip [";
-            for (auto &s : strip) {
-                std::cout << s.ind << ", ";
+            for (auto &p : strip) {
+                std::cout << p.ind << ", ";
             }
             std::cout << "]" << std::endl;
 #endif
@@ -2984,6 +2984,8 @@ Merger::Merger (vtkPolyData *pd, const PStrips &pStrips, const StripsType &strip
             p.swap(q);
         }
 
+        innerIds.push_back(polys.size());
+
         polys.push_back(p);
     }
 
@@ -3003,12 +3005,19 @@ void Merger::Run () {
 
     PolysType::const_iterator itrA, itrB;
 
+    std::size_t i {0};
+
     for (itrA = polys.begin(); itrA != polys.end(); ++itrA) {
-        for (itrB = polys.begin(); itrB != polys.end(); ++itrB) {
-            if (itrA != itrB && PointInPoly(*itrB, *itrA->begin())) {
-                groups[static_cast<std::size_t>(itrB-polys.begin())].push_back(static_cast<std::size_t>(itrA-polys.begin()));
+        if (std::find(innerIds.begin(), innerIds.end(), i) != innerIds.end()) {
+            std::size_t j {0};
+            for (itrB = polys.begin(); itrB != polys.end(); ++itrB) {
+                if (itrA != itrB && PointInPoly(*itrB, *itrA->begin())) {
+                    groups[j].push_back(i);
+                }
+                j++;
             }
         }
+        i++;
     }
 
     std::size_t parent = 0;

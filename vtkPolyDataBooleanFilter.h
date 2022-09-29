@@ -246,6 +246,7 @@ class Merger {
     vtkIdType origId;
 
     PolysType polys;
+    std::vector<std::size_t> innerIds;
 public:
     Merger (vtkPolyData *pd, const PStrips &pStrips, const StripsType &strips, const IdsType &descIds, vtkIdType origId);
     void Run ();
