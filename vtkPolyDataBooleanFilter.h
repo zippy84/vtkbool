@@ -93,8 +93,6 @@ public:
         return out;
     }
 
-    std::vector<Pair> history;
-
     vtkIdType polyId;
 
     bool catched;
