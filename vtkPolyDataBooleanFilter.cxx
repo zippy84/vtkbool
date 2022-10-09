@@ -781,6 +781,35 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
 
     }
 
+    // sucht nach gleichen captPts
+
+    {
+        std::map<Point3d, std::set<vtkIdType>> collapsed;
+
+        PolyStripsType::const_iterator itr;
+        StripPtsType::const_iterator itr2;
+
+        for (itr = polyStrips.begin(); itr != polyStrips.end(); ++itr) {
+            const PStrips &pStrips = itr->second;
+
+            const StripPtsType &pts = pStrips.pts;
+
+            for (itr2 = pts.begin(); itr2 != pts.end(); ++itr2) {
+                const StripPt &sp = itr2->second;
+
+                if (sp.capt & Capt::BOUNDARY) {
+                    auto &inds = collapsed[{sp.cutPt[0], sp.cutPt[1], sp.cutPt[2]}];
+
+                    inds.emplace(sp.ind);
+
+                    if (inds.size() > 1) {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+
     return false;
 
 }
@@ -1205,8 +1234,6 @@ bool vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
                             }
                         }
                     }
-
-                    // history?
 
                 }
 
@@ -1770,7 +1797,7 @@ void vtkPolyDataBooleanFilter::ResolveOverlaps (vtkPolyData *pd, vtkIdTypeArray 
     for (itr = polyStrips.begin(); itr != polyStrips.end(); ++itr) {
         const PStrips &pStrips = itr->second;
 
-        auto &pts = pStrips.pts;
+        const StripPtsType &pts = pStrips.pts;
 
         for (itr2 = pts.begin(); itr2 != pts.end(); ++itr2) {
             const StripPt &sp = itr2->second;
