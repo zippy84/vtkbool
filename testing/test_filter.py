@@ -364,6 +364,23 @@ def test_simple_4(tmp_path):
     write_result(bf, tmp_path)
     check_result(bf, [2, 2])
 
+@pytest.mark.xfail
+def test_simple_5():
+    cube = vtkCubeSource()
+
+    cyl = vtkCylinderSource()
+    cyl.SetResolution(32)
+    cyl.SetHeight(.75)
+
+    bf = vtkPolyDataBooleanFilter()
+    bf.SetInputConnection(0, cube.GetOutputPort())
+    bf.SetInputConnection(1, cyl.GetOutputPort())
+    bf.SetOperModeToNone()
+
+    bf.Update()
+
+    check_result(bf)
+
 def test_same(tmp_path):
     sphere = vtkSphereSource()
 

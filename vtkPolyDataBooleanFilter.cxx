@@ -159,8 +159,7 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 #endif
 
             if (contLines->GetNumberOfCells() == 0) {
-                vtkErrorMacro("Inputs have no contact.");
-
+                vtkErrorMacro("There is no contact.");
                 return 1;
             }
 
@@ -217,9 +216,14 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
                 GetPolyStrips(modPdB, contsB, sourcesB, polyStripsB)) {
 
                 vtkErrorMacro("Strips are invalid.");
-
                 return 1;
+            }
 
+            // löscht bestimmte strips
+
+            if (CleanStrips(polyStripsA, polyStripsB)) {
+                vtkErrorMacro("There is no contact.");
+                return 1;
             }
 
             times.push_back(clock::now()-start);
@@ -232,7 +236,6 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
                 CutCells(modPdB, polyStripsB)) {
 
                 vtkErrorMacro("CutCells failed.");
-
                 return 1;
             }
 
@@ -330,7 +333,6 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
         if (CombineRegions()) {
             vtkErrorMacro("Boolean operation failed.");
-
             return 1;
         }
 
@@ -621,6 +623,8 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
         const IdsType &lines = itr->second;
         const StripPtsType &pts = pStrips.pts;
 
+        StripsType &strips = pStrips.strips;
+
         // zusammensetzen
 
         std::deque<Pair> _lines;
@@ -691,7 +695,7 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
             while (FindRight(strip, stripId)) {}
             while (FindLeft(strip, stripId)) {}
 
-            pStrips.strips.push_back(std::move(strip));
+            strips.push_back(std::move(strip));
 
             stripId++;
 
@@ -784,7 +788,7 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
     // sucht nach gleichen captPts
 
     {
-        std::map<Point3d, std::set<vtkIdType>> collapsed;
+        std::map<Point3d, _IdsType> collapsed;
 
         PolyStripsType::const_iterator itr;
         StripPtsType::const_iterator itr2;
@@ -884,6 +888,101 @@ bool vtkPolyDataBooleanFilter::HasArea (const StripType &strip) const {
     }
 
     return area;
+}
+
+bool vtkPolyDataBooleanFilter::CleanStrips (PolyStripsType &polyStripsA, PolyStripsType &polyStripsB) {
+#ifdef DEBUG
+    std::cout << "CleanStrips()" << std::endl;
+#endif
+
+    _IdsType inds;
+
+    auto FindHoles = [&](PolyStripsType &polyStrips) {
+        PolyStripsType::iterator itr;
+
+        for (itr = polyStrips.begin(); itr != polyStrips.end(); ++itr) {
+            PStrips &pStrips = itr->second;
+            StripsType &strips = pStrips.strips;
+            StripPtsType &pts = pStrips.pts;
+
+            strips.erase(std::remove_if(strips.begin(), strips.end(), [&](const StripType &strip) {
+                if (pts.at(strip.front().ind).capt == Capt::NOT
+                    && pts.at(strip.back().ind).capt == Capt::NOT
+                    && !HasArea(strip)) {
+
+                    for (const StripPtR &p : strip) {
+                        inds.emplace(p.ind);
+                    }
+
+                    return true;
+                }
+
+                return false;
+            }), strips.end());
+        }
+    };
+
+    FindHoles(polyStripsA);
+    FindHoles(polyStripsB);
+
+#ifdef DEBUG
+    std::cout << "inds: [";
+    for (auto &ind : inds) {
+        std::cout << ind << ", ";
+    }
+    std::cout << "]" << std::endl;
+#endif
+
+    auto CleanOther = [&](PolyStripsType &polyStrips) {
+        PolyStripsType::iterator itr;
+
+        for (itr = polyStrips.begin(); itr != polyStrips.end(); ++itr) {
+            PStrips &pStrips = itr->second;
+            StripsType &strips = pStrips.strips;
+
+            strips.erase(std::remove_if(strips.begin(), strips.end(), [&](const StripType &strip) {
+                auto found = std::find_if(strip.begin(), strip.end(), [&](const StripPtR &p) {
+                    return inds.find(p.ind) != inds.end();
+                });
+
+                return found != strip.end();
+
+            }), strips.end());
+        }
+    };
+
+    CleanOther(polyStripsA);
+    CleanOther(polyStripsB);
+
+    auto lines = vtkSmartPointer<vtkIdList>::New();
+
+    vtkIdType i, j, numLines;
+
+    for (vtkIdType ind : inds) {
+        contLines->GetPointCells(ind, lines);
+        numLines = lines->GetNumberOfIds();
+
+        for (i = 0; i < numLines; i++) {
+            contLines->DeleteCell(lines->GetId(i));
+        }
+    }
+
+    j = 0;
+
+    numLines = contLines->GetNumberOfCells();
+
+    for (i = 0; i < numLines; i++) {
+        if (contLines->GetCellType(i) == VTK_EMPTY_CELL) {
+            j++;
+        }
+    }
+
+    if (j == numLines) {
+        return true;
+    }
+
+    return false;
+
 }
 
 template<typename _RefsType>
@@ -2023,7 +2122,7 @@ void vtkPolyDataBooleanFilter::AddAdjacentPoints (vtkPolyData *pd, vtkIdTypeArra
                     contLines->GetPointCells(itrB->get().ind, lines);
                     numLines = lines->GetNumberOfIds();
 
-                    std::set<vtkIdType> involved;
+                    _IdsType involved;
 
                     for (i = 0; i < numLines; i++) {
                         involved.emplace(conts->GetValue(lines->GetId(i)));
@@ -2142,7 +2241,7 @@ void vtkPolyDataBooleanFilter::MergePoints (vtkPolyData *pd, PolyStripsType &pol
     PolyStripsType::const_iterator itr;
     StripsType::const_iterator itr2;
 
-    std::map<vtkIdType, std::set<vtkIdType>> neighPts;
+    std::map<vtkIdType, _IdsType> neighPts;
 
     auto pts = vtkSmartPointer<vtkIdList>::New();
 
@@ -2571,11 +2670,12 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
     WriteVTK("modPdB_8.vtk", pdB);
 #endif
 
-    resultC->ShallowCopy(contLines);
-
     if (OperMode == OPER_NONE) {
         resultA->ShallowCopy(pdA);
         resultB->ShallowCopy(pdB);
+
+        contLines->RemoveDeletedCells();
+        resultC->ShallowCopy(contLines);
 
         return false;
     }
@@ -2874,6 +2974,9 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
     resultA->GetCellData()->AddArray(newOrigCellIdsA);
     resultA->GetCellData()->AddArray(newOrigCellIdsB);
 
+    contLines->RemoveDeletedCells();
+    resultC->ShallowCopy(contLines);
+
     // aufräumen
 
     cfApp->Delete();
@@ -3113,7 +3216,7 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
     FindConns(linesA, kdTree, bspTreeA, polyConns, indexedPolys, sources, n);
 
     PolyConnsType connected {{0, {}}};
-    std::set<vtkIdType> restricted; // keine der conns darf im gleichen punkt beginnen
+    _IdsType restricted; // keine der conns darf im gleichen punkt beginnen
 
     auto linesB = vtkSmartPointer<vtkPolyData>::New();
     linesB->SetPoints(pts);

@@ -23,6 +23,7 @@ limitations under the License.
 #include <vector>
 #include <deque>
 #include <map>
+#include <set>
 
 #include <vtkPolyData.h>
 #include <vtkKdTreePointLocator.h>
@@ -70,6 +71,7 @@ public:
 };
 
 typedef std::vector<vtkIdType> IdsType;
+typedef std::set<vtkIdType> _IdsType;
 
 template<typename T,
     typename std::enable_if<std::is_integral<T>::value, bool>::type = true>
