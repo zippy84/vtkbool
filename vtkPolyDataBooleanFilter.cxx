@@ -221,7 +221,7 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
             // löscht bestimmte strips
 
-            if (CleanStrips(polyStripsA, polyStripsB)) {
+            if (CleanStrips()) {
                 vtkErrorMacro("There is no contact.");
                 return 1;
             }
@@ -890,7 +890,7 @@ bool vtkPolyDataBooleanFilter::HasArea (const StripType &strip) const {
     return area;
 }
 
-bool vtkPolyDataBooleanFilter::CleanStrips (PolyStripsType &polyStripsA, PolyStripsType &polyStripsB) {
+bool vtkPolyDataBooleanFilter::CleanStrips () {
 #ifdef DEBUG
     std::cout << "CleanStrips()" << std::endl;
 #endif

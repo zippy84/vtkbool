@@ -270,7 +270,7 @@ class VTK_EXPORT vtkPolyDataBooleanFilter : public vtkPolyDataAlgorithm {
 
     void GetStripPoints (vtkPolyData *pd, vtkIdTypeArray *sources, PStrips &pStrips, IdsType &lines);
     bool GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *conts, vtkIdTypeArray *sources, PolyStripsType &polyStrips);
-    bool CleanStrips (PolyStripsType &polyStripsA, PolyStripsType &polyStripsB);
+    bool CleanStrips ();
     void RemoveDuplicates (IdsType &lines);
     void CompleteStrips (PStrips &pStrips);
     bool HasArea (const StripType &strip) const;
