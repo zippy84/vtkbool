@@ -8,14 +8,14 @@ This is an extension of the graphics library VTK. The goal of the extension is t
 
 ## Features
 
-- no extra libraries required
+- based on VTK
 - 4 operation types available (union, intersection, difference and difference2 - difference with interchanged operands)
 - triangulation is not needed
 - all types of polygonal cells are supported (triangles, quads, polygons, triangle-strips)
-- triangle-strips and quads will be transformed into triangles (quads only if points are not on the same plane)
+- triangle-strips and quads will be transformed into triangles (quads only if their points are not on the same plane)
 - non-convex polygons are allowed
 - meshes can be stacked (coplanar polygons are right handled)
-- the meshes don’t need to be closed
+- the meshes don’t need to be watertight
 - CellData is passed (attached by the rules of vtkAppendPolyData)
 - contact-lines are available in the 3th output
 - the filter is able to embed holes
@@ -159,7 +159,7 @@ After a successful compilation, the module can be used as follows:
 
 ```python
 import sys
-sys.path.append('/path/to/your/build/directory') # also look at the python files of the testing directory
+sys.path.append('/path/to/your/build/directory') # also look into the python files in the testing directory
 
 from vtkmodules.vtkFiltersSources import vtkCubeSource, vtkSphereSource
 from vtkmodules.vtkIOLegacy import vtkPolyDataWriter
@@ -185,6 +185,39 @@ writer.SetFileName('result.vtk')
 
 writer.Update()
 ```
+
+## Errors and their meaning
+
+- *First/Second input does not contain any supported cells.*
+  
+  What it says. Look at the Features.
+  
+- *First/Second input has non-manifold edges.*
+  
+  The contact goes through a non-manifold edge. A non-manifold edge is an edge that is shared by three or more cells. In general this is not a problem, except it is part of the intersection.
+  
+- *There is no contact.*
+  
+  What it says.
+  
+- *Contact ends suddenly.*
+  
+  The intersection is incomplete. That is, an intersection line ends in the middle of a cell. The cell cannot be divided.
+  
+- *Strips are invalid.*
+  
+  There are two reasons for that kind of error:
+  
+  1. at least two intersection lines intersect each other - the input, one of them, contains an assembly
+  2. there are different intersection points with the same capturing point (whether they are connected by other lines or not) - this is a limitation of the filter
+  
+- *CutCells failed.*
+  
+  Will be printed out only, if some holes couldn't be merged into their outer cells.
+  
+- *Boolean operation failed.*
+  
+  A boolean operation can fail at the end, if some of the intersection lines are not part of the result.
 
 ## Copyright
 

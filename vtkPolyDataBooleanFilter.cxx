@@ -266,8 +266,8 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
             start = clock::now();
 
-            ResolveOverlaps(modPdA, contsA, polyStripsA);
-            ResolveOverlaps(modPdB, contsB, polyStripsB);
+            ResolveOverlaps(modPdA, polyStripsA);
+            ResolveOverlaps(modPdB, polyStripsB);
 
             times.push_back(clock::now()-start);
 
@@ -1880,7 +1880,7 @@ void vtkPolyDataBooleanFilter::DisjoinPolys (vtkPolyData *pd, PolyStripsType &po
 
 }
 
-void vtkPolyDataBooleanFilter::ResolveOverlaps (vtkPolyData *pd, vtkIdTypeArray *conts, PolyStripsType &polyStrips) {
+void vtkPolyDataBooleanFilter::ResolveOverlaps (vtkPolyData *pd, PolyStripsType &polyStrips) {
 
 #ifdef DEBUG
     std::cout << "ResolveOverlaps()" << std::endl;
