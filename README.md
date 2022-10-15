@@ -194,7 +194,7 @@ writer.Update()
   
 - *First/Second input has non-manifold edges.*
   
-  The contact goes through a non-manifold edge. A non-manifold edge is an edge that is shared by three or more cells. In general this is not a problem, except it is part of the intersection.
+  The contact goes through a non-manifold edge. A non-manifold edge is an edge that is shared by three or more cells. In general this is not a problem, unless they are part of the intersection.
   
 - *There is no contact.*
   
