@@ -148,7 +148,10 @@ int main() {
 
             for (i = 0; i < num; i++) {
                 pd->GetPoint(cell[i], pt);
-                assert(poly.emplace(pt[0], pt[1], pt[2]).second); // schlägt fehl, wenn bereits vorhanden
+                if (!poly.emplace(pt[0], pt[1], pt[2]).second) {
+                    // schlägt fehl, wenn bereits vorhanden
+                    return EXIT_FAILURE;
+                }
             }
 
         }
@@ -156,7 +159,9 @@ int main() {
 
     // WriteVTK("merged.vtk", pd);
 
-    assert(pd->GetNumberOfCells() == 10);
+    if (pd->GetNumberOfCells() != 10) {
+        return EXIT_FAILURE;
+    }
 
-    return 0;
+    return EXIT_SUCCESS;
 }

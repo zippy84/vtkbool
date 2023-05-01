@@ -186,6 +186,20 @@ writer.SetFileName('result.vtk')
 writer.Update()
 ```
 
+## Conda
+
+The library is also available at conda-forge. In your virtual environment you can install the package with:
+
+```
+conda install -c conda-forge vtkbool
+```
+
+Unlike in the python example, you need to import it like this:
+
+```python
+from vtkbool.vtkBool import vtkPolyDataBooleanFilter
+```
+
 ## Errors and their meaning
 
 - *First/Second input does not contain any supported cells.*
