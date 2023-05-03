@@ -1,4 +1,4 @@
-# vtkbool ![ci](https://github.com/zippy84/vtkbool/actions/workflows/cmake.yml/badge.svg) [![codecov](https://codecov.io/gh/zippy84/vtkbool/branch/master/graph/badge.svg?token=EUV9QKEW1M)](https://codecov.io/gh/zippy84/vtkbool)
+# vtkbool [![CMake](https://github.com/zippy84/vtkbool/actions/workflows/cmake.yml/badge.svg)](https://github.com/zippy84/vtkbool/actions/workflows/cmake.yml) [![codecov](https://codecov.io/gh/zippy84/vtkbool/branch/master/graph/badge.svg?token=EUV9QKEW1M)](https://codecov.io/gh/zippy84/vtkbool)
 
 ![](/cover.png)
 
