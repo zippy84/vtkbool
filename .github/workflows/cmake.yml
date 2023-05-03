@@ -1,0 +1,58 @@
+name: CMake
+
+on:
+  push:
+    branches: ["master"]
+
+jobs:
+  Coverage:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install Deps
+      run: |
+        sudo apt-get update
+        sudo apt-get -y upgrade
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata
+        sudo apt-get -y install libvtk9-dev python3-vtk9 cmake python3-pytest gcovr
+
+    - name: Configure CMake
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Profile -DVTKBOOL_COVERAGE=ON
+
+    - name: Build
+      run: cmake --build ${{github.workspace}}/build
+
+    - name: Test
+      working-directory: ${{github.workspace}}/build
+      run: |
+        ctest --output-on-failure
+        gcovr -r .. . --exclude-throw-branches --xml -o coverage.xml
+
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        token: ${{secrets.CODECOV_TOKEN}}
+
+  Release:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install Deps
+      run: |
+        sudo apt-get update
+        sudo apt-get -y upgrade
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata
+        sudo apt-get -y install libvtk9-dev python3-vtk9 cmake python3-pytest
+
+    - name: Configure CMake
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Release
+
+    - name: Build
+      run: cmake --build ${{github.workspace}}/build
+
+    - name: Test
+      working-directory: ${{github.workspace}}/build
+      run: ctest --output-on-failure
+
