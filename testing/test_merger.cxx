@@ -46,23 +46,12 @@ Poly Draw (double r, vtkIdType step, double x, double y, double rotate = 0) {
     return poly;
 }
 
-int main() {
+bool Test (PolysType &polys) {
     auto pts = vtkSmartPointer<vtkPoints>::New();
 
     auto pd = vtkSmartPointer<vtkPolyData>::New();
     pd->SetPoints(pts);
     pd->Allocate(1);
-
-    PolysType polys {
-        Draw(8, 18, 0, 0),
-        Draw(.25, 6, 3.5, 0),
-        Draw(.25, 6, -3.5, 0),
-
-        Draw(.5, 6, 1, 0),
-        Draw(.5, 6, -1, 0),
-        Draw(.5, 6, 0, 1, 30),
-        Draw(.5, 6, 0, -1, 30)
-    };
 
     auto cell = vtkSmartPointer<vtkIdList>::New();
 
@@ -125,7 +114,7 @@ int main() {
     try {
         Merger(pd, pStrips, holes, descIds, 0).Run();
     } catch (const std::runtime_error &e) {
-        // throw e;
+        return false;
     }
 
     // dafür ist der Merger nicht zuständig
@@ -150,7 +139,7 @@ int main() {
                 pd->GetPoint(cell[i], pt);
                 if (!poly.emplace(pt[0], pt[1], pt[2]).second) {
                     // schlägt fehl, wenn bereits vorhanden
-                    return EXIT_FAILURE;
+                    return false;
                 }
             }
 
@@ -160,6 +149,44 @@ int main() {
     // WriteVTK("merged.vtk", pd);
 
     if (pd->GetNumberOfCells() != 10) {
+        return false;
+    }
+
+    return true;
+}
+
+int main() {
+    PolysType polysA {
+        Draw(8, 18, 0, 0),
+        Draw(.25, 6, 3.5, 0),
+        Draw(.25, 6, -3.5, 0),
+
+        Draw(.5, 6, 1, 0),
+        Draw(.5, 6, -1, 0),
+        Draw(.5, 6, 0, 1, 30),
+        Draw(.5, 6, 0, -1, 30)
+    };
+
+    WritePolys("polysA.vtk", polysA);
+
+    Poly a = Draw(4, 18, 0, 0, 10),
+        b = Draw(3, 18, 0, 0, 10);
+
+    std::copy(b.rbegin(), b.rend(), std::back_inserter(a));
+
+    PolysType polysB {
+        Poly{{5, 5, 0}, {-5, 5, 0}, {-5, -5, 0}, {5, -5, 0}},
+        Draw(2, 18, 0, 0, 5),
+        a
+    };
+
+    WritePolys("polysB.vtk", polysB);
+
+    // if (!Test(polysA)) {
+    //     return EXIT_FAILURE;
+    // }
+
+    if (!Test(polysB)) {
         return EXIT_FAILURE;
     }
 
