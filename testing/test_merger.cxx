@@ -46,7 +46,7 @@ Poly Draw (double r, vtkIdType step, double x, double y, double rotate = 0) {
     return poly;
 }
 
-bool Test (PolysType &polys) {
+bool Test (PolysType &polys, vtkIdType numCells) {
     auto pts = vtkSmartPointer<vtkPoints>::New();
 
     auto pd = vtkSmartPointer<vtkPolyData>::New();
@@ -148,7 +148,7 @@ bool Test (PolysType &polys) {
 
     // WriteVTK("merged.vtk", pd);
 
-    if (pd->GetNumberOfCells() != 10) {
+    if (pd->GetNumberOfCells() != numCells) {
         return false;
     }
 
@@ -182,11 +182,11 @@ int main() {
 
     WritePolys("polysB.vtk", polysB);
 
-    // if (!Test(polysA)) {
-    //     return EXIT_FAILURE;
-    // }
+    if (!Test(polysA, 10)) {
+        return EXIT_FAILURE;
+    }
 
-    if (!Test(polysB)) {
+    if (!Test(polysB, 5)) {
         return EXIT_FAILURE;
     }
 
