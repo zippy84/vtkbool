@@ -3204,7 +3204,7 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
         }
     }
 
-    // WriteVTK("linesA.vtk", linesA);
+    WriteVTK("linesA.vtk", linesA);
 
     auto bspTreeA = vtkSmartPointer<vtkModifiedBSPTree>::New();
     bspTreeA->SetDataSet(linesA);
@@ -3412,14 +3412,92 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
             }
         } else {
             if (!FindConns(linesA, kdTree, bspTreeA, polyConns, indexedPolys, sources, n)) {
-                throw std::runtime_error("Merging failed.");
+                break;
             }
         }
     }
 
     std::cout << connected;
 
-    // WriteVTK("linesB.vtk", linesB);
+    // fallback
+
+    if (!searchInds.empty()) {
+        for (auto ind : searchInds) {
+            std::vector<std::size_t> newChain;
+
+            for (auto c : chains.at(ind)) {
+                if (solved.find(c) != solved.end()) {
+                    break;
+                }
+
+                newChain.push_back(c);
+            }
+
+            ConnsType &conns = connected.at(ind);
+
+            decltype(newChain)::const_reverse_iterator itr;
+
+            for (itr = newChain.rbegin(); itr != newChain.rend(); itr++) {
+                // gesucht ist hier die kürzeste verbindung
+
+                std::cout << "itr " << *itr << std::endl;
+
+                // polyConns.at(*itr) ist nach d sortiert
+
+                std::shared_ptr<Conn> found;
+
+                for (auto &conn : polyConns.at(*itr)) {
+                    auto &src = sources.at(conn.j);
+
+                    if (solved.find(src) != solved.end()) {
+                        if (restricted.count(conn.i) == 0
+                            && restricted.count(conn.j) == 0
+                            && std::find_if(conns.begin(), conns.end(), [&conn](const Conn &other) { return conn.i == other.i || conn.j == other.j; }) == conns.end()) {
+
+                            pts->GetPoint(conn.i, ptA);
+                            pts->GetPoint(conn.j, ptB);
+
+                            if (bspTreeB->IntersectWithLine(ptA, ptB, 1e-5, nullptr, nullptr) == 0) {
+                                found = std::make_shared<Conn>(conn);
+
+                                break;
+                            }
+
+                        }
+                    }
+                }
+
+                if (found) {
+                    std::cout << "found " << *found << std::endl;
+
+                    conns.push_back(*found);
+
+                    connected.at(sources.at(found->j)).emplace_back(found->d, found->j, found->i);
+
+                    restricted.insert(found->i);
+                    restricted.insert(found->j);
+
+                    vtkIdList *line = vtkIdList::New();
+                    line->InsertNextId(found->i);
+                    line->InsertNextId(found->j);
+
+                    linesB->InsertNextCell(VTK_LINE, line);
+
+                    line->Delete();
+
+                    bspTreeB->Modified();
+
+                    solved.insert(*itr);
+
+                } else {
+                    throw std::runtime_error("Merging failed.");
+                }
+
+            }
+        }
+    }
+
+    WriteVTK("linesB.vtk", linesB);
 
     // stage 1
 
