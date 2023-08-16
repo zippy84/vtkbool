@@ -235,7 +235,7 @@ from vtkbool.vtkBool import vtkPolyDataBooleanFilter
 
 ## Copyright
 
-2012-2022 Ronald Römer
+2012-2023 Ronald Römer
 
 ## License
 

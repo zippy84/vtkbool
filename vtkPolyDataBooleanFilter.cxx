@@ -1,5 +1,5 @@
 /*
-Copyright 2012-2022 Ronald Römer
+Copyright 2012-2023 Ronald Römer
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -2878,8 +2878,8 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
     vtkPolyData *regsA = cfA->GetOutput();
     vtkPolyData *regsB = cfB->GetOutput();
 
-    scalarsA = vtkIdTypeArray::SafeDownCast(regsA->GetPointData()->GetScalars());
-    scalarsB = vtkIdTypeArray::SafeDownCast(regsB->GetPointData()->GetScalars());
+    scalarsA = vtkIdTypeArray::SafeDownCast(regsA->GetCellData()->GetScalars());
+    scalarsB = vtkIdTypeArray::SafeDownCast(regsB->GetCellData()->GetScalars());
 
     if (OperMode != OPER_INTERSECTION) {
         if (comb[0] == Loc::INSIDE) {
@@ -3097,11 +3097,13 @@ void Merger::Run () {
         GroupType _group {parent++};
         std::set_difference(group.begin(), group.end(), parents.begin(), parents.end(), std::back_inserter(_group));
 
+#ifdef DEBUG
         std::cout << "[";
         for (auto &index : _group) {
             std::cout << index << ", ";
         }
         std::cout << "]" << std::endl;
+#endif
 
         PolysType merged;
 
@@ -3204,7 +3206,9 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
         }
     }
 
+#ifdef DEBUG
     WriteVTK("linesA.vtk", linesA);
+#endif
 
     auto bspTreeA = vtkSmartPointer<vtkModifiedBSPTree>::New();
     bspTreeA->SetDataSet(linesA);
@@ -3297,6 +3301,7 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
         }
     }
 
+#ifdef DEBUG
     std::cout << connected;
 
     decltype(chains)::const_iterator itrD;
@@ -3308,6 +3313,7 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
         }
         std::cout << "]" << std::endl;
     }
+#endif
 
     std::set<std::size_t> solved {0};
 
@@ -3325,7 +3331,9 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
         for (auto ind : searchInds) {
             PolyPriosType polyPrios;
 
+#ifdef DEBUG
             std::cout << "ind " << ind << std::endl;
+#endif
 
             const Conn &first = connected.at(ind).back();
 
@@ -3380,7 +3388,9 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
         if (!prios.empty()) {
             auto &prio = *prios.rbegin();
 
+#ifdef DEBUG
             std::cout << "found " << prio << std::endl;
+#endif
 
             auto &conns = connected.at(sources.at(prio.conn.i));
 
@@ -3417,9 +3427,13 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
         }
     }
 
+#ifdef DEBUG
     std::cout << connected;
+#endif
 
     // fallback
+
+    double pt[3];
 
     if (!searchInds.empty()) {
         for (auto ind : searchInds) {
@@ -3440,7 +3454,9 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
             for (itr = newChain.rbegin(); itr != newChain.rend(); itr++) {
                 // gesucht ist hier die kürzeste verbindung
 
+#ifdef DEBUG
                 std::cout << "itr " << *itr << std::endl;
+#endif
 
                 // polyConns.at(*itr) ist nach d sortiert
 
@@ -3451,13 +3467,34 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
 
                     if (solved.find(src) != solved.end()) {
                         if (restricted.count(conn.i) == 0
-                            && restricted.count(conn.j) == 0
+                            // && restricted.count(conn.j) == 0
                             && std::find_if(conns.begin(), conns.end(), [&conn](const Conn &other) { return conn.i == other.i || conn.j == other.j; }) == conns.end()) {
 
                             pts->GetPoint(conn.i, ptA);
                             pts->GetPoint(conn.j, ptB);
 
-                            if (bspTreeB->IntersectWithLine(ptA, ptB, 1e-5, nullptr, nullptr) == 0) {
+                            auto intersPts = vtkSmartPointer<vtkPoints>::New();
+
+                            auto c = bspTreeB->IntersectWithLine(ptA, ptB, 1e-5, intersPts, nullptr);
+
+                            if (c == 0) {
+                                found = std::make_shared<Conn>(conn);
+
+                                break;
+                            }
+
+                            // wenn schnittpunkte existieren, dann müssen alle mit ptB übereinstimmen
+
+                            vtkIdType i, numPts = intersPts->GetNumberOfPoints();
+
+                            std::set<Point3d> foundPts {{ptB[0], ptB[1], ptB[2]}};
+
+                            for (i = 0; i < numPts; i++) {
+                                intersPts->GetPoint(i, pt);
+                                foundPts.emplace(pt[0], pt[1], pt[2]);
+                            }
+
+                            if (foundPts.size() == 1) {
                                 found = std::make_shared<Conn>(conn);
 
                                 break;
@@ -3468,7 +3505,9 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
                 }
 
                 if (found) {
+#ifdef DEBUG
                     std::cout << "found " << *found << std::endl;
+#endif
 
                     conns.push_back(*found);
 
@@ -3497,54 +3536,19 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
         }
     }
 
+#ifdef DEBUG
     WriteVTK("linesB.vtk", linesB);
+#endif
 
-    // stage 1
-
-    struct Cmp {
-        bool operator() (const Conn &a, const Conn &b) const {
-            return std::tie(a.i, a.j) < std::tie(b.i, b.j);
-        }
-    };
-
-    std::set<Conn, Cmp> usedConns;
+    ConnsType2 usedConns(firstConns.begin(), firstConns.end());
 
     IndexedPoly polyA {indexedPolys.front()};
 
-    for (const auto &first : firstConns) {
-        auto itrA = std::find(polyA.begin(), polyA.end(), first.j);
+    MergeStage1(indexedPolys, refPts, sources, firstConns, polyA);
 
-        assert(itrA != polyA.end());
+    IndexedPolysType splitted {polyA};
 
-        auto &polyB = indexedPolys.at(sources.at(first.i));
-
-        auto itrB = std::find(polyB.begin(), polyB.end(), first.i);
-
-        assert(itrB != polyB.end());
-
-        std::rotate(polyA.begin(), itrA, polyA.end());
-        std::rotate(polyB.begin(), itrB, polyB.end());
-
-        IndexedPoly newPoly {polyA};
-        newPoly.push_back(polyA.front());
-        newPoly.push_back(polyB.front());
-
-        newPoly.insert(newPoly.end(), polyB.rbegin(), polyB.rend());
-
-        polyA.swap(newPoly);
-
-        usedConns.insert(first);
-
-    }
-
-    PolysType newPolysA;
-    GetPolys(refPts, {polyA}, newPolysA);
-
-    // WritePolys("merged_stage1.vtk", newPolysA);
-
-    // stage 2
-
-    std::set<Conn, Cmp> leftConns;
+    ConnsType2 leftConns;
 
     for (itrC = connected.begin(); itrC != connected.end(); ++itrC) {
         if (itrC->first == 0) {
@@ -3569,48 +3573,24 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
 
     }
 
+#ifdef DEBUG
     std::cout << "leftConns: [";
     for (auto &conn : leftConns) {
         std::cout << conn << ", ";
     }
     std::cout << "]" << std::endl;
+#endif
 
-    IndexedPolysType splitted {polyA};
+    MergeStage2(leftConns, refPts, usedConns, splitted);
 
-    for (auto &conn : leftConns) {
-        IndexedPolysType::iterator itr;
+    PolysType newPolys;
+    GetPolys(refPts, splitted, newPolys);
 
-        for (itr = splitted.begin(); itr != splitted.end(); ++itr) {
-            auto &poly = *itr;
+#ifdef DEBUG
+    WritePolys("merged_stage2.vtk", newPolys);
+#endif
 
-            auto itrA = std::find(poly.begin(), poly.end(), conn.i);
-
-            if (itrA != poly.end()) {
-                std::rotate(poly.begin(), itrA, poly.end());
-
-                auto itrB = std::find(poly.begin(), poly.end(), conn.j);
-
-                IndexedPoly newPolyA(poly.begin(), itrB+1);
-                IndexedPoly newPolyB(itrB, poly.end());
-
-                newPolyB.push_back(poly.front());
-
-                splitted.erase(itr);
-
-                splitted.push_back(std::move(newPolyA));
-                splitted.push_back(std::move(newPolyB));
-
-                break;
-            }
-        }
-    }
-
-    PolysType newPolysB;
-    GetPolys(refPts, splitted, newPolysB);
-
-    // WritePolys("merged_stage2.vtk", newPolysB);
-
-    std::move(newPolysB.begin(), newPolysB.end(), std::back_inserter(merged));
+    std::move(newPolys.begin(), newPolys.end(), std::back_inserter(merged));
 
 }
 
@@ -3704,4 +3684,177 @@ bool Merger::FindConns (vtkPolyData *lines, vtkSmartPointer<vtkKdTree> kdTree, v
     }
 
     return true;
+}
+
+void Merger::MergeStage1 (const IndexedPolysType &indexedPolys, [[maybe_unused]] const ReferencedPointsType &refPts, const SourcesType &sources, const ConnsType &conns, IndexedPoly &polyA) {
+
+    for (const auto &conn : conns) {
+        auto itrA = std::find(polyA.begin(), polyA.end(), conn.j);
+
+        assert(itrA != polyA.end());
+
+        IndexedPoly polyB(indexedPolys.at(sources.at(conn.i)));
+
+        auto itrB = std::find(polyB.begin(), polyB.end(), conn.i);
+
+        assert(itrB != polyB.end());
+
+        std::rotate(polyA.begin(), itrA, polyA.end());
+        std::rotate(polyB.begin(), itrB, polyB.end());
+
+        IndexedPoly newPoly {polyA};
+        newPoly.push_back(polyA.front());
+        newPoly.push_back(polyB.front());
+
+        newPoly.insert(newPoly.end(), polyB.rbegin(), polyB.rend());
+
+        polyA.swap(newPoly);
+
+    }
+
+#ifdef DEBUG
+    PolysType newPolys;
+    GetPolys(refPts, {polyA}, newPolys);
+
+    WritePolys("merged_stage1.vtk", newPolys);
+#endif
+
+}
+
+void Merger::MergeStage2 (const ConnsType2 &conns, const ReferencedPointsType &refPts, const ConnsType2 &usedConns, IndexedPolysType &splitted) {
+    std::set<Point3d> endPts;
+
+    for (const Conn &conn : usedConns) {
+        endPts.emplace(refPts.at(conn.i));
+        endPts.emplace(refPts.at(conn.j));
+    }
+
+    IndexedPolysType::iterator itr;
+
+    double vA[3], vB[3], w[3], ang, phi;
+
+    double n[] = {0, 0, 1};
+
+    IndexedPoly::iterator itrA, itrB;
+
+    IndexedPoly::iterator prev, next;
+
+    for (auto &conn : conns) {
+        for (itr = splitted.begin(); itr != splitted.end(); ++itr) {
+            IndexedPoly poly(itr->begin(), itr->end());
+
+            if (endPts.count(refPts.at(conn.i)) == 0 && endPts.count(refPts.at(conn.j)) == 0) {
+                // eindeutige verbindung
+
+                auto itrA = std::find(poly.begin(), poly.end(), conn.i);
+
+                if (itrA != poly.end()) {
+                    std::rotate(poly.begin(), itrA, poly.end());
+
+                    auto itrB = std::find(poly.begin(), poly.end(), conn.j);
+
+                    IndexedPoly newPolyA(poly.begin(), itrB+1);
+                    IndexedPoly newPolyB(itrB, poly.end());
+
+                    newPolyB.push_back(poly.front());
+
+                    splitted.erase(itr);
+
+                    splitted.push_back(std::move(newPolyA));
+                    splitted.push_back(std::move(newPolyB));
+
+                    break;
+                }
+
+            } else {
+                Point3d::GetVec(refPts.at(conn.i), refPts.at(conn.j), w);
+
+                if (endPts.count(refPts.at(conn.i)) == 0)  {
+                    itrA = std::find(poly.begin(), poly.end(), conn.i);
+                } else {
+                    itrA = poly.begin();
+                    while ((itrA = std::find(itrA, poly.end(), conn.i)) != poly.end()) {
+                        next = itrA+1;
+                        if (next == poly.end()) {
+                            next = poly.begin();
+                        }
+
+                        if (itrA == poly.begin()) {
+                            prev = poly.end()-1;
+                        } else {
+                            prev = itrA-1;
+                        }
+
+                        Point3d::GetVec(refPts.at(conn.i), refPts.at(*next), vA);
+                        Point3d::GetVec(refPts.at(conn.i), refPts.at(*prev), vB);
+
+                        ang = GetAngle(vA, vB, n);
+                        phi = GetAngle(vA, w, n);
+
+                        if (phi < ang) {
+                            break;
+                        }
+
+                        ++itrA;
+                    }
+                }
+
+                if (itrA == poly.end()) {
+                    continue;
+                }
+
+                std::rotate(poly.begin(), itrA, poly.end());
+
+                vtkMath::MultiplyScalar(w, -1);
+
+                if (endPts.count(refPts.at(conn.j)) == 0)  {
+                    itrB = std::find(poly.begin(), poly.end(), conn.j);
+                } else {
+                    itrB = poly.begin();
+                    while ((itrB = std::find(itrB, poly.end(), conn.j)) != poly.end()) {
+                        next = itrB+1;
+                        if (next == poly.end()) {
+                            next = poly.begin();
+                        }
+
+                        if (itrB == poly.begin()) {
+                            prev = poly.end()-1;
+                        } else {
+                            prev = itrB-1;
+                        }
+
+                        Point3d::GetVec(refPts.at(conn.j), refPts.at(*next), vA);
+                        Point3d::GetVec(refPts.at(conn.j), refPts.at(*prev), vB);
+
+                        ang = GetAngle(vA, vB, n);
+                        phi = GetAngle(vA, w, n);
+
+                        if (phi < ang) {
+                            break;
+                        }
+
+                        ++itrB;
+                    }
+                }
+
+                if (itrB == poly.end()) {
+                    continue;
+                }
+
+                IndexedPoly newPolyA(poly.begin(), itrB+1);
+                IndexedPoly newPolyB(itrB, poly.end());
+
+                newPolyB.push_back(poly.front());
+
+                splitted.erase(itr);
+
+                splitted.push_back(std::move(newPolyA));
+                splitted.push_back(std::move(newPolyB));
+
+                break;
+
+            }
+        }
+    }
+
 }

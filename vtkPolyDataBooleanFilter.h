@@ -1,5 +1,5 @@
 /*
-Copyright 2012-2022 Ronald Römer
+Copyright 2012-2023 Ronald Römer
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -195,6 +195,8 @@ struct ConnCmp {
 typedef std::vector<Conn> ConnsType;
 typedef std::map<std::size_t, ConnsType> PolyConnsType;
 
+typedef std::set<Conn, ConnCmp> ConnsType2;
+
 inline std::ostream& operator<< (std::ostream &out, const PolyConnsType& polyConns) {
     PolyConnsType::const_iterator itr;
 
@@ -252,6 +254,9 @@ public:
 private:
     void MergeGroup (const GroupType &group, PolysType &merged);
     bool FindConns (vtkPolyData *lines, vtkSmartPointer<vtkKdTree> kdTree, vtkSmartPointer<vtkModifiedBSPTree> bspTree, PolyConnsType &polyConns, const IndexedPolysType &indexedPolys, const SourcesType &sources, int &n);
+
+    void MergeStage1 (const IndexedPolysType &indexedPolys, const ReferencedPointsType &refPts, const SourcesType &sources, const ConnsType &conns, IndexedPoly &polyA);
+    void MergeStage2 (const ConnsType2 &conns, const ReferencedPointsType &refPts, const ConnsType2 &usedConns, IndexedPolysType &splitted);
 };
 
 class VTK_EXPORT vtkPolyDataBooleanFilter : public vtkPolyDataAlgorithm {

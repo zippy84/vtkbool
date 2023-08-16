@@ -1,5 +1,5 @@
 /*
-Copyright 2012-2022 Ronald Römer
+Copyright 2012-2023 Ronald Römer
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -97,7 +97,7 @@ void WriteVTK (const char *name, vtkPolyData *pd) {
     w->Delete();
 }
 
-double GetAngle (double *vA, double *vB, double *n) {
+double GetAngle (const double *vA, const double *vB, const double *n) {
     // http://math.stackexchange.com/questions/878785/how-to-find-an-angle-in-range0-360-between-2-vectors
 
     double _vA[3];

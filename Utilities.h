@@ -1,5 +1,5 @@
 /*
-Copyright 2012-2022 Ronald Römer
+Copyright 2012-2023 Ronald Römer
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ limitations under the License.
 
 #define NOTSET -1
 
-double GetAngle (double *vA, double *vB, double *n);
+double GetAngle (const double *vA, const double *vB, const double *n);
 
 /* VTK */
 void ComputeNormal (vtkPoints *pts, double *n, vtkIdType num, const vtkIdType *poly);
@@ -67,6 +67,14 @@ public:
             << ", z=" << p.z
             << ", id=" << p.id << ")";
         return out;
+    }
+
+    static double GetVec (const Point3d &a, const Point3d &b, double *v) {
+        v[0] = b.x-a.x;
+        v[1] = b.y-a.y;
+        v[2] = b.z-a.z;
+
+        return vtkMath::Normalize(v);
     }
 };
 
