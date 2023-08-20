@@ -14,6 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <string>
+#include <cmath>
+
 #include <vtkCellData.h>
 #include <vtkCellArrayIterator.h>
 #include <vtkIdTypeArray.h>
@@ -46,7 +49,12 @@ Poly Draw (double r, vtkIdType step, double x, double y, double rotate = 0) {
     return poly;
 }
 
-bool Test (PolysType &polys, vtkIdType numCells) {
+bool Test (PolysType &polys, vtkIdType numCells, const char *name) {
+    std::string fileName(name);
+    fileName.append(".vtk");
+
+    WritePolys(fileName.c_str(), polys);
+
     auto pts = vtkSmartPointer<vtkPoints>::New();
 
     auto pd = vtkSmartPointer<vtkPolyData>::New();
@@ -146,7 +154,10 @@ bool Test (PolysType &polys, vtkIdType numCells) {
         }
     }
 
-    // WriteVTK("merged.vtk", pd);
+    std::string mergedFileName(name);
+    mergedFileName.append("_merged.vtk");
+
+    WriteVTK(mergedFileName.c_str(), pd);
 
     if (pd->GetNumberOfCells() != numCells) {
         return false;
@@ -167,8 +178,6 @@ int main() {
         Draw(.5, 6, 0, -1, 30)
     };
 
-    WritePolys("polysA.vtk", polysA);
-
     Poly a = Draw(4, 18, 0, 0, 10),
         b = Draw(3, 18, 0, 0, 10);
 
@@ -180,13 +189,23 @@ int main() {
         a
     };
 
-    WritePolys("polysB.vtk", polysB);
+    const double y = 7.5-1.5/std::cos (M_PI/6)-std::tan (M_PI/6)*4.5;
 
-    if (!Test(polysA, 10)) {
+    PolysType polysC {
+        Poly({{0, 0, 0}, {25, 0, 0}, {25, 25, 0}, {0, 25, 0}}),
+        Poly({{2, 5, 0}, {17, 5, 0}, {17, 20, 0}, {2, 20, 0}, {7.5/std::tan (M_PI/6)+2, 12.5, 0}}),
+        Poly({{6.5, 12.5-y, 0}, {y/std::tan (M_PI/6)+6.5, 12.5, 0}, {6.5, 12.5+y, 0}})
+    };
+
+    if (!Test(polysA, 10, "polysA")) {
         return EXIT_FAILURE;
     }
 
-    if (!Test(polysB, 5)) {
+    if (!Test(polysB, 5, "polysB")) {
+        return EXIT_FAILURE;
+    }
+
+    if (!Test(polysC, 5, "polysC")) {
         return EXIT_FAILURE;
     }
 

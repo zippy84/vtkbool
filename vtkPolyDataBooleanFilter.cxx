@@ -168,8 +168,6 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
             contsA = vtkIdTypeArray::SafeDownCast(contLines->GetCellData()->GetScalars("cA"));
             contsB = vtkIdTypeArray::SafeDownCast(contLines->GetCellData()->GetScalars("cB"));
 
-            // vtkIdTypeArray *accuracy = vtkIdTypeArray::SafeDownCast(contLines->GetPointData()->GetScalars("accuracy"));
-
             vtkIdTypeArray *sourcesA = vtkIdTypeArray::SafeDownCast(contLines->GetCellData()->GetScalars("sourcesA"));
             vtkIdTypeArray *sourcesB = vtkIdTypeArray::SafeDownCast(contLines->GetCellData()->GetScalars("sourcesB"));
 
@@ -185,10 +183,6 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
                     return 1;
                 }
 
-                // if (accuracy->GetValue(i) == 1) {
-                //     vtkErrorMacro("Contact goes through a cell with a bad shape.");
-                //     return 1;
-                // }
             }
 
             // sichert die OrigCellIds
@@ -3733,7 +3727,7 @@ void Merger::MergeStage2 (const ConnsType2 &conns, const ReferencedPointsType &r
 
     double vA[3], vB[3], w[3], ang, phi;
 
-    double n[] = {0, 0, 1};
+    const double n[] = {0, 0, 1};
 
     IndexedPoly::iterator itrA, itrB;
 
@@ -3743,117 +3737,91 @@ void Merger::MergeStage2 (const ConnsType2 &conns, const ReferencedPointsType &r
         for (itr = splitted.begin(); itr != splitted.end(); ++itr) {
             IndexedPoly poly(itr->begin(), itr->end());
 
-            if (endPts.count(refPts.at(conn.i)) == 0 && endPts.count(refPts.at(conn.j)) == 0) {
-                // eindeutige verbindung
-
-                auto itrA = std::find(poly.begin(), poly.end(), conn.i);
-
-                if (itrA != poly.end()) {
-                    std::rotate(poly.begin(), itrA, poly.end());
-
-                    auto itrB = std::find(poly.begin(), poly.end(), conn.j);
-
-                    IndexedPoly newPolyA(poly.begin(), itrB+1);
-                    IndexedPoly newPolyB(itrB, poly.end());
-
-                    newPolyB.push_back(poly.front());
-
-                    splitted.erase(itr);
-
-                    splitted.push_back(std::move(newPolyA));
-                    splitted.push_back(std::move(newPolyB));
-
-                    break;
-                }
-
+            if (endPts.count(refPts.at(conn.i)) == 0)  {
+                itrA = std::find(poly.begin(), poly.end(), conn.i);
             } else {
                 Point3d::GetVec(refPts.at(conn.i), refPts.at(conn.j), w);
 
-                if (endPts.count(refPts.at(conn.i)) == 0)  {
-                    itrA = std::find(poly.begin(), poly.end(), conn.i);
-                } else {
-                    itrA = poly.begin();
-                    while ((itrA = std::find(itrA, poly.end(), conn.i)) != poly.end()) {
-                        next = itrA+1;
-                        if (next == poly.end()) {
-                            next = poly.begin();
-                        }
-
-                        if (itrA == poly.begin()) {
-                            prev = poly.end()-1;
-                        } else {
-                            prev = itrA-1;
-                        }
-
-                        Point3d::GetVec(refPts.at(conn.i), refPts.at(*next), vA);
-                        Point3d::GetVec(refPts.at(conn.i), refPts.at(*prev), vB);
-
-                        ang = GetAngle(vA, vB, n);
-                        phi = GetAngle(vA, w, n);
-
-                        if (phi < ang) {
-                            break;
-                        }
-
-                        ++itrA;
+                itrA = poly.begin();
+                while ((itrA = std::find(itrA, poly.end(), conn.i)) != poly.end()) {
+                    next = itrA+1;
+                    if (next == poly.end()) {
+                        next = poly.begin();
                     }
-                }
 
-                if (itrA == poly.end()) {
-                    continue;
-                }
-
-                std::rotate(poly.begin(), itrA, poly.end());
-
-                vtkMath::MultiplyScalar(w, -1);
-
-                if (endPts.count(refPts.at(conn.j)) == 0)  {
-                    itrB = std::find(poly.begin(), poly.end(), conn.j);
-                } else {
-                    itrB = poly.begin();
-                    while ((itrB = std::find(itrB, poly.end(), conn.j)) != poly.end()) {
-                        next = itrB+1;
-                        if (next == poly.end()) {
-                            next = poly.begin();
-                        }
-
-                        if (itrB == poly.begin()) {
-                            prev = poly.end()-1;
-                        } else {
-                            prev = itrB-1;
-                        }
-
-                        Point3d::GetVec(refPts.at(conn.j), refPts.at(*next), vA);
-                        Point3d::GetVec(refPts.at(conn.j), refPts.at(*prev), vB);
-
-                        ang = GetAngle(vA, vB, n);
-                        phi = GetAngle(vA, w, n);
-
-                        if (phi < ang) {
-                            break;
-                        }
-
-                        ++itrB;
+                    if (itrA == poly.begin()) {
+                        prev = poly.end()-1;
+                    } else {
+                        prev = itrA-1;
                     }
+
+                    Point3d::GetVec(refPts.at(conn.i), refPts.at(*next), vA);
+                    Point3d::GetVec(refPts.at(conn.i), refPts.at(*prev), vB);
+
+                    ang = GetAngle(vA, vB, n);
+                    phi = GetAngle(vA, w, n);
+
+                    if (phi < ang) {
+                        break;
+                    }
+
+                    ++itrA;
                 }
-
-                if (itrB == poly.end()) {
-                    continue;
-                }
-
-                IndexedPoly newPolyA(poly.begin(), itrB+1);
-                IndexedPoly newPolyB(itrB, poly.end());
-
-                newPolyB.push_back(poly.front());
-
-                splitted.erase(itr);
-
-                splitted.push_back(std::move(newPolyA));
-                splitted.push_back(std::move(newPolyB));
-
-                break;
-
             }
+
+            if (itrA == poly.end()) {
+                continue;
+            }
+
+            std::rotate(poly.begin(), itrA, poly.end());
+
+            if (endPts.count(refPts.at(conn.j)) == 0)  {
+                itrB = std::find(poly.begin(), poly.end(), conn.j);
+            } else {
+                Point3d::GetVec(refPts.at(conn.j), refPts.at(conn.i), w);
+
+                itrB = poly.begin();
+                while ((itrB = std::find(itrB, poly.end(), conn.j)) != poly.end()) {
+                    next = itrB+1;
+                    if (next == poly.end()) {
+                        next = poly.begin();
+                    }
+
+                    if (itrB == poly.begin()) {
+                        prev = poly.end()-1;
+                    } else {
+                        prev = itrB-1;
+                    }
+
+                    Point3d::GetVec(refPts.at(conn.j), refPts.at(*next), vA);
+                    Point3d::GetVec(refPts.at(conn.j), refPts.at(*prev), vB);
+
+                    ang = GetAngle(vA, vB, n);
+                    phi = GetAngle(vA, w, n);
+
+                    if (phi < ang) {
+                        break;
+                    }
+
+                    ++itrB;
+                }
+            }
+
+            if (itrB == poly.end()) {
+                continue;
+            }
+
+            IndexedPoly newPolyA(poly.begin(), itrB+1);
+            IndexedPoly newPolyB(itrB, poly.end());
+
+            newPolyB.push_back(poly.front());
+
+            splitted.erase(itr);
+
+            splitted.push_back(std::move(newPolyA));
+            splitted.push_back(std::move(newPolyB));
+
+            break;
         }
     }
 

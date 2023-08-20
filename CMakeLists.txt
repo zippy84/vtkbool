@@ -107,12 +107,6 @@ else()
 
             set_property(TEST "import_vtkbool" APPEND PROPERTY ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/${python_default_destination}/vtkbool")
 
-            add_test(NAME "generate_frieze"
-                COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/testing/generate_frieze.py
-                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/testing)
-
-            set_property(TEST "generate_frieze" APPEND PROPERTY ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/${python_default_destination}/vtkbool")
-
             add_test(NAME "test_filter"
                 COMMAND ${Python3_EXECUTABLE} -m pytest
                 WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/testing)
@@ -130,6 +124,12 @@ else()
             add_test(NAME "test_merger"
                 COMMAND test_merger
                 WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/testing)
+
+            add_test(NAME "generate_frieze"
+                COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/testing/generate_frieze.py
+                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/testing)
+
+            set_property(TEST "generate_frieze" APPEND PROPERTY ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/${python_default_destination}/vtkbool")
 
         endif()
 

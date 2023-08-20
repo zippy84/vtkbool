@@ -80,13 +80,9 @@ vtkPolyDataContactFilter::vtkPolyDataContactFilter () {
 
     invalidA = false;
     invalidB = false;
-
-    // accuracy = vtkIdTypeArray::New();
-    // accuracy->SetName("accuracy");
 }
 
 vtkPolyDataContactFilter::~vtkPolyDataContactFilter () {
-
     sourcesB->Delete();
     sourcesA->Delete();
 
@@ -95,9 +91,6 @@ vtkPolyDataContactFilter::~vtkPolyDataContactFilter () {
 
     contPts->Delete();
     contLines->Delete();
-
-    // accuracy->Delete();
-
 }
 
 int vtkPolyDataContactFilter::ProcessRequest (vtkInformation *request, vtkInformationVector **inputVector, vtkInformationVector *outputVector) {
@@ -173,8 +166,6 @@ int vtkPolyDataContactFilter::ProcessRequest (vtkInformation *request, vtkInform
 
         contLines->GetCellData()->AddArray(sourcesA);
         contLines->GetCellData()->AddArray(sourcesB);
-
-        // contLines->GetPointData()->AddArray(accuracy);
 
         contLines->RemoveDeletedCells();
 
@@ -844,10 +835,6 @@ void vtkPolyDataContactFilter::AddContactLines (InterPtsType &intersA, InterPtsT
 
         contA->InsertNextValue(idA);
         contB->InsertNextValue(idB);
-
-        // accuracy->InsertNextValue(f.inaccurate);
-        // accuracy->InsertNextValue(s.inaccurate);
-
     }
 
 }
@@ -921,7 +908,6 @@ void vtkPolyDataContactFilter::CheckInters (InterPtsType &interPts, vtkPolyData 
         //     << p.edge
         //     << std::endl;
 
-        // p.inaccurate = true;
     }
 
 }

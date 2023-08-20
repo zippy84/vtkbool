@@ -44,7 +44,7 @@ class InterPt {
 public:
     InterPt () = delete;
 
-    InterPt (double x, double y, double z, double t, vtkIdType a, vtkIdType b, End end, Src src) : t(t), edge(a, b), end(end), src(src), srcA(NOTSET), srcB(NOTSET), inaccurate(false) {
+    InterPt (double x, double y, double z, double t, vtkIdType a, vtkIdType b, End end, Src src) : t(t), edge(a, b), end(end), src(src), srcA(NOTSET), srcB(NOTSET) {
         pt[0] = x;
         pt[1] = y;
         pt[2] = z;
@@ -55,7 +55,6 @@ public:
     End end;
     Src src;
     vtkIdType srcA, srcB;
-    bool inaccurate;
 
     friend std::ostream& operator<< (std::ostream &out, const InterPt &s) {
         out << "pt [" << s.pt[0] << ", " << s.pt[1] << ", " << s.pt[2] << "]"
@@ -83,10 +82,6 @@ public:
                 srcB = other.end == End::END ? other.edge.g : other.edge.f;
             }
         }
-
-        // if (other.inaccurate) {
-        //     inaccurate = true;
-        // }
     }
 
 };
@@ -122,8 +117,6 @@ class VTK_EXPORT vtkPolyDataContactFilter : public vtkPolyDataAlgorithm {
     InvalidEdgesType edgesA, edgesB;
 
     void GetInvalidEdges (vtkPolyData *pd, InvalidEdgesType &edges);
-
-    // vtkIdTypeArray *accuracy;
 
 public:
     vtkTypeMacro(vtkPolyDataContactFilter, vtkPolyDataAlgorithm);
