@@ -3821,6 +3821,9 @@ void Merger::MergeStage2 (const ConnsType2 &conns, const ReferencedPointsType &r
             splitted.push_back(std::move(newPolyA));
             splitted.push_back(std::move(newPolyB));
 
+            endPts.emplace(refPts.at(conn.i));
+            endPts.emplace(refPts.at(conn.j));
+
             break;
         }
     }

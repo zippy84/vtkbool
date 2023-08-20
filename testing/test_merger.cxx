@@ -189,12 +189,12 @@ int main() {
         a
     };
 
-    const double y = 7.5-1.5/std::cos (M_PI/6)-std::tan (M_PI/6)*4.5;
+    const double y = 7.5-1.5/std::cos(M_PI/6)-std::tan(M_PI/6)*4.5;
 
     PolysType polysC {
         Poly({{0, 0, 0}, {25, 0, 0}, {25, 25, 0}, {0, 25, 0}}),
-        Poly({{2, 5, 0}, {17, 5, 0}, {17, 20, 0}, {2, 20, 0}, {7.5/std::tan (M_PI/6)+2, 12.5, 0}}),
-        Poly({{6.5, 12.5-y, 0}, {y/std::tan (M_PI/6)+6.5, 12.5, 0}, {6.5, 12.5+y, 0}})
+        Poly({{2, 5, 0}, {17, 5, 0}, {17, 20, 0}, {2, 20, 0}, {7.5/std::tan(M_PI/6)+2, 12.5, 0}}),
+        Poly({{6.5, 12.5-y, 0}, {y/std::tan(M_PI/6)+6.5, 12.5, 0}, {6.5, 12.5+y, 0}})
     };
 
     if (!Test(polysA, 10, "polysA")) {
