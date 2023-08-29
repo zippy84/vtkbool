@@ -46,6 +46,7 @@ limitations under the License.
 #include <vtkModifiedBSPTree.h>
 #include <vtkCellArrayIterator.h>
 #include <vtkKdTree.h>
+#include <vtkCellIterator.h>
 
 #include "vtkPolyDataBooleanFilter.h"
 #include "vtkPolyDataContactFilter.h"
@@ -2872,25 +2873,41 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
     vtkPolyData *regsA = cfA->GetOutput();
     vtkPolyData *regsB = cfB->GetOutput();
 
-    scalarsA = vtkIdTypeArray::SafeDownCast(regsA->GetCellData()->GetScalars());
-    scalarsB = vtkIdTypeArray::SafeDownCast(regsB->GetCellData()->GetScalars());
+    scalarsA = vtkIdTypeArray::SafeDownCast(regsA->GetPointData()->GetScalars());
+    scalarsB = vtkIdTypeArray::SafeDownCast(regsB->GetPointData()->GetScalars());
 
     if (OperMode != OPER_INTERSECTION) {
+        vtkCellIterator *cellItr;
+
+        vtkIdType cellId;
+        vtkIdList *ptIds;
+
         if (comb[0] == Loc::INSIDE) {
-            for (i = 0; i < regsA->GetNumberOfCells(); i++) {
-                if (locsA.count(scalarsA->GetValue(i)) == 1) {
-                    regsA->ReverseCell(i);
+            cellItr = regsA->NewCellIterator();
+
+            for (cellItr->InitTraversal(); !cellItr->IsDoneWithTraversal(); cellItr->GoToNextCell()) {
+                cellId = cellItr->GetCellId();
+                ptIds = cellItr->GetPointIds();
+
+                if (locsA.count(scalarsA->GetValue(ptIds->GetId(0))) == 1) {
+                    regsA->ReverseCell(cellId);
                 }
             }
         }
 
         if (comb[1] == Loc::INSIDE) {
-            for (i = 0; i < regsB->GetNumberOfCells(); i++) {
-                if (locsB.count(scalarsB->GetValue(i)) == 1) {
-                    regsB->ReverseCell(i);
+            cellItr = regsB->NewCellIterator();
+
+            for (cellItr->InitTraversal(); !cellItr->IsDoneWithTraversal(); cellItr->GoToNextCell()) {
+                cellId = cellItr->GetCellId();
+                ptIds = cellItr->GetPointIds();
+
+                if (locsB.count(scalarsB->GetValue(ptIds->GetId(0))) == 1) {
+                    regsB->ReverseCell(cellId);
                 }
             }
         }
+
     }
 
     // OrigCellIds und CellData
