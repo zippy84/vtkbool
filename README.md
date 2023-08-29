@@ -205,6 +205,10 @@ from vtkbool.vtkBool import vtkPolyDataBooleanFilter
 - *First/Second input does not contain any supported cells.*
   
   What it says. Look at the Features.
+
+- *Bad shaped cells detected.*
+
+  At least one cell has a bad shape. For a cell with more than three points: not all points lie on the plane defined by the calculated surface normal.
   
 - *First/Second input has non-manifold edges.*
   

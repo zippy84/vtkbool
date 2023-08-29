@@ -62,6 +62,21 @@ void ComputeNormal (vtkPoints *pts, double *n, vtkIdType num, const vtkIdType *p
     vtkMath::Normalize(n);
 }
 
+bool CheckNormal (vtkPoints *pts, vtkIdType num, const vtkIdType *poly, const double *n, double d) {
+    const double *pt;
+    vtkIdType i;
+
+    for (i = 1; i < num; i++) {
+        pt = pts->GetPoint(poly[i]);
+
+        if (std::abs(vtkMath::Dot(n, pt)-d) > 1e-6) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 void FindPoints (vtkKdTreePointLocator *pl, const double *pt, vtkIdList *pts, double tol) {
     pts->Reset();
 

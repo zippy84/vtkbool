@@ -49,11 +49,14 @@ Poly Draw (double r, vtkIdType step, double x, double y, double rotate = 0) {
     return poly;
 }
 
-bool Test (PolysType &polys, vtkIdType numCells, const char *name) {
+bool Test (PolysType &polys, vtkIdType numCells, [[maybe_unused]] const char *name) {
+
+#ifdef DEBUG
     std::string fileName(name);
     fileName.append(".vtk");
 
     WritePolys(fileName.c_str(), polys);
+#endif
 
     auto pts = vtkSmartPointer<vtkPoints>::New();
 
@@ -154,10 +157,12 @@ bool Test (PolysType &polys, vtkIdType numCells, const char *name) {
         }
     }
 
+#ifdef DEBUG
     std::string mergedFileName(name);
     mergedFileName.append("_merged.vtk");
 
     WriteVTK(mergedFileName.c_str(), pd);
+#endif
 
     if (pd->GetNumberOfCells() != numCells) {
         return false;

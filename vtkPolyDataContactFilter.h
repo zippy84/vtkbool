@@ -102,7 +102,7 @@ class VTK_EXPORT vtkPolyDataContactFilter : public vtkPolyDataAlgorithm {
     void OverlapLines (OverlapsType &ols, InterPtsType &intersA, InterPtsType &intersB, vtkIdType idA, vtkIdType idB);
     void AddContactLines (InterPtsType &intersA, InterPtsType &intersB, vtkIdType idA, vtkIdType idB);
 
-    static void CheckInters (InterPtsType &interPts, vtkPolyData *pd, vtkIdType idA, vtkIdType idB);
+    static bool CheckInters (InterPtsType &interPts, vtkPolyData *pd);
 
     vtkIdTypeArray *contA, *contB;
 
@@ -116,7 +116,11 @@ class VTK_EXPORT vtkPolyDataContactFilter : public vtkPolyDataAlgorithm {
     bool invalidA, invalidB;
     InvalidEdgesType edgesA, edgesB;
 
+    vtkIdTypeArray *origCellIdsA, *origCellIdsB;
+
     void GetInvalidEdges (vtkPolyData *pd, InvalidEdgesType &edges);
+
+    bool aborted;
 
 public:
     vtkTypeMacro(vtkPolyDataContactFilter, vtkPolyDataAlgorithm);

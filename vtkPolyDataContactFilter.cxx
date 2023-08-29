@@ -80,6 +80,8 @@ vtkPolyDataContactFilter::vtkPolyDataContactFilter () {
 
     invalidA = false;
     invalidB = false;
+
+    aborted = false;
 }
 
 vtkPolyDataContactFilter::~vtkPolyDataContactFilter () {
@@ -132,6 +134,9 @@ int vtkPolyDataContactFilter::ProcessRequest (vtkInformation *request, vtkInform
             return 1;
         }
 
+        origCellIdsA = vtkIdTypeArray::SafeDownCast(pdA->GetCellData()->GetScalars("OrigCellIds"));
+        origCellIdsB = vtkIdTypeArray::SafeDownCast(pdB->GetCellData()->GetScalars("OrigCellIds"));
+
         GetInvalidEdges(pdA, edgesA);
         GetInvalidEdges(pdB, edgesB);
 
@@ -150,6 +155,11 @@ int vtkPolyDataContactFilter::ProcessRequest (vtkInformation *request, vtkInform
         vtkMatrix4x4 *mat = vtkMatrix4x4::New();
 
         obbA->IntersectWithOBBTree(obbB, mat, InterOBBNodes, this);
+
+        if (aborted) {
+            vtkErrorMacro("Bad shaped cells detected.");
+            return 1;
+        }
 
         if (invalidA) {
             vtkErrorMacro("First input has non-manifold edges.");
@@ -437,24 +447,24 @@ void vtkPolyDataContactFilter::InterEdgeLine (InterPtsType &interPts, vtkPolyDat
         } else {
             // parallel
 
-            double vA[3], vB[3], cA[3], cB[3], dA, dB;
+            double vA[3], vB[3];
 
             vtkMath::Subtract(eA, ptA, vA);
-            vtkMath::Subtract(eA, ptB, vB);
-            vtkMath::Cross(vA, vB, cA);
+            vtkMath::Subtract(eB, ptA, vB);
 
-            double dotA = vtkMath::Dot(vA, r);
+            double dotA = vtkMath::Dot(vA, r),
+                dotB = vtkMath::Dot(vB, r);
 
-            vtkMath::Subtract(eB, ptA, vA);
-            vtkMath::Subtract(eB, ptB, vB);
-            vtkMath::Cross(vA, vB, cB);
+            double a = vtkMath::Norm(vA),
+                b = vtkMath::Norm(vB);
 
-            double dotB = vtkMath::Dot(vA, r);
+            double angA = std::acos(dotA/a),
+                angB = std::acos(dotB/b);
 
-            dA = vtkMath::Norm(cA);
-            dB = vtkMath::Norm(cB);
+            double dA = std::sin(angA)*a,
+                dB = std::sin(angB)*b;
 
-            if (dA < 1e-4 || dB < 1e-4) {
+            if ((std::isnan(dA) || dA < 1e-5) && (std::isnan(dB) || dB < 1e-5)) {
 #ifdef DEBUG
                 std::cout << "congruent lines with d (" << dA << ", " << dB << ") and t (" << dotA << ", " << dotB << ") and l " << l << std::endl;
 #endif
@@ -667,6 +677,16 @@ void vtkPolyDataContactFilter::InterPolys (vtkIdType idA, vtkIdType idB) {
     dA = vtkMath::Dot(nA, ptA);
     dB = vtkMath::Dot(nB, ptB);
 
+    if (!CheckNormal(pdA->GetPoints(), numA, polyA, nA, dA)) {
+        aborted = true;
+        return;
+    }
+
+    if (!CheckNormal(pdB->GetPoints(), numB, polyB, nB, dB)) {
+        aborted = true;
+        return;
+    }
+
     // richtungsvektor
 
     double r[3];
@@ -720,10 +740,16 @@ void vtkPolyDataContactFilter::InterPolys (vtkIdType idA, vtkIdType idB) {
     vtkPolyDataContactFilter::InterPolyLine(intersB, pdB, numB, polyB, r, s, Src::B, nB);
 
     // probe, ob die schnittpunkte auf den kanten liegen
-    // bei ungenauen normalen ist das manchmal nicht der fall
 
-    vtkPolyDataContactFilter::CheckInters(intersA, pdA, idA, idB);
-    vtkPolyDataContactFilter::CheckInters(intersB, pdB, idA, idB);
+    if (!vtkPolyDataContactFilter::CheckInters(intersA, pdA)) {
+        aborted = true;
+        return;
+    }
+
+    if (!vtkPolyDataContactFilter::CheckInters(intersB, pdB)) {
+        aborted = true;
+        return;
+    }
 
 #ifdef DEBUG
     std::cout << "intersA" << std::endl;
@@ -850,10 +876,10 @@ int vtkPolyDataContactFilter::InterOBBNodes (vtkOBBNode *nodeA, vtkOBBNode *node
 
     vtkIdType i, j, ci, cj;
 
-    for (i = 0; i < numCellsA; i++) {
+    for (i = 0; i < numCellsA && !self->aborted; i++) {
         ci = cellsA->GetId(i);
 
-        for (j = 0; j < numCellsB; j++) {
+        for (j = 0; j < numCellsB && !self->aborted; j++) {
             cj = cellsB->GetId(j);
 
             self->InterPolys(ci, cj);
@@ -863,7 +889,7 @@ int vtkPolyDataContactFilter::InterOBBNodes (vtkOBBNode *nodeA, vtkOBBNode *node
     return 0;
 }
 
-void vtkPolyDataContactFilter::CheckInters (InterPtsType &interPts, vtkPolyData *pd, vtkIdType vtkNotUsed(idA), vtkIdType vtkNotUsed(idB)) {
+bool vtkPolyDataContactFilter::CheckInters (InterPtsType &interPts, vtkPolyData *pd) {
     double ptA[3],
         ptB[3],
         v[3],
@@ -895,19 +921,10 @@ void vtkPolyDataContactFilter::CheckInters (InterPtsType &interPts, vtkPolyData 
             continue;
         }
 
-        // if (p.src == Src::A) {
-        //     std::cout << "? A ";
-        // } else {
-        //     std::cout << "? B ";
-        // }
-
-        // std::cout << idA << ", " << idB << ": "
-        //     << std::fixed
-        //     << d
-        //     << ", [" << p.pt[0] << ", " << p.pt[1] << ", " << p.pt[2] << "], "
-        //     << p.edge
-        //     << std::endl;
+        return false;
 
     }
+
+    return true;
 
 }

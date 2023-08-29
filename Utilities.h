@@ -37,6 +37,8 @@ double GetAngle (const double *vA, const double *vB, const double *n);
 
 /* VTK */
 void ComputeNormal (vtkPoints *pts, double *n, vtkIdType num, const vtkIdType *poly);
+bool CheckNormal (vtkPoints *pts, vtkIdType num, const vtkIdType *poly, const double *n, double d);
+
 void FindPoints (vtkKdTreePointLocator *pl, const double *pt, vtkIdList *pts, double tol = 1e-6);
 void WriteVTK (const char *name, vtkPolyData *pd);
 
