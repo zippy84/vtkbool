@@ -63,6 +63,10 @@ void ComputeNormal (vtkPoints *pts, double *n, vtkIdType num, const vtkIdType *p
 }
 
 bool CheckNormal (vtkPoints *pts, vtkIdType num, const vtkIdType *poly, const double *n, double d) {
+    if (n[0] == 0 && n[1] == 0 && n[2] == 0) {
+        return false;
+    }
+
     const double *pt;
     vtkIdType i;
 
