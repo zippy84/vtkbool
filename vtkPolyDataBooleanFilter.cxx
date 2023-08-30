@@ -160,7 +160,6 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 #endif
 
             if (contLines->GetNumberOfCells() == 0) {
-                vtkErrorMacro("There is no contact.");
                 return 1;
             }
 
@@ -2893,6 +2892,8 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
                     regsA->ReverseCell(cellId);
                 }
             }
+
+            cellItr->Delete();
         }
 
         if (comb[1] == Loc::INSIDE) {
@@ -2906,6 +2907,8 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
                     regsB->ReverseCell(cellId);
                 }
             }
+
+            cellItr->Delete();
         }
 
     }

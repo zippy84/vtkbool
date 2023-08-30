@@ -863,3 +863,19 @@ def test_bad_shaped():
     bf.Update()
 
     check_result(bf)
+
+@pytest.mark.xfail
+def test_no_contact():
+    cubeA = vtkCubeSource()
+    cubeA.SetCenter(-1, 0, 0)
+
+    cubeB = vtkCubeSource()
+    cubeB.SetCenter(1, 0, 0)
+
+    bf = vtkPolyDataBooleanFilter()
+    bf.SetInputConnection(0, cubeA.GetOutputPort())
+    bf.SetInputConnection(1, cubeB.GetOutputPort())
+    bf.SetOperModeToNone()
+    bf.Update()
+
+    check_result(bf)

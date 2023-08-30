@@ -161,6 +161,11 @@ int vtkPolyDataContactFilter::ProcessRequest (vtkInformation *request, vtkInform
             return 1;
         }
 
+        if (contLines->GetNumberOfCells() == 0) {
+            vtkErrorMacro("There is no contact.");
+            return 1;
+        }
+
         if (invalidA) {
             vtkErrorMacro("First input has non-manifold edges.");
             return 1;
