@@ -82,7 +82,7 @@ vtkPolyDataBooleanFilter::~vtkPolyDataBooleanFilter () {
     // nix mehr
 }
 
-int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInformationVector **inputVector, vtkInformationVector *outputVector) {
+int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformationVector **inputVector, vtkInformationVector *outputVector) {
 
     if (request->Has(vtkDemandDrivenPipeline::REQUEST_DATA())) {
 

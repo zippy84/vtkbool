@@ -133,7 +133,7 @@ protected:
     vtkPolyDataContactFilter ();
     ~vtkPolyDataContactFilter ();
 
-    int ProcessRequest (vtkInformation *request, vtkInformationVector **inputVector, vtkInformationVector *outputVector) override;
+    int RequestData (vtkInformation *request, vtkInformationVector **inputVector, vtkInformationVector *outputVector) override;
 
     void PrintSelf (ostream&, vtkIndent) override {};
 

@@ -95,7 +95,7 @@ vtkPolyDataContactFilter::~vtkPolyDataContactFilter () {
     contLines->Delete();
 }
 
-int vtkPolyDataContactFilter::ProcessRequest (vtkInformation *request, vtkInformationVector **inputVector, vtkInformationVector *outputVector) {
+int vtkPolyDataContactFilter::RequestData (vtkInformation *request, vtkInformationVector **inputVector, vtkInformationVector *outputVector) {
 
     if (request->Has(vtkDemandDrivenPipeline::REQUEST_DATA())) {
 
