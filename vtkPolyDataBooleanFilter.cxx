@@ -1069,6 +1069,39 @@ bool vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
 
         vtkIdType origId = origCellIds->GetValue(polyInd);
 
+        if (std::all_of(pts.begin(), pts.end(), [](const auto &p) { return p.second.capt & Capt::A || p.second.capt & Capt::B; })) {
+            Poly _poly;
+
+            for (auto &id : poly) {
+                auto pt = pd->GetPoint(id);
+                _poly.emplace_back(pt[0], pt[1], pt[2]);
+            }
+
+            std::set<Point3d> ptsA(_poly.begin(), _poly.end()), ptsB;
+
+            for (const auto& [ind, sp] : pts) {
+                ptsB.emplace(sp.cutPt[0], sp.cutPt[1], sp.cutPt[2]);
+            }
+
+            if (ptsA == ptsB) {
+                vtkIdList *cell = vtkIdList::New();
+
+                for (auto &p : _poly) {
+                    cell->InsertNextId(pdPts->InsertNextPoint(p.x, p.y, p.z));
+                }
+
+                pd->InsertNextCell(VTK_POLYGON, cell);
+                origCellIds->InsertNextValue(origId);
+
+                cell->Delete();
+
+                pd->DeleteCell(polyInd);
+
+                continue;
+            }
+
+        }
+
         double _t = 0;
         std::map<vtkIdType, double> absoluteT;
 

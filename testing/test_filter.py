@@ -16,7 +16,7 @@
 # limitations under the License.
 
 import sys
-sys.path.extend(['/home/zippy/vtkbool/build/lib/python3.10/site-packages/vtkbool'])
+sys.path.extend(['/home/zippy/vtkbool/build/lib/python3.11/site-packages/vtkbool'])
 
 from collections import defaultdict
 from operator import itemgetter
@@ -875,6 +875,71 @@ def test_no_contact():
     bf = vtkPolyDataBooleanFilter()
     bf.SetInputConnection(0, cubeA.GetOutputPort())
     bf.SetInputConnection(1, cubeB.GetOutputPort())
+    bf.SetOperModeToNone()
+    bf.Update()
+
+    check_result(bf)
+
+@pytest.mark.xfail
+def test_self_intersecting_polys():
+    cube = vtkCubeSource()
+    cube.SetCenter(0, 0, 1.375) # 1, 1.25, 1.375
+
+    pts = [
+        [.5, .5, 0],
+        [-.5, .5, 0],
+        [-.5, -.5, 0],
+        [.5 , -.5, 0],
+
+        [.5, 0, .5], # 4
+        [0, .5, .5],
+        [-.5, 0, .5],
+        [0, -.5, .5],
+
+        [.5, 0, .75], # 8
+        [0, .5, .75],
+        [-.5, 0, .75],
+        [0, -.5, .75],
+
+        [.5, 0, 1], # 12
+        [.5, .5, 1],
+        [0, .5, 1],
+        [-.5, .5, 1],
+        [-.5, 0, 1], # 16
+        [-.5, -.5, 1],
+        [0, -.5, 1],
+        [.5, -.5, 1]
+    ]
+
+    polys = [
+        [3, 2, 1, 0],
+        [12, 13, 14, 15, 16, 17, 18, 19],
+        [3, 19, 18, 11, 7, 11, 18, 17, 2],
+        [0, 13, 12, 8, 4, 8, 12, 19, 3],
+        [1, 15, 14, 9, 5, 9, 14, 13, 0],
+        [2, 17, 16, 10, 6, 10, 16, 15, 1]
+    ]
+
+    _pts = vtkPoints()
+
+    for pt in pts:
+        _pts.InsertNextPoint(*pt)
+
+    pd = vtkPolyData()
+    pd.Allocate(1)
+    pd.SetPoints(_pts)
+
+    for poly in polys:
+        cell = vtkIdList()
+        [ cell.InsertNextId(i) for i in poly ]
+        pd.InsertNextCell(VTK_POLYGON, cell)
+
+    prod = vtkTrivialProducer()
+    prod.SetOutput(pd)
+
+    bf = vtkPolyDataBooleanFilter()
+    bf.SetInputConnection(0, prod.GetOutputPort())
+    bf.SetInputConnection(1, cube.GetOutputPort())
     bf.SetOperModeToNone()
     bf.Update()
 
