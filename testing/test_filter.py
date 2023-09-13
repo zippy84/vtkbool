@@ -944,3 +944,27 @@ def test_self_intersecting_polys():
     bf.Update()
 
     check_result(bf)
+
+@pytest.mark.xfail
+def test_invalid_capt_pts():
+    cyl = vtkCylinderSource()
+    cyl.SetHeight(2)
+    cyl.SetResolution(12)
+
+    z = .0000025
+
+    tra = vtkTransform()
+    tra.RotateZ(90)
+    tra.Translate(0, 0, z)
+
+    tf = vtkTransformPolyDataFilter()
+    tf.SetTransform(tra)
+    tf.SetInputConnection(cyl.GetOutputPort())
+
+    bf = vtkPolyDataBooleanFilter()
+    bf.SetInputConnection(0, cyl.GetOutputPort())
+    bf.SetInputConnection(1, tf.GetOutputPort())
+    bf.SetOperModeToNone()
+    bf.Update()
+
+    check_result(bf)
