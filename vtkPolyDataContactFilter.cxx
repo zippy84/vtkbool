@@ -351,7 +351,7 @@ void vtkPolyDataContactFilter::GetInvalidEdges (vtkPolyData *pd, InvalidEdgesTyp
 
     auto cell = vtkSmartPointer<vtkIdList>::New();
 
-    vtkIdType i, indexA, indexB, nextA, nextB, numNeigs;
+    vtkIdType indexA, indexB, nextA, nextB, numNeigs;
 
     auto lineItr = vtk::TakeSmartPointer(lines->GetLines()->NewIterator());
 
@@ -369,11 +369,7 @@ void vtkPolyDataContactFilter::GetInvalidEdges (vtkPolyData *pd, InvalidEdgesTyp
 
         cellsA->IntersectWith(cellsB);
 
-        std::set<vtkIdType> cellIds;
-
-        for (i = 0; i < cellsA->GetNumberOfIds(); i++) {
-            cellIds.insert(cellsA->GetId(i));
-        }
+        std::set<vtkIdType> cellIds(cellsA->begin(), cellsA->end());
 
         numNeigs = 0;
 

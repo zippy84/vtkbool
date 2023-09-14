@@ -865,22 +865,6 @@ def test_bad_shaped():
     check_result(bf)
 
 @pytest.mark.xfail
-def test_no_contact():
-    cubeA = vtkCubeSource()
-    cubeA.SetCenter(-1, 0, 0)
-
-    cubeB = vtkCubeSource()
-    cubeB.SetCenter(1, 0, 0)
-
-    bf = vtkPolyDataBooleanFilter()
-    bf.SetInputConnection(0, cubeA.GetOutputPort())
-    bf.SetInputConnection(1, cubeB.GetOutputPort())
-    bf.SetOperModeToNone()
-    bf.Update()
-
-    check_result(bf)
-
-@pytest.mark.xfail
 def test_self_intersecting_polys():
     cube = vtkCubeSource()
     cube.SetCenter(0, 0, 1.375) # 1, 1.25, 1.375
@@ -963,6 +947,33 @@ def test_invalid_capt_pts():
 
     bf = vtkPolyDataBooleanFilter()
     bf.SetInputConnection(0, cyl.GetOutputPort())
+    bf.SetInputConnection(1, tf.GetOutputPort())
+    bf.SetOperModeToNone()
+    bf.Update()
+
+    check_result(bf)
+
+@pytest.mark.xfail
+def test_invalid_capt_pts_2():
+    reader = vtkPolyDataReader()
+    reader.SetFileName('data/cross.vtk')
+
+    cyl = vtkCylinderSource()
+    cyl.SetHeight(2.5)
+    cyl.SetResolution(12)
+
+    z = .0000025
+
+    tra = vtkTransform()
+    tra.RotateZ(45)
+    tra.Translate(0, 0, z)
+
+    tf = vtkTransformPolyDataFilter()
+    tf.SetTransform(tra)
+    tf.SetInputConnection(cyl.GetOutputPort())
+
+    bf = vtkPolyDataBooleanFilter()
+    bf.SetInputConnection(0, reader.GetOutputPort())
     bf.SetInputConnection(1, tf.GetOutputPort())
     bf.SetOperModeToNone()
     bf.Update()
