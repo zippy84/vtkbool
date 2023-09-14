@@ -930,7 +930,7 @@ def test_self_intersecting_polys():
     check_result(bf)
 
 @pytest.mark.xfail
-def test_invalid_capt_pts():
+def test_invalid_capt_pts(tmp_path):
     cyl = vtkCylinderSource()
     cyl.SetHeight(2)
     cyl.SetResolution(12)
@@ -951,10 +951,11 @@ def test_invalid_capt_pts():
     bf.SetOperModeToNone()
     bf.Update()
 
+    # write_result(bf, tmp_path)
     check_result(bf)
 
 @pytest.mark.xfail
-def test_invalid_capt_pts_2():
+def test_invalid_capt_pts_2(tmp_path):
     reader = vtkPolyDataReader()
     reader.SetFileName('data/cross.vtk')
 
@@ -978,4 +979,5 @@ def test_invalid_capt_pts_2():
     bf.SetOperModeToNone()
     bf.Update()
 
+    # write_result(bf, tmp_path)
     check_result(bf)

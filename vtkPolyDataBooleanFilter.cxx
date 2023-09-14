@@ -782,7 +782,7 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
     // sucht nach gleichen captPts
 
     {
-        std::map<Point3d, _IdsType> collapsed;
+        std::map<Point3d, std::map<vtkIdType, std::vector<std::reference_wrapper<const StripPt>>>> collapsed;
 
         PolyStripsType::const_iterator itr;
         StripPtsType::const_iterator itr2;
@@ -796,14 +796,22 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
                 const StripPt &sp = itr2->second;
 
                 if (sp.capt & Capt::BOUNDARY) {
-                    auto &inds = collapsed[{sp.cutPt[0], sp.cutPt[1], sp.cutPt[2]}];
-
-                    inds.emplace(sp.ind);
-
-                    if (inds.size() > 1) {
-                        return true;
-                    }
+                    collapsed[{sp.cutPt[0], sp.cutPt[1], sp.cutPt[2]}][sp.ind].push_back(sp);
                 }
+            }
+        }
+
+        for (auto &[pt, map] : collapsed) {
+            if (map.size() > 1) {
+                // std::cout << pt << std::endl;
+
+                // for (auto &[ind, pts] : map) {
+                //     for (auto &p : pts) {
+                //         std::cout << p << std::endl;
+                //     }
+                // }
+
+                return true;
             }
         }
     }
