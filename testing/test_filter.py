@@ -959,11 +959,7 @@ def test_invalid_capt_pts_2(tmp_path):
     reader = vtkPolyDataReader()
     reader.SetFileName('data/cross.vtk')
 
-    cyl = vtkCylinderSource()
-    cyl.SetHeight(2.5)
-    cyl.SetResolution(12)
-
-    z = .0000025
+    z = .000001
 
     tra = vtkTransform()
     tra.RotateZ(45)
@@ -971,7 +967,7 @@ def test_invalid_capt_pts_2(tmp_path):
 
     tf = vtkTransformPolyDataFilter()
     tf.SetTransform(tra)
-    tf.SetInputConnection(cyl.GetOutputPort())
+    tf.SetInputConnection(reader.GetOutputPort())
 
     bf = vtkPolyDataBooleanFilter()
     bf.SetInputConnection(0, reader.GetOutputPort())

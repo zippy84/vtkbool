@@ -611,6 +611,58 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
 
     }
 
+    // sucht nach gleichen captPts
+
+    {
+        std::map<Point3d, std::map<vtkIdType, std::vector<std::reference_wrapper<StripPt>>>> collapsed;
+
+        PolyStripsType::iterator itr;
+        StripPtsType::iterator itr2;
+
+        for (itr = polyStrips.begin(); itr != polyStrips.end(); ++itr) {
+            PStrips &pStrips = itr->second;
+
+            StripPtsType &pts = pStrips.pts;
+
+            for (itr2 = pts.begin(); itr2 != pts.end(); ++itr2) {
+                StripPt &sp = itr2->second;
+
+                if (sp.capt & Capt::BOUNDARY) {
+                    collapsed[{sp.cutPt[0], sp.cutPt[1], sp.cutPt[2]}][sp.ind].push_back(sp);
+                }
+            }
+        }
+
+        for (auto &[pt, map] : collapsed) {
+            if (map.size() > 1) {
+                // std::cout << pt << std::endl;
+
+                // for (auto &[ind, pts] : map) {
+                //     for (auto &p : pts) {
+                //         std::cout << p << std::endl;
+                //     }
+                // }
+
+                // if (map.size() == 2 && std::all_of(map.begin(), map.end(), [](const auto &m) { return m.second.size() == 1 && m.second.back().get().capt == Capt::EDGE; })) {
+
+                //     for (auto &[ind, pts] : map) {
+                //         StripPt &sp = pts.back();
+
+                //         sp.capt = Capt::NOT;
+                //         sp.edge[0] = sp.edge[1] = NOTSET;
+                //         Cpy(sp.cutPt, sp.pt, 3);
+                //     }
+
+                // } else {
+                //     return true;
+                // }
+
+                return true;
+
+            }
+        }
+    }
+
     for (itr = polyLines.begin(); itr != polyLines.end(); ++itr) {
         PStrips &pStrips = polyStrips.at(itr->first);
 
@@ -777,43 +829,6 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
 
         }
 
-    }
-
-    // sucht nach gleichen captPts
-
-    {
-        std::map<Point3d, std::map<vtkIdType, std::vector<std::reference_wrapper<const StripPt>>>> collapsed;
-
-        PolyStripsType::const_iterator itr;
-        StripPtsType::const_iterator itr2;
-
-        for (itr = polyStrips.begin(); itr != polyStrips.end(); ++itr) {
-            const PStrips &pStrips = itr->second;
-
-            const StripPtsType &pts = pStrips.pts;
-
-            for (itr2 = pts.begin(); itr2 != pts.end(); ++itr2) {
-                const StripPt &sp = itr2->second;
-
-                if (sp.capt & Capt::BOUNDARY) {
-                    collapsed[{sp.cutPt[0], sp.cutPt[1], sp.cutPt[2]}][sp.ind].push_back(sp);
-                }
-            }
-        }
-
-        for (auto &[pt, map] : collapsed) {
-            if (map.size() > 1) {
-                // std::cout << pt << std::endl;
-
-                // for (auto &[ind, pts] : map) {
-                //     for (auto &p : pts) {
-                //         std::cout << p << std::endl;
-                //     }
-                // }
-
-                return true;
-            }
-        }
     }
 
     return false;
