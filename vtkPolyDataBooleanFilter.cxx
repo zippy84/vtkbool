@@ -2064,13 +2064,14 @@ void vtkPolyDataBooleanFilter::ResolveOverlaps (vtkPolyData *pd, PolyStripsType 
 
                         contLines->GetPoint(itr3->first, pt);
 
+                        id = pd->GetPoints()->InsertNextPoint(pt);
+
 #ifdef DEBUG
                         std::cout << cells->GetId(i)
                             << ": " << edgeA[1] << " -> " << id
                             << std::endl;
 #endif
 
-                        id = pd->GetPoints()->InsertNextPoint(pt);
                         pd->ReplaceCellPoint(cells->GetId(i), edgeA[1], id);
 
                         break;
