@@ -202,10 +202,6 @@ from vtkbool.vtkBool import vtkPolyDataBooleanFilter
 
 ## Errors and their meaning
 
-- *First/Second input does not contain any supported cells.*
-  
-  What it says. Look at the Features.
-
 - *Bad shaped cells detected.*
 
   At least one cell has a bad shape. For a cell with more than three points: not all points lie on the plane defined by the calculated surface normal.
@@ -239,7 +235,7 @@ from vtkbool.vtkBool import vtkPolyDataBooleanFilter
 
 ## Copyright
 
-2012-2023 Ronald Römer
+2012-2024 Ronald Römer
 
 ## License
 

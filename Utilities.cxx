@@ -1,5 +1,5 @@
 /*
-Copyright 2012-2023 Ronald Römer
+Copyright 2012-2024 Ronald Römer
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ limitations under the License.
 
 #include <vtkPolyDataWriter.h>
 
-void ComputeNormal (vtkPoints *pts, double *n, vtkIdType num, const vtkIdType *poly) {
+double ComputeNormal (vtkPoints *pts, double *n, vtkIdType num, const vtkIdType *poly) {
     n[0] = 0; n[1] = 0; n[2] = 0;
 
     if (num == 3) {
@@ -59,7 +59,7 @@ void ComputeNormal (vtkPoints *pts, double *n, vtkIdType num, const vtkIdType *p
         }
     }
 
-    vtkMath::Normalize(n);
+    return vtkMath::Normalize(n);
 }
 
 bool CheckNormal (vtkPoints *pts, vtkIdType num, const vtkIdType *poly, const double *n, double d) {
@@ -173,7 +173,7 @@ void BackTransform (const double *in, double *out, const Base &base) {
     out[2] = z;
 }
 
-void ComputeNormal (const Poly &poly, double *n) {
+double ComputeNormal (const Poly &poly, double *n) {
     n[0] = 0; n[1] = 0; n[2] = 0;
 
     Poly::const_iterator itrA, itrB;
@@ -193,7 +193,7 @@ void ComputeNormal (const Poly &poly, double *n) {
         n[2] += (ptA.x-ptB.x)*(ptA.y+ptB.y);
     }
 
-    vtkMath::Normalize(n);
+    return vtkMath::Normalize(n);
 }
 
 bool PointInPoly (const Poly &poly, const Point3d &p) {

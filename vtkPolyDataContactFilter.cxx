@@ -1,5 +1,5 @@
 /*
-Copyright 2012-2023 Ronald Römer
+Copyright 2012-2024 Ronald Römer
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -33,15 +33,12 @@ limitations under the License.
 #include <vtkMath.h>
 #include <vtkIdTypeArray.h>
 #include <vtkCellData.h>
-#include <vtkPointData.h>
 #include <vtkCleanPolyData.h>
 #include <vtkTriangleStrip.h>
 #include <vtkSmartPointer.h>
-#include <vtkPolyDataConnectivityFilter.h>
 #include <vtkFeatureEdges.h>
 #include <vtkCellIterator.h>
 #include <vtkCellArrayIterator.h>
-
 #include <vtkCellArray.h>
 
 #include "vtkPolyDataContactFilter.h"
@@ -52,29 +49,6 @@ limitations under the License.
 vtkStandardNewMacro(vtkPolyDataContactFilter);
 
 vtkPolyDataContactFilter::vtkPolyDataContactFilter () {
-
-    contLines = vtkPolyData::New();
-    contLines->Allocate(1000);
-
-    contPts = vtkPoints::New();
-    contPts->SetDataTypeToDouble();
-    contLines->SetPoints(contPts);
-
-    contA = vtkIdTypeArray::New();
-    contB = vtkIdTypeArray::New();
-
-    contA->SetName("cA");
-    contB->SetName("cB");
-
-    sourcesA = vtkIdTypeArray::New();
-    sourcesA->SetNumberOfComponents(2);
-
-    sourcesB = vtkIdTypeArray::New();
-    sourcesB->SetNumberOfComponents(2);
-
-    sourcesA->SetName("sourcesA");
-    sourcesB->SetName("sourcesB");
-
     SetNumberOfInputPorts(2);
     SetNumberOfOutputPorts(3);
 
@@ -85,14 +59,7 @@ vtkPolyDataContactFilter::vtkPolyDataContactFilter () {
 }
 
 vtkPolyDataContactFilter::~vtkPolyDataContactFilter () {
-    sourcesB->Delete();
-    sourcesA->Delete();
-
-    contB->Delete();
-    contA->Delete();
-
-    contPts->Delete();
-    contLines->Delete();
+    // nix mehr
 }
 
 int vtkPolyDataContactFilter::RequestData (vtkInformation *request, vtkInformationVector **inputVector, vtkInformationVector *outputVector) {
@@ -113,56 +80,69 @@ int vtkPolyDataContactFilter::RequestData (vtkInformation *request, vtkInformati
         vtkPolyData *resultB = vtkPolyData::SafeDownCast(outInfoB->Get(vtkDataObject::DATA_OBJECT()));
         vtkPolyData *resultC = vtkPolyData::SafeDownCast(outInfoC->Get(vtkDataObject::DATA_OBJECT()));
 
+        // contLines anlegen
+
+        contLines = vtkSmartPointer<vtkPolyData>::New();
+        contLines->Allocate(1000);
+
+        auto contPts = vtkSmartPointer<vtkPoints>::New();
+        contPts->SetDataTypeToDouble();
+
+        contLines->SetPoints(contPts);
+
+        contA = vtkSmartPointer<vtkIdTypeArray>::New();
+        contB = vtkSmartPointer<vtkIdTypeArray>::New();
+
+        contA->Allocate(1000);
+        contB->Allocate(1000);
+
+        contA->SetName("cA");
+        contB->SetName("cB");
+
+        sourcesA = vtkSmartPointer<vtkIdTypeArray>::New();
+        sourcesB = vtkSmartPointer<vtkIdTypeArray>::New();
+
+        sourcesA->Allocate(1000);
+        sourcesB->Allocate(1000);
+
+        sourcesA->SetNumberOfComponents(2);
+        sourcesB->SetNumberOfComponents(2);
+
+        sourcesA->SetName("sourcesA");
+        sourcesB->SetName("sourcesB");
+
         // durchführung der aufgabe
 
-        pdA = vtkPolyData::New();
-        pdA->DeepCopy(_pdA);
+        newPdA = vtkSmartPointer<vtkPolyData>::New();
+        newPdB = vtkSmartPointer<vtkPolyData>::New();
 
-        pdB = vtkPolyData::New();
-        pdB->DeepCopy(_pdB);
+        CopyPolyData(_pdA, newPdA);
+        CopyPolyData(_pdB, newPdB);
 
-        PreparePolyData(pdA);
-        PreparePolyData(pdB);
+        GetInvalidEdges(newPdA, edgesA);
+        GetInvalidEdges(newPdB, edgesB);
 
-        if (pdA->GetNumberOfCells() == 0) {
-            vtkErrorMacro("First input does not contain any supported cells.");
-            return 1;
-        }
-
-        if (pdB->GetNumberOfCells() == 0) {
-            vtkErrorMacro("Second input does not contain any supported cells.");
-            return 1;
-        }
-
-        origCellIdsA = vtkIdTypeArray::SafeDownCast(pdA->GetCellData()->GetScalars("OrigCellIds"));
-        origCellIdsB = vtkIdTypeArray::SafeDownCast(pdB->GetCellData()->GetScalars("OrigCellIds"));
-
-        GetInvalidEdges(pdA, edgesA);
-        GetInvalidEdges(pdB, edgesB);
-
-        // anlegen der obb-trees
-
-        vtkOBBTree *obbA = vtkOBBTree::New();
-        obbA->SetDataSet(pdA);
-        obbA->SetNumberOfCellsPerNode(1);
+        auto obbA = vtkSmartPointer<vtkOBBTree>::New();
+        obbA->SetDataSet(newPdA);
+        obbA->SetNumberOfCellsPerNode(10);
         obbA->BuildLocator();
 
-        vtkOBBTree *obbB = vtkOBBTree::New();
-        obbB->SetDataSet(pdB);
-        obbB->SetNumberOfCellsPerNode(1);
+        auto obbB = vtkSmartPointer<vtkOBBTree>::New();
+        obbB->SetDataSet(newPdB);
+        obbB->SetNumberOfCellsPerNode(10);
         obbB->BuildLocator();
 
-        vtkMatrix4x4 *mat = vtkMatrix4x4::New();
+        auto mat = vtkSmartPointer<vtkMatrix4x4>::New();
 
         obbA->IntersectWithOBBTree(obbB, mat, InterOBBNodes, this);
 
-        if (aborted) {
-            vtkErrorMacro("Bad shaped cells detected.");
+        if (contLines->GetNumberOfCells() == 0) {
+            vtkErrorMacro("There is no contact.");
             return 1;
         }
 
-        if (contLines->GetNumberOfCells() == 0) {
-            vtkErrorMacro("There is no contact.");
+        if (aborted) {
+            vtkErrorMacro("Bad shaped cells detected.");
             return 1;
         }
 
@@ -184,7 +164,9 @@ int vtkPolyDataContactFilter::RequestData (vtkInformation *request, vtkInformati
 
         contLines->RemoveDeletedCells();
 
-        vtkCleanPolyData *clean = vtkCleanPolyData::New();
+        contLines->Squeeze();
+
+        auto clean = vtkSmartPointer<vtkCleanPolyData>::New();
         clean->SetInputData(contLines);
         clean->ToleranceIsAbsoluteOn();
         clean->SetAbsoluteTolerance(1e-5);
@@ -202,95 +184,53 @@ int vtkPolyDataContactFilter::RequestData (vtkInformation *request, vtkInformati
 
         resultA->RemoveDeletedCells();
 
-        clean->Delete();
-        mat->Delete();
-        obbB->Delete();
-        obbA->Delete();
-
-        resultB->DeepCopy(pdA);
-        resultC->DeepCopy(pdB);
-
-        pdB->Delete();
-        pdA->Delete();
-
+        resultB->DeepCopy(newPdA);
+        resultC->DeepCopy(newPdB);
     }
 
     return 1;
 
 }
 
-void vtkPolyDataContactFilter::PreparePolyData (vtkPolyData *pd) {
+void vtkPolyDataContactFilter::CopyPolyData (vtkPolyData *pd, vtkPolyData *newPd) {
+    auto newPoints = vtkSmartPointer<vtkPoints>::New();
 
-    pd->GetCellData()->Initialize();
-    pd->GetPointData()->Initialize();
+    newPoints->SetDataType(pd->GetPoints()->GetDataType());
+    newPoints->DeepCopy(pd->GetPoints());
 
-    vtkIdTypeArray *cellIds = vtkIdTypeArray::New();
+    newPd->SetPoints(newPoints);
+
+    auto newPolys = vtkSmartPointer<vtkCellArray>::New();
+
+    newPolys->Allocate(pd->GetNumberOfPolys());
+
+    newPd->SetPolys(newPolys);
+
+    auto cellIds = vtkSmartPointer<vtkIdTypeArray>::New();
+    cellIds->Allocate(pd->GetNumberOfPolys());
 
     vtkCellIterator *cellItr = pd->NewCellIterator();
-    for (cellItr->InitTraversal(); !cellItr->IsDoneWithTraversal(); cellItr->GoToNextCell()) {
-        cellIds->InsertNextValue(cellItr->GetCellId());
-    }
 
     vtkIdType cellId;
+    vtkIdList *ptIds;
+
+    double p0[3], p1[3], p2[3], p3[3];
+
+    double n[3], d;
+
+    double dA, dB;
 
     for (cellItr->InitTraversal(); !cellItr->IsDoneWithTraversal(); cellItr->GoToNextCell()) {
         cellId = cellItr->GetCellId();
+        ptIds = cellItr->GetPointIds();
 
-        if (cellItr->GetCellType() == VTK_QUAD) {
-            vtkIdList *ptIds = cellItr->GetPointIds();
+        if (cellItr->GetCellType() == VTK_TRIANGLE || cellItr->GetCellType() == VTK_POLYGON) {
+            newPd->InsertNextCell(cellItr->GetCellType(), ptIds);
 
-            vtkPoints *pts = cellItr->GetPoints();
-
-            double n[3];
-
-            ComputeNormal(pd->GetPoints(), n, 4, ptIds->GetPointer(0));
-
-            double dA = vtkMath::Dot(n, pts->GetPoint(0)),
-                dB = vtkMath::Dot(n, pts->GetPoint(1))-dA;
-
-            if (std::abs(dB) > 1e-6) {
-                // nur wenn nicht auf einer ebene
-
-                dA = vtkMath::Distance2BetweenPoints(pts->GetPoint(0), pts->GetPoint(2));
-                dB = vtkMath::Distance2BetweenPoints(pts->GetPoint(1), pts->GetPoint(3));
-
-                auto newCellA = vtkSmartPointer<vtkIdList>::New();
-                auto newCellB = vtkSmartPointer<vtkIdList>::New();
-
-                newCellA->SetNumberOfIds(3);
-                newCellB->SetNumberOfIds(3);
-
-                if (dA < dB) {
-                    newCellA->SetId(0, ptIds->GetId(1));
-                    newCellA->SetId(1, ptIds->GetId(2));
-                    newCellA->SetId(2, ptIds->GetId(3));
-
-                    newCellB->SetId(0, ptIds->GetId(3));
-                    newCellB->SetId(1, ptIds->GetId(0));
-                    newCellB->SetId(2, ptIds->GetId(1));
-                } else {
-                    newCellA->SetId(0, ptIds->GetId(0));
-                    newCellA->SetId(1, ptIds->GetId(1));
-                    newCellA->SetId(2, ptIds->GetId(2));
-
-                    newCellB->SetId(0, ptIds->GetId(2));
-                    newCellB->SetId(1, ptIds->GetId(3));
-                    newCellB->SetId(2, ptIds->GetId(0));
-                }
-
-                pd->InsertNextCell(VTK_TRIANGLE, newCellA);
-                cellIds->InsertNextValue(cellId);
-
-                pd->InsertNextCell(VTK_TRIANGLE, newCellB);
-                cellIds->InsertNextValue(cellId);
-
-                pd->DeleteCell(cellId);
-            }
+            cellIds->InsertNextValue(cellId);
 
         } else if (cellItr->GetCellType() == VTK_TRIANGLE_STRIP) {
-            vtkIdList *ptIds = cellItr->GetPointIds();
-
-            vtkCellArray *cells = vtkCellArray::New();
+            auto cells = vtkSmartPointer<vtkCellArray>::New();
 
             vtkTriangleStrip::DecomposeStrip(cellItr->GetNumberOfPoints(), ptIds->GetPointer(0), cells);
 
@@ -299,30 +239,62 @@ void vtkPolyDataContactFilter::PreparePolyData (vtkPolyData *pd) {
 
             for (cells->InitTraversal(); cells->GetNextCell(n, pts);) {
                 if (pts[0] != pts[1] && pts[1] != pts[2] && pts[2] != pts[0]) {
-                    pd->InsertNextCell(VTK_TRIANGLE, n, pts);
+                    newPd->InsertNextCell(VTK_TRIANGLE, n, pts);
                     cellIds->InsertNextValue(cellId);
                 }
-
             }
 
-            cells->Delete();
+        } else if (cellItr->GetCellType() == VTK_QUAD) {
 
-            pd->DeleteCell(cellId);
+            newPoints->GetPoint(ptIds->GetId(0), p0);
+            newPoints->GetPoint(ptIds->GetId(1), p1);
+            newPoints->GetPoint(ptIds->GetId(2), p2);
+            newPoints->GetPoint(ptIds->GetId(3), p3);
 
-        } else if (cellItr->GetCellType() != VTK_TRIANGLE && cellItr->GetCellType() != VTK_POLYGON) {
-            pd->DeleteCell(cellId);
+            ComputeNormal(newPoints, n, 4, ptIds->GetPointer(0));
+
+            d = vtkMath::Dot(n, p0);
+
+            if (CheckNormal(newPoints, 4, ptIds->GetPointer(0), n, d)) {
+                newPd->InsertNextCell(VTK_POLYGON, ptIds);
+                cellIds->InsertNextValue(cellId);
+
+            } else {
+                dA = vtkMath::Distance2BetweenPoints(p0, p2);
+                dB = vtkMath::Distance2BetweenPoints(p1, p3);
+
+                if (dA < dB) {
+                    // 0, 2
+                    const vtkIdType cellA[] = {ptIds->GetId(0), ptIds->GetId(1), ptIds->GetId(2)};
+                    const vtkIdType cellB[] = {ptIds->GetId(2), ptIds->GetId(3), ptIds->GetId(0)};
+
+                    newPd->InsertNextCell(VTK_TRIANGLE, 3, cellA);
+                    cellIds->InsertNextValue(cellId);
+
+                    newPd->InsertNextCell(VTK_TRIANGLE, 3, cellB);
+                    cellIds->InsertNextValue(cellId);
+
+                } else {
+                    // 1, 3
+                    const vtkIdType cellA[] = {ptIds->GetId(1), ptIds->GetId(2), ptIds->GetId(3)};
+                    const vtkIdType cellB[] = {ptIds->GetId(3), ptIds->GetId(0), ptIds->GetId(1)};
+
+                    newPd->InsertNextCell(VTK_TRIANGLE, 3, cellA);
+                    cellIds->InsertNextValue(cellId);
+
+                    newPd->InsertNextCell(VTK_TRIANGLE, 3, cellB);
+                    cellIds->InsertNextValue(cellId);
+                }
+            }
         }
     }
 
     cellItr->Delete();
 
     cellIds->SetName("OrigCellIds");
-    pd->GetCellData()->SetScalars(cellIds);
+    newPd->GetCellData()->SetScalars(cellIds);
 
-    cellIds->Delete();
-
-    pd->RemoveDeletedCells();
-    pd->BuildLinks();
+    newPd->Squeeze();
 
 }
 
@@ -675,6 +647,12 @@ bool vtkPolyDataContactFilter::InterPolyLine (InterPtsType &interPts, vtkPolyDat
         _interPts.insert(_interPts.end(), pts.begin(), pts.end());
     }
 
+    // probe, ob die schnittpunkte auf den kanten liegen
+
+    if (!vtkPolyDataContactFilter::CheckInters(_interPts, pd)) {
+        return false;
+    }
+
     interPts.swap(_interPts);
 
     return true;
@@ -690,28 +668,28 @@ void vtkPolyDataContactFilter::InterPolys (vtkIdType idA, vtkIdType idB) {
     vtkIdType numA, numB;
     const vtkIdType *polyA, *polyB;
 
-    pdA->GetCellPoints(idA, numA, polyA);
-    pdB->GetCellPoints(idB, numB, polyB);
+    newPdA->GetCellPoints(idA, numA, polyA);
+    newPdB->GetCellPoints(idB, numB, polyB);
 
     // ebenen aufstellen
 
     double nA[3], nB[3], ptA[3], ptB[3], dA, dB;
 
-    ComputeNormal(pdA->GetPoints(), nA, numA, polyA);
-    ComputeNormal(pdB->GetPoints(), nB, numB, polyB);
+    ComputeNormal(newPdA->GetPoints(), nA, numA, polyA);
+    ComputeNormal(newPdB->GetPoints(), nB, numB, polyB);
 
-    pdA->GetPoint(polyA[0], ptA);
-    pdB->GetPoint(polyB[0], ptB);
+    newPdA->GetPoint(polyA[0], ptA);
+    newPdB->GetPoint(polyB[0], ptB);
 
     dA = vtkMath::Dot(nA, ptA);
     dB = vtkMath::Dot(nB, ptB);
 
-    if (!CheckNormal(pdA->GetPoints(), numA, polyA, nA, dA)) {
+    if (!CheckNormal(newPdA->GetPoints(), numA, polyA, nA, dA)) {
         aborted = true;
         return;
     }
 
-    if (!CheckNormal(pdB->GetPoints(), numB, polyB, nB, dB)) {
+    if (!CheckNormal(newPdB->GetPoints(), numB, polyB, nB, dB)) {
         aborted = true;
         return;
     }
@@ -765,14 +743,12 @@ void vtkPolyDataContactFilter::InterPolys (vtkIdType idA, vtkIdType idB) {
 
     InterPtsType intersA, intersB;
 
-    // probe, ob die schnittpunkte auf den kanten liegen
-
-    if (!vtkPolyDataContactFilter::InterPolyLine(intersA, pdA, numA, polyA, r, s, Src::A, nA) || !vtkPolyDataContactFilter::CheckInters(intersA, pdA)) {
+    if (!vtkPolyDataContactFilter::InterPolyLine(intersA, newPdA, numA, polyA, r, s, Src::A, nA)) {
         aborted = true;
         return;
     }
 
-    if (!vtkPolyDataContactFilter::InterPolyLine(intersB, pdB, numB, polyB, r, s, Src::B, nB) || !vtkPolyDataContactFilter::CheckInters(intersB, pdB)) {
+    if (!vtkPolyDataContactFilter::InterPolyLine(intersB, newPdB, numB, polyB, r, s, Src::B, nB)) {
         aborted = true;
         return;
     }
@@ -872,8 +848,8 @@ void vtkPolyDataContactFilter::AddContactLines (InterPtsType &intersA, InterPtsT
 
         vtkIdList *linePts = vtkIdList::New();
 
-        linePts->InsertNextId(contPts->InsertNextPoint(f.pt));
-        linePts->InsertNextId(contPts->InsertNextPoint(s.pt));
+        linePts->InsertNextId(contLines->GetPoints()->InsertNextPoint(f.pt));
+        linePts->InsertNextId(contLines->GetPoints()->InsertNextPoint(s.pt));
 
         contLines->InsertNextCell(VTK_LINE, linePts);
 

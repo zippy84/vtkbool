@@ -1,5 +1,5 @@
 /*
-Copyright 2012-2023 Ronald Römer
+Copyright 2012-2024 Ronald Römer
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -1831,7 +1831,7 @@ void vtkPolyDataBooleanFilter::RestoreOrigPoints (vtkPolyData *pd, PolyStripsTyp
     std::cout << "RestoreOrigPoints()" << std::endl;
 #endif
 
-    pd->BuildLinks();
+    pd->DeleteLinks(); pd->BuildLinks();
 
     vtkKdTreePointLocator *loc = vtkKdTreePointLocator::New();
     loc->SetDataSet(pd);
@@ -1873,7 +1873,7 @@ void vtkPolyDataBooleanFilter::DisjoinPolys (vtkPolyData *pd, PolyStripsType &po
     std::cout << "DisjoinPolys()" << std::endl;
 #endif
 
-    pd->BuildLinks();
+    pd->DeleteLinks(); pd->BuildLinks();
 
     vtkKdTreePointLocator *loc = vtkKdTreePointLocator::New();
     loc->SetDataSet(pd);
@@ -2093,7 +2093,7 @@ void vtkPolyDataBooleanFilter::AddAdjacentPoints (vtkPolyData *pd, vtkIdTypeArra
     std::cout << "AddAdjacentPoints()" << std::endl;
 #endif
 
-    pd->BuildLinks();
+    pd->DeleteLinks(); pd->BuildLinks();
 
     vtkIdTypeArray *origCellIds = vtkIdTypeArray::SafeDownCast(pd->GetCellData()->GetScalars("OrigCellIds"));
 
@@ -2282,9 +2282,9 @@ void vtkPolyDataBooleanFilter::MergePoints (vtkPolyData *pd, PolyStripsType &pol
 #endif
 
     pd->BuildCells();
-    pd->BuildLinks();
+    pd->DeleteLinks(); pd->BuildLinks();
 
-    contLines->BuildLinks();
+    contLines->DeleteLinks(); contLines->BuildLinks();
 
     auto loc = vtkSmartPointer<vtkKdTreePointLocator>::New();
     loc->SetDataSet(pd);
@@ -2739,8 +2739,8 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
     plB->SetDataSet(pdB);
     plB->BuildLocator();
 
-    pdA->BuildLinks();
-    pdB->BuildLinks();
+    pdA->DeleteLinks(); pdA->BuildLinks();
+    pdB->DeleteLinks(); pdB->BuildLinks();
 
     vtkIdTypeArray *scalarsA = vtkIdTypeArray::SafeDownCast(pdA->GetPointData()->GetScalars());
     vtkIdTypeArray *scalarsB = vtkIdTypeArray::SafeDownCast(pdB->GetPointData()->GetScalars());

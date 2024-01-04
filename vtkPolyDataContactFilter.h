@@ -1,5 +1,5 @@
 /*
-Copyright 2012-2023 Ronald Römer
+Copyright 2012-2024 Ronald Römer
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -94,7 +94,7 @@ typedef std::set<Pair> InvalidEdgesType;
 
 class VTK_EXPORT vtkPolyDataContactFilter : public vtkPolyDataAlgorithm {
 
-    void PreparePolyData (vtkPolyData *pd);
+    void CopyPolyData (vtkPolyData *pd, vtkPolyData *newPd);
 
     static void InterEdgeLine (InterPtsType &interPts, vtkPolyData *pd, vtkIdType idA, vtkIdType idB, const double *r, const double *pt, Src src);
     static bool InterPolyLine (InterPtsType &interPts, vtkPolyData *pd, vtkIdType num, const vtkIdType *poly, const double *r, const double *pt, Src src, const double *n);
@@ -104,19 +104,13 @@ class VTK_EXPORT vtkPolyDataContactFilter : public vtkPolyDataAlgorithm {
 
     static bool CheckInters (InterPtsType &interPts, vtkPolyData *pd);
 
-    vtkIdTypeArray *contA, *contB;
+    vtkSmartPointer<vtkPolyData> newPdA, newPdB;
 
-    vtkPolyData *contLines;
-    vtkPoints *contPts;
-
-    vtkPolyData *pdA, *pdB;
-
-    vtkIdTypeArray *sourcesA, *sourcesB;
+    vtkSmartPointer<vtkPolyData> contLines;
+    vtkSmartPointer<vtkIdTypeArray> contA, contB, sourcesA, sourcesB;
 
     bool invalidA, invalidB;
     InvalidEdgesType edgesA, edgesB;
-
-    vtkIdTypeArray *origCellIdsA, *origCellIdsB;
 
     void GetInvalidEdges (vtkPolyData *pd, InvalidEdgesType &edges);
 

@@ -1,5 +1,5 @@
 /*
-Copyright 2012-2023 Ronald Römer
+Copyright 2012-2024 Ronald Römer
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ limitations under the License.
 double GetAngle (const double *vA, const double *vB, const double *n);
 
 /* VTK */
-void ComputeNormal (vtkPoints *pts, double *n, vtkIdType num, const vtkIdType *poly);
+double ComputeNormal (vtkPoints *pts, double *n, vtkIdType num, const vtkIdType *poly);
 bool CheckNormal (vtkPoints *pts, vtkIdType num, const vtkIdType *poly, const double *n, double d);
 
 void FindPoints (vtkKdTreePointLocator *pl, const double *pt, vtkIdList *pts, double tol = 1e-6);
@@ -127,7 +127,7 @@ std::ostream& operator<< (typename std::enable_if<std::is_enum<T>::value, std::o
 typedef std::vector<Point3d> Poly;
 typedef std::vector<Poly> PolysType;
 
-void ComputeNormal (const Poly &poly, double *n);
+double ComputeNormal (const Poly &poly, double *n);
 bool PointInPoly (const Poly &poly, const Point3d &p);
 
 void WritePolys (const char *name, const PolysType &polys);
