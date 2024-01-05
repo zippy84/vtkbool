@@ -136,11 +136,6 @@ int vtkPolyDataContactFilter::RequestData (vtkInformation *request, vtkInformati
 
         obbA->IntersectWithOBBTree(obbB, mat, InterOBBNodes, this);
 
-        if (contLines->GetNumberOfCells() == 0) {
-            vtkErrorMacro("There is no contact.");
-            return 1;
-        }
-
         if (aborted) {
             vtkErrorMacro("Bad shaped cells detected.");
             return 1;
@@ -153,6 +148,11 @@ int vtkPolyDataContactFilter::RequestData (vtkInformation *request, vtkInformati
 
         if (invalidB) {
             vtkErrorMacro("Second input has non-manifold edges.");
+            return 1;
+        }
+
+        if (contLines->GetNumberOfCells() == 0) {
+            vtkErrorMacro("There is no contact.");
             return 1;
         }
 
