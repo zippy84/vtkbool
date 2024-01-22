@@ -1159,7 +1159,7 @@ bool vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
 
         strips.erase(std::remove_if(strips.begin(), strips.end(), fct), strips.end());
 
-        std::map<vtkIdType, std::reference_wrapper<StripType>> stripsM;
+        std::map<std::size_t, std::reference_wrapper<StripType>> stripsM;
 
         for (auto &strip : strips) {
             stripsM.emplace(strip.front().strip, strip);
