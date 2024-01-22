@@ -332,7 +332,7 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
 
         times.push_back(clock::now()-start);
 
-// #ifdef DEBUG
+#ifdef DEBUG
         double sum = std::chrono::duration_cast<std::chrono::duration<double>>(std::accumulate(times.begin(), times.end(), clock::duration())).count();
 
         std::vector<clock::duration>::const_iterator itr;
@@ -343,7 +343,7 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
                 << ": " << time << "s (" << (time/sum*100) << "%)"
                 << std::endl;
         }
-// #endif
+#endif
 
     }
 
@@ -1159,6 +1159,12 @@ bool vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
 
         strips.erase(std::remove_if(strips.begin(), strips.end(), fct), strips.end());
 
+        std::map<vtkIdType, std::reference_wrapper<StripType>> stripsM;
+
+        for (auto &strip : strips) {
+            stripsM.emplace(strip.front().strip, strip);
+        }
+
         // init
 
         for (auto &strip : strips) {
@@ -1167,7 +1173,7 @@ bool vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
             for (auto &p : strip) {
                 std::cout << p.ind << ", ";
             }
-            std::cout << "]" << std::endl;
+            std::cout << "] :: " << strip.front().strip << std::endl;
 #endif
 
             // enden auf gleichem edge
@@ -1454,16 +1460,16 @@ bool vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
                         if (a.strip != b.strip) {
                             // gehören nicht dem gleichen strip an
 
-                            StripType &stripA = strips[a.strip],
-                                &stripB = strips[b.strip];
+                            StripType &stripA = stripsM.at(a.strip),
+                                &stripB = stripsM.at(b.strip);
 
                             // andere enden ermitteln
 
-                            const StripPtR &eA = (&a == &(stripA.front())) ? stripA.back() : stripA.front(),
-                                &eB = (&b == &(stripB.front())) ? stripB.back() : stripB.front();
+                            const vtkIdType eA = a.ind == stripA.front().ind ? stripA.back().ind : stripA.front().ind,
+                                eB = b.ind == stripB.front().ind ? stripB.back().ind : stripB.front().ind;
 
-                            const StripPt &eA_ = pts[eA.ind],
-                                &eB_ = pts[eB.ind];
+                            const StripPt &eA_ = pts[eA],
+                                &eB_ = pts[eB];
 
                             if (eA_.ind != eB_.ind) {
                                 r = absoluteT[id]+a_.t;
@@ -1499,7 +1505,7 @@ bool vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
                         } else {
                             // gleicher strip
 
-                            StripType &strip = strips[a.strip];
+                            StripType &strip = stripsM.at(a.strip);
 
                             if (HasArea(strip)) {
                                 RefsType poly_(strip.begin(), strip.end()-1);
@@ -1527,7 +1533,7 @@ bool vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
 
 #ifdef DEBUG
                 for (auto& e : edge) {
-                    std::cout << e << std::endl;
+                    std::cout << e << ", t " << pts[e.get().ind].t << std::endl;
                 }
 #endif
 
@@ -1546,7 +1552,7 @@ bool vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
 
 #ifdef DEBUG
                 std::cout << "strip " << start.strip
-                    << " , refs (" << start.ref << ", " << end.ref << ")"
+                    << ", refs (" << start.ref << ", " << end.ref << ")"
                     << std::endl;
 #endif
 
@@ -1660,19 +1666,21 @@ bool vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
 
                                         if (p.strip != sp.strip) {
                                             if (p.strip <= start.strip) {
-#ifdef DEBUG
-                                                std::cout << "*1 ref " << sp.ref;
-#endif
+                                                vtkIdType _ref;
 
                                                 if (p.side == Side::END) {
-                                                    sp.ref = p.desc[0];
+                                                    _ref = p.desc[0];
                                                 } else {
-                                                    sp.ref = p.desc[1];
+                                                    _ref = p.desc[1];
                                                 }
 
 #ifdef DEBUG
-                                                std::cout << " -> " << sp.ref << " (from strip " << p.strip << ", ind " << p.ind << ")" << std::endl;
+                                                if (sp.ref != _ref) {
+                                                    std::cout << "*1 ref " << sp.ref << " -> " << _ref << " (from strip " << p.strip << ", ind " << p.ind << ")" << std::endl;
+                                                }
 #endif
+
+                                                sp.ref = _ref;
 
                                                 _p = std::make_shared<StripPtR>(p);
 
@@ -1681,7 +1689,9 @@ bool vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
                                             }
                                         } else {
 #ifdef DEBUG
-                                            std::cout << "*2 ref " << sp.ref << " -> " << p.ref << " (from strip " << p.strip << ", ind " << p.ind << ")" << std::endl;
+                                            if (sp.ref != p.ref) {
+                                                std::cout << "*2 ref " << sp.ref << " -> " << p.ref << " (from strip " << p.strip << ", ind " << p.ind << ")" << std::endl;
+                                            }
 #endif
 
                                             sp.ref = p.ref;
@@ -1705,19 +1715,21 @@ bool vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
                                                 break;
                                             }
 
-#ifdef DEBUG
-                                            std::cout << "*3 ref " << sp.ref;
-#endif
+                                            vtkIdType _ref;
 
                                             if (p.side == Side::START) {
-                                                sp.ref = p.desc[0];
+                                                _ref = p.desc[0];
                                             } else {
-                                                sp.ref = p.desc[1];
+                                                _ref = p.desc[1];
                                             }
 
 #ifdef DEBUG
-                                            std::cout << " -> " << sp.ref << " (from strip " << p.strip << ", ind " << p.ind << ")" << std::endl;
+                                            if (sp.ref != _ref) {
+                                                std::cout << "*3 ref " << sp.ref << " -> " << _ref << " (from strip " << p.strip << ", ind " << p.ind << ")" << std::endl;
+                                            }
 #endif
+
+                                            sp.ref = _ref;
 
                                             break;
                                         }
@@ -1735,19 +1747,21 @@ bool vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
                                     && b.strip == start.strip
                                     && pts[a.ind].capt == Capt::A) { // sollte weg
 
-#ifdef DEBUG
-                                    std::cout << "*4 ref " << a.ref;
-#endif
+                                    vtkIdType _ref;
 
                                     if (b.side == Side::START) {
-                                        a.ref = b.desc[0];
+                                        _ref = b.desc[0];
                                     } else {
-                                        a.ref = b.desc[1];
+                                        _ref = b.desc[1];
                                     }
 
 #ifdef DEBUG
-                                    std::cout << " -> " << a.ref << " (from strip " << b.strip << ", ind " << b.ind << ")" << std::endl;
+                                    if (a.ref != _ref) {
+                                        std::cout << "*4 ref " << a.ref << " -> " << _ref << " (from strip " << b.strip << ", ind " << b.ind << ")" << std::endl;
+                                    }
 #endif
+
+                                    a.ref = _ref;
 
                                 }
                             }

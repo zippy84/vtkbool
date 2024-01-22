@@ -493,18 +493,27 @@ bool vtkPolyDataContactFilter::InterPolyLine (InterPtsType &interPts, vtkPolyDat
     }
 
     struct Cmp {
-        bool operator() (const double &l, const double &r) const {
-            long a = std::lround(l*1e5),
-                b = std::lround(r*1e5);
+        bool operator() (const InterPt &lhs, const InterPt &rhs) const {
+            if (lhs.end != End::NONE && rhs.end != End::NONE) {
+                const vtkIdType indA = lhs.end == End::BEGIN ? lhs.edge.f : lhs.edge.g,
+                    indB = rhs.end == End::BEGIN ? rhs.edge.f : rhs.edge.g;
+
+                if (indA == indB) {
+                    return indA < indB;
+                }
+            }
+
+            const long a = std::lround(lhs.t*1e5),
+                b = std::lround(rhs.t*1e5);
 
             return a < b;
         }
     };
 
-    std::map<double, InterPtsType, Cmp> paired;
+    std::map<InterPt, InterPtsType, Cmp> paired;
 
     for (auto &p : interPts) {
-        paired[p.t].push_back(p);
+        paired[p].push_back(p);
     }
 
     std::vector<InterPtsType> sortedPts;
