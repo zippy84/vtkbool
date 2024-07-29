@@ -4,9 +4,10 @@
 import math
 from collections import defaultdict, namedtuple
 from operator import itemgetter
+from itertools import batched
 
 from vtkmodules.vtkCommonCore import vtkIdList, vtkIdTypeArray, vtkPoints, vtkMath
-from vtkmodules.vtkCommonDataModel import vtkPolyData, VTK_POLYGON, VTK_VERTEX
+from vtkmodules.vtkCommonDataModel import vtkPolyData, vtkPolygon, VTK_POLYGON, VTK_TRIANGLE, VTK_VERTEX
 from vtkmodules.vtkFiltersSources import vtkCylinderSource
 from vtkmodules.vtkFiltersGeneral import vtkTransformPolyDataFilter
 from vtkmodules.vtkCommonTransforms import vtkTransform
@@ -17,6 +18,8 @@ from vtkmodules.vtkFiltersCore import vtkCleanPolyData
 SnapPoint = namedtuple('SnapPoint', 'cell_id,s,id,pt,line')
 SnapEdge = namedtuple('SnapEdge', 'cell_id,s,edge,proj,line')
 SnapPoly = namedtuple('SnapPoly', 'cell_id,s,line')
+
+Point = namedtuple('Point', 'id,pt')
 
 def write(pd, file_name):
     writer = vtkPolyDataWriter()
@@ -125,7 +128,7 @@ def get_points(pd, cell_id):
     cell = vtkIdList()
     pd.GetCellPoints(cell_id, cell)
 
-    ids = [ cell.GetId(id_) for id_ in range(cell.GetNumberOfIds()) ]
+    ids = [ cell.GetId(i) for i in range(cell.GetNumberOfIds()) ]
 
     return ids, [ pd.GetPoint(id_) for id_ in ids ]
 
@@ -141,8 +144,8 @@ class Prepare:
         self.mesh_a = clean(mesh_a)
         self.mesh_b = clean(mesh_b)
 
-        self.find(self.mesh_a, self.mesh_b, 'verts_a.vtk')
-        self.find(self.mesh_b, self.mesh_a, 'verts_b.vtk')
+        self.find(self.mesh_a, self.mesh_b, 'a')
+        self.find(self.mesh_b, self.mesh_a, 'b')
 
     def find(self, mesh, other_mesh, file_name):
 
@@ -254,23 +257,112 @@ class Prepare:
 
                 proj, d = _proj_line(mesh, snaps[0].line, snaps[0].proj)
 
-                all_edge_snaps[frozenset(snaps[0].edge)].append((snaps[0].proj, proj, d))
+                all_edge_snaps[frozenset(snaps[0].edge)].append((snaps[0], proj, d))
 
 
         pd.SetPoints(pd_pts)
 
-        write(pd, file_name)
+        write(pd, f'verts_{file_name}.vtk')
+
+        other_mesh.BuildLinks()
+
+        other_pts = other_mesh.GetPoints()
 
         for edge, projs in all_edge_snaps.items():
             a, b = edge
 
             p = other_mesh.GetPoint(a)
 
-            projs[:] = [ (src_proj, dest_proj, d, vtkMath.Distance2BetweenPoints(p, src_proj)) for src_proj, dest_proj, d in projs ]
+            projs[:] = [ (snap, dest_proj, d, vtkMath.Distance2BetweenPoints(p, snap.proj)) for snap, dest_proj, d in projs ]
 
             projs.sort(key=itemgetter(2))
 
+            snap, *_ = projs[0]
+
+            print(snap)
+
+            neigs = vtkIdList()
+
+            other_mesh.GetCellEdgeNeighbors(snap.cell_id, *snap.edge, neigs)
+
+            assert neigs.GetNumberOfIds() == 1
+
+            neig_id = neigs.GetId(0)
+
+            print(snap.cell_id, neig_id)
+
+            new_pts = [ Point(other_pts.InsertNextPoint(p[1]), p[1]) for p in projs ]
+
+            print(new_pts)
+
+            self.tringulate_cell(other_mesh, snap.cell_id, snap.edge, new_pts, False)
+            self.tringulate_cell(other_mesh, neig_id, snap.edge, new_pts, True)
+
+
         print(all_edge_snaps)
+
+        other_mesh.RemoveDeletedCells()
+
+        write(other_mesh, f'new_pd_{file_name}.vtk')
+
+
+    def tringulate_cell(self, mesh, cell_id, edge, new_pts, reverse):
+
+        ids, pts = get_points(mesh, cell_id)
+
+        normal = compute_normal(pts)
+
+        base = Base(pts, normal)
+
+        cell_pts = [ Point(id_, pt) for id_, pt in zip(ids, pts) ]
+
+        if reverse:
+            cell_pts.reverse()
+
+        new_cell = []
+
+        cell_pts = cell_pts + cell_pts[:1]
+
+        for a, b in zip(cell_pts, cell_pts[1:]):
+            new_cell.append(a)
+
+            if (a.id, b.id) == edge:
+                new_cell.extend(new_pts)
+
+        if reverse:
+            new_cell.reverse()
+
+        print([ p.id for p in new_cell ])
+
+        poly = vtkPolygon()
+
+        poly.GetPointIds().SetNumberOfIds(len(new_cell))
+        poly.GetPoints().SetNumberOfPoints(len(new_cell))
+
+        for i, p in enumerate(new_cell):
+            poly.GetPointIds().SetId(i, i)
+
+            pt = base.tr_forward(p.pt) + [0]
+
+            poly.GetPoints().SetPoint(i, pt)
+
+        triangles = vtkIdList()
+
+        assert poly.Triangulate(triangles) != 0
+
+        print(triangles.GetNumberOfIds())
+
+        triangle_ids = [ triangles.GetId(i) for i in range(triangles.GetNumberOfIds()) ]
+
+        mesh.DeleteCell(cell_id)
+
+        for triangle in batched(triangle_ids, 3):
+            cell = vtkIdList()
+
+            [ cell.InsertNextId(new_cell[i].id) for i in triangle ]
+
+            mesh.InsertNextCell(VTK_TRIANGLE, cell)
+
 
 if __name__ == '__main__':
     cyl = vtkCylinderSource()
