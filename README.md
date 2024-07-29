@@ -1,4 +1,4 @@
-# vtkbool [![CMake](https://github.com/zippy84/vtkbool/actions/workflows/cmake.yml/badge.svg)](https://github.com/zippy84/vtkbool/actions/workflows/cmake.yml) [![codecov](https://codecov.io/gh/zippy84/vtkbool/branch/master/graph/badge.svg?token=EUV9QKEW1M)](https://codecov.io/gh/zippy84/vtkbool) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10569008.svg)](https://doi.org/10.5281/zenodo.10569008)
+# vtkbool [![CMake](https://github.com/zippy84/vtkbool/actions/workflows/cmake.yml/badge.svg)](https://github.com/zippy84/vtkbool/actions/workflows/cmake.yml) [![codecov](https://codecov.io/gh/zippy84/vtkbool/branch/master/graph/badge.svg?token=EUV9QKEW1M)](https://codecov.io/gh/zippy84/vtkbool) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10461186.svg)](https://zenodo.org/doi/10.5281/zenodo.10461186)
 
 ![](/cover.png)
 
@@ -205,32 +205,32 @@ from vtkbool.vtkBool import vtkPolyDataBooleanFilter
 - *Bad shaped cells detected.*
 
   At least one cell has a bad shape. For a cell with more than three points: not all points lie on the plane defined by the calculated surface normal.
-  
+
 - *First/Second input has non-manifold edges.*
-  
+
   The contact goes through a non-manifold edge. A non-manifold edge is an edge that is shared by three or more cells. In general this is not a problem, unless they are part of the intersection.
-  
+
 - *There is no contact.*
-  
+
   What it says.
-  
+
 - *Contact ends suddenly.*
-  
+
   The intersection is incomplete. That is, an intersection line ends in the middle of a cell. The cell cannot be divided.
-  
+
 - *Strips are invalid.*
-  
+
   There are two reasons for that kind of error:
-  
+
   1. at least two intersection lines intersect each other - the input, one of them, contains an assembly
   2. there are different intersection points with the same capturing point - normally a capturing point will be used by only one point of the intersection lines
-  
+
 - *CutCells failed.*
-  
+
   Will be printed out only, if some holes couldn't be merged into their outer cells.
-  
+
 - *Boolean operation failed.*
-  
+
   A boolean operation can fail at the end, if some of the intersection lines are not part of the result.
 
 ## Copyright

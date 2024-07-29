@@ -635,30 +635,7 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
 
         for (auto &[pt, map] : collapsed) {
             if (map.size() > 1) {
-                // std::cout << pt << std::endl;
-
-                // for (auto &[ind, pts] : map) {
-                //     for (auto &p : pts) {
-                //         std::cout << p << std::endl;
-                //     }
-                // }
-
-                // if (map.size() == 2 && std::all_of(map.begin(), map.end(), [](const auto &m) { return m.second.size() == 1 && m.second.back().get().capt == Capt::EDGE; })) {
-
-                //     for (auto &[ind, pts] : map) {
-                //         StripPt &sp = pts.back();
-
-                //         sp.capt = Capt::NOT;
-                //         sp.edge[0] = sp.edge[1] = NOTSET;
-                //         Cpy(sp.cutPt, sp.pt, 3);
-                //     }
-
-                // } else {
-                //     return true;
-                // }
-
                 return true;
-
             }
         }
     }

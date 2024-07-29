@@ -409,6 +409,7 @@ void vtkPolyDataContactFilter::InterEdgeLine (InterPtsType &interPts, vtkPolyDat
             double s = vtkMath::Determinant3x3(p, r, v)/(n*n);
 
             if (s > -1e-6 && s < l+1e-6) {
+
                 double t = vtkMath::Determinant3x3(p, e, v)/(n*n);
 
                 End end = End::NONE;
@@ -493,6 +494,8 @@ bool vtkPolyDataContactFilter::InterPolyLine (InterPtsType &interPts, vtkPolyDat
     }
 
     struct Cmp {
+        const double tol = 1e-5;
+
         bool operator() (const InterPt &lhs, const InterPt &rhs) const {
             if (lhs.end != End::NONE && rhs.end != End::NONE) {
                 const vtkIdType indA = lhs.end == End::BEGIN ? lhs.edge.f : lhs.edge.g,
@@ -503,10 +506,13 @@ bool vtkPolyDataContactFilter::InterPolyLine (InterPtsType &interPts, vtkPolyDat
                 }
             }
 
-            const long a = std::lround(lhs.t*1e5),
-                b = std::lround(rhs.t*1e5);
+            const double d = lhs.t-rhs.t;
 
-            return a < b;
+            if (std::abs(d) < tol) {
+                return false;
+            } else {
+                return d < 0;
+            }
         }
     };
 
@@ -518,57 +524,50 @@ bool vtkPolyDataContactFilter::InterPolyLine (InterPtsType &interPts, vtkPolyDat
 
     std::vector<InterPtsType> sortedPts;
 
-    for (auto &p : paired) {
-        InterPtsType &pts = p.second;
-
-        if (pts.size() == 1 && pts.front().end != End::NONE) {
-            // hier fehlt der zweite punkt
-            pts.push_back(pts.back());
-        }
-
-        sortedPts.push_back(pts);
-    }
-
-    // trivial
-
-    if (sortedPts.front().size() == 2) {
-        sortedPts.front().pop_back();
-    }
-
-    if (sortedPts.back().size() == 2) {
-        sortedPts.back().pop_back();
-    }
-
-    // behandelt schnitte durch kanten von sich selbst schneidenden einfachen polygonen
-
-    for (const auto &pts : sortedPts) {
-        if (pts.size() > 2) {
-            return false;
-        }
-
-        if (pts.size() == 2) {
-            if (pts.back().end == End::NONE) {
-                return false;
-            }
-
-            std::set<vtkIdType> ids {pts.front().edge.f, pts.front().edge.g, pts.back().edge.f, pts.back().edge.g};
-
-            if (ids.size() == 2) {
-                return false;
-            }
-        }
-    }
-
-    // ...
+    std::transform(paired.begin(), paired.end(), std::back_inserter(sortedPts), [](auto &kv) { return kv.second; });
 
     std::map<vtkIdType, double> ends;
 
-    for (const auto &pts : sortedPts) {
-        auto &last = pts.back();
+    decltype(sortedPts)::iterator itr;
 
-        if (last.end != End::NONE) {
-            ends.emplace(last.end == End::BEGIN ? last.edge.f : last.edge.g, last.t);
+    for (itr = sortedPts.begin(); itr != sortedPts.end(); ++itr) {
+        if (itr == sortedPts.begin()) {
+            if (itr->size() == 2) {
+                itr->pop_back();
+            }
+        } else if (itr == sortedPts.end()-1) {
+            if (itr->size() == 2) {
+                itr->pop_back();
+            }
+        } else if (itr->size() == 1 && itr->back().end != End::NONE) {
+            itr->push_back(itr->back());
         }
+
+        // validierung
+
+        if (itr->size() > 2) {
+            return false;
+        }
+
+        if (itr->size() == 2) {
+            if (itr->back().end == End::NONE) {
+                return false;
+            }
+
+            const Pair &edgeA = itr->front().edge,
+                &edgeB = itr->back().edge;
+
+            if (edgeA.f == edgeB.g && edgeB.f == edgeA.g) {
+                return false;
+            }
+        }
+
+        const auto &p = itr->back();
+
+        if (p.end != End::NONE) {
+            ends.emplace(p.end == End::BEGIN ? p.edge.f : p.edge.g, p.t);
+        }
+
     }
 
     double s[3], d;
@@ -580,28 +579,28 @@ bool vtkPolyDataContactFilter::InterPolyLine (InterPtsType &interPts, vtkPolyDat
 
     vtkIdType id, prev, next;
 
-    for (auto &pts : sortedPts) {
-        auto &last = pts.back();
+    for (itr = sortedPts.begin(); itr != sortedPts.end(); ++itr) {
+        const auto &p = itr->back();
 
-        if (last.end != End::NONE) {
-            if (last.end == End::BEGIN) {
-                id = last.edge.f;
-                next = last.edge.g;
+        if (p.end != End::NONE) {
+            if (p.end == End::BEGIN) {
+                id = p.edge.f;
+                next = p.edge.g;
                 prev = std::find_if(edges.begin(), edges.end(), [&id](const Pair &edge) { return edge.g == id; })->f;
             } else {
-                id = last.edge.g;
-                prev = last.edge.f;
+                id = p.edge.g;
+                prev = p.edge.f;
                 next = std::find_if(edges.begin(), edges.end(), [&id](const Pair &edge) { return edge.f == id; })->g;
             }
 
-            if (pts.size() == 2) {
+            if (itr->size() == 2) {
                 if (ends.count(next) == 0 && ends.count(prev) == 1) {
                     pd->GetPoint(next, ptA);
                     dA = vtkMath::Dot(s, ptA)-d;
 
-                    if ((last.t > ends.at(prev) && dA > 0) || (last.t < ends.at(prev) && dA < 0)) {
+                    if ((p.t > ends.at(prev) && dA > 0) || (p.t < ends.at(prev) && dA < 0)) {
                         // tasche
-                        pts.pop_back();
+                        itr->pop_back();
                     }
 
                     continue;
@@ -610,9 +609,9 @@ bool vtkPolyDataContactFilter::InterPolyLine (InterPtsType &interPts, vtkPolyDat
                     pd->GetPoint(prev, ptB);
                     dB = vtkMath::Dot(s, ptB)-d;
 
-                    if ((last.t > ends.at(next) && dB < 0) || (last.t < ends.at(next) && dB > 0)) {
+                    if ((p.t > ends.at(next) && dB < 0) || (p.t < ends.at(next) && dB > 0)) {
                         // tasche
-                        pts.pop_back();
+                        itr->pop_back();
                     }
 
                     continue;
@@ -628,8 +627,8 @@ bool vtkPolyDataContactFilter::InterPolyLine (InterPtsType &interPts, vtkPolyDat
                 dB = vtkMath::Dot(s, ptB)-d;
 
                 if (std::signbit(dA) != std::signbit(dB)) {
-                    if (pts.size() == 2) {
-                        pts.pop_back();
+                    if (itr->size() == 2) {
+                        itr->pop_back();
                     }
 
                 } else {
@@ -640,15 +639,13 @@ bool vtkPolyDataContactFilter::InterPolyLine (InterPtsType &interPts, vtkPolyDat
                     tB = vtkMath::Dot(vB, r);
 
                     if ((tB > tA) == std::signbit(dA)) {
-                        pts.clear();
+                        itr->clear();
                     }
 
                 }
             }
         }
     }
-
-    // ...
 
     InterPtsType _interPts;
 
