@@ -389,3 +389,26 @@ if __name__ == '__main__':
     pd_b = tf.GetOutput()
 
     Prepare(pd_a, pd_b)
+
+
+    # test
+
+    import sys
+    sys.path.extend(['/home/zippy/vtkbool/build/lib/python3.12/site-packages/vtkbool'])
+
+    from vtkBool import vtkPolyDataBooleanFilter
+
+    reader_a = vtkPolyDataReader()
+    reader_a.SetFileName('new_pd_a.vtk')
+
+    reader_b = vtkPolyDataReader()
+    reader_b.SetFileName('new_pd_b.vtk')
+
+    bf = vtkPolyDataBooleanFilter()
+    bf.SetInputConnection(0, reader_a.GetOutputPort())
+    bf.SetInputConnection(1, reader_b.GetOutputPort())
+
+    writer = vtkPolyDataWriter()
+    writer.SetFileName('union.vtk')
+    writer.SetInputConnection(bf.GetOutputPort())
+    writer.Update()
