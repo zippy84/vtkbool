@@ -275,36 +275,36 @@ class Prepare:
 
         other_pts = other_mesh.GetPoints()
 
-        for edge, projs in all_edge_snaps.items():
-            a, b = edge
+        for projs in all_edge_snaps.values():
+            first, *_ = projs[0]
+
+            print(first)
+
+            a, b = first.edge
 
             p = other_mesh.GetPoint(a)
 
             projs[:] = [ (snap, dest_proj, d, vtkMath.Distance2BetweenPoints(p, snap.proj)) for snap, dest_proj, d in projs ]
 
-            projs.sort(key=itemgetter(2))
-
-            snap, *_ = projs[0]
-
-            print(snap)
+            projs.sort(key=itemgetter(3))
 
             neigs = vtkIdList()
 
-            other_mesh.GetCellEdgeNeighbors(snap.cell_id, *snap.edge, neigs)
+            other_mesh.GetCellEdgeNeighbors(first.cell_id, *first.edge, neigs)
 
             assert neigs.GetNumberOfIds() == 1
 
             neig_id = neigs.GetId(0)
 
-            print(snap.cell_id, neig_id)
+            print(first.cell_id, neig_id)
 
             new_pts = [ Point(other_pts.InsertNextPoint(p[1]), p[1]) for p in projs ]
 
             print(new_pts)
 
-            _cells[snap.cell_id][snap.edge] = new_pts
+            _cells[first.cell_id][first.edge] = new_pts
 
-            _cells[neig_id][snap.edge[::-1]] = new_pts[::-1]
+            _cells[neig_id][first.edge[::-1]] = new_pts[::-1]
 
         print(all_edge_snaps)
 
