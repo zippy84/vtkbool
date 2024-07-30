@@ -15,6 +15,11 @@ from vtkmodules.vtkIOLegacy import vtkPolyDataWriter, vtkPolyDataReader
 from vtkmodules.vtkFiltersFlowPaths import vtkModifiedBSPTree
 from vtkmodules.vtkFiltersCore import vtkCleanPolyData
 
+import sys
+sys.path.extend(['/home/zippy/vtkbool/build/lib/python3.12/site-packages/vtkbool'])
+
+from vtkBool import vtkPolyDataBooleanFilter
+
 SnapPoint = namedtuple('SnapPoint', 'cell_id,s,id,pt,line')
 SnapEdge = namedtuple('SnapEdge', 'cell_id,s,edge,proj,line')
 SnapPoly = namedtuple('SnapPoly', 'cell_id,s,line')
@@ -367,7 +372,39 @@ class Prepare:
             mesh.InsertNextCell(VTK_TRIANGLE, cell)
 
 
-if __name__ == '__main__':
+def create_complex():
+    cyl = vtkCylinderSource()
+    cyl.SetHeight(2)
+    cyl.SetResolution(12)
+
+    tra_a = vtkTransform()
+    tra_a.Translate(.25, 0, 0)
+
+    tf_a = vtkTransformPolyDataFilter()
+    tf_a.SetTransform(tra_a)
+    tf_a.SetInputConnection(cyl.GetOutputPort())
+
+    tra_b = vtkTransform()
+    tra_b.Translate(-.25, 0, 0)
+
+    tf_b = vtkTransformPolyDataFilter()
+    tf_b.SetTransform(tra_b)
+    tf_b.SetInputConnection(cyl.GetOutputPort())
+
+    bf = vtkPolyDataBooleanFilter()
+    bf.SetInputConnection(0, tf_a.GetOutputPort())
+    bf.SetInputConnection(1, tf_b.GetOutputPort())
+
+    bf.Update()
+
+    cleaned = clean(bf.GetOutput())
+
+    writer = vtkPolyDataWriter()
+    writer.SetFileName('complex.vtk')
+    writer.SetInputData(cleaned)
+    writer.Update()
+
+def test():
     cyl = vtkCylinderSource()
     cyl.SetHeight(2)
     cyl.SetResolution(12)
@@ -390,13 +427,40 @@ if __name__ == '__main__':
 
     Prepare(pd_a, pd_b)
 
+def test2():
+    cyl = vtkCylinderSource()
+    cyl.SetHeight(2)
+    cyl.SetResolution(12)
 
-    # test
+    reader = vtkPolyDataReader()
+    reader.SetFileName('complex.vtk')
 
-    import sys
-    sys.path.extend(['/home/zippy/vtkbool/build/lib/python3.12/site-packages/vtkbool'])
+    z = .0000025
 
-    from vtkBool import vtkPolyDataBooleanFilter
+    tra = vtkTransform()
+    tra.RotateZ(90)
+    tra.Translate(0, 0, z)
+
+    tf = vtkTransformPolyDataFilter()
+    tf.SetTransform(tra)
+    tf.SetInputConnection(reader.GetOutputPort())
+
+    cyl.Update()
+    tf.Update()
+
+    pd_a = cyl.GetOutput()
+    pd_b = tf.GetOutput()
+
+    Prepare(pd_a, pd_b)
+
+
+if __name__ == '__main__':
+    # test()
+
+    create_complex()
+    test2()
+
+    # verify
 
     reader_a = vtkPolyDataReader()
     reader_a.SetFileName('new_pd_a.vtk')
