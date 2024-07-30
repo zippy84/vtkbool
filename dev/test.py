@@ -264,6 +264,8 @@ class Prepare:
 
         write(pd, f'verts_{file_name}.vtk')
 
+        _cells = defaultdict(dict)
+
         other_mesh.BuildLinks()
 
         other_pts = other_mesh.GetPoints()
@@ -295,18 +297,23 @@ class Prepare:
 
             print(new_pts)
 
-            self.tringulate_cell(other_mesh, snap.cell_id, snap.edge, new_pts, False)
-            self.tringulate_cell(other_mesh, neig_id, snap.edge, new_pts, True)
+            _cells[snap.cell_id][snap.edge] = new_pts
 
+            _cells[neig_id][snap.edge[::-1]] = new_pts[::-1]
 
         print(all_edge_snaps)
+
+        print(_cells)
+
+        for cell_id, edges in _cells.items():
+            self.tringulate_cell(other_mesh, cell_id, edges)
 
         other_mesh.RemoveDeletedCells()
 
         write(other_mesh, f'new_pd_{file_name}.vtk')
 
 
-    def tringulate_cell(self, mesh, cell_id, edge, new_pts, reverse):
+    def tringulate_cell(self, mesh, cell_id, edges):
 
         ids, pts = get_points(mesh, cell_id)
 
@@ -316,9 +323,6 @@ class Prepare:
 
         cell_pts = [ Point(id_, pt) for id_, pt in zip(ids, pts) ]
 
-        if reverse:
-            cell_pts.reverse()
-
         new_cell = []
 
         cell_pts = cell_pts + cell_pts[:1]
@@ -326,11 +330,10 @@ class Prepare:
         for a, b in zip(cell_pts, cell_pts[1:]):
             new_cell.append(a)
 
-            if (a.id, b.id) == edge:
-                new_cell.extend(new_pts)
+            edge = a.id, b.id
 
-        if reverse:
-            new_cell.reverse()
+            if edge in edges:
+                new_cell.extend(edges[edge])
 
         print([ p.id for p in new_cell ])
 
