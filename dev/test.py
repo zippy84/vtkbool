@@ -7,7 +7,7 @@ from operator import itemgetter
 from itertools import batched
 
 from vtkmodules.vtkCommonCore import vtkIdList, vtkIdTypeArray, vtkPoints, vtkMath
-from vtkmodules.vtkCommonDataModel import vtkPolyData, vtkPolygon, VTK_POLYGON, VTK_TRIANGLE, VTK_VERTEX
+from vtkmodules.vtkCommonDataModel import vtkPolyData, vtkPolygon, VTK_POLYGON, VTK_QUAD, VTK_TRIANGLE, VTK_VERTEX
 from vtkmodules.vtkFiltersSources import vtkCylinderSource
 from vtkmodules.vtkFiltersGeneral import vtkTransformPolyDataFilter
 from vtkmodules.vtkCommonTransforms import vtkTransform
@@ -125,7 +125,7 @@ def proj_line(mesh, ids, pt):
     for edge in zip(ids, ids[1:]):
         proj, d = _proj_line(mesh, edge, pt)
 
-        if d < 1e-5:
+        if d > 0 and d < 1e-5:
             return edge, proj
 
 
@@ -148,6 +148,9 @@ class Prepare:
     def __init__(self, mesh_a, mesh_b):
         self.mesh_a = clean(mesh_a)
         self.mesh_b = clean(mesh_b)
+
+        write(self.mesh_a, 'cleaned_a.vtk')
+        write(self.mesh_b, 'cleaned_b.vtk')
 
         self.find(self.mesh_a, self.mesh_b, 'a')
         self.find(self.mesh_b, self.mesh_a, 'b')
@@ -221,48 +224,56 @@ class Prepare:
 
                 pd.InsertNextCell(VTK_VERTEX, vert)
 
-                for id_, pt_ in zip(ids, cell_pts):
-                    if vtkMath.Distance2BetweenPoints(pt, pt_) < 1e-10:
-                        k = ','.join([ f'{x:z.5f}' for x in pt_ ])
+                snap = next(( SnapPoint(cell_id, pt, id_, pt_, line) for id_, pt_ in zip(ids, cell_pts) if vtkMath.Distance2BetweenPoints(pt, pt_) < 1e-10 ), None)
 
-                        point_snaps[k].append(SnapPoint(cell_id, pt, id_, pt_, line))
+                if snap:
+                    point_snaps[snap.id].append(snap)
 
-                        break
+                else:
+                    try:
+                        edge, proj = proj_line(other_mesh, ids, pt)
 
-                try:
-                    edge, proj = proj_line(other_mesh, ids, pt)
+                        k = ','.join([ f'{x:z.5f}' for x in proj ])
 
-                    k = ','.join([ f'{x:z.5f}' for x in proj ])
+                        snap = SnapEdge(cell_id, pt, edge, proj, line)
 
-                    edge_snaps[k].append(SnapEdge(cell_id, pt, edge, proj, line))
+                        edge_snaps[k].append(snap)
 
-                except TypeError:
-                    pass
+                    except TypeError:
+                        pass
 
-            point_snaps = { k: v for k, v in point_snaps.items() if len(v) > 1 }
+            point_snaps = [ snaps for snaps in point_snaps.values() if len(snaps) > 1 ]
 
             print(point_snaps)
 
-            for snaps in point_snaps.values():
+            for snaps in point_snaps:
+                assert len(snaps) == 2
 
-                assert len(set( snap.id for snap in snaps )) == 1
+                a, b = snaps
 
-                proj, d = _proj_line(mesh, snaps[0].line, snaps[0].pt)
+                assert a.id == b.id
 
-                print(snaps[0].id, '->', proj, d)
+                proj, d = _proj_line(mesh, a.line, a.pt)
+
+                print(a.id, '->', proj, d)
+
+                Prepare.move_pt(other_mesh, a.id, proj)
 
 
-            edge_snaps = { k: v for k, v in edge_snaps.items() if len(v) > 1 }
+            edge_snaps = [ snaps for snaps in edge_snaps.values() if len(snaps) > 1 ]
 
             print(edge_snaps)
 
-            for snaps in edge_snaps.values():
+            for snaps in edge_snaps:
+                assert len(snaps) == 2
 
-                assert len(set( frozenset(snap.edge) for snap in snaps )) == 1
+                a, b = snaps
 
-                proj, d = _proj_line(mesh, snaps[0].line, snaps[0].proj)
+                assert frozenset(a.edge) == frozenset(b.edge)
 
-                all_edge_snaps[frozenset(snaps[0].edge)].append((snaps[0], proj, d))
+                proj, d = _proj_line(mesh, a.line, a.proj)
+
+                all_edge_snaps[frozenset(a.edge)].append((a, proj, d))
 
 
         pd.SetPoints(pd_pts)
@@ -311,14 +322,15 @@ class Prepare:
         print(_cells)
 
         for cell_id, edges in _cells.items():
-            self.tringulate_cell(other_mesh, cell_id, edges)
+            Prepare.tringulate_cell(other_mesh, cell_id, edges)
 
         other_mesh.RemoveDeletedCells()
 
         write(other_mesh, f'new_pd_{file_name}.vtk')
 
 
-    def tringulate_cell(self, mesh, cell_id, edges):
+    @staticmethod
+    def tringulate_cell(mesh, cell_id, edges = None):
 
         ids, pts = get_points(mesh, cell_id)
 
@@ -330,15 +342,19 @@ class Prepare:
 
         new_cell = []
 
-        cell_pts = cell_pts + cell_pts[:1]
+        if edges:
+            cell_pts = cell_pts + cell_pts[:1]
 
-        for a, b in zip(cell_pts, cell_pts[1:]):
-            new_cell.append(a)
+            for a, b in zip(cell_pts, cell_pts[1:]):
+                new_cell.append(a)
 
-            edge = a.id, b.id
+                edge = a.id, b.id
 
-            if edge in edges:
-                new_cell.extend(edges[edge])
+                if edge in edges:
+                    new_cell.extend(edges[edge])
+
+        else:
+            new_cell = cell_pts[:]
 
         print([ p.id for p in new_cell ])
 
@@ -370,6 +386,24 @@ class Prepare:
             [ cell.InsertNextId(new_cell[i].id) for i in triangle ]
 
             mesh.InsertNextCell(VTK_TRIANGLE, cell)
+
+
+    @staticmethod
+    def move_pt(mesh, ind, dest_pt):
+
+        cells = vtkIdList()
+
+        mesh.GetPointCells(ind, cells)
+
+        for i in range(cells.GetNumberOfIds()):
+            cell_id = cells.GetId(i)
+
+            t = mesh.GetCellType(cell_id)
+
+            if t == VTK_POLYGON or t == VTK_QUAD:
+                Prepare.tringulate_cell(mesh, cell_id)
+
+        mesh.GetPoints().SetPoint(ind, dest_pt)
 
 
 def create_complex():
@@ -453,12 +487,38 @@ def test2():
 
     Prepare(pd_a, pd_b)
 
+def test3():
+    reader = vtkPolyDataReader()
+    reader.SetFileName('../testing/data/cross.vtk')
+
+    z = .000001
+
+    tra = vtkTransform()
+    tra.RotateZ(45)
+    tra.Translate(0, 0, z)
+
+    tf = vtkTransformPolyDataFilter()
+    tf.SetTransform(tra)
+    tf.SetInputConnection(reader.GetOutputPort())
+
+    tf.Update()
+
+    pd_a = reader.GetOutput()
+    pd_b = tf.GetOutput()
+
+    Prepare(pd_a, pd_b)
+
 
 if __name__ == '__main__':
-    # test()
+    r = sys.argv[1]
 
-    create_complex()
-    test2()
+    if r == '0':
+        test()
+    elif r == '1':
+        create_complex()
+        test2()
+    elif r == '2':
+        test3()
 
     # verify
 
