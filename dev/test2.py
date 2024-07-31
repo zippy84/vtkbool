@@ -95,15 +95,9 @@ class Align:
 
                     # lage innerhalb der cell?
 
-                    snap = None
-
                     ids, cell_pts = get_points(other_mesh, cell_id)
 
-                    for id_, pt_ in zip(ids, cell_pts):
-                        if vtkMath.Distance2BetweenPoints(pt, pt_) < 1e-10:
-                            snap = SnapPoint(cell_id, pt, id_, pt_, line)
-
-                            break
+                    snap = next(( SnapPoint(cell_id, pt, id_, pt_, line) for id_, pt_ in zip(ids, cell_pts) if vtkMath.Distance2BetweenPoints(pt, pt_) < 1e-10 ), None)
 
                     if not snap:
                         try:
