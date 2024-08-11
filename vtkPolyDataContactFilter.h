@@ -40,11 +40,16 @@ enum class End {
     END
 };
 
+enum class PointSrc {
+    CALCULATED,
+    COPIED
+};
+
 class InterPt {
 public:
     InterPt () = delete;
 
-    InterPt (double x, double y, double z, double t, vtkIdType a, vtkIdType b, End end, Src src) : t(t), edge(a, b), end(end), src(src), srcA(NOTSET), srcB(NOTSET) {
+    InterPt (double x, double y, double z, double t, vtkIdType a, vtkIdType b, End end, Src src, PointSrc pointSrc) : t(t), edge(a, b), end(end), src(src), srcA(NOTSET), srcB(NOTSET), pointSrc(pointSrc) {
         pt[0] = x;
         pt[1] = y;
         pt[2] = z;
@@ -56,12 +61,15 @@ public:
     Src src;
     vtkIdType srcA, srcB;
 
+    PointSrc pointSrc;
+
     friend std::ostream& operator<< (std::ostream &out, const InterPt &s) {
         out << "pt [" << s.pt[0] << ", " << s.pt[1] << ", " << s.pt[2] << "]"
             << ", t " << s.t
             << ", edge " << s.edge
             << ", end " << s.end
-            << ", src " << s.src;
+            << ", src " << s.src
+            << ", pointSrc " << s.pointSrc;
 
         return out;
     }
@@ -70,18 +78,30 @@ public:
         assert(src != other.src);
 
         if (src == Src::A) {
-            srcA = end == End::END ? edge.g : edge.f;
+            srcA = getEnd();
         } else {
-            srcB = end == End::END ? edge.g : edge.f;
+            srcB = getEnd();
         }
 
         if (std::abs(other.t-t) < 1e-5) {
             if (other.src == Src::A) {
-                srcA = other.end == End::END ? other.edge.g : other.edge.f;
+                srcA = other.getEnd();
             } else {
-                srcB = other.end == End::END ? other.edge.g : other.edge.f;
+                srcB = other.getEnd();
             }
         }
+    }
+
+    inline vtkIdType getEnd() const {
+        if (end == End::BEGIN) {
+            return edge.f;
+        }
+
+        if (end == End::END) {
+            return edge.g;
+        }
+
+        return NOTSET;
     }
 
 };

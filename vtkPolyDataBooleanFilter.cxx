@@ -148,7 +148,7 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
             modPdA->DeepCopy(cl->GetOutput(1));
             modPdB->DeepCopy(cl->GetOutput(2));
 
-#ifdef DEBUG
+// #ifdef DEBUG
             std::cout << "Exporting contLines.vtk" << std::endl;
             WriteVTK("contLines.vtk", contLines);
 
@@ -157,7 +157,7 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
 
             std::cout << "Exporting modPdB_1.vtk" << std::endl;
             WriteVTK("modPdB_1.vtk", modPdB);
-#endif
+// #endif
 
             if (contLines->GetNumberOfCells() == 0) {
                 return 1;
@@ -175,14 +175,21 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
 
             auto cells = vtkSmartPointer<vtkIdList>::New();
 
+            bool hasGap(false);
+
             for (i = 0; i < numPts; i++) {
                 contLines->GetPointCells(i, cells);
 
                 if (cells->GetNumberOfIds() == 1) {
-                    vtkErrorMacro("Contact ends suddenly.");
-                    return 1;
+                    vtkErrorMacro("Contact ends suddenly at point " << i << ".");
+
+                    hasGap = true;
                 }
 
+            }
+
+            if (hasGap) {
+                return 1;
             }
 
             // sichert die OrigCellIds

@@ -14,6 +14,7 @@ from vtkmodules.vtkCommonTransforms import vtkTransform
 from vtkmodules.vtkIOLegacy import vtkPolyDataWriter, vtkPolyDataReader
 from vtkmodules.vtkFiltersFlowPaths import vtkModifiedBSPTree
 from vtkmodules.vtkFiltersCore import vtkCleanPolyData
+from vtkmodules.vtkCommonExecutionModel import vtkAlgorithm
 
 import sys
 sys.path.extend(['/home/zippy/vtkbool/build/lib/python3.12/site-packages/vtkbool'])
@@ -139,6 +140,7 @@ def get_points(pd, cell_id):
 
 def clean(pd):
     clean = vtkCleanPolyData()
+    clean.SetOutputPointsPrecision(vtkAlgorithm.DOUBLE_PRECISION)
     clean.SetInputData(pd)
     clean.Update()
 
@@ -247,7 +249,7 @@ class Prepare:
             print(point_snaps)
 
             for snaps in point_snaps:
-                assert len(snaps) == 2
+                assert len(snaps) == 2 # sind hier nicht auch mehr als 2 möglich?
 
                 a, b = snaps
 
@@ -405,6 +407,8 @@ class Prepare:
 
         mesh.GetPoints().SetPoint(ind, dest_pt)
 
+        assert mesh.GetPoints().GetPoint(ind) == tuple(dest_pt)
+
 
 def create_complex():
     cyl = vtkCylinderSource()
@@ -459,7 +463,7 @@ def test():
     pd_a = cyl.GetOutput()
     pd_b = tf.GetOutput()
 
-    Prepare(pd_a, pd_b)
+    return Prepare(pd_a, pd_b)
 
 def test2():
     cyl = vtkCylinderSource()
@@ -485,7 +489,7 @@ def test2():
     pd_a = cyl.GetOutput()
     pd_b = tf.GetOutput()
 
-    Prepare(pd_a, pd_b)
+    return Prepare(pd_a, pd_b)
 
 def test3():
     reader = vtkPolyDataReader()
@@ -506,31 +510,25 @@ def test3():
     pd_a = reader.GetOutput()
     pd_b = tf.GetOutput()
 
-    Prepare(pd_a, pd_b)
+    return Prepare(pd_a, pd_b)
 
 
 if __name__ == '__main__':
     r = sys.argv[1]
 
     if r == '0':
-        test()
+        prepare = test()
     elif r == '1':
         create_complex()
-        test2()
+        prepare = test2()
     elif r == '2':
-        test3()
+        prepare = test3()
 
     # verify
 
-    reader_a = vtkPolyDataReader()
-    reader_a.SetFileName('new_pd_a.vtk')
-
-    reader_b = vtkPolyDataReader()
-    reader_b.SetFileName('new_pd_b.vtk')
-
     bf = vtkPolyDataBooleanFilter()
-    bf.SetInputConnection(0, reader_a.GetOutputPort())
-    bf.SetInputConnection(1, reader_b.GetOutputPort())
+    bf.SetInputData(0, prepare.mesh_a)
+    bf.SetInputData(1, prepare.mesh_b)
 
     writer = vtkPolyDataWriter()
     writer.SetFileName('union.vtk')

@@ -5,8 +5,8 @@ import math
 from collections import defaultdict, namedtuple
 from operator import itemgetter
 
-from vtkmodules.vtkCommonCore import vtkIdList, vtkIdTypeArray, vtkPoints, vtkMath
-from vtkmodules.vtkCommonDataModel import vtkPolyData, VTK_POLYGON, VTK_VERTEX, VTK_TRIANGLE
+from vtkmodules.vtkCommonCore import vtkIdList, vtkIdTypeArray, vtkPoints, vtkMath, mutable
+from vtkmodules.vtkCommonDataModel import vtkPolyData, VTK_POLYGON, VTK_QUAD, VTK_VERTEX, VTK_TRIANGLE, vtkKdTreePointLocator
 from vtkmodules.vtkFiltersSources import vtkCylinderSource
 from vtkmodules.vtkFiltersGeneral import vtkTransformPolyDataFilter
 from vtkmodules.vtkCommonTransforms import vtkTransform
@@ -14,17 +14,51 @@ from vtkmodules.vtkIOLegacy import vtkPolyDataWriter, vtkPolyDataReader
 from vtkmodules.vtkFiltersFlowPaths import vtkModifiedBSPTree
 from vtkmodules.vtkFiltersCore import vtkCleanPolyData
 
-from test import SnapPoint, SnapEdge, SnapPoly, write, compute_normal, Base, in_poly, proj_line, get_points, clean
+import sys
+sys.path.extend(['/home/zippy/vtkbool/build/lib/python3.12/site-packages/vtkbool'])
+
+from vtkBool import vtkPolyDataBooleanFilter
+
+from test import SnapPoint, SnapEdge, SnapPoly, write, compute_normal, Base, in_poly, _proj_line, proj_line, get_points, clean, Prepare
 
 class Align:
     def __init__(self, mesh_a, mesh_b):
         self.mesh_a = clean(mesh_a)
         self.mesh_b = clean(mesh_b)
 
-        self.find_inters(self.mesh_a, self.mesh_b, 'verts_a_2.vtk')
-        self.find_inters(self.mesh_b, self.mesh_a, 'verts_b_2.vtk')
+        write(self.mesh_a, 'cleaned_a_2.vtk')
+        write(self.mesh_b, 'cleaned_b_2.vtk')
 
-    def find_inters(self, mesh, other_mesh, file_name):
+        self.congr_ids_a = set()
+        self.congr_ids_b = set()
+
+        self.align_congruent_points()
+
+        self.find_inters(self.mesh_a, self.mesh_b, self.congr_ids_a, 'a') # , 18340)
+        self.find_inters(self.mesh_b, self.mesh_a, self.congr_ids_b, 'b') # , 1659)
+
+    def align_congruent_points(self):
+        tree = vtkKdTreePointLocator()
+
+        tree.SetDataSet(self.mesh_b)
+        tree.BuildLocator()
+
+        for i in range(self.mesh_a.GetNumberOfPoints()):
+            p = self.mesh_a.GetPoint(i)
+
+            d = mutable(0)
+
+            j = tree.FindClosestPointWithinRadius(1e-5, p, d)
+
+            if j != -1:
+                Prepare.move_pt(self.mesh_a, i, self.mesh_b.GetPoint(j))
+
+                self.congr_ids_a.add(i)
+                self.congr_ids_b.add(j)
+
+    def find_inters(self, mesh, other_mesh, omit_ids, file_name, deb_id = None):
+        if deb_id is not None:
+            print(f'find_iters({file_name})')
 
         lines = set()
 
@@ -33,17 +67,23 @@ class Align:
         while not itr.IsDoneWithTraversal():
             curr = itr.GetCurrentCell()
 
-            ids = [ curr.GetId(i) for i in range(curr.GetNumberOfIds()) ]
+            if deb_id is not None and deb_id != itr.GetCurrentCellId():
+                pass
 
-            ids = ids + ids[:1]
+            else:
 
-            for line in zip(ids, ids[1:]):
-                if line[::-1] not in lines:
-                    lines.add(tuple(line))
+                ids = [ curr.GetId(i) for i in range(curr.GetNumberOfIds()) ]
+
+                ids = ids + ids[:1]
+
+                for line in zip(ids, ids[1:]):
+                    if line[::-1] not in lines:
+                        lines.add(tuple(line))
 
             itr.GoToNextCell()
 
-        # print(lines)
+        if deb_id is not None:
+            print(lines)
 
         tree = vtkModifiedBSPTree()
         tree.SetDataSet(other_mesh)
@@ -55,6 +95,8 @@ class Align:
         pd_pts = vtkPoints()
 
         inters = defaultdict(list)
+
+        other_inters = defaultdict(list)
 
         pts = vtkPoints()
         cells = vtkIdList()
@@ -84,26 +126,33 @@ class Align:
             for i in range(pts.GetNumberOfPoints()):
                 cell_id = cells.GetId(i)
 
-                pt = pts.GetPoint(i)
+                s = pts.GetPoint(i)
 
-                d_a = vtkMath.Distance2BetweenPoints(pt, p_a)
-                d_b = vtkMath.Distance2BetweenPoints(pt, p_b)
+                # projektion s auf line, da schnittpunkt in abh. von cell nicht exakt sein kann
 
-                # abstand innerhalb (1e-6, 1e-5)?
+                s, d = _proj_line(mesh, line, s)
 
-                if (d_a < 1e-10 and d_a > 1e-12) or (d_b < 1e-10 and d_b > 1e-12):
+                if deb_id is not None:
+                    print('->', cell_id, d)
+
+                d_a = vtkMath.Distance2BetweenPoints(s, p_a)
+                d_b = vtkMath.Distance2BetweenPoints(s, p_b)
+
+                # abstand innerhalb 1e-5?
+
+                if d_a < 1e-10 or d_b < 1e-10:
 
                     # lage innerhalb der cell?
 
                     ids, cell_pts = get_points(other_mesh, cell_id)
 
-                    snap = next(( SnapPoint(cell_id, pt, id_, pt_, line) for id_, pt_ in zip(ids, cell_pts) if vtkMath.Distance2BetweenPoints(pt, pt_) < 1e-10 ), None)
+                    snap = next(( SnapPoint(cell_id, s, id_, pt, line) for id_, pt in zip(ids, cell_pts) if vtkMath.Distance2BetweenPoints(s, pt) < 1e-10 ), None)
 
                     if not snap:
                         try:
-                            edge, proj = proj_line(other_mesh, ids, pt)
+                            edge, proj = proj_line(other_mesh, ids, s)
 
-                            snap = SnapEdge(cell_id, pt, edge, proj, line)
+                            snap = SnapEdge(cell_id, s, edge, proj, line)
                         except TypeError:
                             pass
 
@@ -112,27 +161,34 @@ class Align:
 
                         base = Base(cell_pts, normal)
 
-                        if in_poly(base.poly, base.tr_forward(pt)):
-                            snap = SnapPoly(cell_id, pt, line)
+                        if in_poly(base.poly, base.tr_forward(s)):
+                            snap = SnapPoly(cell_id, s, line)
 
                     if snap:
-                        # print(snap)
-
-                        if d_a < 1e-10 and d_a > 1e-12:
+                        if d_a < 1e-10 and a not in omit_ids:
                             inters[a].append(snap)
 
-                        elif d_b < 1e-10 and d_b > 1e-12:
+                        elif d_b < 1e-10 and b not in omit_ids:
                             inters[b].append(snap)
 
                         vert = vtkIdList()
-                        vert.InsertNextId(pd_pts.InsertNextPoint(pt))
+                        vert.InsertNextId(pd_pts.InsertNextPoint(s))
 
                         pd.InsertNextCell(VTK_VERTEX, vert)
+
+                else:
+                    ids, cell_pts = get_points(other_mesh, cell_id)
+
+                    snap = next(( SnapPoint(cell_id, s, id_, pt, line) for id_, pt in zip(ids, cell_pts) if vtkMath.Distance2BetweenPoints(s, pt) < 1e-10 ), None)
+
+                    if snap and snap.s != snap.pt:
+                        other_inters[snap.id].append(snap)
+
 
 
         pd.SetPoints(pd_pts)
 
-        write(pd, file_name)
+        write(pd, f'verts_{file_name}_2.vtk')
 
         for ind, snaps in inters.items():
 
@@ -140,15 +196,24 @@ class Align:
 
                 assert len(set( frozenset(snap.edge) for snap in snaps )) == 1
 
-                self.move_pt(mesh, ind, snaps[0].proj)
+                if deb_id is not None:
+                    print(ind, snaps[0])
+
+                Prepare.move_pt(mesh, ind, snaps[0].proj)
 
             elif all( isinstance(snap, SnapPoint) for snap in snaps ):
                 assert len(set( snap.id for snap in snaps )) == 1
 
-                self.move_pt(mesh, ind, snaps[0].pt)
+                if deb_id is not None:
+                    print(ind, snaps[0])
+
+                Prepare.move_pt(mesh, ind, snaps[0].pt)
 
             elif all( isinstance(snap, SnapPoly) for snap in snaps ):
-                self.move_pt(mesh, ind, snaps[0].s)
+                if deb_id is not None:
+                    print(ind, snaps[0])
+
+                Prepare.move_pt(mesh, ind, snaps[0].s)
 
             else:
                 point_snaps = [ snap for snap in snaps if isinstance(snap, SnapPoint) ]
@@ -156,27 +221,28 @@ class Align:
                 edge_snaps = [ snap for snap in snaps if isinstance(snap, SnapEdge) ]
 
                 if point_snaps:
-                    self.move_pt(mesh, ind, point_snaps[0].pt)
+                    if deb_id is not None:
+                        print(ind, point_snaps[0])
+
+                    Prepare.move_pt(mesh, ind, point_snaps[0].pt)
 
                 elif edge_snaps:
-                    self.move_pt(mesh, ind, edge_snaps[0].proj)
+                    if deb_id is not None:
+                        print(ind, edge_snaps[0])
 
+                    Prepare.move_pt(mesh, ind, edge_snaps[0].proj)
 
-    def move_pt(self, mesh, ind, dest_pt):
-        src_pt = mesh.GetPoint(ind)
+        mesh.RemoveDeletedCells()
 
-        d = vtkMath.Distance2BetweenPoints(src_pt, dest_pt)
+        for ind, snaps in other_inters.items():
+            snap, = snaps[:1]
 
-        print(ind, '->', dest_pt, d)
+            if deb_id is not None:
+                print(ind, snap)
 
-        cells = vtkIdList()
+            Prepare.move_pt(other_mesh, ind, snap.s)
 
-        mesh.GetPointCells(ind, cells)
-
-        types = [ mesh.GetCellType(cells.GetId(i)) for i in range(cells.GetNumberOfIds()) ]
-
-        if all(t == VTK_TRIANGLE for t in types):
-            pass
+        write(mesh, f'new_pd_{file_name}_2.vtk')
 
 
 if __name__ == '__main__':
@@ -192,4 +258,15 @@ if __name__ == '__main__':
     pd_a = reader_a.GetOutput()
     pd_b = reader_b.GetOutput()
 
-    Align(pd_a, pd_b)
+    align = Align(pd_a, pd_b)
+
+    # verify
+
+    bf = vtkPolyDataBooleanFilter()
+    bf.SetInputData(0, align.mesh_a)
+    bf.SetInputData(1, align.mesh_b)
+
+    writer = vtkPolyDataWriter()
+    writer.SetFileName('union_2.vtk')
+    writer.SetInputConnection(bf.GetOutputPort())
+    writer.Update()
