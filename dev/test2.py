@@ -5,7 +5,7 @@ import math
 from collections import defaultdict, namedtuple
 from operator import itemgetter
 
-from vtkmodules.vtkCommonCore import vtkIdList, vtkIdTypeArray, vtkPoints, vtkMath, mutable
+from vtkmodules.vtkCommonCore import vtkIdList, vtkIdTypeArray, vtkPoints, vtkMath, reference
 from vtkmodules.vtkCommonDataModel import vtkPolyData, VTK_POLYGON, VTK_QUAD, VTK_VERTEX, VTK_TRIANGLE, vtkKdTreePointLocator
 from vtkmodules.vtkFiltersSources import vtkCylinderSource
 from vtkmodules.vtkFiltersGeneral import vtkTransformPolyDataFilter
@@ -46,7 +46,7 @@ class Align:
         for i in range(self.mesh_a.GetNumberOfPoints()):
             p = self.mesh_a.GetPoint(i)
 
-            d = mutable(0)
+            d = reference(0)
 
             j = tree.FindClosestPointWithinRadius(1e-5, p, d)
 
@@ -136,6 +136,8 @@ class Align:
                 if deb_id is not None:
                     print('->', cell_id, d)
 
+                ids, cell_pts = get_points(other_mesh, cell_id)
+
                 d_a = vtkMath.Distance2BetweenPoints(s, p_a)
                 d_b = vtkMath.Distance2BetweenPoints(s, p_b)
 
@@ -144,8 +146,6 @@ class Align:
                 if d_a < 1e-10 or d_b < 1e-10:
 
                     # lage innerhalb der cell?
-
-                    ids, cell_pts = get_points(other_mesh, cell_id)
 
                     snap = next(( SnapPoint(cell_id, s, id_, pt, line) for id_, pt in zip(ids, cell_pts) if vtkMath.Distance2BetweenPoints(s, pt) < 1e-10 ), None)
 
@@ -178,7 +178,6 @@ class Align:
                         pd.InsertNextCell(VTK_VERTEX, vert)
 
                 else:
-                    ids, cell_pts = get_points(other_mesh, cell_id)
 
                     snap = next(( SnapPoint(cell_id, s, id_, pt, line) for id_, pt in zip(ids, cell_pts) if vtkMath.Distance2BetweenPoints(s, pt) < 1e-10 ), None)
 

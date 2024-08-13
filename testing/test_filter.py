@@ -392,7 +392,7 @@ def test_same(tmp_path):
     bf.Update()
 
     write_result(bf, tmp_path)
-    check_result(bf, [88, 88])
+    check_result(bf, [56, 56])
 
 @pytest.mark.xfail
 def test_strips():

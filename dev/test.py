@@ -525,6 +525,8 @@ if __name__ == '__main__':
         prepare = test2()
     elif r == '2':
         prepare = test3()
+    else:
+        sys.exit(1)
 
     # verify
 
