@@ -44,8 +44,8 @@ limitations under the License.
 #include "vtkPolyDataContactFilter.h"
 #include "Utilities.h"
 
-// #define _debA 18340
-// #define _debB 1659
+// #define _debA 18352
+// #define _debB 1829
 
 #if (defined(_debA) && defined(_debB))
 vtkIdType _idA, _idB;

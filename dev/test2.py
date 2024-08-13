@@ -34,8 +34,8 @@ class Align:
 
         self.align_congruent_points()
 
-        self.find_inters(self.mesh_a, self.mesh_b, self.congr_ids_a, 'a') # , 18340)
-        self.find_inters(self.mesh_b, self.mesh_a, self.congr_ids_b, 'b') # , 1659)
+        self.find_inters(self.mesh_a, self.mesh_b, self.congr_ids_a, 'a') #, 18352)
+        self.find_inters(self.mesh_b, self.mesh_a, self.congr_ids_b, 'b') #, 1829)
 
     def align_congruent_points(self):
         tree = vtkKdTreePointLocator()
@@ -58,7 +58,7 @@ class Align:
 
     def find_inters(self, mesh, other_mesh, omit_ids, file_name, deb_id = None):
         if deb_id is not None:
-            print(f'find_iters({file_name})')
+            print(f'find_iters({file_name}, {deb_id})')
 
         lines = set()
 
@@ -102,7 +102,8 @@ class Align:
         cells = vtkIdList()
 
         for line in lines:
-            # print(line)
+            if deb_id is not None:
+                print(line)
 
             a, b = line
 
@@ -130,7 +131,7 @@ class Align:
 
                 # projektion s auf line, da schnittpunkt in abh. von cell nicht exakt sein kann
 
-                s, d = _proj_line(mesh, line, s)
+                s, d, on_line = _proj_line(mesh, line, s)
 
                 if deb_id is not None:
                     print('->', cell_id, d)
@@ -181,8 +182,25 @@ class Align:
 
                     snap = next(( SnapPoint(cell_id, s, id_, pt, line) for id_, pt in zip(ids, cell_pts) if vtkMath.Distance2BetweenPoints(s, pt) < 1e-10 ), None)
 
-                    if snap and snap.s != snap.pt:
-                        other_inters[snap.id].append(snap)
+                    if snap:
+                        if snap.s != snap.pt:
+                            other_inters[snap.id].append(snap)
+
+                    else:
+
+                        projs = [ (id_, pt, vtkMath.Distance2BetweenPoints(s, pt), *_proj_line(mesh, line, pt)) for id_, pt in zip(ids, cell_pts) ]
+
+                        dists = { id_: (math.sqrt(d2), d) for id_, pt, d2, proj, d, on_line in projs if on_line and d < 1e-5 }
+
+                        if snap is None:
+                            if deb_id is not None:
+                                print(cell_id, dists)
+
+                        snap = next(( SnapPoint(cell_id, proj, id_, pt, line) for id_, pt, d2, proj, d, on_line in projs if on_line and d < 1e-5 ), None)
+
+                        if snap and snap.s != snap.pt:
+                            other_inters[snap.id].append(snap)
+
 
 
 
