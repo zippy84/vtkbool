@@ -98,7 +98,7 @@ def _proj_line(mesh, edge, pt):
     v = [0, 0, 0]
 
     vtkMath.Subtract(p_b, p_a, v)
-    vtkMath.Normalize(v)
+    L = vtkMath.Normalize(v)
 
     w = [0, 0, 0]
 
@@ -120,15 +120,15 @@ def _proj_line(mesh, edge, pt):
 
     t = prod*l
 
-    return proj, d, t > -1e-5 and t < l+1e-5
+    return proj, d, L, t
 
 def proj_line(mesh, ids, pt):
     ids = ids + ids[:1]
 
     for edge in zip(ids, ids[1:]):
-        proj, d, _ = _proj_line(mesh, edge, pt)
+        proj, d, l, t = _proj_line(mesh, edge, pt)
 
-        if d > 0 and d < 1e-5:
+        if d > 0 and d < 1e-5 and t > 0 and t < l:
             return edge, proj
 
 
@@ -257,7 +257,7 @@ class Prepare:
 
                 assert a.id == b.id
 
-                proj, d, on_line = _proj_line(mesh, a.line, a.pt)
+                proj, d, *rest = _proj_line(mesh, a.line, a.pt)
 
                 print(a.id, '->', proj, d)
 
@@ -275,7 +275,7 @@ class Prepare:
 
                 assert frozenset(a.edge) == frozenset(b.edge)
 
-                proj, d, on_line = _proj_line(mesh, a.line, a.proj)
+                proj, l, d, t = _proj_line(mesh, a.line, a.proj)
 
                 all_edge_snaps[frozenset(a.edge)].append((a, proj, d))
 

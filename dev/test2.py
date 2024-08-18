@@ -34,8 +34,73 @@ class Align:
 
         self.align_congruent_points()
 
-        self.find_inters(self.mesh_a, self.mesh_b, self.congr_ids_a, 'a') #, 18352)
-        self.find_inters(self.mesh_b, self.mesh_a, self.congr_ids_b, 'b') #, 1829)
+        deb_a = None
+        deb_b = None
+
+        # deb_a = 17696
+        # deb_b = 29901
+
+        self.lines_a = defaultdict(set)
+        self.lines_b = defaultdict(set)
+
+        self.find_inters(self.mesh_a, self.mesh_b, self.congr_ids_a, self.lines_a, self.lines_b, 'a', deb_a)
+        self.find_inters(self.mesh_b, self.mesh_a, self.congr_ids_b, self.lines_b, self.lines_a, 'b', deb_b)
+
+        self.lines_a = { edge: { ind: [sys.float_info.max] for ind in dat } for edge, dat in self.lines_a.items() }
+        self.lines_b = { edge: { ind: [sys.float_info.max] for ind in dat } for edge, dat in self.lines_b.items() }
+
+        while self.adjust_snaps(self.mesh_a, self.mesh_b, self.lines_a, 'a') > 0 \
+            or self.adjust_snaps(self.mesh_b, self.mesh_a, self.lines_b, 'b') > 0:
+
+            pass
+
+        self.final_check(self.lines_a, 'a')
+        self.final_check(self.lines_b, 'b')
+
+
+    def final_check(self, connected, name):
+        print(f'final_check({name})')
+
+        data = []
+
+        for edge, dat in connected.items():
+            for ind, dists in dat.items():
+
+                if len(dists) > 1 and dists[-1] > 1e-10:
+                    data.append((edge, ind, math.sqrt(dists[-1])))
+
+        data.sort(key=itemgetter(2))
+
+        for dat in data:
+            print(*dat)
+
+
+    def adjust_snaps(self, mesh, other_mesh, connected, name):
+        i = 0
+
+        for edge, dat in connected.items():
+            # edge auf die gesnapt wurde
+
+            for ind, dists in dat.items():
+                # ind ist der punkt aus mesh, der auf edge liegen sollte
+
+                pt = mesh.GetPoint(ind)
+
+                proj, d, l, t = _proj_line(other_mesh, edge, pt)
+
+                if d > 1e-10:
+                     # konvergenz zur 0 ist erstrebenswert
+
+                    if d < dists[-1]:
+                        Prepare.move_pt(mesh, ind, proj)
+
+                        dists.append(d)
+
+                        i += 1
+
+        return i
+
+
 
     def align_congruent_points(self):
         tree = vtkKdTreePointLocator()
@@ -56,9 +121,11 @@ class Align:
                 self.congr_ids_a.add(i)
                 self.congr_ids_b.add(j)
 
-    def find_inters(self, mesh, other_mesh, omit_ids, file_name, deb_id = None):
+    def find_inters(self, mesh, other_mesh, omit_ids, connected, other_connected, name, deb_id = None):
         if deb_id is not None:
-            print(f'find_iters({file_name}, {deb_id})')
+            print(f'find_iters({name}, {deb_id})')
+
+        cell_lines = defaultdict(list)
 
         lines = set()
 
@@ -67,23 +134,25 @@ class Align:
         while not itr.IsDoneWithTraversal():
             curr = itr.GetCurrentCell()
 
-            if deb_id is not None and deb_id != itr.GetCurrentCellId():
-                pass
+            ids = [ curr.GetId(i) for i in range(curr.GetNumberOfIds()) ]
 
-            else:
+            ids = ids + ids[:1]
 
-                ids = [ curr.GetId(i) for i in range(curr.GetNumberOfIds()) ]
+            for line in zip(ids, ids[1:]):
+                _line = tuple(sorted(line))
 
-                ids = ids + ids[:1]
+                cell_lines[itr.GetCurrentCellId()].append(_line)
 
-                for line in zip(ids, ids[1:]):
-                    if line[::-1] not in lines:
-                        lines.add(tuple(line))
+                lines.add(_line)
 
             itr.GoToNextCell()
 
+        _lines = []
+
         if deb_id is not None:
-            print(lines)
+            _lines = cell_lines[deb_id]
+
+            print(_lines)
 
         tree = vtkModifiedBSPTree()
         tree.SetDataSet(other_mesh)
@@ -102,8 +171,8 @@ class Align:
         cells = vtkIdList()
 
         for line in lines:
-            if deb_id is not None:
-                print(line)
+            if line in _lines:
+                print('line', line)
 
             a, b = line
 
@@ -131,9 +200,9 @@ class Align:
 
                 # projektion s auf line, da schnittpunkt in abh. von cell nicht exakt sein kann
 
-                s, d, on_line = _proj_line(mesh, line, s)
+                s, d, *rest = _proj_line(mesh, line, s)
 
-                if deb_id is not None:
+                if line in _lines:
                     print('->', cell_id, d)
 
                 ids, cell_pts = get_points(other_mesh, cell_id)
@@ -156,14 +225,6 @@ class Align:
                             snap = SnapEdge(cell_id, s, edge, proj, line)
                         except TypeError:
                             pass
-
-                    if not snap:
-                        normal = compute_normal(cell_pts)
-
-                        base = Base(cell_pts, normal)
-
-                        if in_poly(base.poly, base.tr_forward(s)):
-                            snap = SnapPoly(cell_id, s, line)
 
                     if snap:
                         if d_a < 1e-10 and a not in omit_ids:
@@ -189,13 +250,13 @@ class Align:
 
                         projs = [ (id_, pt, vtkMath.Distance2BetweenPoints(s, pt), *_proj_line(mesh, line, pt)) for id_, pt in zip(ids, cell_pts) ]
 
-                        dists = { id_: (math.sqrt(d2), d) for id_, pt, d2, proj, d, on_line in projs if on_line and d < 1e-5 }
+                        dists = { id_: (math.sqrt(d2), d) for id_, pt, d2, proj, d, l, t in projs if d < 1e-5 and t > 0 and t < l }
 
                         if snap is None:
-                            if deb_id is not None:
+                            if line in _lines:
                                 print(cell_id, dists)
 
-                        snap = next(( SnapPoint(cell_id, proj, id_, pt, line) for id_, pt, d2, proj, d, on_line in projs if on_line and d < 1e-5 ), None)
+                        snap = next(( SnapPoint(cell_id, proj, id_, pt, line) for id_, pt, d2, proj, d, l, t in projs if d < 1e-5 and t > 0 and t < l ), None)
 
                         if snap and snap.s != snap.pt:
                             other_inters[snap.id].append(snap)
@@ -205,7 +266,8 @@ class Align:
 
         pd.SetPoints(pd_pts)
 
-        write(pd, f'verts_{file_name}_2.vtk')
+        write(pd, f'verts_{name}_2.vtk')
+
 
         for ind, snaps in inters.items():
 
@@ -213,24 +275,24 @@ class Align:
 
                 assert len(set( frozenset(snap.edge) for snap in snaps )) == 1
 
-                if deb_id is not None:
-                    print(ind, snaps[0])
+                snap = snaps[0]
 
-                Prepare.move_pt(mesh, ind, snaps[0].proj)
+                if snap.line in _lines:
+                    print('1 ->', ind, snap)
+
+                Prepare.move_pt(mesh, ind, snap.proj)
+
+                connected[snap.edge].add(ind)
 
             elif all( isinstance(snap, SnapPoint) for snap in snaps ):
                 assert len(set( snap.id for snap in snaps )) == 1
 
-                if deb_id is not None:
-                    print(ind, snaps[0])
+                snap = snaps[0]
 
-                Prepare.move_pt(mesh, ind, snaps[0].pt)
+                if snap.line in _lines:
+                    print('2 ->', ind, snap)
 
-            elif all( isinstance(snap, SnapPoly) for snap in snaps ):
-                if deb_id is not None:
-                    print(ind, snaps[0])
-
-                Prepare.move_pt(mesh, ind, snaps[0].s)
+                Prepare.move_pt(mesh, ind, snap.pt)
 
             else:
                 point_snaps = [ snap for snap in snaps if isinstance(snap, SnapPoint) ]
@@ -238,28 +300,36 @@ class Align:
                 edge_snaps = [ snap for snap in snaps if isinstance(snap, SnapEdge) ]
 
                 if point_snaps:
-                    if deb_id is not None:
-                        print(ind, point_snaps[0])
+                    snap = point_snaps[0]
 
-                    Prepare.move_pt(mesh, ind, point_snaps[0].pt)
+                    if snap.line in _lines:
+                        print('4 ->', ind, snap)
+
+                    Prepare.move_pt(mesh, ind, snap.pt)
 
                 elif edge_snaps:
-                    if deb_id is not None:
-                        print(ind, edge_snaps[0])
+                    snap = edge_snaps[0]
 
-                    Prepare.move_pt(mesh, ind, edge_snaps[0].proj)
+                    if snap.line in _lines:
+                        print('5 ->', ind, snap)
+
+                    Prepare.move_pt(mesh, ind, snap.proj)
 
         mesh.RemoveDeletedCells()
 
         for ind, snaps in other_inters.items():
             snap, = snaps[:1]
 
-            if deb_id is not None:
-                print(ind, snap)
+            if snap.line in _lines:
+                print('6 ->', ind, snap)
 
             Prepare.move_pt(other_mesh, ind, snap.s)
 
-        write(mesh, f'new_pd_{file_name}_2.vtk')
+            other_connected[snap.line].add(snap.id)
+
+            # cell_id,s,edge,proj,line
+
+        write(mesh, f'new_pd_{name}_2.vtk')
 
 
 if __name__ == '__main__':
