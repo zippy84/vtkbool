@@ -44,8 +44,8 @@ limitations under the License.
 #include "vtkPolyDataContactFilter.h"
 #include "Utilities.h"
 
-// #define _debA 17696
-// #define _debB 29901
+// #define _debA 17920
+// #define _debB 1339
 
 #if (defined(_debA) && defined(_debB))
 vtkIdType _idA, _idB;
@@ -753,7 +753,7 @@ void vtkPolyDataContactFilter::InterPolys (vtkIdType idA, vtkIdType idB) {
     ComputeNormal(newPdA->GetPoints(), nA, numA, polyA);
     ComputeNormal(newPdB->GetPoints(), nB, numB, polyB);
 
-    if (vtkMath::Dot(nA, nB) > .999999) {
+    if (vtkMath::Dot(nA, nB) > .9999999999) {
         return;
     }
 
@@ -890,6 +890,12 @@ void vtkPolyDataContactFilter::OverlapLines (OverlapsType &ols, InterPtsType &in
 
 void vtkPolyDataContactFilter::AddContactLines (InterPtsType &intersA, InterPtsType &intersB, vtkIdType idA, vtkIdType idB) {
 
+#if (defined(_debA) && defined(_debB))
+    if (_idA == _debA && _idB == _debB) {
+        std::cout << "AddContactLines()" << std::endl;
+    }
+#endif
+
     OverlapsType overlaps;
     OverlapLines(overlaps, intersA, intersB, idA, idB);
 
@@ -922,6 +928,13 @@ void vtkPolyDataContactFilter::AddContactLines (InterPtsType &intersA, InterPtsT
                 invalidB = true;
             }
         }
+
+#if (defined(_debA) && defined(_debB))
+        if (_idA == _debA && _idB == _debB) {
+            std::cout << "line[0] " << f << std::endl;
+            std::cout << "line[1] " << s << std::endl;
+        }
+#endif
 
         vtkIdList *linePts = vtkIdList::New();
 

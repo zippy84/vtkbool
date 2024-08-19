@@ -21,6 +21,13 @@ from vtkBool import vtkPolyDataBooleanFilter
 
 from test import SnapPoint, SnapEdge, SnapPoly, write, compute_normal, Base, in_poly, _proj_line, proj_line, get_points, clean, Prepare
 
+def get_plane(pts):
+    normal = compute_normal(pts)
+
+    d = vtkMath.Dot(normal, pts[0])
+
+    return normal, d
+
 class Align:
     def __init__(self, mesh_a, mesh_b):
         self.mesh_a = clean(mesh_a)
@@ -37,8 +44,8 @@ class Align:
         deb_a = None
         deb_b = None
 
-        # deb_a = 17696
-        # deb_b = 29901
+        deb_a = 17920 # 17007
+        deb_b = 1339
 
         self.lines_a = defaultdict(set)
         self.lines_b = defaultdict(set)
@@ -210,6 +217,9 @@ class Align:
                 d_a = vtkMath.Distance2BetweenPoints(s, p_a)
                 d_b = vtkMath.Distance2BetweenPoints(s, p_b)
 
+                if line in _lines:
+                    print(d_a, d_b)
+
                 # abstand innerhalb 1e-5?
 
                 if d_a < 1e-10 or d_b < 1e-10:
@@ -261,6 +271,51 @@ class Align:
                         if snap and snap.s != snap.pt:
                             other_inters[snap.id].append(snap)
 
+                        if not snap:
+                            plane_normal, plane_d = get_plane(cell_pts)
+
+                            plane_d_a = vtkMath.Dot(plane_normal, p_a)-plane_d
+                            plane_d_b = vtkMath.Dot(plane_normal, p_b)-plane_d
+
+                            if line in _lines:
+                                print(plane_d_a, plane_d_b)
+
+                            base = Base(cell_pts, plane_normal)
+
+                            if abs(plane_d_a) < 1e-5:
+                                v = plane_normal[:]
+
+                                vtkMath.MultiplyScalar(v, plane_d_a)
+
+                                w = [0, 0, 0]
+
+                                vtkMath.Subtract(p_a, v, w)
+
+                                if in_poly(base.poly, base.tr_forward(w)):
+                                    snap = SnapPoly(cell_id, w, line)
+
+                                    if line in _lines:
+                                        print(a, snap)
+
+                                    inters[a].append(snap)
+
+                            if abs(plane_d_b) < 1e-5:
+                                v = plane_normal[:]
+
+                                vtkMath.MultiplyScalar(v, plane_d_b)
+
+                                w = [0, 0, 0]
+
+                                vtkMath.Subtract(p_b, v, w)
+
+                                if in_poly(base.poly, base.tr_forward(w)):
+                                    snap = SnapPoly(cell_id, w, line)
+
+                                    if line in _lines:
+                                        print(b, snap)
+
+                                    inters[b].append(snap)
+
 
 
 
@@ -271,28 +326,36 @@ class Align:
 
         for ind, snaps in inters.items():
 
-            if all( isinstance(snap, SnapEdge) for snap in snaps ):
-
-                assert len(set( frozenset(snap.edge) for snap in snaps )) == 1
+            if all( isinstance(snap, SnapPoint) for snap in snaps ):
+                assert len(set( snap.id for snap in snaps )) == 1
 
                 snap = snaps[0]
 
                 if snap.line in _lines:
                     print('1 ->', ind, snap)
 
-                Prepare.move_pt(mesh, ind, snap.proj)
+                Prepare.move_pt(mesh, ind, snap.pt)
 
-                connected[snap.edge].add(ind)
+            elif all( isinstance(snap, SnapEdge) for snap in snaps ):
 
-            elif all( isinstance(snap, SnapPoint) for snap in snaps ):
-                assert len(set( snap.id for snap in snaps )) == 1
+                assert len(set( frozenset(snap.edge) for snap in snaps )) == 1
 
                 snap = snaps[0]
 
                 if snap.line in _lines:
                     print('2 ->', ind, snap)
 
-                Prepare.move_pt(mesh, ind, snap.pt)
+                Prepare.move_pt(mesh, ind, snap.proj)
+
+                connected[snap.edge].add(ind)
+
+            elif all( isinstance(snap, SnapPoly) for snap in snaps ):
+                snap = snaps[0]
+
+                if snap.line in _lines:
+                    print('3 ->', ind, snap)
+
+                Prepare.move_pt(mesh, ind, snap.s)
 
             else:
                 point_snaps = [ snap for snap in snaps if isinstance(snap, SnapPoint) ]
@@ -327,7 +390,6 @@ class Align:
 
             other_connected[snap.line].add(snap.id)
 
-            # cell_id,s,edge,proj,line
 
         write(mesh, f'new_pd_{name}_2.vtk')
 
