@@ -47,30 +47,59 @@ class Align:
         deb_a = 17920 # 17007
         deb_b = 1339
 
-        self.lines_a = defaultdict(set)
-        self.lines_b = defaultdict(set)
+        self.edges_a = defaultdict(set)
+        self.edges_b = defaultdict(set)
 
-        self.find_inters(self.mesh_a, self.mesh_b, self.congr_ids_a, self.lines_a, self.lines_b, 'a', deb_a)
-        self.find_inters(self.mesh_b, self.mesh_a, self.congr_ids_b, self.lines_b, self.lines_a, 'b', deb_b)
+        self.polys_a = defaultdict(set)
+        self.polys_b = defaultdict(set)
 
-        self.lines_a = { edge: { ind: [sys.float_info.max] for ind in dat } for edge, dat in self.lines_a.items() }
-        self.lines_b = { edge: { ind: [sys.float_info.max] for ind in dat } for edge, dat in self.lines_b.items() }
+        self.find_inters(self.mesh_a, self.mesh_b, self.congr_ids_a, self.edges_a, self.edges_b, self.polys_a, 'a', deb_a)
+        self.find_inters(self.mesh_b, self.mesh_a, self.congr_ids_b, self.edges_b, self.edges_a, self.polys_b, 'b', deb_b)
 
-        while self.adjust_snaps(self.mesh_a, self.mesh_b, self.lines_a, 'a') > 0 \
-            or self.adjust_snaps(self.mesh_b, self.mesh_a, self.lines_b, 'b') > 0:
+        self.edges_a = { edge: { ind: [sys.float_info.max] for ind in dat } for edge, dat in self.edges_a.items() }
+        self.edges_b = { edge: { ind: [sys.float_info.max] for ind in dat } for edge, dat in self.edges_b.items() }
+
+        while self.adjust_snaps(self.mesh_a, self.mesh_b, self.edges_a, 'a') > 0 \
+            or self.adjust_snaps(self.mesh_b, self.mesh_a, self.edges_b, 'b') > 0:
 
             pass
 
-        self.final_check(self.lines_a, 'a')
-        self.final_check(self.lines_b, 'b')
+        self.check_edge_projs(self.edges_a, 'a')
+        self.check_edge_projs(self.edges_b, 'b')
+
+        self.check_poly_projs(self.mesh_a, self.mesh_b, self.polys_a, 'a')
+        self.check_poly_projs(self.mesh_b, self.mesh_a, self.polys_b, 'b')
 
 
-    def final_check(self, connected, name):
-        print(f'final_check({name})')
+    def check_poly_projs(self, mesh, other_mesh, polys, name):
+        print(f'check_poly_projs({name})')
 
         data = []
 
-        for edge, dat in connected.items():
+        for cell_id, inds in polys.items():
+            ids, cell_pts = get_points(other_mesh, cell_id)
+
+            plane_normal, plane_d = get_plane(cell_pts)
+
+            for ind in inds:
+                pt = mesh.GetPoint(ind)
+
+                d = vtkMath.Dot(plane_normal, pt)-plane_d
+
+                data.append((cell_id, ind, abs(d)))
+
+        data.sort(key=itemgetter(2))
+
+        for dat in data:
+            print(*dat)
+
+
+    def check_edge_projs(self, edges, name):
+        print(f'check_edge_projs({name})')
+
+        data = []
+
+        for edge, dat in edges.items():
             for ind, dists in dat.items():
 
                 if len(dists) > 1 and dists[-1] > 1e-10:
@@ -82,10 +111,10 @@ class Align:
             print(*dat)
 
 
-    def adjust_snaps(self, mesh, other_mesh, connected, name):
+    def adjust_snaps(self, mesh, other_mesh, edges, name):
         i = 0
 
-        for edge, dat in connected.items():
+        for edge, dat in edges.items():
             # edge auf die gesnapt wurde
 
             for ind, dists in dat.items():
@@ -128,7 +157,7 @@ class Align:
                 self.congr_ids_a.add(i)
                 self.congr_ids_b.add(j)
 
-    def find_inters(self, mesh, other_mesh, omit_ids, connected, other_connected, name, deb_id = None):
+    def find_inters(self, mesh, other_mesh, omit_ids, edges, other_edges, polys, name, deb_id = None):
         if deb_id is not None:
             print(f'find_iters({name}, {deb_id})')
 
@@ -347,7 +376,7 @@ class Align:
 
                 Prepare.move_pt(mesh, ind, snap.proj)
 
-                connected[snap.edge].add(ind)
+                edges[snap.edge].add(ind)
 
             elif all( isinstance(snap, SnapPoly) for snap in snaps ):
                 snap = snaps[0]
@@ -356,6 +385,8 @@ class Align:
                     print('3 ->', ind, snap)
 
                 Prepare.move_pt(mesh, ind, snap.s)
+
+                polys[snap.cell_id].add(ind)
 
             else:
                 point_snaps = [ snap for snap in snaps if isinstance(snap, SnapPoint) ]
@@ -388,7 +419,7 @@ class Align:
 
             Prepare.move_pt(other_mesh, ind, snap.s)
 
-            other_connected[snap.line].add(snap.id)
+            other_edges[snap.line].add(snap.id)
 
 
         write(mesh, f'new_pd_{name}_2.vtk')
