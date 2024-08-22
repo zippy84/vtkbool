@@ -56,22 +56,44 @@ class Align:
         self.find_inters(self.mesh_a, self.mesh_b, self.congr_ids_a, self.edges_a, self.edges_b, self.polys_a, 'a', deb_a)
         self.find_inters(self.mesh_b, self.mesh_a, self.congr_ids_b, self.edges_b, self.edges_a, self.polys_b, 'b', deb_b)
 
-        self.edges_a = { edge: { ind: [sys.float_info.max] for ind in dat } for edge, dat in self.edges_a.items() }
-        self.edges_b = { edge: { ind: [sys.float_info.max] for ind in dat } for edge, dat in self.edges_b.items() }
+        deps_a = self.collect_dependencies(self.edges_b, 'a')
+        deps_b = self.collect_dependencies(self.edges_a, 'b')
 
-        while self.adjust_snaps(self.mesh_a, self.mesh_b, self.edges_a, 'a') > 0 \
-            or self.adjust_snaps(self.mesh_b, self.mesh_a, self.edges_b, 'b') > 0:
+        self.edges_a = { edge: { ind: [sys.float_info.max] for ind in inds } for edge, inds in self.edges_a.items() }
+        self.edges_b = { edge: { ind: [sys.float_info.max] for ind in inds } for edge, inds in self.edges_b.items() }
+
+        while self.adjust_snaps(self.mesh_a, self.mesh_b, self.edges_a, deps_a, 'a') > 0 \
+            or self.adjust_snaps(self.mesh_b, self.mesh_a, self.edges_b, deps_b, 'b') > 0:
 
             pass
 
         self.check_edge_projs(self.edges_a, 'a')
         self.check_edge_projs(self.edges_b, 'b')
 
-        self.check_poly_projs(self.mesh_a, self.mesh_b, self.polys_a, 'a')
-        self.check_poly_projs(self.mesh_b, self.mesh_a, self.polys_b, 'b')
+        self.check_poly_projs(self.mesh_a, self.mesh_b, self.polys_a, deps_a, 'a')
+        self.check_poly_projs(self.mesh_b, self.mesh_a, self.polys_b, deps_b, 'b')
+
+    def collect_dependencies(self, edges, name):
+        print(f'collect_dependencies({name})')
+
+        deps = defaultdict(lambda: defaultdict(set))
+
+        for edge, inds in edges.items():
+            edge_ = tuple(sorted(edge))
+
+            a, b = edge_
+
+            for ind in inds:
+                deps[a][edge_].add(ind)
+                deps[b][edge_].add(ind)
+
+        for k, v in deps.items():
+            print(k, '->', sum(map(list, v.values()), []))
+
+        return deps
 
 
-    def check_poly_projs(self, mesh, other_mesh, polys, name):
+    def check_poly_projs(self, mesh, other_mesh, polys, deps, name):
         print(f'check_poly_projs({name})')
 
         data = []
@@ -87,6 +109,9 @@ class Align:
                 d = vtkMath.Dot(plane_normal, pt)-plane_d
 
                 data.append((cell_id, ind, abs(d)))
+
+                if ind in deps:
+                    print(ind, '-->', dict(deps[ind]))
 
         data.sort(key=itemgetter(2))
 
@@ -111,7 +136,7 @@ class Align:
             print(*dat)
 
 
-    def adjust_snaps(self, mesh, other_mesh, edges, name):
+    def adjust_snaps(self, mesh, other_mesh, edges, deps, name):
         i = 0
 
         for edge, dat in edges.items():
@@ -121,6 +146,9 @@ class Align:
                 # ind ist der punkt aus mesh, der auf edge liegen sollte
 
                 pt = mesh.GetPoint(ind)
+
+                if ind in deps:
+                    print(ind, '-->', dict(deps[ind]))
 
                 proj, d, l, t = _proj_line(other_mesh, edge, pt)
 
