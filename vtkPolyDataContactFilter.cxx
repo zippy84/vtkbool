@@ -1040,6 +1040,9 @@ void PreventEqualCaptPoints::Run () {
     WriteVTK("captB.vtk", pdB);
 #endif
 
+    pdA->BuildLinks();
+    pdB->BuildLinks();
+
     Find(pdA, pdB, "A");
 
 #ifdef _DEBUG
@@ -1098,10 +1101,12 @@ void PreventEqualCaptPoints::Find (vtkPolyData *pd, vtkPolyData *other, [[maybe_
 
     double tr[2];
 
+#ifdef _DEBUG
     auto pdVerts = vtkSmartPointer<vtkPolyData>::New();
     pdVerts->Allocate(1);
 
     auto ptsVerts = vtkSmartPointer<vtkPoints>::New();
+#endif
 
     std::map<vtkIdType, std::vector<SnapPoint>> pointSnaps;
     std::map<Point3d, std::vector<SnapEdge>> edgeSnaps;
@@ -1136,10 +1141,12 @@ void PreventEqualCaptPoints::Find (vtkPolyData *pd, vtkPolyData *other, [[maybe_
             Point3d sB(tr[0], tr[1], 0);
 
             if (PointInPoly(polyB, sB)) {
+#ifdef _DEBUG
                 auto vert = vtkSmartPointer<vtkIdList>::New();
                 vert->InsertNextId(ptsVerts->InsertNextPoint(pt));
 
                 pdVerts->InsertNextCell(VTK_VERTEX, vert);
+#endif
 
                 // snap auf ecke oder kante?
 
@@ -1364,9 +1371,9 @@ void PreventEqualCaptPoints::Find (vtkPolyData *pd, vtkPolyData *other, [[maybe_
 
     other->RemoveDeletedCells();
 
+#ifdef _DEBUG
     pdVerts->SetPoints(ptsVerts);
 
-#ifdef _DEBUG
     auto fileName = "verts" + name + ".vtk";
 
     WriteVTK(fileName.c_str(), pdVerts);
