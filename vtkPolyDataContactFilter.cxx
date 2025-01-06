@@ -1434,9 +1434,15 @@ void PreventEqualCaptPoints::TriangluteCell (vtkPolyData *pd, vtkIdType cellId, 
 
     auto triangles = vtkSmartPointer<vtkIdList>::New();
 
+#if (VTK_MAJOR_VERSION >= 9 && VTK_MINOR_VERSION >= 3)
     if (vtkPoly->TriangulateLocalIds(0, triangles) != 1) {
         throw std::runtime_error("");
     }
+#elif
+    if (vtkPoly->Triangulate(triangles) != 1) {
+        throw std::runtime_error("");
+    }
+#endif
 
     auto ids = vtkSmartPointer<vtkIdList>::New();
 
