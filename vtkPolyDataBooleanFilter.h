@@ -31,11 +31,13 @@ limitations under the License.
 
 #include "Utilities.h"
 
-#define OPER_NONE 0
-#define OPER_UNION 1
-#define OPER_INTERSECTION 2
-#define OPER_DIFFERENCE 3
-#define OPER_DIFFERENCE2 4
+enum OperMode {
+    OPER_NONE,
+    OPER_UNION,
+    OPER_INTERSECTION,
+    OPER_DIFFERENCE,
+    OPER_DIFFERENCE2
+};
 
 enum class Capt {
     NOT = 1 << 0,

@@ -148,7 +148,10 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
             modPdA->DeepCopy(cl->GetOutput(1));
             modPdB->DeepCopy(cl->GetOutput(2));
 
-// #ifdef DEBUG
+            modPdA->EditableOn();
+            modPdB->EditableOn();
+
+#ifdef DEBUG
             std::cout << "Exporting contLines.vtk" << std::endl;
             WriteVTK("contLines.vtk", contLines);
 
@@ -157,7 +160,7 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
 
             std::cout << "Exporting modPdB_1.vtk" << std::endl;
             WriteVTK("modPdB_1.vtk", modPdB);
-// #endif
+#endif
 
             if (contLines->GetNumberOfCells() == 0) {
                 return 1;

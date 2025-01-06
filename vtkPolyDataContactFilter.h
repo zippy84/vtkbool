@@ -20,6 +20,7 @@ limitations under the License.
 #include <map>
 #include <tuple>
 #include <set>
+#include <string>
 
 #include <vtkPolyDataAlgorithm.h>
 #include <vtkIdTypeArray.h>
@@ -155,6 +156,67 @@ private:
     vtkPolyDataContactFilter (const vtkPolyDataContactFilter&) = delete;
     void operator= (const vtkPolyDataContactFilter&) = delete;
 
+};
+
+
+using Edges = std::map<Pair, Points>;
+
+class SnapPoint {
+public:
+    SnapPoint () = delete;
+    SnapPoint (vtkIdType cellId, const Pair &line, const Point3d &point, const Point3d &inter, double d) : cellId(cellId), line(line), point(point), inter(inter), d(d) {}
+
+    vtkIdType cellId;
+    Pair line;
+    Point3d point;
+    Point3d inter;
+    double d;
+
+    friend std::ostream& operator<< (std::ostream &out, const SnapPoint &s) {
+        out << "cellId " << s.cellId
+            << ", line " << s.line
+            << ", point " << s.point
+            << ", inter " << s.inter
+            << ", d " << s.d;
+
+        return out;
+    }
+};
+
+class SnapEdge {
+public:
+    SnapEdge () = delete;
+    SnapEdge (vtkIdType cellId, const Pair &line, const Pair &edge, const Point3d &proj, const Point3d &inter, double d) : cellId(cellId), line(line), edge(edge), proj(proj), inter(inter), d(d) {}
+
+    vtkIdType cellId;
+    Pair line;
+    Pair edge;
+    Point3d proj;
+    Point3d inter;
+    double d;
+
+    friend std::ostream& operator<< (std::ostream &out, const SnapEdge &s) {
+        out << "cellId " << s.cellId
+            << ", line " << s.line
+            << ", edge " << s.edge
+            << ", proj " << s.proj
+            << ", inter " << s.inter
+            << ", d " << s.d;
+
+        return out;
+    }
+};
+
+class PreventEqualCaptPoints {
+    vtkPolyData *pdA, *pdB;
+public:
+    static void TriangluteCell (vtkPolyData *pd, vtkIdType cellId, const Edges &edges);
+    static void MovePoint (vtkPolyData *pd, vtkIdType ind, const Point3d &p);
+
+    PreventEqualCaptPoints (vtkPolyData *pdA, vtkPolyData *pdB);
+    void Run ();
+private:
+    void Find (vtkPolyData *pd, vtkPolyData *other, const std::string &name);
 };
 
 #endif

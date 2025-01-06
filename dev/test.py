@@ -173,8 +173,9 @@ class Prepare:
             ids = ids + ids[:1]
 
             for line in zip(ids, ids[1:]):
-                if line[::-1] not in lines:
-                    lines.add(tuple(line))
+                _line = tuple(sorted(line))
+
+                lines.add(_line)
 
             itr.GoToNextCell()
 
@@ -194,6 +195,10 @@ class Prepare:
 
         all_edge_snaps = defaultdict(list)
 
+        point_snaps = defaultdict(list)
+
+        edge_snaps = defaultdict(list)
+
         for line in lines:
             # print(line)
 
@@ -205,12 +210,10 @@ class Prepare:
             if tree.IntersectWithLine(p_a, p_b, 1e-5, pts, cells) == 0:
                 continue
 
-            point_snaps = defaultdict(list)
-
-            edge_snaps = defaultdict(list)
-
             for i in range(pts.GetNumberOfPoints()):
                 pt = pts.GetPoint(i)
+
+                # pt kann ungenau sein, sodass er nicht auf line liegt
 
                 cell_id = cells.GetId(i)
 
@@ -246,38 +249,36 @@ class Prepare:
                     except TypeError:
                         pass
 
-            point_snaps = [ snaps for snaps in point_snaps.values() if len(snaps) > 1 ]
+        point_snaps = [ snaps for snaps in point_snaps.values() if len(snaps) > 1 ]
 
-            print(point_snaps)
+        print(point_snaps)
 
-            for snaps in point_snaps:
-                assert len(snaps) == 2 # sind hier nicht auch mehr als 2 möglich?
+        for snaps in point_snaps:
+            a, b = snaps[:2]
 
-                a, b = snaps
+            print('-->', [ (snap.cell_id, snap.line) for snap in snaps ])
 
-                assert a.id == b.id
+            proj, d, *rest = _proj_line(mesh, a.line, a.pt)
 
-                proj, d, *rest = _proj_line(mesh, a.line, a.pt)
+            print(a.id, '->', proj, d)
 
-                print(a.id, '->', proj, d)
-
-                Prepare.move_pt(other_mesh, a.id, proj)
+            Prepare.move_pt(other_mesh, a.id, proj)
 
 
-            edge_snaps = [ snaps for snaps in edge_snaps.values() if len(snaps) > 1 ]
+        edge_snaps = [ snaps for snaps in edge_snaps.values() if len(snaps) > 1 ]
 
-            print(edge_snaps)
+        print(edge_snaps)
 
-            for snaps in edge_snaps:
-                assert len(snaps) == 2
+        for snaps in edge_snaps:
+            assert len(snaps) == 2
 
-                a, b = snaps
+            a, b = snaps
 
-                assert frozenset(a.edge) == frozenset(b.edge)
+            assert frozenset(a.edge) == frozenset(b.edge)
 
-                proj, l, d, t = _proj_line(mesh, a.line, a.proj)
+            proj, l, d, t = _proj_line(mesh, a.line, a.proj)
 
-                all_edge_snaps[frozenset(a.edge)].append((a, proj, d))
+            all_edge_snaps[frozenset(a.edge)].append((a, proj, d))
 
 
         pd.SetPoints(pd_pts)

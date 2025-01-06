@@ -22,6 +22,7 @@ from collections import defaultdict
 from operator import itemgetter
 import math
 import pytest
+from functools import reduce
 
 from vtkmodules.vtkCommonCore import vtkIdList, vtkIdTypeArray, vtkPoints
 from vtkmodules.vtkCommonDataModel import vtkPolyData, VTK_POLYGON
@@ -33,6 +34,7 @@ from vtkmodules.vtkCommonExecutionModel import vtkTrivialProducer
 from vtkmodules.vtkFiltersModeling import vtkRotationalExtrusionFilter
 from vtkmodules.vtkFiltersGeneral import vtkTransformPolyDataFilter
 from vtkmodules.vtkCommonTransforms import vtkTransform
+from vtkmodules.vtkCommonExecutionModel import vtkAlgorithm
 
 from vtkBool import vtkPolyDataBooleanFilter, vtkPolyDataContactFilter
 
@@ -68,8 +70,8 @@ def check_result(bf, expected_regs=None):
         assert len(valuesA) == expected_regs[0]
         assert len(valuesB) == expected_regs[1]
 
-    for pd in [pdA, pdB]:
-        print('checking pd')
+    for name, pd in [('pdA', pdA), ('pdB', pdB)]:
+        print(f'checking {name}')
 
         loc = vtkKdTreePointLocator()
         loc.SetDataSet(pd)
@@ -81,7 +83,7 @@ def check_result(bf, expected_regs=None):
 
             line = it.GetCurrentCell()
 
-            print('line', it.GetCurrentCellId())
+            # print('line', it.GetCurrentCellId())
 
             idA = line.GetId(0)
             idB = line.GetId(1)
@@ -249,6 +251,8 @@ def check_result(bf, expected_regs=None):
                     assert False
 
             it.GoToNextCell()
+
+        print('-> ok')
 
 def write_result(bf, d):
     for i, name in enumerate(['pdA', 'pdB', 'lines']):
@@ -929,8 +933,7 @@ def test_self_intersecting_polys():
 
     check_result(bf)
 
-@pytest.mark.xfail
-def test_invalid_capt_pts(tmp_path):
+def test_equal_capt_pts(tmp_path):
     cyl = vtkCylinderSource()
     cyl.SetHeight(2)
     cyl.SetResolution(12)
@@ -951,11 +954,10 @@ def test_invalid_capt_pts(tmp_path):
     bf.SetOperModeToNone()
     bf.Update()
 
-    # write_result(bf, tmp_path)
-    check_result(bf)
+    write_result(bf, tmp_path)
+    check_result(bf, [4, 4])
 
-@pytest.mark.xfail
-def test_invalid_capt_pts_2(tmp_path):
+def test_equal_capt_pts_2(tmp_path):
     reader = vtkPolyDataReader()
     reader.SetFileName('data/cross.vtk')
 
@@ -975,5 +977,59 @@ def test_invalid_capt_pts_2(tmp_path):
     bf.SetOperModeToNone()
     bf.Update()
 
-    # write_result(bf, tmp_path)
-    check_result(bf)
+    write_result(bf, tmp_path)
+    check_result(bf, [24, 24])
+
+def test_equal_capt_pts_3(tmp_path):
+
+    # from vtkmodules.util.execution_model import select_ports
+
+    # cyl = vtkCylinderSource()
+    # cyl.SetHeight(2)
+    # cyl.SetResolution(12)
+
+    # cyls = []
+
+    # for x in [-.5, -.25, 0, .25, .5]:
+    #     tra = vtkTransform()
+    #     tra.Translate(x, 0, 0)
+
+    #     cyls.append(cyl >> vtkTransformPolyDataFilter(transform=tra))
+
+    # def fct(a, b):
+    #     bf = vtkPolyDataBooleanFilter()
+
+    #     a >> bf
+    #     b >> select_ports(1, bf)
+
+    #     return bf
+
+    # union = reduce(fct, cyls)
+
+    # (union >> vtkCleanPolyData(output_points_precision=vtkAlgorithm.DOUBLE_PRECISION) >> vtkPolyDataWriter(file_name='data/complex.vtk')).update()
+
+    cyl = vtkCylinderSource()
+    cyl.SetHeight(2)
+    cyl.SetResolution(12)
+
+    reader = vtkPolyDataReader()
+    reader.SetFileName('data/complex.vtk')
+
+    z = .0000025
+
+    tra = vtkTransform()
+    tra.RotateZ(90)
+    tra.Translate(0, 0, z)
+
+    tf = vtkTransformPolyDataFilter()
+    tf.SetTransform(tra)
+    tf.SetInputConnection(reader.GetOutputPort())
+
+    bf = vtkPolyDataBooleanFilter()
+    bf.SetInputConnection(0, cyl.GetOutputPort())
+    bf.SetInputConnection(1, tf.GetOutputPort())
+    bf.SetOperModeToNone()
+    bf.Update()
+
+    write_result(bf, tmp_path)
+    check_result(bf, [14, 14])

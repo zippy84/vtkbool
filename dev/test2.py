@@ -460,6 +460,12 @@ if __name__ == '__main__':
     reader_b = vtkPolyDataReader()
     reader_b.SetFileName('fibulaB.vtk')
 
+    # reader_a = vtkPolyDataReader()
+    # reader_a.SetFileName('../_bugs/issue77/a.vtk')
+
+    # reader_b = vtkPolyDataReader()
+    # reader_b.SetFileName('../_bugs/issue77/b.vtk')
+
     reader_a.Update()
     reader_b.Update()
 

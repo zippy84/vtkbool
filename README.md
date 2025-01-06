@@ -25,7 +25,7 @@ This is an extension of the graphics library VTK. The goal of the extension is t
 ## Limitations
 
 - the filter assumes well defined triangles, quads and polygons
-- PointData is not preserved - you have to do your own mapping (use *OrigCellIdsA* and *OrigCellIdsB*)
+- PointData is not preserved - you have to do your own mapping with *OrigCellIdsA* and *OrigCellIdsB*
 
 ## Requirements
 
@@ -158,6 +158,8 @@ The Python module will be generated automatically, if three conditions are met:
 After a successful compilation, the module can be used as follows:
 
 ```python
+#!/usr/bin/env python
+
 import sys
 sys.path.append('/path/to/your/build/directory') # also look into the python files in the testing directory
 
@@ -172,18 +174,43 @@ sphere.SetCenter(.5, .5, .5)
 sphere.SetThetaResolution(20)
 sphere.SetPhiResolution(20)
 
-boolean = vtkPolyDataBooleanFilter()
-boolean.SetInputConnection(0, cube.GetOutputPort())
-boolean.SetInputConnection(1, sphere.GetOutputPort())
-boolean.SetOperModeToDifference()
+bf = vtkPolyDataBooleanFilter()
+bf.SetInputConnection(0, cube.GetOutputPort())
+bf.SetInputConnection(1, sphere.GetOutputPort())
+bf.SetOperModeToDifference()
 
 # write the result, if you want ...
 
 writer = vtkPolyDataWriter()
-writer.SetInputConnection(boolean.GetOutputPort())
+writer.SetInputConnection(bf.GetOutputPort())
 writer.SetFileName('result.vtk')
 
 writer.Update()
+```
+
+Or with VTK >= 9.4:
+
+```python
+#!/usr/bin/env python
+
+import sys
+sys.path.append('/path/to/your/build/directory')
+
+from vtkmodules.vtkFiltersSources import vtkCubeSource, vtkSphereSource
+from vtkmodules.vtkIOLegacy import vtkPolyDataWriter
+from vtkmodules.util.execution_model import select_ports
+
+from vtkBool import vtkPolyDataBooleanFilter, OPER_DIFFERENCE
+
+cube = vtkCubeSource()
+sphere = vtkSphereSource(center=[.5, .5, .5], theta_resolution=20, phi_resolution=20)
+
+bf = vtkPolyDataBooleanFilter(oper_mode=OPER_DIFFERENCE)
+cube >> bf
+sphere >> select_ports(1, bf)
+
+(bf >> vtkPolyDataWriter(file_name='result.vtk')).update()
+
 ```
 
 ## Conda
