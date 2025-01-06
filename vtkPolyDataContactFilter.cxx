@@ -1438,7 +1438,7 @@ void PreventEqualCaptPoints::TriangluteCell (vtkPolyData *pd, vtkIdType cellId, 
     if (vtkPoly->TriangulateLocalIds(0, triangles) != 1) {
         throw std::runtime_error("");
     }
-#elif
+#else
     if (vtkPoly->Triangulate(triangles) != 1) {
         throw std::runtime_error("");
     }
