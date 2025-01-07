@@ -6,10 +6,10 @@ on:
 
 jobs:
   Build:
-    runs-on: ubuntu-latest
     strategy:
       matrix:
-        cxx: [g++-12, clang++-14]
+        os: [ubuntu-22.04, ubuntu-latest]
+        cxx: [g++, clang++]
         build_type: [Debug, Release]
 
     steps:
