@@ -6,6 +6,7 @@ on:
 
 jobs:
   Build:
+    runs-on: ${{matrix.os}}
     strategy:
       matrix:
         os: [ubuntu-22.04, ubuntu-latest]
