@@ -79,21 +79,21 @@ public:
         assert(src != other.src);
 
         if (src == Src::A) {
-            srcA = getEnd();
+            srcA = GetEnd();
         } else {
-            srcB = getEnd();
+            srcB = GetEnd();
         }
 
         if (std::abs(other.t-t) < 1e-5) {
             if (other.src == Src::A) {
-                srcA = other.getEnd();
+                srcA = other.GetEnd();
             } else {
-                srcB = other.getEnd();
+                srcB = other.GetEnd();
             }
         }
     }
 
-    inline vtkIdType getEnd() const {
+    inline vtkIdType GetEnd() const {
         if (end == End::BEGIN) {
             return edge.f;
         }

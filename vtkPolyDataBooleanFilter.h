@@ -32,7 +32,7 @@ limitations under the License.
 #include "Utilities.h"
 
 enum OperMode {
-    OPER_NONE,
+    OPER_NONE = 0,
     OPER_UNION,
     OPER_INTERSECTION,
     OPER_DIFFERENCE,

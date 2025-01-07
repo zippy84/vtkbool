@@ -527,20 +527,20 @@ bool vtkPolyDataContactFilter::InterPolyLine (InterPtsType &interPts, vtkPolyDat
 
         bool operator() (const InterPt &lhs, const InterPt &rhs) const {
             if (lhs.pointSrc == PointSrc::COPIED && rhs.pointSrc == PointSrc::COPIED) {
-                const vtkIdType indA = lhs.getEnd(),
-                    indB = rhs.getEnd();
+                const vtkIdType indA = lhs.GetEnd(),
+                    indB = rhs.GetEnd();
 
                 if (indA == indB) {
                     return false;
                 }
             } else if (lhs.pointSrc == PointSrc::COPIED) {
-                const vtkIdType ind = lhs.getEnd();
+                const vtkIdType ind = lhs.GetEnd();
 
                 if (ind == rhs.edge.f || ind == rhs.edge.g) {
                     return false;
                 }
             } else if (rhs.pointSrc == PointSrc::COPIED) {
-                const vtkIdType ind = rhs.getEnd();
+                const vtkIdType ind = rhs.GetEnd();
 
                 if (ind == lhs.edge.f || ind == lhs.edge.g) {
                     return false;
@@ -1300,9 +1300,7 @@ void PreventEqualCaptPoints::Find (vtkPolyData *pd, vtkPolyData *other, [[maybe_
             const auto &snapB = snaps[1];
 
             if (Point3d::GetDist(snapA.inter, snapB.inter) > 1e-10) {
-                const auto &last = snaps.back();
-
-                Pair edge(last.edge);
+                Pair edge(snapA.edge);
 
                 if (edge.f > edge.g) {
                     std::swap(edge.f, edge.g);
@@ -1311,7 +1309,7 @@ void PreventEqualCaptPoints::Find (vtkPolyData *pd, vtkPolyData *other, [[maybe_
                 std::shared_ptr<Point3d> p;
 
                 if (snapA.line == snapB.line) {
-                    ProjOnLine(pd, last.line, last.proj, p);
+                    ProjOnLine(pd, snapA.line, snapA.proj, p);
 
                 } else {
                     vtkIdType s = snapA.line & snapB.line;
@@ -1325,9 +1323,9 @@ void PreventEqualCaptPoints::Find (vtkPolyData *pd, vtkPolyData *other, [[maybe_
 
                 Point3d q(pt[0], pt[1], pt[2]);
 
-                t = Point3d::GetDist(q, last.proj);
+                t = Point3d::GetDist(q, snapA.proj);
 
-                allEdgeSnaps[edge].emplace(last, *p, t);
+                allEdgeSnaps[edge].emplace(snapA, *p, t);
             }
         }
     }
