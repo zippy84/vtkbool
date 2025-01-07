@@ -939,6 +939,7 @@ def test_equal_capt_pts(tmp_path):
     cyl.SetResolution(12)
 
     z = .0000025
+    # z = .0000075 # verursacht ein anderes bekanntes problem
 
     tra = vtkTransform()
     tra.RotateZ(90)
