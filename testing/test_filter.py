@@ -16,7 +16,7 @@
 # limitations under the License.
 
 import sys
-sys.path.extend(['/home/zippy/vtkbool/build/lib/python3.11/site-packages/vtkbool'])
+sys.path.extend(['/home/zippy/vtkbool/build/lib/python3.13/site-packages/vtkbool'])
 
 from collections import defaultdict
 from operator import itemgetter

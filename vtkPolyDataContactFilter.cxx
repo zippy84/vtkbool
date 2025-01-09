@@ -1197,9 +1197,9 @@ void PreventEqualCaptPoints::Find (vtkPolyData *pd, vtkPolyData *other, [[maybe_
 
             double d;
 
-            bool collapse = false;
+            bool collapse = true;
 
-            for (; itrA != snaps.end()-1 && !collapse; ++itrA) {
+            for (; itrA != snaps.end()-1 && collapse; ++itrA) {
                 for (itrB = itrA+1; itrB < snaps.end(); ++itrB) {
                     d = Point3d::GetDist(itrA->inter, itrB->inter);
 
@@ -1208,13 +1208,13 @@ void PreventEqualCaptPoints::Find (vtkPolyData *pd, vtkPolyData *other, [[maybe_
 #endif
 
                     if (d > 1e-10) {
-                        collapse = true;
+                        collapse = false;
                         break;
                     }
                 }
             }
 
-            if (!collapse) {
+            if (collapse) {
                 continue;
             }
 
@@ -1439,7 +1439,7 @@ void PreventEqualCaptPoints::TriangluteCell (vtkPolyData *pd, vtkIdType cellId, 
 
     auto triangles = vtkSmartPointer<vtkIdList>::New();
 
-#if (VTK_MAJOR_VERSION >= 9 && VTK_MINOR_VERSION >= 3)
+#if (VTK_MAJOR_VERSION >= 9 && VTK_MINOR_VERSION > 3)
     if (vtkPoly->TriangulateLocalIds(0, triangles) != 1) {
         throw std::runtime_error("");
     }
