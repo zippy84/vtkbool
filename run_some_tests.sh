@@ -8,8 +8,10 @@ pushd testing
 # pytest test_filter.py::test_equal_capt_pts_2 -s
 # pytest test_filter.py::test_equal_capt_pts_3 -s
 
-# gdb --args python -m pytest test_filter.py::test_equal_capt_pts_3 -s
+# gdb --args python -m pytest test_filter.py::test_simple -s
 
-pytest test_filter.py
+# pytest test_filter.py
+
+pytest test_filter.py::test_simple -s
 
 popd

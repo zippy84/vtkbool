@@ -31,14 +31,13 @@ limitations under the License.
 #include <vtkPoints.h>
 #include <vtkIdList.h>
 #include <vtkMath.h>
+#include <vtkSmartPointer.h>
 
 #define NOTSET -1
 
 double GetAngle (const double *vA, const double *vB, const double *n);
 
-/* VTK */
 double ComputeNormal (vtkPoints *pts, double *n, vtkIdType num, const vtkIdType *poly);
-bool CheckNormal (vtkPoints *pts, vtkIdType num, const vtkIdType *poly, const double *n, double d);
 
 void FindPoints (vtkKdTreePointLocator *pl, const double *pt, vtkIdList *pts, double tol = 1e-6);
 void WriteVTK (const char *name, vtkPolyData *pd);
@@ -125,9 +124,52 @@ public:
 void Transform (const double *in, double *out, const Base &base);
 void BackTransform (const double *in, double *out, const Base &base);
 
-inline void Cpy (double *a, const double *b, const int n = 2) {
-    std::copy_n(b, n, a);
-}
+class Base2 {
+public:
+    Base2 () {}
+    Base2 (double *_t, double *_ei, double *_ek) {
+        std::copy_n(_t, 3, t);
+        std::copy_n(_ei, 3, ei);
+        std::copy_n(_ek, 3, ek);
+
+        ej[0] = ek[1]*ei[2]-ek[2]*ei[1];
+        ej[1] = -ek[0]*ei[2]+ek[2]*ei[0];
+        ej[2] = ek[0]*ei[1]-ek[1]*ei[0];
+
+        vtkMath::Normalize(ej);
+    }
+    void Transform (const double *in, double *out) const {
+        double R[][3] = {
+            { ei[0], ei[1], ei[2] },
+            { ej[0], ej[1], ej[2] },
+            { ek[0], ek[1], ek[2] }
+        };
+
+        double _t[] = { in[0]-t[0], in[1]-t[1], in[2]-t[2] };
+
+        out[0] = R[0][0]*_t[0]+R[0][1]*_t[1]+R[0][2]*_t[2];
+        out[1] = R[1][0]*_t[0]+R[1][1]*_t[1]+R[1][2]*_t[2];
+        out[2] = R[2][0]*_t[0]+R[2][1]*_t[1]+R[2][2]*_t[2];
+    }
+    void BackTransform (const double *in, double *out) const {
+        double R[][3] = {
+            { ei[0], ej[0], ek[0] },
+            { ei[1], ej[1], ek[1] },
+            { ei[2], ej[2], ek[2] }
+        };
+
+        double _out[] = {
+            R[0][0]*in[0]+R[0][1]*in[1]+R[0][2]*in[2],
+            R[1][0]*in[0]+R[1][1]*in[1]+R[1][2]*in[2],
+            R[2][0]*in[0]+R[2][1]*in[1]+R[2][2]*in[2]
+        };
+
+        out[0] = _out[0]+t[0];
+        out[1] = _out[1]+t[1];
+        out[2] = _out[2]+t[2];
+    }
+    double t[3], ei[3], ej[3], ek[3];
+};
 
 template<typename T>
 std::ostream& operator<< (typename std::enable_if<std::is_enum<T>::value, std::ostream>::type& stream, const T& e) {
@@ -151,6 +193,7 @@ void GetPolys (const ReferencedPointsType &pts, const IndexedPolysType &indexedP
 
 void GetPoly (vtkPoints *pts, vtkIdType num, const vtkIdType *poly, Poly &out);
 void FlattenPoly (const Poly &poly, Poly &out, const Base &base);
+void FlattenPoly2 (const Poly &poly, Poly &out, const Base2 &base);
 
 class Proj {
 public:
@@ -165,5 +208,7 @@ std::shared_ptr<Proj> GetEdgeProj (const Poly &poly, const Point3d &p);
 
 void ProjOnLine (const Point3d &a, const Point3d &b, const Point3d &p, double *d, double *t, std::shared_ptr<Point3d> &proj);
 void ProjOnLine (vtkPolyData *pd, const Pair &line, const Point3d &p, std::shared_ptr<Point3d> &proj);
+
+vtkSmartPointer<vtkPolyData> CreatePolyData (const PolysType &polys);
 
 #endif

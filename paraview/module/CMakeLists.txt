@@ -1,15 +1,21 @@
 set(srcs
-    ../../vtkPolyDataBooleanFilter.cxx
-    ../../vtkPolyDataContactFilter.cxx
-    ../../Utilities.cxx)
+    ../Utilities.cxx
+    ../Optimize.cxx
+    ../Contact.cxx
+    ../Merger.cxx
+    ../vtkPolyDataBooleanFilter.cxx
+)
 
 set(headers
-    ../../vtkPolyDataBooleanFilter.h)
+    ../../vtkPolyDataBooleanFilter.h
+)
 
-vtk_module_add_module(vtkBool
+vtk_module_add_module(vtkbool
     FORCE_STATIC
     SOURCES ${srcs}
-    HEADERS ${headers})
+    HEADERS ${headers}
+)
 
 paraview_add_server_manager_xmls(
-  XMLS vtkPolyDataBooleanFilter.xml)
+  XMLS vtkPolyDataBooleanFilter.xml
+)

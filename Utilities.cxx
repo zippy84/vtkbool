@@ -49,25 +49,6 @@ double ComputeNormal (vtkPoints *pts, double *n, vtkIdType num, const vtkIdType 
     return vtkMath::Normalize(n);
 }
 
-bool CheckNormal (vtkPoints *pts, vtkIdType num, const vtkIdType *poly, const double *n, double d) {
-    if (n[0] == 0 && n[1] == 0 && n[2] == 0) {
-        return false;
-    }
-
-    const double *pt;
-    vtkIdType i;
-
-    for (i = 1; i < num; i++) {
-        pt = pts->GetPoint(poly[i]);
-
-        if (std::abs(vtkMath::Dot(n, pt)-d) > 1e-6) {
-            return false;
-        }
-    }
-
-    return true;
-}
-
 void FindPoints (vtkKdTreePointLocator *pl, const double *pt, vtkIdList *pts, double tol) {
     pts->Reset();
 
@@ -272,6 +253,20 @@ void FlattenPoly (const Poly &poly, Poly &out, const Base &base) {
     }
 }
 
+void FlattenPoly2 (const Poly &poly, Poly &out, const Base2 &base) {
+    double pt[3], tr[3];
+
+    for (auto &p : poly) {
+        pt[0] = p.x;
+        pt[1] = p.y;
+        pt[2] = p.z;
+
+        base.Transform(pt, tr);
+
+        out.emplace_back(tr[0], tr[1], tr[2], p.id);
+    }
+}
+
 std::shared_ptr<Proj> GetEdgeProj (const Poly &poly, const Point3d &p) {
     Poly::const_iterator itrA, itrB;
 
@@ -326,4 +321,27 @@ void ProjOnLine (vtkPolyData *pd, const Pair &line, const Point3d &p, std::share
     double d, t;
 
     ProjOnLine(a, b, p, &d, &t, proj);
+}
+
+vtkSmartPointer<vtkPolyData> CreatePolyData (const PolysType &polys) {
+    auto pts = vtkSmartPointer<vtkPoints>::New();
+    pts->SetDataTypeToDouble();
+
+    auto pd = vtkSmartPointer<vtkPolyData>::New();
+    pd->SetPoints(pts);
+    pd->Allocate(100);
+
+    for (const auto &poly : polys) {
+        auto cell = vtkSmartPointer<vtkIdList>::New();
+
+        for (const auto &p : poly) {
+            cell->InsertNextId(pts->InsertNextPoint(p.x, p.y, p.z));
+        }
+
+        pd->InsertNextCell(VTK_POLYGON, cell);
+    }
+
+    pd->Squeeze();
+
+    return pd;
 }

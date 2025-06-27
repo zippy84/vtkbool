@@ -115,7 +115,7 @@ if(VTK_FOUND)
     add_subdirectory(vtkbool)
 
     add_executable(test test.cxx)
-    target_link_libraries(test PRIVATE vtkBool ${VTK_LIBRARIES})
+    target_link_libraries(test PRIVATE vtkbool ${VTK_LIBRARIES})
 
     vtk_module_autoinit(
         TARGETS test
@@ -165,7 +165,7 @@ sys.path.append('/path/to/your/build/directory') # also look into the python fil
 
 from vtkmodules.vtkFiltersSources import vtkCubeSource, vtkSphereSource
 from vtkmodules.vtkIOLegacy import vtkPolyDataWriter
-from vtkBool import vtkPolyDataBooleanFilter
+from vtkbool import vtkPolyDataBooleanFilter
 
 cube = vtkCubeSource()
 
@@ -200,7 +200,7 @@ from vtkmodules.vtkFiltersSources import vtkCubeSource, vtkSphereSource
 from vtkmodules.vtkIOLegacy import vtkPolyDataWriter
 from vtkmodules.util.execution_model import select_ports
 
-from vtkBool import vtkPolyDataBooleanFilter, OPER_DIFFERENCE
+from vtkbool import vtkPolyDataBooleanFilter, OPER_DIFFERENCE
 
 cube = vtkCubeSource()
 sphere = vtkSphereSource(center=[.5, .5, .5], theta_resolution=20, phi_resolution=20)
@@ -224,7 +224,7 @@ conda install -c conda-forge vtkbool
 Unlike in the python example, you need to import it like this:
 
 ```python
-from vtkbool.vtkBool import vtkPolyDataBooleanFilter
+from vtkbool.vtkbool import vtkPolyDataBooleanFilter
 ```
 
 ## Errors and their meaning

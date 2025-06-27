@@ -21,7 +21,7 @@ limitations under the License.
 #include <vtkCellArrayIterator.h>
 #include <vtkIdTypeArray.h>
 
-#include "vtkPolyDataBooleanFilter.h"
+#include "Merger.h"
 
 Poly Draw (double r, vtkIdType step, double x, double y, double rotate = 0) {
     Poly poly;
@@ -49,28 +49,7 @@ Poly Draw (double r, vtkIdType step, double x, double y, double rotate = 0) {
     return poly;
 }
 
-bool Test (PolysType &polys, vtkIdType numCells, [[maybe_unused]] const char *name) {
-
-#ifdef DEBUG
-    std::string fileName(name);
-    fileName.append(".vtk");
-
-    WritePolys(fileName.c_str(), polys);
-#endif
-
-    auto pts = vtkSmartPointer<vtkPoints>::New();
-
-    auto pd = vtkSmartPointer<vtkPolyData>::New();
-    pd->SetPoints(pts);
-    pd->Allocate(1);
-
-    auto cell = vtkSmartPointer<vtkIdList>::New();
-
-    for (const auto &p : polys[0]) {
-        cell->InsertNextId(pts->InsertNextPoint(p.x, p.y, p.z));
-    }
-
-    pd->InsertNextCell(VTK_POLYGON, cell);
+bool Test (vtkPolyData *pd, PolysType &polys, vtkIdType numCells, [[maybe_unused]] const char *name) {
 
     auto cellIds = vtkSmartPointer<vtkIdTypeArray>::New();
     cellIds->SetName("OrigCellIds");
@@ -91,11 +70,8 @@ bool Test (PolysType &polys, vtkIdType numCells, [[maybe_unused]] const char *na
     vtkIdType ind {0};
     std::size_t stripId {0};
 
-    PolysType::iterator itr;
-    for (itr = polys.begin()+1; itr != polys.end(); ++itr) {
+    for (auto &poly : polys) {
         StripType strip;
-
-        Poly &poly = *itr;
 
         poly.push_back(poly.front());
 
@@ -158,10 +134,7 @@ bool Test (PolysType &polys, vtkIdType numCells, [[maybe_unused]] const char *na
     }
 
 #ifdef DEBUG
-    std::string mergedFileName(name);
-    mergedFileName.append("_merged.vtk");
-
-    WriteVTK(mergedFileName.c_str(), pd);
+    WriteVTK(name, pd);
 #endif
 
     if (pd->GetNumberOfCells() != numCells) {
@@ -172,45 +145,47 @@ bool Test (PolysType &polys, vtkIdType numCells, [[maybe_unused]] const char *na
 }
 
 int main() {
+    auto pdA = CreatePolyData({ Draw(8, 18, 0, 0) });
+
     PolysType polysA {
-        Draw(8, 18, 0, 0),
         Draw(.25, 6, 3.5, 0),
         Draw(.25, 6, -3.5, 0),
-
         Draw(.5, 6, 1, 0),
         Draw(.5, 6, -1, 0),
         Draw(.5, 6, 0, 1, 30),
         Draw(.5, 6, 0, -1, 30)
     };
 
-    Poly a = Draw(4, 18, 0, 0, 10),
-        b = Draw(3, 18, 0, 0, 10);
+    if (!Test(pdA, polysA, 10, "polysA")) {
+        return EXIT_FAILURE;
+    }
 
-    std::copy(b.rbegin(), b.rend(), std::back_inserter(a));
+    auto pdB = CreatePolyData({ { {5, 5, 0}, {-5, 5, 0}, {-5, -5, 0}, {5, -5, 0} } });
+
+    Poly polyA = Draw(4, 18, 0, 0, 10),
+        polyB = Draw(3, 18, 0, 0, 10);
+
+    std::copy(polyB.rbegin(), polyB.rend(), std::back_inserter(polyA));
 
     PolysType polysB {
-        Poly{{5, 5, 0}, {-5, 5, 0}, {-5, -5, 0}, {5, -5, 0}},
         Draw(2, 18, 0, 0, 5),
-        a
+        polyA
     };
+
+    if (!Test(pdB, polysB, 5, "polysB")) {
+        return EXIT_FAILURE;
+    }
 
     const double y = 7.5-1.5/std::cos(M_PI/6)-std::tan(M_PI/6)*4.5;
 
+    auto pdC = CreatePolyData({ { {0, 0, 0}, {25, 0, 0}, {25, 25, 0}, {0, 25, 0} } });
+
     PolysType polysC {
-        Poly{{0, 0, 0}, {25, 0, 0}, {25, 25, 0}, {0, 25, 0}},
-        Poly{{2, 5, 0}, {17, 5, 0}, {17, 20, 0}, {2, 20, 0}, {7.5/std::tan(M_PI/6)+2, 12.5, 0}},
-        Poly{{6.5, 12.5-y, 0}, {y/std::tan(M_PI/6)+6.5, 12.5, 0}, {6.5, 12.5+y, 0}}
+        { {2, 5, 0}, {17, 5, 0}, {17, 20, 0}, {2, 20, 0}, {7.5/std::tan(M_PI/6)+2, 12.5, 0} },
+        { {6.5, 12.5-y, 0}, {y/std::tan(M_PI/6)+6.5, 12.5, 0}, {6.5, 12.5+y, 0} }
     };
 
-    if (!Test(polysA, 10, "polysA")) {
-        return EXIT_FAILURE;
-    }
-
-    if (!Test(polysB, 5, "polysB")) {
-        return EXIT_FAILURE;
-    }
-
-    if (!Test(polysC, 5, "polysC")) {
+    if (!Test(pdC, polysC, 5, "polysC")) {
         return EXIT_FAILURE;
     }
 

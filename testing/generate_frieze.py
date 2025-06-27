@@ -29,7 +29,7 @@ from vtkmodules.vtkFiltersGeneral import vtkTransformPolyDataFilter
 from vtkmodules.vtkFiltersModeling import vtkLinearExtrusionFilter
 from vtkmodules.vtkCommonExecutionModel import vtkTrivialProducer
 
-from vtkBool import vtkPolyDataBooleanFilter
+from vtkbool import vtkPolyDataBooleanFilter
 
 import math
 import os

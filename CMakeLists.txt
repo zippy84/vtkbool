@@ -80,7 +80,7 @@ else()
 
         vtk_module_scan(
             MODULE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/module/vtk.module"
-            REQUEST_MODULES vtkBool
+            REQUEST_MODULES vtkbool
             PROVIDES_MODULES modules
             ENABLE_TESTS ON)
 
@@ -114,7 +114,7 @@ else()
             set_property(TEST "test_filter" APPEND PROPERTY ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/${python_default_destination}/vtkbool")
 
             add_executable(test_merger testing/test_merger.cxx)
-            target_link_libraries(test_merger PRIVATE vtkBool ${VTK_LIBRARIES})
+            target_link_libraries(test_merger PRIVATE vtkbool ${VTK_LIBRARIES})
 
             vtk_module_autoinit(
                 TARGETS test_merger
@@ -132,6 +132,9 @@ else()
             set_property(TEST "generate_frieze" APPEND PROPERTY ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/${python_default_destination}/vtkbool")
 
         endif()
+
+        add_executable(test_2d test_2d.cxx)
+        target_link_libraries(test_2d PRIVATE vtkbool ${VTK_LIBRARIES})
 
     endif()
 

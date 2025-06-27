@@ -1,5 +1,5 @@
 NAME
-  vtkBool
+  vtkbool
 DEPENDS
   VTK::CommonCore
   VTK::CommonExecutionModel

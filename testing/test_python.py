@@ -21,7 +21,7 @@ sys.path.extend(['/home/zippy/vtkbool/build/lib/python3.13/site-packages/vtkbool
 from vtkmodules.vtkFiltersSources import vtkCubeSource
 from vtkmodules.vtkIOLegacy import vtkPolyDataWriter
 
-from vtkBool import vtkPolyDataBooleanFilter
+from vtkbool import vtkPolyDataBooleanFilter
 
 cubeA = vtkCubeSource()
 cubeB = vtkCubeSource()
