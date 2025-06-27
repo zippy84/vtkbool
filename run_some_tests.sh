@@ -10,8 +10,8 @@ pushd testing
 
 # gdb --args python -m pytest test_filter.py::test_simple -s
 
-# pytest test_filter.py
+pytest test_filter.py
 
-pytest test_filter.py::test_simple -s
+# pytest test_filter.py::test_simple -s
 
 popd
