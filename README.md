@@ -229,21 +229,21 @@ from vtkbool.vtkbool import vtkPolyDataBooleanFilter
 
 ## Errors and their meaning
 
-- *Bad shaped cells detected.*
+- *Contact failed with ...*
 
   At least one cell has a bad shape. For a cell with more than three points: not all points lie on the plane defined by the calculated surface normal.
 
-- *First/Second input has non-manifold edges.*
+- *Cannot prevent equal capture points.*
 
-  The contact goes through a non-manifold edge. A non-manifold edge is an edge that is shared by three or more cells. In general this is not a problem, unless they are part of the intersection.
+  ???
 
 - *There is no contact.*
 
   What it says.
 
-- *Contact ends suddenly.*
+- *At least one line-end has only one neighbor.*
 
-  The intersection is incomplete. That is, an intersection line ends in the middle of a cell. The cell cannot be divided.
+  The intersection is incomplete. Therefore the cell cannot be divided.
 
 - *Strips are invalid.*
 

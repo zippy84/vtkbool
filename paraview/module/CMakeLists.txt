@@ -1,9 +1,9 @@
 set(srcs
-    ../Utilities.cxx
-    ../Optimize.cxx
-    ../Contact.cxx
-    ../Merger.cxx
-    ../vtkPolyDataBooleanFilter.cxx
+    ../../Utilities.cxx
+    ../../Optimize.cxx
+    ../../Contact.cxx
+    ../../Merger.cxx
+    ../../vtkPolyDataBooleanFilter.cxx
 )
 
 set(headers
@@ -17,5 +17,5 @@ vtk_module_add_module(vtkbool
 )
 
 paraview_add_server_manager_xmls(
-  XMLS vtkPolyDataBooleanFilter.xml
+    XMLS vtkPolyDataBooleanFilter.xml
 )

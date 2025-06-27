@@ -10,4 +10,4 @@ TEST_DEPENDS
   VTK::RenderingFreeType
   VTK::FiltersSources
 DESCRIPTION
- This module contains classes to do polydata boolean operations.
+  This module contains a class to do polydata boolean operations.
