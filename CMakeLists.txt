@@ -116,13 +116,20 @@ else()
             add_executable(test_merger testing/test_merger.cxx)
             target_link_libraries(test_merger PRIVATE vtkbool ${VTK_LIBRARIES})
 
+            add_executable(test_congruence testing/test_congruence.cxx)
+            target_link_libraries(test_congruence PRIVATE vtkbool ${VTK_LIBRARIES})
+
             vtk_module_autoinit(
-                TARGETS test_merger
+                TARGETS test_merger test_congruence
                 MODULES ${VTK_LIBRARIES}
             )
 
             add_test(NAME "test_merger"
                 COMMAND test_merger
+                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/testing)
+
+            add_test(NAME "test_congruence"
+                COMMAND test_congruence
                 WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/testing)
 
             add_test(NAME "generate_frieze"
@@ -132,9 +139,6 @@ else()
             set_property(TEST "generate_frieze" APPEND PROPERTY ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/${python_default_destination}/vtkbool")
 
         endif()
-
-        add_executable(test_2d test_2d.cxx)
-        target_link_libraries(test_2d PRIVATE vtkbool ${VTK_LIBRARIES})
 
     endif()
 
