@@ -40,12 +40,12 @@ enum OperMode {
 };
 
 enum class Capt {
-    NOT = 1 << 0,
-    EDGE = 1 << 1,
+    Not = 1 << 0,
+    Edge = 1 << 1,
     A = 1 << 2,
     B = 1 << 3,
-    BRANCHED = 1 << 4,
-    BOUNDARY = 0xe
+    Branched = 1 << 4,
+    Boundary = 0xe
 };
 
 // inline std::underlying_type_t<Capt> operator| (Capt lhs, Capt rhs) {
@@ -59,20 +59,20 @@ inline std::underlying_type_t<Capt> operator& (Capt lhs, Capt rhs) {
 }
 
 enum class Side {
-    NONE,
-    START,
-    END
+    None,
+    Start,
+    End
 };
 
 enum class Loc {
-    NONE,
-    INSIDE,
-    OUTSIDE
+    None,
+    Inside,
+    Outside
 };
 
 class StripPt {
 public:
-    StripPt () : t(0), capt(Capt::NOT), catched(true) {
+    StripPt () : t(0), capt(Capt::Not), catched(true) {
         edge[0] = NOTSET;
         edge[1] = NOTSET;
     }
@@ -104,7 +104,7 @@ class StripPtR {
 public:
     StripPtR () = delete;
 
-    StripPtR (vtkIdType ind, std::size_t strip) : ind(ind), strip(strip), ref(NOTSET), side(Side::NONE) {
+    StripPtR (vtkIdType ind, std::size_t strip) : ind(ind), strip(strip), ref(NOTSET), side(Side::None) {
         desc[0] = NOTSET;
         desc[1] = NOTSET;
     }

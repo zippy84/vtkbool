@@ -11,3 +11,4 @@
 - Problematik mit den non-manifold Edges
 - ~~Error abfangen: Linie endet ohne Nachbarn~~
 - InterPts: Gruppierung, Validierung
+- ~~Enums umstellen auf Camelcase~~
