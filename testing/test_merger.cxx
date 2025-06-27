@@ -23,7 +23,7 @@ limitations under the License.
 
 #include "Merger.h"
 
-Poly Draw (double r, vtkIdType step, double x, double y, double rotate = 0) {
+Poly CreateRegularPoly (double r, vtkIdType step, double x, double y, double rotate = 0) {
     Poly poly;
 
     double phi = 2*M_PI/static_cast<double>(step);
@@ -145,15 +145,15 @@ bool Test (vtkPolyData *pd, PolysType &polys, vtkIdType numCells, [[maybe_unused
 }
 
 int main() {
-    auto pdA = CreatePolyData({ Draw(8, 18, 0, 0) });
+    auto pdA = CreatePolyData({ CreateRegularPoly(8, 18, 0, 0) });
 
     PolysType polysA {
-        Draw(.25, 6, 3.5, 0),
-        Draw(.25, 6, -3.5, 0),
-        Draw(.5, 6, 1, 0),
-        Draw(.5, 6, -1, 0),
-        Draw(.5, 6, 0, 1, 30),
-        Draw(.5, 6, 0, -1, 30)
+        CreateRegularPoly(.25, 6, 3.5, 0),
+        CreateRegularPoly(.25, 6, -3.5, 0),
+        CreateRegularPoly(.5, 6, 1, 0),
+        CreateRegularPoly(.5, 6, -1, 0),
+        CreateRegularPoly(.5, 6, 0, 1, 30),
+        CreateRegularPoly(.5, 6, 0, -1, 30)
     };
 
     if (!Test(pdA, polysA, 10, "polysA")) {
@@ -162,13 +162,13 @@ int main() {
 
     auto pdB = CreatePolyData({ { {5, 5, 0}, {-5, 5, 0}, {-5, -5, 0}, {5, -5, 0} } });
 
-    Poly polyA = Draw(4, 18, 0, 0, 10),
-        polyB = Draw(3, 18, 0, 0, 10);
+    Poly polyA = CreateRegularPoly(4, 18, 0, 0, 10);
+    Poly polyB = CreateRegularPoly(3, 18, 0, 0, 10);
 
     std::copy(polyB.rbegin(), polyB.rend(), std::back_inserter(polyA));
 
     PolysType polysB {
-        Draw(2, 18, 0, 0, 5),
+        CreateRegularPoly(2, 18, 0, 0, 5),
         polyA
     };
 

@@ -21,10 +21,10 @@ limitations under the License.
 int main() {
     auto pdA = CreatePolyData({ { {0, 0, 0}, {1, 0, 0}, {1, 1, 0}, {0, 1, 0} } });
 
-    double z = tan(0.0005/180*M_PI)*.5;
+    double z = std::tan(0.0005/180*M_PI)*.5;
 
-    auto pdB = CreatePolyData({ {
-        {0, 0, 0}, {0, .5, 0}, {1, .5, 0}, {1, 0, 0} },
+    auto pdB = CreatePolyData({
+        { {0, 0, 0}, {0, .5, 0}, {1, .5, 0}, {1, 0, 0} },
         { {1, .5, 0}, {0, .5, 0}, {0, 1, z}, {1, 1, z} }
     });
 

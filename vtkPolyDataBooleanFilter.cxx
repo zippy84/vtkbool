@@ -168,7 +168,18 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
                 return 1;
             }
 
-            // ...
+            vtkIdType i;
+
+            auto cells = vtkSmartPointer<vtkIdList>::New();
+
+            for (i = 0; i < contLines->GetNumberOfPoints(); i++) {
+                contLines->GetPointCells(i, cells);
+
+                if (cells->GetNumberOfIds() == 1) {
+                    vtkErrorMacro("At least one line-end has only one neighbor.");
+                    return 1;
+                }
+            }
 
             // in den CellDatas steht drin, welche polygone einander schneiden
 
@@ -188,8 +199,6 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
 
             vtkIdType numCellsA = modPdA->GetNumberOfCells();
             vtkIdType numCellsB = modPdB->GetNumberOfCells();
-
-            vtkIdType i;
 
             for (i = 0; i < numCellsA; i++) {
                 origCellIdsA->SetValue(i, i);
