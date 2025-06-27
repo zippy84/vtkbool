@@ -29,7 +29,7 @@ vtkIdType _idA, _idB;
 #endif
 
 vtkSmartPointer<vtkPolyData> Clean (vtkPolyData *pd) {
-    
+
     auto clean = vtkSmartPointer<vtkCleanPolyData>::New();
     clean->SetOutputPointsPrecision(vtkAlgorithm::DOUBLE_PRECISION);
     clean->SetTolerance(1e-6);
@@ -44,15 +44,15 @@ vtkSmartPointer<vtkPolyData> Clean (vtkPolyData *pd) {
 
     auto cleaned = clean->GetOutput();
 
-    vtkIdType numPolys = cleaned->GetNumberOfPolys();
+    vtkIdType numCells = cleaned->GetNumberOfCells();
 
     auto newPd = vtkSmartPointer<vtkPolyData>::New();
     newPd->SetPoints(cleaned->GetPoints());
-    newPd->Allocate(numPolys);
+    newPd->Allocate(numCells);
 
     auto cellIds = vtkSmartPointer<vtkIdTypeArray>::New();
     cellIds->SetName("OrigCellIds");
-    cellIds->Allocate(numPolys);
+    cellIds->Allocate(numCells);
 
     vtkCellIterator *cellItr = cleaned->NewCellIterator();
 
@@ -86,7 +86,7 @@ vtkSmartPointer<vtkPolyData> Clean (vtkPolyData *pd) {
             newPd->InsertNextCell(VTK_POLYGON, ptIds);
             cellIds->InsertNextValue(cellId);
 
-            // ... 
+            // ...
         }
     }
 

@@ -115,6 +115,9 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
             modPdA = Clean(pdA);
             modPdB = Clean(pdB);
 
+            modPdA->EditableOn();
+            modPdB->EditableOn();
+
 #ifdef DEBUG
             std::cout << "Exporting modPdA.vtk" << std::endl;
             WriteVTK("modPdA.vtk", modPdA);
@@ -130,13 +133,13 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
                 return 1;
             }
 
-#ifdef DEBUG
+// #ifdef DEBUG
             std::cout << "Exporting modPdA_1.vtk" << std::endl;
             WriteVTK("modPdA_1.vtk", modPdA);
 
             std::cout << "Exporting modPdB_1.vtk" << std::endl;
             WriteVTK("modPdB_1.vtk", modPdB);
-#endif
+// #endif
 
             start = clock::now();
 
@@ -267,8 +270,8 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
 
             start = clock::now();
 
-            // AddAdjacentPoints(modPdA, contsA, polyStripsA);
-            // AddAdjacentPoints(modPdB, contsB, polyStripsB);
+            AddAdjacentPoints(modPdA, contsA, polyStripsA);
+            AddAdjacentPoints(modPdB, contsB, polyStripsB);
 
             times.push_back(clock::now()-start);
 
