@@ -83,12 +83,35 @@ vtkSmartPointer<vtkPolyData> Clean (vtkPolyData *pd) {
             }
 
         } else if (cellItr->GetCellType() == VTK_QUAD) {
-            newPd->InsertNextCell(VTK_POLYGON, ptIds);
-            cellIds->InsertNextValue(cellId);
 
-            // ...
+            double pA[3], pB[3], pC[3], pD[3];
+
+            cleaned->GetPoint(ptIds->GetId(0), pA);
+            cleaned->GetPoint(ptIds->GetId(1), pB);
+            cleaned->GetPoint(ptIds->GetId(2), pC);
+            cleaned->GetPoint(ptIds->GetId(3), pD);
+
+            double det = vtkMath::Determinant3x3(pB[0]-pA[0], pC[0]-pA[0], pD[0]-pA[0],
+                pB[1]-pA[1], pC[1]-pA[1], pD[1]-pA[1],
+                pB[2]-pA[2], pC[2]-pA[2], pD[2]-pA[2]);
+
+            if (std::abs(det) < 1e-10) {
+                newPd->InsertNextCell(VTK_POLYGON, ptIds);
+                cellIds->InsertNextValue(cellId);
+            } else {
+                const vtkIdType cellA[] = {ptIds->GetId(0), ptIds->GetId(1), ptIds->GetId(2)};
+                const vtkIdType cellB[] = {ptIds->GetId(2), ptIds->GetId(3), ptIds->GetId(0)};
+
+                newPd->InsertNextCell(VTK_TRIANGLE, 3, cellA);
+                cellIds->InsertNextValue(cellId);
+
+                newPd->InsertNextCell(VTK_TRIANGLE, 3, cellB);
+                cellIds->InsertNextValue(cellId);
+            }
         }
     }
+
+    cellItr->Delete();
 
     newPd->GetCellData()->SetScalars(cellIds);
     newPd->Squeeze();
