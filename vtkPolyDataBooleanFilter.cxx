@@ -2459,9 +2459,9 @@ void vtkPolyDataBooleanFilter::MergePoints (vtkPolyData *pd, PolyStripsType &pol
 }
 
 enum class Congr {
-    EQUAL,
-    OPPOSITE,
-    NOT
+    Equal,
+    Opposite,
+    Not
 };
 
 class PolyAtEdge {
@@ -2510,14 +2510,14 @@ public:
             if (ang > eps) {
                 if (cong > eps) {
                     // normalen sind gleich ausgerichtet
-                    return Congr::EQUAL;
+                    return Congr::Equal;
                 } else {
-                    return Congr::OPPOSITE;
+                    return Congr::Opposite;
                 }
             }
         }
 
-        return Congr::NOT;
+        return Congr::Not;
     }
 
 };
@@ -2540,14 +2540,14 @@ public:
                   << ", cB " << cB
                   << std::endl;
 
-        if (cA != Congr::NOT || cB != Congr::NOT) {
+        if (cA != Congr::Not || cB != Congr::Not) {
             assert(cA != cB);
         }
 
 #endif
 
-        if (cA == Congr::EQUAL || cA == Congr::OPPOSITE) {
-            if (cA == Congr::OPPOSITE) {
+        if (cA == Congr::Equal || cA == Congr::Opposite) {
+            if (cA == Congr::Opposite) {
                 // normalen sind entgegengesetzt gerichtet
 
                 if (mode == OPER_INTERSECTION) {
@@ -2562,8 +2562,8 @@ public:
                 pT.loc = Loc::Outside;
             }
 
-        } else if (cB == Congr::EQUAL || cB == Congr::OPPOSITE) {
-            if (cB == Congr::OPPOSITE) {
+        } else if (cB == Congr::Equal || cB == Congr::Opposite) {
+            if (cB == Congr::Opposite) {
                 // normalen sind entgegengesetzt gerichtet
 
                 if (mode == OPER_INTERSECTION) {

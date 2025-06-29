@@ -102,6 +102,8 @@ public:
 typedef std::vector<InterPt> InterPtsType;
 typedef std::vector<std::tuple<InterPt, InterPt>> OverlapsType;
 
+typedef std::set<Pair> NonManifoldEdgesType;
+
 vtkSmartPointer<vtkPolyData> Clean (vtkPolyData *pd);
 
 class Contact {
@@ -115,7 +117,13 @@ public:
     vtkSmartPointer<vtkPolyData> lines;
     vtkSmartPointer<vtkIdTypeArray> contA, contB, sourcesA, sourcesB;
 
+    bool touchesEdgesA, touchesEdgesB;
+
+    NonManifoldEdgesType edgesA, edgesB;
+
     vtkSmartPointer<vtkPolyData> GetLines ();
+
+    void GetNonManifoldEdges (vtkPolyData *pd, NonManifoldEdgesType &edges);
 
     void InterEdgeLine (InterPtsType &interPts, const Point3d &pA, const Point3d &pB, Src src);
 
@@ -124,7 +132,7 @@ public:
     void InterPolys (vtkIdType idA, vtkIdType idB);
 
     bool CheckInters (const InterPtsType &interPts, vtkPolyData *pd);
-    
+
     void OverlapLines (OverlapsType &overlaps, InterPtsType &intersA, InterPtsType &intersB);
 
     void AddContactLines (InterPtsType &intersA, InterPtsType &intersB, vtkIdType idA, vtkIdType idB);

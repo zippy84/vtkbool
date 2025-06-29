@@ -147,6 +147,9 @@ Contact::Contact (vtkPolyData *newPdA, vtkPolyData *newPdB) : newPdA(newPdA), ne
 
     sourcesA->SetName("sourcesA");
     sourcesB->SetName("sourcesB");
+
+    GetNonManifoldEdges(newPdA, edgesA);
+    GetNonManifoldEdges(newPdB, edgesB);
 }
 
 vtkSmartPointer<vtkPolyData> Contact::GetLines () {
@@ -161,6 +164,10 @@ vtkSmartPointer<vtkPolyData> Contact::GetLines () {
     auto matrix = vtkSmartPointer<vtkMatrix4x4>::New();
 
     treeA->IntersectWithOBBTree(treeB, matrix, InterNodes, this);
+
+    if (touchesEdgesA || touchesEdgesB) {
+        throw std::runtime_error("Intersection goes through non-manifold edges.");
+    }
 
     lines->GetCellData()->AddArray(contA);
     lines->GetCellData()->AddArray(contB);
@@ -194,6 +201,45 @@ vtkSmartPointer<vtkPolyData> Contact::GetLines () {
     cleaned->RemoveDeletedCells();
 
     return cleaned;
+}
+
+void Contact::GetNonManifoldEdges (vtkPolyData *pd, NonManifoldEdgesType &edges) {
+
+    vtkCellIterator *cellItr = pd->NewCellIterator();
+
+    vtkIdType cellId;
+    vtkIdList *ptIds;
+
+    auto neigs = vtkSmartPointer<vtkIdList>::New();
+
+    vtkIdType i, j;
+
+    vtkIdType idA, idB;
+
+    for (cellItr->InitTraversal(); !cellItr->IsDoneWithTraversal(); cellItr->GoToNextCell()) {
+        cellId = cellItr->GetCellId();
+        ptIds = cellItr->GetPointIds();
+
+        for (i = 0; i < ptIds->GetNumberOfIds(); i++) {
+            j = i+1;
+
+            if (j == ptIds->GetNumberOfIds()) {
+                j = 0;
+            }
+
+            idA = ptIds->GetId(i);
+            idB = ptIds->GetId(j);
+
+            pd->GetCellEdgeNeighbors(cellId, idA, idB, neigs);
+
+            if (neigs->GetNumberOfIds() > 1) {
+                edges.emplace(idA, idB);
+                edges.emplace(idB, idA);
+            }
+        }
+    }
+
+    cellItr->Delete();
 }
 
 void Contact::InterEdgeLine (InterPtsType &interPts, const Point3d &pA, const Point3d &pB, Src src) {
@@ -511,6 +557,30 @@ void Contact::AddContactLines (InterPtsType &intersA, InterPtsType &intersB, vtk
     for (itr = overlaps.begin(); itr != overlaps.end(); ++itr) {
         auto &f = std::get<0>(*itr);
         auto &s = std::get<1>(*itr);
+
+        if (f.src == Src::A) {
+            if (edgesA.count(f.edge) == 1) {
+                touchesEdgesA = true;
+            }
+        }
+
+        if (s.src == Src::A) {
+            if (edgesA.count(s.edge) == 1) {
+                touchesEdgesA = true;
+            }
+        }
+
+        if (f.src == Src::B) {
+            if (edgesB.count(f.edge) == 1) {
+                touchesEdgesB = true;
+            }
+        }
+
+        if (s.src == Src::B) {
+            if (edgesB.count(s.edge) == 1) {
+                touchesEdgesB = true;
+            }
+        }
 
         vtkIdList *linePts = vtkIdList::New();
 
