@@ -381,6 +381,12 @@ bool Contact::InterPolyLine (InterPtsType &interPts, vtkPolyData *pd, const Base
         }
     }
 
+    std::map<vtkIdType, std::reference_wrapper<const Point3d>> pts;
+
+    for (auto &p : poly) {
+        pts.emplace(p.id, p);
+    }
+
     vtkIdType ind;
 
     vtkIdType prev, next;
@@ -421,13 +427,34 @@ bool Contact::InterPolyLine (InterPtsType &interPts, vtkPolyData *pd, const Base
 
         if (itr->size() == 2) {
             if (allEnds.count(prev) == 0 && allEnds.count(next) == 1) {
+                const Point3d &q = pts.at(prev);
+
+                if ((allEnds.at(next) < p.t && q.y < 0) || (allEnds.at(next) > p.t && q.y > 0)) {
+                    itr->pop_back();
+                }
 
             } else if (allEnds.count(prev) == 1 && allEnds.count(next) == 0) {
+                const Point3d &q = pts.at(next);
 
+                if ((allEnds.at(prev) < p.t && q.y > 0) || (allEnds.at(prev) > p.t && q.y < 0)) {
+                    itr->pop_back();
+                }
             }
         }
 
         if (allEnds.count(prev) == 0 && allEnds.count(next) == 0) {
+            const Point3d &a = pts.at(prev);
+            const Point3d &b = pts.at(next);
+
+            if (std::signbit(a.y) != std::signbit(b.y)) {
+                if (itr->size() == 2) {
+                    itr->pop_back();
+                }
+            } else {
+                if ((a.x > b.x) == std::signbit(a.y)) {
+                    itr->clear();
+                }
+            }
 
         }
 

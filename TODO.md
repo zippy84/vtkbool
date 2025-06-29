@@ -10,5 +10,5 @@
 - ~~test_nearly_congruent müsste in C++ gemacht werden~~
 - ~~Problematik mit den non-manifold Edges~~
 - ~~Error abfangen: Linie endet ohne Nachbarn~~
-- InterPts: Gruppierung, Validierung
+- InterPts: Gruppierung, Validierung (muss als SVG dokumentiert werden)
 - ~~Enums umstellen auf Camelcase~~
