@@ -215,9 +215,16 @@ void Contact::GetNonManifoldEdges (vtkPolyData *pd, NonManifoldEdgesType &edges)
 
     auto neigs = vtkSmartPointer<vtkIdList>::New();
 
-    vtkIdType i, j;
+    vtkIdType i, j, k;
 
     vtkIdType idA, idB;
+
+    vtkIdType n;
+
+    vtkIdType num;
+    const vtkIdType *pts;
+
+    vtkIdType a, b;
 
     for (cellItr->InitTraversal(); !cellItr->IsDoneWithTraversal(); cellItr->GoToNextCell()) {
         cellId = cellItr->GetCellId();
@@ -236,8 +243,29 @@ void Contact::GetNonManifoldEdges (vtkPolyData *pd, NonManifoldEdgesType &edges)
             pd->GetCellEdgeNeighbors(cellId, idA, idB, neigs);
 
             if (neigs->GetNumberOfIds() > 1) {
-                edges.emplace(idA, idB);
-                edges.emplace(idB, idA);
+
+                n = 0;
+
+                for (k = 0; k < neigs->GetNumberOfIds(); k++) {
+                    pd->GetCellPoints(neigs->GetId(k), num, pts);
+
+                    for (a = 0; a < num; a++) {
+                        b = a+1;
+
+                        if (b == num) {
+                            b = 0;
+                        }
+
+                        if (pts[a] == idB && pts[b] == idA) {
+                            n++;
+                        }
+                    }
+                }
+
+                if (n > 1) {
+                    edges.emplace(idA, idB);
+                    edges.emplace(idB, idA);
+                }
             }
         }
     }

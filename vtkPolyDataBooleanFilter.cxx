@@ -133,13 +133,13 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
                 return 1;
             }
 
-// #ifdef DEBUG
+#ifdef DEBUG
             std::cout << "Exporting modPdA_1.vtk" << std::endl;
             WriteVTK("modPdA_1.vtk", modPdA);
 
             std::cout << "Exporting modPdB_1.vtk" << std::endl;
             WriteVTK("modPdB_1.vtk", modPdB);
-// #endif
+#endif
 
             start = clock::now();
 
@@ -158,10 +158,10 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
 
             times.push_back(clock::now()-start);
 
-// #ifdef DEBUG
+#ifdef DEBUG
             std::cout << "Exporting contLines.vtk" << std::endl;
             WriteVTK("contLines.vtk", contLines);
-// #endif
+#endif
 
             if (contLines->GetNumberOfCells() == 0) {
                 vtkErrorMacro("There is no contact.");
