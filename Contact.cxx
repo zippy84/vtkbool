@@ -257,8 +257,8 @@ void Contact::InterEdgeLine (InterPtsType &interPts, const Point3d &pA, const Po
 
     if (std::abs(w[0]) < 1e-10) {
         if (std::abs(pA.y) < 1e-5 && std::abs(pB.y) < 1e-5) {
-            // interPts.emplace_back(pA.x, 0, 0, pA.x, pA.id, pB.id, End::A, src, PointSrc::Copied);
-            // interPts.emplace_back(pB.x, 0, 0, pB.x, pA.id, pB.id, End::B, src, PointSrc::Copied);
+            interPts.emplace_back(pA.x, 0, 0, pA.x, pA.id, pB.id, End::A, src, PointSrc::Copied);
+            interPts.emplace_back(pB.x, 0, 0, pB.x, pA.id, pB.id, End::B, src, PointSrc::Copied);
         }
     } else {
         double yA = pA.y-1e-6*v[1];
@@ -310,6 +310,136 @@ bool Contact::InterPolyLine (InterPtsType &interPts, vtkPolyData *pd, const Base
     }
 
     std::sort(interPts.begin(), interPts.end(), [](auto &a, auto &b) { return a.t < b.t; });
+
+    struct Cmp {
+        const double tol = 1e-5;
+
+        bool operator() (const InterPt &lhs, const InterPt &rhs) const {
+            if (lhs.pointSrc == PointSrc::Copied && rhs.pointSrc == PointSrc::Copied) {
+                if (lhs.GetEnd() == rhs.GetEnd()) {
+                    return false;
+                }
+            } else if (lhs.pointSrc == PointSrc::Copied) {
+                const vtkIdType end = lhs.GetEnd();
+
+                if (end == rhs.edge.f || end == rhs.edge.g) {
+                    return false;
+                }
+            } else if (rhs.pointSrc == PointSrc::Copied) {
+                const vtkIdType end = rhs.GetEnd();
+
+                if (end == lhs.edge.f || end == lhs.edge.g) {
+                    return false;
+                }
+            }
+
+            const double d = lhs.t-rhs.t;
+
+            if (std::abs(d) < tol) {
+                return false;
+            } else {
+                return d < 0;
+            }
+        }
+    };
+
+    std::map<InterPt, InterPtsType, Cmp> grouped;
+
+    std::vector<InterPtsType> sortedPts;
+
+    for (auto &p : interPts) {
+        grouped[p].push_back(p);
+    }
+
+    for (auto& [k, v] : grouped) {
+        std::sort(v.begin(), v.end(), [](const InterPt &lhs, const InterPt &rhs) { return lhs.pointSrc > rhs.pointSrc; });
+
+        sortedPts.push_back(v);
+    }
+
+    std::map<vtkIdType, double> allEnds;
+
+    decltype(sortedPts)::iterator itr;
+
+    for (itr = sortedPts.begin(); itr != sortedPts.end(); ++itr) {
+        if (itr == sortedPts.begin()) {
+            if (itr->size() == 2) {
+                itr->pop_back();
+            }
+        } else if (itr == sortedPts.end()-1) {
+            if (itr->size() == 2) {
+                itr->pop_back();
+            }
+        } else if (itr->size() == 1 && itr->back().end != End::None) {
+            itr->push_back(itr->back());
+        }
+
+        if (itr->back().end != End::None) {
+            auto p = itr->back();
+
+            allEnds.emplace(p.end == End::A ? p.edge.f : p.edge.g, p.t);
+        }
+    }
+
+    vtkIdType ind;
+
+    vtkIdType prev, next;
+
+    for (itr = sortedPts.begin(); itr != sortedPts.end(); ++itr) {
+        auto p = itr->back();
+
+        if (p.end == End::None) {
+            continue;
+        }
+
+        if (p.end == End::A) {
+            ind = p.edge.f;
+
+            next = p.edge.g;
+
+            auto _itr = std::find_if(poly.begin(), poly.end(), [&ind](auto &p) { return p.id == ind; });
+
+            if (_itr == poly.begin()) {
+                prev = poly.back().id;
+            } else {
+                prev = std::prev(_itr)->id;
+            }
+
+        } else {
+            ind = p.edge.g;
+
+            prev = p.edge.f;
+
+            auto _itr = std::find_if(poly.begin(), poly.end(), [&ind](auto &p) { return p.id == ind; });
+
+            if (_itr == poly.end()-1) {
+                next = poly.front().id;
+            } else {
+                next = std::next(_itr)->id;
+            }
+        }
+
+        if (itr->size() == 2) {
+            if (allEnds.count(prev) == 0 && allEnds.count(next) == 1) {
+
+            } else if (allEnds.count(prev) == 1 && allEnds.count(next) == 0) {
+
+            }
+        }
+
+        if (allEnds.count(prev) == 0 && allEnds.count(next) == 0) {
+
+        }
+
+    }
+
+    InterPtsType _interPts;
+
+    for (const auto &pts : sortedPts) {
+        std::copy(pts.begin(), pts.end(), std::back_inserter(_interPts));
+    }
+
+    interPts.swap(_interPts);
 
 #if (defined(_debA) && defined(_debB))
     for (auto &p : interPts) {
