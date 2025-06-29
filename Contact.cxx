@@ -309,7 +309,7 @@ void Contact::InterEdgeLine (InterPtsType &interPts, const Point3d &pA, const Po
 
 }
 
-bool Contact::InterPolyLine (InterPtsType &interPts, vtkPolyData *pd, const Base2 &base, const Poly &poly, Src src) {
+bool Contact::InterPolyLine (InterPtsType &interPts, const Base2 &base, const Poly &poly, Src src) {
 
 #if (defined(_debA) && defined(_debB))
     if (_idA == _debA && _idB == _debB) {
@@ -407,6 +407,29 @@ bool Contact::InterPolyLine (InterPtsType &interPts, vtkPolyData *pd, const Base
 
             allEnds.emplace(p.end == End::A ? p.edge.f : p.edge.g, p.t);
         }
+
+        // hier schneidet sich das polygon selbst
+
+        if (itr->size() > 2) {
+            return false;
+        }
+
+        if (itr->size() == 2) {
+            // schnitt durch kongruente kanten
+
+            if (itr->back().end == End::None) {
+                return false;
+            }
+
+            auto &edgeA = itr->front().edge;
+            auto &edgeB = itr->back().edge;
+
+            if (edgeA.f == edgeB.g && edgeB.f == edgeA.g) {
+                return false;
+            }
+
+        }
+
     }
 
     std::map<vtkIdType, std::reference_wrapper<const Point3d>> pts;
@@ -598,11 +621,11 @@ void Contact::InterPolys (vtkIdType idA, vtkIdType idB) {
 
     InterPtsType intersPtsA, intersPtsB;
 
-    if (!InterPolyLine(intersPtsA, newPdA, baseA, _polyA, Src::A)) {
+    if (!InterPolyLine(intersPtsA, baseA, _polyA, Src::A)) {
         throw std::runtime_error("Found invalid intersection points.");
     }
 
-    if (!InterPolyLine(intersPtsB, newPdB, baseB, _polyB, Src::B)) {
+    if (!InterPolyLine(intersPtsB, baseB, _polyB, Src::B)) {
         throw std::runtime_error("Found invalid intersection points.");
     }
 
