@@ -148,6 +148,9 @@ Contact::Contact (vtkPolyData *newPdA, vtkPolyData *newPdB) : newPdA(newPdA), ne
     sourcesA->SetName("sourcesA");
     sourcesB->SetName("sourcesB");
 
+    touchesEdgesA = false;
+    touchesEdgesB = false;
+
     GetNonManifoldEdges(newPdA, edgesA);
     GetNonManifoldEdges(newPdB, edgesB);
 }
