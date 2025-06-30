@@ -85,7 +85,7 @@ public:
         }
     }
 
-    inline vtkIdType GetEnd() const {
+    inline vtkIdType GetEnd () const {
         if (end == End::A) {
             return edge.f;
         }

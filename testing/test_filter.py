@@ -605,7 +605,6 @@ def test_special(tmp_path):
     bf.Update()
 
     write_result(bf, tmp_path)
-    # check_result(bf, [10, 8])
 
     assert bf.GetOutput(2).GetNumberOfCells() == 32
 
@@ -741,62 +740,6 @@ def test_branched_6(tmp_path):
 
     write_result(bf, tmp_path)
     check_result(bf, [6, 5])
-
-@pytest.mark.xfail
-def test_bad_shaped(tmp_path):
-    cube = vtkCubeSource()
-    cube.SetBounds(-2.5, 2.5, 0, 5, 0, 5)
-
-    z = 4.999
-
-    pts = [
-        [2.5, -2.5, 0],
-        [2.5, -2.5, 5],
-        [0, -2.5, z],
-        [-2.5, -2.5, 5],
-        [-2.5, -2.5, 0],
-
-        [-2.5, 2.5, 0],
-        [-2.5, 2.5, 5],
-        [0, 2.5, z],
-        [2.5, 2.5, 5],
-        [2.5, 2.5, 0],
-    ]
-
-    polys = [
-        [0, 1, 2, 3, 4],
-        [5, 6, 7, 8, 9],
-        [9, 8, 1, 0],
-        [4, 3, 6, 5],
-        [9, 0, 4, 5],
-        [1, 8, 7, 6, 3, 2]
-    ]
-
-    _pts = vtkPoints()
-
-    for pt in pts:
-        _pts.InsertNextPoint(*pt)
-
-    pd = vtkPolyData()
-    pd.Allocate(1)
-    pd.SetPoints(_pts)
-
-    for poly in polys:
-        cell = vtkIdList()
-        [ cell.InsertNextId(i) for i in poly ]
-        pd.InsertNextCell(VTK_POLYGON, cell)
-
-    prod = vtkTrivialProducer()
-    prod.SetOutput(pd)
-
-    bf = vtkPolyDataBooleanFilter()
-    bf.SetInputConnection(0, cube.GetOutputPort())
-    bf.SetInputConnection(1, prod.GetOutputPort())
-    bf.SetOperModeToNone()
-    bf.Update()
-
-    write_result(bf, tmp_path)
-    check_result(bf)
 
 @pytest.mark.xfail
 def test_self_intersecting_polys():

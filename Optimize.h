@@ -73,6 +73,7 @@ public:
     static void TriangluteCell (vtkPolyData *pd, vtkIdType cellId, const Edges &edges);
     static void MovePoint (vtkPolyData *pd, vtkIdType ind, const Point3d &p);
 
+    PreventEqualCaptPoints () = delete;
     PreventEqualCaptPoints (vtkPolyData *pdA, vtkPolyData *pdB);
     void Run ();
 private:
