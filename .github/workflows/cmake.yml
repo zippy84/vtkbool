@@ -2,7 +2,8 @@ name: CMake
 
 on:
   push:
-    branches: [master]
+    branches:
+      - '*'
 
 jobs:
   Build:
@@ -37,6 +38,7 @@ jobs:
       run: ctest --output-on-failure -C ${{matrix.build_type}}
 
   Coverage:
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3

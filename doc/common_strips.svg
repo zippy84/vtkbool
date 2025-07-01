@@ -3,7 +3,7 @@
 
 <svg
    sodipodi:docname="common_strips.svg"
-   inkscape:version="1.2.1 (9c6d41e410, 2022-07-14, custom)"
+   inkscape:version="1.4.2 (ebf0e940d0, 2025-05-08)"
    id="svg5"
    version="1.1"
    viewBox="0 0 155 50"
@@ -26,12 +26,12 @@
      inkscape:document-units="mm"
      showgrid="false"
      inkscape:zoom="1.4142136"
-     inkscape:cx="452.19479"
-     inkscape:cy="84.145707"
+     inkscape:cx="340.11835"
+     inkscape:cy="112.42998"
      inkscape:window-width="1455"
      inkscape:window-height="1053"
-     inkscape:window-x="691"
-     inkscape:window-y="68"
+     inkscape:window-x="457"
+     inkscape:window-y="27"
      inkscape:window-maximized="0"
      inkscape:current-layer="layer1">
     <inkscape:grid
@@ -43,7 +43,8 @@
        empspacing="2"
        dotted="false"
        originx="0"
-       originy="0" />
+       originy="0"
+       visible="false" />
   </sodipodi:namedview>
   <defs
      id="defs2">

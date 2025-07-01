@@ -7,7 +7,7 @@
    viewBox="0 0 230 65"
    version="1.1"
    id="svg387"
-   inkscape:version="1.2.1 (9c6d41e410, 2022-07-14, custom)"
+   inkscape:version="1.4.2 (ebf0e940d0, 2025-05-08)"
    sodipodi:docname="branched_strips.svg"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
@@ -25,9 +25,9 @@
      inkscape:deskcolor="#d1d1d1"
      inkscape:document-units="mm"
      showgrid="false"
-     inkscape:zoom="2.3200104"
-     inkscape:cx="724.3502"
-     inkscape:cy="116.37879"
+     inkscape:zoom="1.1600052"
+     inkscape:cx="446.98075"
+     inkscape:cy="148.2752"
      inkscape:window-width="1422"
      inkscape:window-height="953"
      inkscape:window-x="490"
@@ -44,7 +44,8 @@
        empspacing="2"
        dotted="false"
        originx="0"
-       originy="0" />
+       originy="0"
+       visible="false" />
   </sodipodi:namedview>
   <defs
      id="defs384">
