@@ -635,13 +635,13 @@ void Contact::InterPolys (vtkIdType idA, vtkIdType idB) {
     bool hasReplB = replsB.count(idB) == 1;
 
     if (!isPlanarA && !hasReplA && newPdA->GetCellType(idA) != VTK_TRIANGLE) {
-        auto newIds = PreventEqualCaptPoints::TriangluteCell(newPdA, idA, {});
+        auto newIds = PreventEqualCaptPoints::TriangulateCell(newPdA, idA, {});
         replsA.emplace(idA, newIds);
         hasReplA = true;
     }
 
     if (!isPlanarB && !hasReplB && newPdB->GetCellType(idB) != VTK_TRIANGLE) {
-        auto newIds = PreventEqualCaptPoints::TriangluteCell(newPdB, idB, {});
+        auto newIds = PreventEqualCaptPoints::TriangulateCell(newPdB, idB, {});
         replsB.emplace(idB, newIds);
         hasReplB = true;
     }

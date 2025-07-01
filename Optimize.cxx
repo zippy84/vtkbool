@@ -356,7 +356,7 @@ void PreventEqualCaptPoints::Find (vtkPolyData *pd, vtkPolyData *other, [[maybe_
     }
 
     for (const auto& [cellId, edges] : newCells) {
-        PreventEqualCaptPoints::TriangluteCell(other, cellId, edges);
+        PreventEqualCaptPoints::TriangulateCell(other, cellId, edges);
         other->DeleteCell(cellId);
     }
 
@@ -372,7 +372,7 @@ void PreventEqualCaptPoints::Find (vtkPolyData *pd, vtkPolyData *other, [[maybe_
 
 }
 
-IdsType PreventEqualCaptPoints::TriangluteCell (vtkPolyData *pd, vtkIdType cellId, const Edges &edges) {
+IdsType PreventEqualCaptPoints::TriangulateCell (vtkPolyData *pd, vtkIdType cellId, const Edges &edges) {
     vtkIdTypeArray *origCellIds = vtkIdTypeArray::SafeDownCast(pd->GetCellData()->GetScalars("OrigCellIds"));
 
     IdsType newCellIds;
@@ -479,7 +479,7 @@ void PreventEqualCaptPoints::MovePoint (vtkPolyData *pd, vtkIdType ind, const Po
         cellId = cells->GetId(i);
 
         if (pd->GetCellType(cellId) == VTK_POLYGON) {
-            PreventEqualCaptPoints::TriangluteCell(pd, cellId, {});
+            PreventEqualCaptPoints::TriangulateCell(pd, cellId, {});
             pd->DeleteCell(cellId);
         }
     }
