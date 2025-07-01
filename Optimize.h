@@ -70,7 +70,7 @@ public:
 class PreventEqualCaptPoints {
     vtkPolyData *pdA, *pdB;
 public:
-    static void TriangluteCell (vtkPolyData *pd, vtkIdType cellId, const Edges &edges);
+    static IdsType TriangluteCell (vtkPolyData *pd, vtkIdType cellId, const Edges &edges);
     static void MovePoint (vtkPolyData *pd, vtkIdType ind, const Point3d &p);
 
     PreventEqualCaptPoints () = delete;

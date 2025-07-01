@@ -15,11 +15,13 @@ limitations under the License.
 */
 
 #include "Contact.h"
+#include "Optimize.h"
 
 #include <vtkCleanPolyData.h>
 #include <vtkCellIterator.h>
 #include <vtkCellData.h>
 #include <vtkTriangleStrip.h>
+#include <vtkArrayIteratorTemplate.h>
 
 // #define _debA 0
 // #define _debB 0
@@ -120,6 +122,14 @@ vtkSmartPointer<vtkPolyData> Clean (vtkPolyData *pd) {
 }
 
 Contact::Contact (vtkPolyData *newPdA, vtkPolyData *newPdB) : newPdA(newPdA), newPdB(newPdB) {
+    if (newPdA->GetCellData()->GetScalars("OrigCellIds") == nullptr) {
+        throw std::invalid_argument("OrigCellIds is missing.");
+    }
+
+    if (newPdB->GetCellData()->GetScalars("OrigCellIds") == nullptr) {
+        throw std::invalid_argument("OrigCellIds is missing.");
+    }
+
     pts = vtkSmartPointer<vtkPoints>::New();
     pts->SetDataTypeToDouble();
 
@@ -168,18 +178,17 @@ vtkSmartPointer<vtkPolyData> Contact::GetLines () {
 
     treeA->IntersectWithOBBTree(treeB, matrix, InterNodes, this);
 
-    if (touchesEdgesA || touchesEdgesB) {
-        throw std::runtime_error("Intersection goes through non-manifold edges.");
-    }
-
     lines->GetCellData()->AddArray(contA);
     lines->GetCellData()->AddArray(contB);
 
     lines->GetCellData()->AddArray(sourcesA);
     lines->GetCellData()->AddArray(sourcesB);
 
-    lines->RemoveDeletedCells();
-    lines->Squeeze();
+    IntersectReplacements();
+
+    if (touchesEdgesA || touchesEdgesB) {
+        throw std::runtime_error("Intersection goes through non-manifold edges.");
+    }
 
     auto clean = vtkSmartPointer<vtkCleanPolyData>::New();
     clean->SetInputData(lines);
@@ -521,7 +530,7 @@ bool Contact::InterPolyLine (InterPtsType &interPts, const Base2 &base, const Po
 
 #if (defined(_debA) && defined(_debB))
     for (auto &p : interPts) {
-        std::cout << p << '\n';
+        std::cout << p << std::endl;
     }
 #endif
 
@@ -598,55 +607,70 @@ void Contact::InterPolys (vtkIdType idA, vtkIdType idB) {
     Base2 baseA(s, r, nA);
     Base2 baseB(s, r, nB);
 
-    Poly _polyA, _polyB;
+    Poly transA, transB;
 
-    FlattenPoly2(polyA, _polyA, baseA);
-    FlattenPoly2(polyB, _polyB, baseB);
+    FlattenPoly2(polyA, transA, baseA);
+    FlattenPoly2(polyB, transB, baseB);
 
 #if (defined(_debA) && defined(_debB))
     if (_idA == _debA && _idB == _debB) {
-        std::cout << "_polyA {";
-        for (auto& p : _polyA) {
+        std::cout << "transA {";
+        for (auto& p : transA) {
             std::cout << p << ", ";
         }
         std::cout << std::endl;
 
-        std::cout << "_polyB {";
-        for (auto& p : _polyB) {
+        std::cout << "transB {";
+        for (auto& p : transB) {
             std::cout << p << ", ";
         }
         std::cout << std::endl;
     }
 #endif
 
+    bool isPlanarA = std::find_if(transA.begin(), transA.end(), [](auto &p) { return std::abs(p.z) > 1e-6; }) == transA.end();
+    bool isPlanarB = std::find_if(transB.begin(), transB.end(), [](auto &p) { return std::abs(p.z) > 1e-6; }) == transB.end();
+
+    bool hasReplA = replsA.count(idA) == 1;
+    bool hasReplB = replsB.count(idB) == 1;
+
+    if (!isPlanarA && !hasReplA && newPdA->GetCellType(idA) != VTK_TRIANGLE) {
+        auto newIds = PreventEqualCaptPoints::TriangluteCell(newPdA, idA, {});
+        replsA.emplace(idA, newIds);
+        hasReplA = true;
+    }
+
+    if (!isPlanarB && !hasReplB && newPdB->GetCellType(idB) != VTK_TRIANGLE) {
+        auto newIds = PreventEqualCaptPoints::TriangluteCell(newPdB, idB, {});
+        replsB.emplace(idB, newIds);
+        hasReplB = true;
+    }
+
+    if (hasReplA || hasReplB) {
+        pairs.emplace_back(idA, idB);
+        return;
+    }
+
     InterPtsType intersPtsA, intersPtsB;
 
-    if (!InterPolyLine(intersPtsA, baseA, _polyA, Src::A)) {
+    if (!InterPolyLine(intersPtsA, baseA, transA, Src::A)) {
         throw std::runtime_error("Found invalid intersection points.");
     }
 
-    if (!InterPolyLine(intersPtsB, baseB, _polyB, Src::B)) {
+    if (!InterPolyLine(intersPtsB, baseB, transB, Src::B)) {
         throw std::runtime_error("Found invalid intersection points.");
     }
 
     if (!CheckInters(intersPtsA, newPdA)) {
         std::stringstream ss;
-        ss << "polys (" << idA << ", " << idB << "): Intersection points do not lie on the edges.";
-
-        if (std::find_if(_polyA.begin(), _polyA.end(), [](auto &p) { return std::abs(p.z) > 1e-6; }) != _polyA.end()) {
-            ss << " Normal is inaccurate.";
-        }
+        ss << "Intersection points do not lie on the edges (cells " << idA << ", " << idB << ").";
 
         throw std::runtime_error(ss.str());
     }
 
     if (!CheckInters(intersPtsB, newPdB)) {
         std::stringstream ss;
-        ss << "polys (" << idA << ", " << idB << "): Intersection points do not lie on the edges.";
-
-        if (std::find_if(_polyB.begin(), _polyB.end(), [](auto &p) { return std::abs(p.z) > 1e-6; }) != _polyB.end()) {
-            ss << " Normal is inaccurate.";
-        }
+        ss << "Intersection points do not lie on the edges (cells " << idA << ", " << idB << ").";
 
         throw std::runtime_error(ss.str());
     }
@@ -663,7 +687,6 @@ bool Contact::CheckInters (const InterPtsType &interPts, vtkPolyData *pd) {
         std::cout << "CheckInters()" << std::endl;
     }
 #endif
-
 
     double ptA[3],
         ptB[3],
@@ -836,4 +859,148 @@ int Contact::InterNodes (vtkOBBNode *nodeA, vtkOBBNode *nodeB, vtkMatrix4x4 *vtk
     }
 
     return 0;
+}
+
+void Contact::IntersectReplacements () {
+    {
+        std::vector<std::tuple<vtkIdType, vtkIdType, vtkIdType>> invalid;
+
+        vtkIdType i;
+
+        auto iterA = vtkArrayIteratorTemplate<vtkIdType>::New();
+        iterA->Initialize(contA);
+
+        auto iterB = vtkArrayIteratorTemplate<vtkIdType>::New();
+        iterB->Initialize(contB);
+
+        for (i = 0; i < iterA->GetNumberOfValues(); i++) {
+            if (replsA.count(iterA->GetValue(i)) == 1 || replsB.count(iterB->GetValue(i)) == 1) {
+                invalid.emplace_back(i, iterA->GetValue(i), iterB->GetValue(i));
+            }
+        }
+
+        for (auto& [lineId, idA, idB] : invalid) {
+            lines->DeleteCell(lineId);
+
+            pairs.emplace_back(idA, idB);
+        }
+
+        lines->RemoveDeletedCells();
+
+        contA = vtkIdTypeArray::SafeDownCast(lines->GetCellData()->GetScalars("cA"));
+        contB = vtkIdTypeArray::SafeDownCast(lines->GetCellData()->GetScalars("cB"));
+
+        sourcesA = vtkIdTypeArray::SafeDownCast(lines->GetCellData()->GetScalars("sourcesA"));
+        sourcesB = vtkIdTypeArray::SafeDownCast(lines->GetCellData()->GetScalars("sourcesB"));
+    }
+
+    for (auto &p : pairs) {
+        auto itrA = replsA.find(p.f);
+        auto itrB = replsB.find(p.g);
+
+        IdsType cellsA, cellsB;
+
+        if (itrA == replsA.end()) {
+            cellsA.push_back(p.f);
+        } else {
+            auto ids = itrA->second;
+            std::copy(ids.begin(), ids.end(), std::back_inserter(cellsA));
+
+            newPdA->DeleteCell(p.f);
+        }
+
+        if (itrB == replsB.end()) {
+            cellsB.push_back(p.g);
+        } else {
+            auto ids = itrB->second;
+            std::copy(ids.begin(), ids.end(), std::back_inserter(cellsB));
+
+            newPdB->DeleteCell(p.g);
+        }
+
+        for (auto &idA : cellsA) {
+            for (auto &idB : cellsB) {
+                InterPolys(idA, idB);
+            }
+        }
+
+    }
+
+    // contA und contB aktualisieren
+
+    auto oldCellIdsA = vtkSmartPointer<vtkIdTypeArray>::New();
+    auto oldCellIdsB = vtkSmartPointer<vtkIdTypeArray>::New();
+
+    oldCellIdsA->SetName("OldCellIds");
+    oldCellIdsB->SetName("OldCellIds");
+
+    vtkIdType numCellsA = newPdA->GetNumberOfCells();
+    vtkIdType numCellsB = newPdB->GetNumberOfCells();
+
+    oldCellIdsA->SetNumberOfValues(numCellsA);
+    oldCellIdsB->SetNumberOfValues(numCellsB);
+
+    vtkIdType i;
+
+    for (i = 0; i < numCellsA; i++) {
+        oldCellIdsA->SetValue(i, i);
+    }
+
+    for (i = 0; i < numCellsB; i++) {
+        oldCellIdsB->SetValue(i, i);
+    }
+
+    newPdA->GetCellData()->AddArray(oldCellIdsA);
+    newPdB->GetCellData()->AddArray(oldCellIdsB);
+
+    newPdA->RemoveDeletedCells();
+    newPdB->RemoveDeletedCells();
+
+    numCellsA = newPdA->GetNumberOfCells();
+    numCellsB = newPdB->GetNumberOfCells();
+
+    oldCellIdsA = vtkIdTypeArray::SafeDownCast(newPdA->GetCellData()->GetScalars("OldCellIds"));
+    oldCellIdsB = vtkIdTypeArray::SafeDownCast(newPdB->GetCellData()->GetScalars("OldCellIds"));
+
+    std::map<vtkIdType, vtkIdType> newCellIdsA, newCellIdsB;
+
+    auto iterA = vtkArrayIteratorTemplate<vtkIdType>::New();
+    iterA->Initialize(oldCellIdsA);
+
+    for (i = 0; i < numCellsA; i++) {
+        newCellIdsA.emplace(iterA->GetValue(i), i);
+    }
+
+    auto iterB = vtkArrayIteratorTemplate<vtkIdType>::New();
+    iterB->Initialize(oldCellIdsB);
+
+    for (i = 0; i < numCellsB; i++) {
+        newCellIdsB.emplace(iterB->GetValue(i), i);
+    }
+
+    vtkIdType numLines = lines->GetNumberOfCells();
+
+    try {
+
+        auto _iterA = vtkArrayIteratorTemplate<vtkIdType>::New();
+        _iterA->Initialize(contA);
+
+        for (i = 0; i < numLines; i++) {
+            _iterA->SetValue(i, newCellIdsA.at(_iterA->GetValue(i)));
+        }
+
+        auto _iterB = vtkArrayIteratorTemplate<vtkIdType>::New();
+        _iterB->Initialize(contB);
+
+        for (i = 0; i < numLines; i++) {
+            _iterB->SetValue(i, newCellIdsB.at(_iterB->GetValue(i)));
+        }
+
+    } catch (const std::out_of_range &e) {
+        throw std::runtime_error("");
+    }
+
+    newPdA->GetCellData()->RemoveArray("OldCellIds");
+    newPdB->GetCellData()->RemoveArray("OldCellIds");
+
 }

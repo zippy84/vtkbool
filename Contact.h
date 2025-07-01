@@ -138,6 +138,12 @@ public:
     void AddContactLines (InterPtsType &intersA, InterPtsType &intersB, vtkIdType idA, vtkIdType idB);
 
     static int InterNodes (vtkOBBNode *nodeA, vtkOBBNode *nodeB, vtkMatrix4x4 *vtkNotUsed(matrix), void *ptr);
+
+    std::vector<Pair> pairs;
+
+    std::map<vtkIdType, IdsType> replsA, replsB;
+
+    void IntersectReplacements ();
 };
 
 #endif

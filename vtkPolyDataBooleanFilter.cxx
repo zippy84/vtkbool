@@ -133,14 +133,6 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
                 return 1;
             }
 
-#ifdef DEBUG
-            std::cout << "Exporting modPdA_1.vtk" << std::endl;
-            WriteVTK("modPdA_1.vtk", modPdA);
-
-            std::cout << "Exporting modPdB_1.vtk" << std::endl;
-            WriteVTK("modPdB_1.vtk", modPdB);
-#endif
-
             start = clock::now();
 
             Contact contact(modPdA, modPdB);
@@ -159,6 +151,12 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
             times.push_back(clock::now()-start);
 
 #ifdef DEBUG
+            std::cout << "Exporting modPdA_1.vtk" << std::endl;
+            WriteVTK("modPdA_1.vtk", modPdA);
+
+            std::cout << "Exporting modPdB_1.vtk" << std::endl;
+            WriteVTK("modPdB_1.vtk", modPdB);
+
             std::cout << "Exporting contLines.vtk" << std::endl;
             WriteVTK("contLines.vtk", contLines);
 #endif

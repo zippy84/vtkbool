@@ -16,8 +16,6 @@ limitations under the License.
 
 #include "Contact.h"
 
-#include <vtkCleanPolyData.h>
-
 int main() {
     auto pdA = CreatePolyData({ { {0, 0, 0}, {1, 0, 0}, {1, 1, 0}, {0, 1, 0} } });
 
@@ -28,11 +26,10 @@ int main() {
         { {1, .5, 0}, {0, .5, 0}, {0, 1, z}, {1, 1, z} }
     });
 
-    auto clean = vtkSmartPointer<vtkCleanPolyData>::New();
-    clean->SetInputData(pdB);
-    clean->Update();
+    auto _pdA = Clean(pdA);
+    auto _pdB = Clean(pdB);
 
-    auto lines = Contact(pdA, clean->GetOutput()).GetLines();
+    auto lines = Contact(_pdA, _pdB).GetLines();
 
     if (lines->GetNumberOfCells() == 0) {
         return EXIT_FAILURE;
