@@ -217,6 +217,8 @@ vtkSmartPointer<vtkPolyData> Contact::GetLines () {
 
 void Contact::GetNonManifoldEdges (vtkPolyData *pd, NonManifoldEdgesType &edges) {
 
+    pd->BuildLinks();
+
     vtkCellIterator *cellItr = pd->NewCellIterator();
 
     vtkIdType cellId;

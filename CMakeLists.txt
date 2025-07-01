@@ -14,7 +14,7 @@
 
 cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
 project(vtkbool
-    VERSION 3.1
+    VERSION 3.2
     HOMEPAGE_URL https://github.com/zippy84/vtkbool)
 
 set(CMAKE_CXX_STANDARD 17)
