@@ -56,8 +56,6 @@ void FindPoints (vtkKdTreePointLocator *pl, const double *pt, vtkIdList *pts, do
 
     vtkIdList *closest = vtkIdList::New();
 
-    // vtkKdTree.cxx#L2505
-    // arbeitet mit single-precision
     pl->FindPointsWithinRadius(std::max(1e-3, tol), pt, closest);
 
     vtkIdType i, numPts = closest->GetNumberOfIds();

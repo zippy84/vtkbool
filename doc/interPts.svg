@@ -24,7 +24,7 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
      inkscape:document-units="mm"
-     showgrid="true"
+     showgrid="false"
      inkscape:zoom="1"
      inkscape:cx="407"
      inkscape:cy="449"
@@ -48,7 +48,7 @@
        opacity="0.14901961"
        empspacing="2"
        enabled="true"
-       visible="true" />
+       visible="false" />
     <sodipodi:guide
        position="90.000004,242.00001"
        orientation="1,0"

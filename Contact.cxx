@@ -122,13 +122,8 @@ vtkSmartPointer<vtkPolyData> Clean (vtkPolyData *pd) {
 }
 
 Contact::Contact (vtkPolyData *newPdA, vtkPolyData *newPdB) : newPdA(newPdA), newPdB(newPdB) {
-    if (newPdA->GetCellData()->GetScalars("OrigCellIds") == nullptr) {
-        throw std::invalid_argument("OrigCellIds is missing.");
-    }
-
-    if (newPdB->GetCellData()->GetScalars("OrigCellIds") == nullptr) {
-        throw std::invalid_argument("OrigCellIds is missing.");
-    }
+    assert(newPdA->GetCellData()->GetScalars("OrigCellIds") != nullptr);
+    assert(newPdB->GetCellData()->GetScalars("OrigCellIds") != nullptr);
 
     pts = vtkSmartPointer<vtkPoints>::New();
     pts->SetDataTypeToDouble();
