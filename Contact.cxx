@@ -789,28 +789,12 @@ void Contact::AddContactLines (InterPtsType &intersA, InterPtsType &intersB, vtk
         auto &f = std::get<0>(*itr);
         auto &s = std::get<1>(*itr);
 
-        if (f.src == Src::A) {
-            if (edgesA.count(f.edge) == 1) {
-                touchesEdgesA = true;
-            }
+        if ((f.src == Src::A && edgesA.count(f.edge) == 1) || (s.src == Src::A && edgesA.count(s.edge) == 1)) {
+            touchesEdgesA = true;
         }
 
-        if (s.src == Src::A) {
-            if (edgesA.count(s.edge) == 1) {
-                touchesEdgesA = true;
-            }
-        }
-
-        if (f.src == Src::B) {
-            if (edgesB.count(f.edge) == 1) {
-                touchesEdgesB = true;
-            }
-        }
-
-        if (s.src == Src::B) {
-            if (edgesB.count(s.edge) == 1) {
-                touchesEdgesB = true;
-            }
+        if ((f.src == Src::B && edgesB.count(f.edge) == 1) || (s.src == Src::B && edgesB.count(s.edge) == 1)) {
+            touchesEdgesB = true;
         }
 
         vtkIdList *linePts = vtkIdList::New();
