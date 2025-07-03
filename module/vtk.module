@@ -7,7 +7,6 @@ DEPENDS
   VTK::IOLegacy
   VTK::FiltersFlowPaths
 TEST_DEPENDS
-  VTK::RenderingFreeType
   VTK::FiltersSources
 DESCRIPTION
   This module contains a class to do polydata boolean operations.

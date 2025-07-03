@@ -191,6 +191,7 @@ bool PointInPoly (const Poly &poly, const Point3d &p) {
     return in;
 }
 
+#ifdef DEBUG
 void WritePolys (const char *name, const PolysType &polys) {
     auto pts = vtkSmartPointer<vtkPoints>::New();
 
@@ -210,6 +211,7 @@ void WritePolys (const char *name, const PolysType &polys) {
 
     WriteVTK(name, pd);
 }
+#endif
 
 void GetPolys (const ReferencedPointsType &pts, const IndexedPolysType &indexedPolys, PolysType &polys) {
     for (const auto &poly : indexedPolys) {

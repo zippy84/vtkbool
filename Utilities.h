@@ -182,7 +182,9 @@ typedef std::vector<Poly> PolysType;
 double ComputeNormal (const Poly &poly, double *n);
 bool PointInPoly (const Poly &poly, const Point3d &p);
 
+#ifdef DEBUG
 void WritePolys (const char *name, const PolysType &polys);
+#endif
 
 typedef std::deque<vtkIdType> IndexedPoly;
 typedef std::vector<IndexedPoly> IndexedPolysType;

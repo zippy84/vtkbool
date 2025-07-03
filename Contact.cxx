@@ -859,6 +859,10 @@ int Contact::InterNodes (vtkOBBNode *nodeA, vtkOBBNode *nodeB, vtkMatrix4x4 *vtk
 }
 
 void Contact::IntersectReplacements () {
+    if (pairs.empty()) {
+        return;
+    }
+
     while (!pairs.empty()) {
         vtkIdType i;
 

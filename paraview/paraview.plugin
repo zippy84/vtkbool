@@ -4,4 +4,4 @@ REQUIRES_MODULES
   VTK::CommonCore
   VTK::FiltersCore
 DESCRIPTION
-  This module contains classes to do polydata boolean operations.
+  This module contains a class to do polydata boolean operations.
