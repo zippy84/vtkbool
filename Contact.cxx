@@ -141,6 +141,9 @@ Contact::Contact (vtkPolyData *newPdA, vtkPolyData *newPdB) : newPdA(newPdA), ne
     contA->SetName("cA");
     contB->SetName("cB");
 
+    lines->GetCellData()->AddArray(contA);
+    lines->GetCellData()->AddArray(contB);
+
     sourcesA = vtkSmartPointer<vtkIdTypeArray>::New();
     sourcesB = vtkSmartPointer<vtkIdTypeArray>::New();
 
@@ -152,6 +155,9 @@ Contact::Contact (vtkPolyData *newPdA, vtkPolyData *newPdB) : newPdA(newPdA), ne
 
     sourcesA->SetName("sourcesA");
     sourcesB->SetName("sourcesB");
+
+    lines->GetCellData()->AddArray(sourcesA);
+    lines->GetCellData()->AddArray(sourcesB);
 
     touchesEdgesA = false;
     touchesEdgesB = false;
@@ -169,15 +175,7 @@ vtkSmartPointer<vtkPolyData> Contact::GetLines () {
     treeB->SetDataSet(newPdB);
     treeB->BuildLocator();
 
-    auto matrix = vtkSmartPointer<vtkMatrix4x4>::New();
-
-    treeA->IntersectWithOBBTree(treeB, matrix, InterNodes, this);
-
-    lines->GetCellData()->AddArray(contA);
-    lines->GetCellData()->AddArray(contB);
-
-    lines->GetCellData()->AddArray(sourcesA);
-    lines->GetCellData()->AddArray(sourcesB);
+    treeA->IntersectWithOBBTree(treeB, nullptr, InterNodes, this);
 
     IntersectReplacements();
 
@@ -526,8 +524,10 @@ bool Contact::InterPolyLine (InterPtsType &interPts, const Base2 &base, const Po
     interPts.swap(_interPts);
 
 #if (defined(_debA) && defined(_debB))
-    for (auto &p : interPts) {
-        std::cout << p << std::endl;
+    if (_idA == _debA && _idB == _debB) {
+        for (auto &p : interPts) {
+            std::cout << p << std::endl;
+        }
     }
 #endif
 
@@ -859,9 +859,7 @@ int Contact::InterNodes (vtkOBBNode *nodeA, vtkOBBNode *nodeB, vtkMatrix4x4 *vtk
 }
 
 void Contact::IntersectReplacements () {
-    {
-        std::vector<std::tuple<vtkIdType, vtkIdType, vtkIdType>> invalid;
-
+    while (!pairs.empty()) {
         vtkIdType i;
 
         auto iterA = vtkArrayIteratorTemplate<vtkIdType>::New();
@@ -872,56 +870,52 @@ void Contact::IntersectReplacements () {
 
         for (i = 0; i < iterA->GetNumberOfValues(); i++) {
             if (replsA.count(iterA->GetValue(i)) == 1 || replsB.count(iterB->GetValue(i)) == 1) {
-                invalid.emplace_back(i, iterA->GetValue(i), iterB->GetValue(i));
+                lines->DeleteCell(i);
+
+                pairs.emplace_back(iterA->GetValue(i), iterB->GetValue(i));
             }
         }
 
-        for (auto& [lineId, idA, idB] : invalid) {
-            lines->DeleteCell(lineId);
+        PairsType current;
 
-            pairs.emplace_back(idA, idB);
-        }
+        current.swap(pairs);
 
-        lines->RemoveDeletedCells();
+        for (auto& [a, b] : current) {
+            auto itrA = replsA.find(a);
+            auto itrB = replsB.find(b);
 
-        contA = vtkIdTypeArray::SafeDownCast(lines->GetCellData()->GetScalars("cA"));
-        contB = vtkIdTypeArray::SafeDownCast(lines->GetCellData()->GetScalars("cB"));
+            IdsType cellsA, cellsB;
 
-        sourcesA = vtkIdTypeArray::SafeDownCast(lines->GetCellData()->GetScalars("sourcesA"));
-        sourcesB = vtkIdTypeArray::SafeDownCast(lines->GetCellData()->GetScalars("sourcesB"));
-    }
+            if (itrA == replsA.end()) {
+                cellsA.push_back(a);
+            } else {
+                auto ids = itrA->second;
+                std::copy(ids.begin(), ids.end(), std::back_inserter(cellsA));
+            }
 
-    for (auto &p : pairs) {
-        auto itrA = replsA.find(p.f);
-        auto itrB = replsB.find(p.g);
+            if (itrB == replsB.end()) {
+                cellsB.push_back(b);
+            } else {
+                auto ids = itrB->second;
+                std::copy(ids.begin(), ids.end(), std::back_inserter(cellsB));
+            }
 
-        IdsType cellsA, cellsB;
-
-        if (itrA == replsA.end()) {
-            cellsA.push_back(p.f);
-        } else {
-            auto ids = itrA->second;
-            std::copy(ids.begin(), ids.end(), std::back_inserter(cellsA));
-
-            newPdA->DeleteCell(p.f);
-        }
-
-        if (itrB == replsB.end()) {
-            cellsB.push_back(p.g);
-        } else {
-            auto ids = itrB->second;
-            std::copy(ids.begin(), ids.end(), std::back_inserter(cellsB));
-
-            newPdB->DeleteCell(p.g);
-        }
-
-        for (auto &idA : cellsA) {
-            for (auto &idB : cellsB) {
-                InterPolys(idA, idB);
+            for (auto &idA : cellsA) {
+                for (auto &idB : cellsB) {
+                    InterPolys(idA, idB);
+                }
             }
         }
 
     }
+
+    lines->RemoveDeletedCells();
+
+    contA = vtkIdTypeArray::SafeDownCast(lines->GetCellData()->GetScalars("cA"));
+    contB = vtkIdTypeArray::SafeDownCast(lines->GetCellData()->GetScalars("cB"));
+
+    sourcesA = vtkIdTypeArray::SafeDownCast(lines->GetCellData()->GetScalars("sourcesA"));
+    sourcesB = vtkIdTypeArray::SafeDownCast(lines->GetCellData()->GetScalars("sourcesB"));
 
     // contA und contB aktualisieren
 
@@ -949,6 +943,14 @@ void Contact::IntersectReplacements () {
 
     newPdA->GetCellData()->AddArray(oldCellIdsA);
     newPdB->GetCellData()->AddArray(oldCellIdsB);
+
+    for (auto& [k, v] : replsA) {
+        newPdA->DeleteCell(k);
+    }
+
+    for (auto& [k, v] : replsB) {
+        newPdB->DeleteCell(k);
+    }
 
     newPdA->RemoveDeletedCells();
     newPdB->RemoveDeletedCells();

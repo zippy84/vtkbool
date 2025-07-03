@@ -104,6 +104,8 @@ typedef std::vector<std::tuple<InterPt, InterPt>> OverlapsType;
 
 typedef std::set<Pair> NonManifoldEdgesType;
 
+typedef std::vector<std::pair<vtkIdType, vtkIdType>> PairsType;
+
 vtkSmartPointer<vtkPolyData> Clean (vtkPolyData *pd);
 
 class Contact {
@@ -139,7 +141,7 @@ public:
 
     static int InterNodes (vtkOBBNode *nodeA, vtkOBBNode *nodeB, vtkMatrix4x4 *vtkNotUsed(matrix), void *ptr);
 
-    std::vector<Pair> pairs;
+    PairsType pairs;
 
     std::map<vtkIdType, IdsType> replsA, replsB;
 
