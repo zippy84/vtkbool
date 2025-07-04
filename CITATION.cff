@@ -1,11 +1,13 @@
 cff-version: 1.2.0
-message: "If you use this software, please cite it as below."
+title: vtkbool
+message: 'If you use this software, please cite it as below.'
+type: software
 authors:
-- family-names: "Römer"
-  given-names: "Ronald"
-
-title: "vtkbool"
+  - family-names: Römer
+    given-names: Ronald
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.10461186
+repository-code: 'https://github.com/zippy84/vtkbool'
+license: Apache-2.0
 version: 3.2.0
-url: "https://github.com/zippy84/vtkbool"
-date-released: 2025-01-06
-doi: 10.5281/zenodo.10569008

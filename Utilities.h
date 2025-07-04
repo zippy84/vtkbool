@@ -40,7 +40,10 @@ double GetAngle (const double *vA, const double *vB, const double *n);
 double ComputeNormal (vtkPoints *pts, double *n, vtkIdType num, const vtkIdType *poly);
 
 void FindPoints (vtkKdTreePointLocator *pl, const double *pt, vtkIdList *pts, double tol = 1e-6);
+
+#ifdef DEBUG
 void WriteVTK (const char *name, vtkPolyData *pd);
+#endif
 
 class Point3d {
 public:
