@@ -203,6 +203,8 @@ vtkSmartPointer<vtkPolyData> Contact::GetLines () {
         }
     }
 
+    cellItr->Delete();
+
     cleaned->RemoveDeletedCells();
 
     return cleaned;
