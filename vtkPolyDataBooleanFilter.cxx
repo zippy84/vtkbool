@@ -119,10 +119,7 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
             modPdB->EditableOn();
 
 #ifdef DEBUG
-            std::cout << "Exporting modPdA.vtk" << std::endl;
             WriteVTK("modPdA.vtk", modPdA);
-
-            std::cout << "Exporting modPdB.vtk" << std::endl;
             WriteVTK("modPdB.vtk", modPdB);
 #endif
 
@@ -151,13 +148,8 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
             times.push_back(clock::now()-start);
 
 #ifdef DEBUG
-            std::cout << "Exporting modPdA_1.vtk" << std::endl;
             WriteVTK("modPdA_1.vtk", modPdA);
-
-            std::cout << "Exporting modPdB_1.vtk" << std::endl;
             WriteVTK("modPdB_1.vtk", modPdB);
-
-            std::cout << "Exporting contLines.vtk" << std::endl;
             WriteVTK("contLines.vtk", contLines);
 #endif
 
@@ -238,10 +230,7 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
             times.push_back(clock::now()-start);
 
 #ifdef DEBUG
-            std::cout << "Exporting modPdA_2.vtk" << std::endl;
             WriteVTK("modPdA_2.vtk", modPdA);
-
-            std::cout << "Exporting modPdB_2.vtk" << std::endl;
             WriteVTK("modPdB_2.vtk", modPdB);
 #endif
 
@@ -253,10 +242,7 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
             times.push_back(clock::now()-start);
 
 #ifdef DEBUG
-            std::cout << "Exporting modPdA_3.vtk" << std::endl;
             WriteVTK("modPdA_3.vtk", modPdA);
-
-            std::cout << "Exporting modPdB_3.vtk" << std::endl;
             WriteVTK("modPdB_3.vtk", modPdB);
 #endif
 
@@ -268,10 +254,7 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
             times.push_back(clock::now()-start);
 
 #ifdef DEBUG
-            std::cout << "Exporting modPdA_4.vtk" << std::endl;
             WriteVTK("modPdA_4.vtk", modPdA);
-
-            std::cout << "Exporting modPdB_4.vtk" << std::endl;
             WriteVTK("modPdB_4.vtk", modPdB);
 #endif
 
@@ -283,10 +266,7 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
             times.push_back(clock::now()-start);
 
 #ifdef DEBUG
-            std::cout << "Exporting modPdA_5.vtk" << std::endl;
             WriteVTK("modPdA_5.vtk", modPdA);
-
-            std::cout << "Exporting modPdB_5.vtk" << std::endl;
             WriteVTK("modPdB_5.vtk", modPdB);
 #endif
 
@@ -298,10 +278,7 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
             times.push_back(clock::now()-start);
 
 #ifdef DEBUG
-            std::cout << "Exporting modPdA_6.vtk" << std::endl;
             WriteVTK("modPdA_6.vtk", modPdA);
-
-            std::cout << "Exporting modPdB_6.vtk" << std::endl;
             WriteVTK("modPdB_6.vtk", modPdB);
 #endif
 
@@ -313,10 +290,7 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
             times.push_back(clock::now()-start);
 
 #ifdef DEBUG
-            std::cout << "Exporting modPdA_7.vtk" << std::endl;
             WriteVTK("modPdA_7.vtk", modPdA);
-
-            std::cout << "Exporting modPdB_7.vtk" << std::endl;
             WriteVTK("modPdB_7.vtk", modPdB);
 #endif
 
@@ -2717,10 +2691,7 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
     vtkPolyData *pdB = cfB->GetOutput();
 
 #ifdef DEBUG
-    std::cout << "Exporting modPdA_8.vtk" << std::endl;
     WriteVTK("modPdA_8.vtk", pdA);
-
-    std::cout << "Exporting modPdB_8.vtk" << std::endl;
     WriteVTK("modPdB_8.vtk", pdB);
 #endif
 

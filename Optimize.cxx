@@ -450,6 +450,22 @@ IdsType PreventEqualCaptPoints::TriangulateCell (vtkPolyData *pd, vtkIdType cell
         ids->InsertNextId(p.id);
     }
 
+    double pA[3], pB[3], pC[3];
+
+    for (i = 0; i < triangles->GetNumberOfIds(); i += 3) {
+        pd->GetPoint(ids->GetId(triangles->GetId(i)), pA);
+        pd->GetPoint(ids->GetId(triangles->GetId(i+1)), pB);
+        pd->GetPoint(ids->GetId(triangles->GetId(i+2)), pC);
+
+        Poly p = { {pA[0], pA[1], pA[2]}, {pB[0], pB[1], pB[2]}, {pC[0], pC[1], pC[2]} };
+
+        double quality = GetTringleQuality(p);
+
+        if (quality < 0.001) {
+            throw std::runtime_error("");
+        }
+    }
+
     vtkIdType origId = origCellIds->GetValue(cellId);
 
     auto triangle = vtkSmartPointer<vtkIdList>::New();

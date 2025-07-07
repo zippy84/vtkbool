@@ -216,4 +216,6 @@ void ProjOnLine (vtkPolyData *pd, const Pair &line, const Point3d &p, std::share
 
 vtkSmartPointer<vtkPolyData> CreatePolyData (const PolysType &polys);
 
+double GetTringleQuality (const Poly &poly);
+
 #endif

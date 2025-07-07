@@ -76,6 +76,8 @@ void FindPoints (vtkKdTreePointLocator *pl, const double *pt, vtkIdList *pts, do
 
 #ifdef DEBUG
 void WriteVTK (const char *name, vtkPolyData *pd) {
+    std::cout << "Writing " << name << std::endl;
+
     vtkPolyDataWriter *w = vtkPolyDataWriter::New();
     w->SetInputData(pd);
     w->SetFileName(name);
@@ -346,4 +348,26 @@ vtkSmartPointer<vtkPolyData> CreatePolyData (const PolysType &polys) {
     pd->Squeeze();
 
     return pd;
+}
+
+double GetTringleQuality (const Poly &poly) {
+    double n[3];
+
+    double l = ComputeNormal(poly, n);
+
+    double d = 0;
+
+    Poly::const_iterator itrA, itrB;
+
+    for (itrA = poly.begin(); itrA != poly.end(); ++itrA) {
+        itrB = itrA+1;
+
+        if (itrB == poly.end()) {
+            itrB = poly.begin();
+        }
+
+        d += std::sqrt(Point3d::GetDist(*itrA, *itrB));
+    }
+
+    return 10.392304845413264*l/(d*d);
 }
