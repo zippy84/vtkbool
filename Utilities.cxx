@@ -350,7 +350,7 @@ vtkSmartPointer<vtkPolyData> CreatePolyData (const PolysType &polys) {
     return pd;
 }
 
-double GetTringleQuality (const Poly &poly) {
+double GetTriangleQuality (const Poly &poly) {
     double n[3];
 
     double l = ComputeNormal(poly, n);

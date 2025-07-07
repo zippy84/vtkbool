@@ -459,7 +459,7 @@ IdsType PreventEqualCaptPoints::TriangulateCell (vtkPolyData *pd, vtkIdType cell
 
         Poly p = { {pA[0], pA[1], pA[2]}, {pB[0], pB[1], pB[2]}, {pC[0], pC[1], pC[2]} };
 
-        double quality = GetTringleQuality(p);
+        double quality = GetTriangleQuality(p);
 
         if (quality < 0.001) {
             throw std::runtime_error("");
