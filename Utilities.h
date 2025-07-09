@@ -48,10 +48,10 @@ void WriteVTK (const char *name, vtkPolyData *pd);
 class Point3d {
 public:
     const double x, y, z;
-    vtkIdType id;
+    vtkIdType id, otherId;
 
     Point3d () = delete;
-    Point3d (const double x, const double y, const double z, vtkIdType id = NOTSET) : x(x), y(y), z(z), id(id) {}
+    Point3d (const double x, const double y, const double z, vtkIdType id = NOTSET, vtkIdType otherId = NOTSET) : x(x), y(y), z(z), id(id), otherId(otherId) {}
     bool operator< (const Point3d &other) const {
         const long x1 = std::lround(x*1e5),
             y1 = std::lround(y*1e5),
@@ -70,7 +70,8 @@ public:
         out << "Point3d(x=" << p.x
             << ", y=" << p.y
             << ", z=" << p.z
-            << ", id=" << p.id << ")";
+            << ", id=" << p.id
+            << ", otherId=" << p.otherId << ")";
         return out;
     }
 
