@@ -126,7 +126,7 @@ public:
 };
 
 void Transform (const double *in, double *out, const Base &base);
-void BackTransform (const double *in, double *out, const Base &base);
+// void BackTransform (const double *in, double *out, const Base &base);
 
 class Base2 {
 public:

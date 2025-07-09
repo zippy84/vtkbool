@@ -133,7 +133,7 @@ void Transform (const double *in, double *out, const Base &base) {
     out[1] = y;
 }
 
-void BackTransform (const double *in, double *out, const Base &base) {
+/*void BackTransform (const double *in, double *out, const Base &base) {
     double x = in[0]*base.ei[0]+in[1]*base.ej[0]+base.d*base.n[0],
         y = in[0]*base.ei[1]+in[1]*base.ej[1]+base.d*base.n[1],
         z = in[0]*base.ei[2]+in[1]*base.ej[2]+base.d*base.n[2];
@@ -141,7 +141,7 @@ void BackTransform (const double *in, double *out, const Base &base) {
     out[0] = x;
     out[1] = y;
     out[2] = z;
-}
+}*/
 
 double ComputeNormal (const Poly &poly, double *n) {
     n[0] = 0; n[1] = 0; n[2] = 0;
