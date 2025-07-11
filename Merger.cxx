@@ -132,7 +132,7 @@ void Merger::Run () {
 
         MergeGroup(_group, merged);
 
-        std::map<Point3d, vtkIdType> newIds;
+        std::map<vtkIdType, vtkIdType> newIds;
 
         for (auto &poly : merged) {
             auto newCell = vtkSmartPointer<vtkIdList>::New();
@@ -141,13 +141,13 @@ void Merger::Run () {
                 vtkIdType id = p.id;
 
                 if (id == NOTSET) {
-                    auto itr = newIds.find(p);
+                    auto itr = newIds.find(p.otherId);
 
                     if (itr == newIds.end()) {
                         auto &q = pStrips.pts.at(p.otherId);
 
                         id = pdPts->InsertNextPoint(q.pt);
-                        newIds.emplace(p, id);
+                        newIds.emplace(p.otherId, id);
                     } else {
                         id = itr->second;
                     }

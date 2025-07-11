@@ -132,7 +132,7 @@ example
 └── vtkbool
     ├── CMakeLists.txt
     ├── ...
-    └── vtkPolyDataContactFilter.h
+    └── vtkPolyDataBooleanFilter.h
 ```
 
 From inside the `build` directory, run `ccmake ..`, follow the instructions, and finally type `make`.

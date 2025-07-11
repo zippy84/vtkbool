@@ -1952,8 +1952,6 @@ void vtkPolyDataBooleanFilter::ResolveOverlaps (vtkPolyData *pd, PolyStripsType 
             auto edgeA = pairA.second.get().edge;
             auto edgeB = pairB.second.get().edge;
 
-            assert(edgeA[1] == edgeB[0]);
-
             if (edgeA[1] == edgeB[0] && edgeA[0] != edgeB[1]) {
 
 #ifdef DEBUG
