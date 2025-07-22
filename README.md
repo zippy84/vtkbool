@@ -1,5 +1,12 @@
 # vtkbool [![CMake](https://github.com/zippy84/vtkbool/actions/workflows/cmake.yml/badge.svg)](https://github.com/zippy84/vtkbool/actions/workflows/cmake.yml) [![codecov](https://codecov.io/gh/zippy84/vtkbool/branch/master/graph/badge.svg?token=EUV9QKEW1M)](https://codecov.io/gh/zippy84/vtkbool) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10461186.svg)](https://zenodo.org/doi/10.5281/zenodo.10461186)
 
+[![Python 3.x](https://img.shields.io/badge/Python%203.x-3776AB?logo=python&logoColor=fff)](#)
+![Supported Python versions](https://raw.githubusercontent.com/Project-MONAI/MONAI/dev/docs/images/python.svg)
+[![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](https://opensource.org/licenses/Apache-2.0)
+[![conda](https://img.shields.io/conda/vn/conda-forge/vtkbool?color=green)](https://anaconda.org/conda-forge/vtkbool)
+[![forks - badge-generator](https://img.shields.io/github/forks/zippy84/vtkbool?style=social)](https://github.com/zippy84/vtkbool/fork)
+[![stars - badge-generator](https://img.shields.io/github/stars/zippy84/vtkbool?style=social)](https://github.com/zippy84/vtkbool/stargazers)
+
 ## About
 
 This is an extension of the graphics library VTK. The goal of the extension is to equip the library with boolean operations on polygonal meshes. I started the project at the end of my studies in mechanical engineering at the University of Applied Sciences ([HTWK](http://htwk-leipzig.de/)) in Leipzig. I used VTK to develop a program, which I had to create for a paper. At this time I would have wished, that this feature already exists. There was several implementations from third parties, but after some tests, I came to the conclusion, that none of them worked correct. I decided to start with my own implementation. This library is the result of my efforts.
