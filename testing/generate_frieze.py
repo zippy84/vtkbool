@@ -45,7 +45,8 @@ def extrude(pts, h, z=0):
     _pts = vtkPoints()
     _pts.SetDataTypeToDouble()
 
-    [ (_pts.InsertNextPoint(pt[0], pt[1], z), cell.InsertNextId(i)) for i, pt in enumerate(pts) ]
+    for pt in pts:
+        cell.InsertNextId(_pts.InsertNextPoint(pt[0], pt[1], z))
 
     pd = vtkPolyData()
     pd.Allocate(1)
@@ -402,7 +403,7 @@ if __name__ == '__main__':
     os.makedirs('einzeln', exist_ok=True)
     os.makedirs('stl', exist_ok=True)
 
-    cell_counts = [524, 98, 576, 264, 1274, 1866, 582, 98, 472, 194, 1048, 272, 56, 284, 284]
+    cell_counts = [524, 98, 576, 264, 1274, 1867, 582, 98, 472, 194, 1048, 272, 56, 284, 284]
 
     for i, cfg in enumerate(cfgs):
         print(f'~~ {i} ~~')

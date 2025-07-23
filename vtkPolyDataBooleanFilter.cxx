@@ -590,8 +590,6 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
     // sucht nach gleichen captPts
 
     {
-        // std::map<Point3d, std::map<vtkIdType, std::vector<std::reference_wrapper<StripPt>>>> collapsed;
-
         std::map<Point3d, std::set<vtkIdType>> collapsed;
 
         PolyStripsType::iterator itr;
@@ -606,24 +604,16 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
                 StripPt &sp = itr2->second;
 
                 if (sp.capt & Capt::Boundary) {
-                    // collapsed[{sp.cutPt[0], sp.cutPt[1], sp.cutPt[2]}][sp.ind].push_back(sp);
+                    Point3d p(sp.cutPt[0], sp.cutPt[1], sp.cutPt[2]);
 
-                    auto inds = collapsed[{sp.cutPt[0], sp.cutPt[1], sp.cutPt[2]}];
+                    collapsed[p].emplace(sp.ind);
 
-                    inds.emplace(sp.ind);
-
-                    if (inds.size() > 1) {
+                    if (collapsed[p].size() == 2) {
                         return true;
                     }
                 }
             }
         }
-
-        // for (auto &[pt, map] : collapsed) {
-        //     if (map.size() > 1) {
-        //         return true;
-        //     }
-        // }
     }
 
     for (itr = polyLines.begin(); itr != polyLines.end(); ++itr) {
@@ -728,7 +718,7 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
             const StripPtsType &pts = pStrips.pts;
             const Base &base = pStrips.base;
 
-            auto treePts = vtkSmartPointer<vtkPoints>::New();
+            auto treePts = vtkSmartPointer<vtkPoints>::New(VTK_DOUBLE);
 
             auto treePd = vtkSmartPointer<vtkPolyData>::New();
             treePd->Allocate(1);
@@ -2825,8 +2815,6 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
 
         } else {
             _failed.push_back(i);
-
-            // return true;
         }
 
     }

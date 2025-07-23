@@ -28,17 +28,16 @@ from vtkmodules.vtkCommonCore import vtkIdList, vtkIdTypeArray, vtkPoints
 from vtkmodules.vtkCommonDataModel import vtkPolyData, VTK_POLYGON
 from vtkmodules.vtkFiltersSources import vtkCubeSource, vtkCylinderSource, vtkSphereSource, vtkPolyLineSource
 from vtkmodules.vtkCommonDataModel import vtkKdTreePointLocator
-from vtkmodules.vtkFiltersCore import vtkAppendPolyData, vtkCleanPolyData
+from vtkmodules.vtkFiltersCore import vtkAppendPolyData, vtkCleanPolyData, vtkPolyDataNormals
 from vtkmodules.vtkIOLegacy import vtkPolyDataWriter, vtkPolyDataReader
 from vtkmodules.vtkCommonExecutionModel import vtkTrivialProducer
 from vtkmodules.vtkFiltersModeling import vtkRotationalExtrusionFilter
 from vtkmodules.vtkFiltersGeneral import vtkTransformPolyDataFilter
 from vtkmodules.vtkCommonTransforms import vtkTransform
 from vtkmodules.vtkCommonExecutionModel import vtkAlgorithm
+from vtkmodules.vtkFiltersModeling import vtkLinearExtrusionFilter
 
 from vtkbool import vtkPolyDataBooleanFilter
-
-from generate_frieze import extrude
 
 def check_result(bf, expected_regs=None):
     lines = bf.GetOutput(2)
@@ -261,6 +260,52 @@ def write_result(bf, d):
         writer.SetInputConnection(bf.GetOutputPort(i))
         writer.Update()
 
+def extrude_polygon(poly, z):
+    cell = vtkIdList()
+
+    pts = vtkPoints()
+    pts.SetDataTypeToDouble()
+
+    for pt in poly:
+        cell.InsertNextId(pts.InsertNextPoint(*pt, 0))
+
+    pd = vtkPolyData()
+    pd.Allocate(1)
+    pd.SetPoints(pts)
+    pd.InsertNextCell(VTK_POLYGON, cell)
+
+    extr = vtkLinearExtrusionFilter()
+    extr.SetInputData(pd)
+    extr.SetVector(0, 0, z)
+
+    normals = vtkPolyDataNormals()
+    normals.SetInputConnection(extr.GetOutputPort())
+    normals.AutoOrientNormalsOn()
+
+    return normals
+
+def create_polydata(pts, polys):
+    _pts = vtkPoints()
+    _pts.SetDataTypeToDouble()
+
+    for pt in pts:
+        _pts.InsertNextPoint(*pt)
+
+    pd = vtkPolyData()
+    pd.Allocate(1)
+    pd.SetPoints(_pts)
+
+    for poly in polys:
+        cell = vtkIdList()
+        for i in poly:
+            cell.InsertNextId(i)
+        pd.InsertNextCell(VTK_POLYGON, cell)
+
+    prod = vtkTrivialProducer()
+    prod.SetOutput(pd)
+
+    return prod
+
 def test_simple(tmp_path):
     cube = vtkCubeSource()
     cube.SetYLength(.5)
@@ -324,6 +369,7 @@ def test_simple_4(tmp_path):
     cyl.Allocate(1)
 
     pts = vtkPoints()
+    pts.SetDataTypeToDouble()
 
     bottom = vtkIdList()
     top = vtkIdList()
@@ -368,23 +414,6 @@ def test_simple_4(tmp_path):
     write_result(bf, tmp_path)
     check_result(bf, [2, 2])
 
-@pytest.mark.xfail
-def test_simple_5():
-    cube = vtkCubeSource()
-
-    cyl = vtkCylinderSource()
-    cyl.SetResolution(32)
-    cyl.SetHeight(.75)
-
-    bf = vtkPolyDataBooleanFilter()
-    bf.SetInputConnection(0, cube.GetOutputPort())
-    bf.SetInputConnection(1, cyl.GetOutputPort())
-    bf.SetOperModeToNone()
-
-    bf.Update()
-
-    check_result(bf)
-
 def test_same(tmp_path):
     sphere = vtkSphereSource()
 
@@ -401,24 +430,62 @@ def test_same(tmp_path):
 @pytest.mark.xfail
 def test_intersecting_strips():
     cubeA = vtkCubeSource()
+    cubeA.SetBounds(-5, 5, -2.5, 2.5, -1.25, 1.25)
 
     cubeB = vtkCubeSource()
-    cubeB.SetCenter(.3, .3, 0)
+    cubeB.SetBounds(-1.25, 1.25, -1.25, 1.25, -1.25, 1.25)
 
-    cubeC = vtkCubeSource()
-    cubeC.SetCenter(.15, 1.15, 0)
-    cubeC.SetXLength(2)
-    cubeC.SetYLength(2)
+    traA = vtkTransform()
+    traA.Translate(-1.25, 0, 0)
+    traA.RotateZ(45)
+
+    traB = vtkTransform()
+    traB.Translate(1.25, 0, 0)
+    traB.RotateZ(45)
+
+    tfA = vtkTransformPolyDataFilter()
+    tfA.SetTransform(traA)
+    tfA.SetInputConnection(cubeB.GetOutputPort())
+
+    tfB = vtkTransformPolyDataFilter()
+    tfB.SetTransform(traB)
+    tfB.SetInputConnection(cubeB.GetOutputPort())
 
     app = vtkAppendPolyData()
-    app.AddInputConnection(cubeA.GetOutputPort())
-    app.AddInputConnection(cubeB.GetOutputPort())
+    app.AddInputConnection(tfA.GetOutputPort())
+    app.AddInputConnection(tfB.GetOutputPort())
 
     bf = vtkPolyDataBooleanFilter()
-    bf.SetInputConnection(0, app.GetOutputPort())
-    bf.SetInputConnection(1, cubeC.GetOutputPort())
+    bf.SetInputConnection(0, cubeA.GetOutputPort())
+    bf.SetInputConnection(1, app.GetOutputPort())
     bf.SetOperModeToNone()
 
+    bf.Update()
+
+    check_result(bf)
+
+@pytest.mark.xfail
+def test_intersecting_strips_2():
+    cube = vtkCubeSource()
+    cube.SetBounds(-10, 10, 0, 12, 0, 10)
+
+    poly = [
+        [-5, 0],
+        [3, 8],
+        [-3, 8],
+        [5, 0],
+        [8, 0],
+        [8, 10],
+        [-8, 10],
+        [-8, 0]
+    ]
+
+    pd = extrude_polygon(poly, 10)
+
+    bf = vtkPolyDataBooleanFilter()
+    bf.SetInputConnection(0, cube.GetOutputPort())
+    bf.SetInputConnection(1, pd.GetOutputPort())
+    bf.SetOperModeToNone()
     bf.Update()
 
     check_result(bf)
@@ -460,61 +527,12 @@ def test_merger(tmp_path):
 def test_merger_2(tmp_path):
     cube = vtkCubeSource()
 
-    pts = [
-        [-.4, 0],
-        [0, -.4],
-        [.4, 0],
-        [0, .4],
-        [-.25, 0],
-        [-.15, -.1],
-        [-.05, 0],
-        [-.15, .1],
-        [.05, 0],
-        [.15, -.1],
-        [.25, 0],
-        [.15, .1]
-    ]
-
-    polys = [
-        [0, 2, 4, 20, 18, 16, 12, 10, 8],
-        [4, 6, 0, 8, 14, 12, 16, 22, 20],
-        [5, 3, 1, 9, 11, 13, 17, 19, 21],
-        [1, 7, 5, 21, 23, 17, 13, 15, 9],
-        [0, 1, 3, 2],
-        [2, 3, 5, 4],
-        [4, 5, 7, 6],
-        [6, 7, 1, 0],
-        [8, 10, 11, 9],
-        [10, 12, 13, 11],
-        [12, 14, 15, 13],
-        [14, 8, 9, 15],
-        [16, 18, 19, 17],
-        [18, 20, 21, 19],
-        [20, 22, 23, 21],
-        [22, 16, 17, 23]
-    ]
-
-    _pts = vtkPoints()
-
-    for pt in pts:
-        _pts.InsertNextPoint(*pt, .5)
-        _pts.InsertNextPoint(*pt, -.5)
-
-    pd = vtkPolyData()
-    pd.Allocate(1)
-    pd.SetPoints(_pts)
-
-    for poly in polys:
-        cell = vtkIdList()
-        [ cell.InsertNextId(i) for i in poly ]
-        pd.InsertNextCell(VTK_POLYGON, cell)
-
-    prod = vtkTrivialProducer()
-    prod.SetOutput(pd)
+    reader = vtkPolyDataReader()
+    reader.SetFileName('data/merger.vtk')
 
     bf = vtkPolyDataBooleanFilter()
     bf.SetInputConnection(0, cube.GetOutputPort())
-    bf.SetInputConnection(1, prod.GetOutputPort())
+    bf.SetInputConnection(1, reader.GetOutputPort())
     bf.SetOperModeToNone()
 
     bf.Update()
@@ -579,7 +597,7 @@ def test_special(tmp_path):
     cubeA = vtkCubeSource()
     cubeA.SetBounds(-5, 5, -10, 0, 0, 10)
 
-    pts = [
+    poly = [
         [0, 0],
         [1, 0],
         [2, -1],
@@ -595,7 +613,7 @@ def test_special(tmp_path):
         [-1, 0]
     ]
 
-    cubeB = extrude(pts, 10)
+    cubeB = extrude_polygon(poly, 10)
 
     bf = vtkPolyDataBooleanFilter()
     bf.SetInputConnection(0, cubeA.GetOutputPort())
@@ -611,7 +629,7 @@ def test_special(tmp_path):
 @pytest.mark.xfail
 def test_non_manifolds():
     reader = vtkPolyDataReader()
-    reader.SetFileName('data/test.vtk')
+    reader.SetFileName('data/non-manifold.vtk')
 
     cyl = vtkCylinderSource()
     cyl.SetCenter(.75, 0, 0)
@@ -742,8 +760,8 @@ def test_branched_6(tmp_path):
     check_result(bf, [6, 5])
 
 def test_bad_shaped(tmp_path):
-    cube = vtkCubeSource()
-    cube.SetBounds(-2.5, 2.5, 0, 5, 0, 5)
+    cubeA = vtkCubeSource()
+    cubeA.SetBounds(-2.5, 2.5, 0, 5, 0, 5)
 
     z = 4.75
 
@@ -770,26 +788,11 @@ def test_bad_shaped(tmp_path):
         [1, 8, 7, 6, 3, 2]
     ]
 
-    _pts = vtkPoints()
-
-    for pt in pts:
-        _pts.InsertNextPoint(*pt)
-
-    pd = vtkPolyData()
-    pd.Allocate(1)
-    pd.SetPoints(_pts)
-
-    for poly in polys:
-        cell = vtkIdList()
-        [ cell.InsertNextId(i) for i in poly ]
-        pd.InsertNextCell(VTK_POLYGON, cell)
-
-    prod = vtkTrivialProducer()
-    prod.SetOutput(pd)
+    cubeB = create_polydata(pts, polys)
 
     bf = vtkPolyDataBooleanFilter()
-    bf.SetInputConnection(0, cube.GetOutputPort())
-    bf.SetInputConnection(1, prod.GetOutputPort())
+    bf.SetInputConnection(0, cubeA.GetOutputPort())
+    bf.SetInputConnection(1, cubeB.GetOutputPort())
     bf.SetOperModeToNone()
     bf.Update()
 
@@ -798,8 +801,8 @@ def test_bad_shaped(tmp_path):
 
 @pytest.mark.xfail
 def test_self_intersecting_polys():
-    cube = vtkCubeSource()
-    cube.SetCenter(0, 0, 1.375) # 1, 1.25, 1.375
+    cubeA = vtkCubeSource()
+    cubeA.SetCenter(0, 0, 1.375) # 1, 1.25, 1.375
 
     pts = [
         [.5, .5, 0],
@@ -836,26 +839,11 @@ def test_self_intersecting_polys():
         [2, 17, 16, 10, 6, 10, 16, 15, 1]
     ]
 
-    _pts = vtkPoints()
-
-    for pt in pts:
-        _pts.InsertNextPoint(*pt)
-
-    pd = vtkPolyData()
-    pd.Allocate(1)
-    pd.SetPoints(_pts)
-
-    for poly in polys:
-        cell = vtkIdList()
-        [ cell.InsertNextId(i) for i in poly ]
-        pd.InsertNextCell(VTK_POLYGON, cell)
-
-    prod = vtkTrivialProducer()
-    prod.SetOutput(pd)
+    cubeB = create_polydata(pts, polys)
 
     bf = vtkPolyDataBooleanFilter()
-    bf.SetInputConnection(0, prod.GetOutputPort())
-    bf.SetInputConnection(1, cube.GetOutputPort())
+    bf.SetInputConnection(0, cubeA.GetOutputPort())
+    bf.SetInputConnection(1, cubeB.GetOutputPort())
     bf.SetOperModeToNone()
     bf.Update()
 
@@ -910,55 +898,43 @@ def test_equal_capt_pts_2(tmp_path):
     check_result(bf, [24, 24])
 
 def test_equal_capt_pts_3(tmp_path):
+    z = .000005
 
-    # from vtkmodules.util.execution_model import select_ports
+    poly = [
+        [0, 0],
+        [3, 3],
+        [6, 0],
+        [9, 3],
+        [12, 0],
+        [15, 3],
+        [18, 0],
+        [21, 3],
+        [24, 0],
+        [24, -8],
+        [0, -8]
+    ]
 
-    # cyl = vtkCylinderSource()
-    # cyl.SetHeight(2)
-    # cyl.SetResolution(12)
-
-    # cyls = []
-
-    # for x in [-.5, -.25, 0, .25, .5]:
-    #     tra = vtkTransform()
-    #     tra.Translate(x, 0, 0)
-
-    #     cyls.append(cyl >> vtkTransformPolyDataFilter(transform=tra))
-
-    # def fct(a, b):
-    #     bf = vtkPolyDataBooleanFilter()
-
-    #     a >> bf
-    #     b >> select_ports(1, bf)
-
-    #     return bf
-
-    # union = reduce(fct, cyls)
-
-    # (union >> vtkCleanPolyData(output_points_precision=vtkAlgorithm.DOUBLE_PRECISION) >> vtkPolyDataWriter(file_name='data/complex.vtk')).update()
+    rack = extrude_polygon(poly, 20)
 
     cyl = vtkCylinderSource()
-    cyl.SetHeight(2)
+    cyl.SetHeight(30)
+    cyl.SetRadius(5)
     cyl.SetResolution(12)
-
-    reader = vtkPolyDataReader()
-    reader.SetFileName('data/complex.vtk')
-
-    z = .0000025
+    cyl.SetOutputPointsPrecision(vtkAlgorithm.DOUBLE_PRECISION)
 
     tra = vtkTransform()
+    tra.Translate(12, -2-z, 10)
     tra.RotateZ(90)
-    tra.Translate(0, 0, z)
 
     tf = vtkTransformPolyDataFilter()
     tf.SetTransform(tra)
-    tf.SetInputConnection(reader.GetOutputPort())
+    tf.SetInputConnection(cyl.GetOutputPort())
 
     bf = vtkPolyDataBooleanFilter()
-    bf.SetInputConnection(0, cyl.GetOutputPort())
+    bf.SetInputConnection(0, rack.GetOutputPort())
     bf.SetInputConnection(1, tf.GetOutputPort())
     bf.SetOperModeToNone()
     bf.Update()
 
     write_result(bf, tmp_path)
-    check_result(bf, [14, 14])
+    check_result(bf, [6, 6])

@@ -229,11 +229,11 @@ from vtkbool.vtkbool import vtkPolyDataBooleanFilter
 
 - *Contact failed with ...*
 
-  At least one cell has a bad shape. For a cell with more than three points: not all points lie on the plane defined by the calculated surface normal.
+  tbd
 
 - *Cannot prevent equal capture points.*
 
-  ???
+  tbd
 
 - *There is no contact.*
 
@@ -245,10 +245,7 @@ from vtkbool.vtkbool import vtkPolyDataBooleanFilter
 
 - *Strips are invalid.*
 
-  There are two reasons for that kind of error:
-
-  1. at least two intersection lines intersect each other - the input, one of them, contains an assembly
-  2. there are different intersection points with the same capturing point - normally a capturing point will be used by only one point of the intersection lines
+  tbd
 
 - *CutCells failed.*
 
