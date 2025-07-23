@@ -718,7 +718,8 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
             const StripPtsType &pts = pStrips.pts;
             const Base &base = pStrips.base;
 
-            auto treePts = vtkSmartPointer<vtkPoints>::New(VTK_DOUBLE);
+            auto treePts = vtkSmartPointer<vtkPoints>::New();
+            treePts->SetDataTypeToDouble();
 
             auto treePd = vtkSmartPointer<vtkPolyData>::New();
             treePd->Allocate(1);

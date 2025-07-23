@@ -125,7 +125,8 @@ Contact::Contact (vtkPolyData *newPdA, vtkPolyData *newPdB) : newPdA(newPdA), ne
     assert(newPdA->GetCellData()->GetScalars("OrigCellIds") != nullptr);
     assert(newPdB->GetCellData()->GetScalars("OrigCellIds") != nullptr);
 
-    pts = vtkSmartPointer<vtkPoints>::New(VTK_DOUBLE);
+    pts = vtkSmartPointer<vtkPoints>::New();
+    pts->SetDataTypeToDouble();
 
     lines = vtkSmartPointer<vtkPolyData>::New();
     lines->SetPoints(pts);

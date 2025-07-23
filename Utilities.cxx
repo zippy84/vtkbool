@@ -197,7 +197,8 @@ bool PointInPoly (const Poly &poly, const Point3d &p) {
 
 #ifdef DEBUG
 void WritePolys (const char *name, const PolysType &polys) {
-    auto pts = vtkSmartPointer<vtkPoints>::New(VTK_DOUBLE);
+    auto pts = vtkSmartPointer<vtkPoints>::New();
+    pts->SetDataTypeToDouble();
 
     auto pd = vtkSmartPointer<vtkPolyData>::New();
     pd->SetPoints(pts);
@@ -328,7 +329,8 @@ void ProjOnLine (vtkPolyData *pd, const Pair &line, const Point3d &p, std::share
 }
 
 vtkSmartPointer<vtkPolyData> CreatePolyData (const PolysType &polys) {
-    auto pts = vtkSmartPointer<vtkPoints>::New(VTK_DOUBLE);
+    auto pts = vtkSmartPointer<vtkPoints>::New();
+    pts->SetDataTypeToDouble();
 
     auto pd = vtkSmartPointer<vtkPolyData>::New();
     pd->SetPoints(pts);

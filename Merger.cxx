@@ -172,7 +172,8 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
         return;
     }
 
-    auto pts = vtkSmartPointer<vtkPoints>::New(VTK_DOUBLE);
+    auto pts = vtkSmartPointer<vtkPoints>::New();
+    pts->SetDataTypeToDouble();
 
     IndexedPolysType indexedPolys;
 
@@ -493,7 +494,8 @@ void Merger::MergeGroup (const GroupType &group, PolysType &merged) {
                             pts->GetPoint(conn.i, ptA);
                             pts->GetPoint(conn.j, ptB);
 
-                            auto intersPts = vtkSmartPointer<vtkPoints>::New(VTK_DOUBLE);
+                            auto intersPts = vtkSmartPointer<vtkPoints>::New();
+                            intersPts->SetDataTypeToDouble();
 
                             auto c = bspTreeB->IntersectWithLine(ptA, ptB, 1e-5, intersPts, nullptr);
 
