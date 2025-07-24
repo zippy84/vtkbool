@@ -164,18 +164,43 @@ Contact::Contact (vtkPolyData *newPdA, vtkPolyData *newPdB) : newPdA(newPdA), ne
 
     GetNonManifoldEdges(newPdA, edgesA);
     GetNonManifoldEdges(newPdB, edgesB);
-}
 
-vtkSmartPointer<vtkPolyData> Contact::GetLines () {
-    auto treeA = vtkSmartPointer<vtkOBBTree>::New();
+    treeA = vtkSmartPointer<vtkOBBTree>::New();
     treeA->SetDataSet(newPdA);
     treeA->BuildLocator();
 
-    auto treeB = vtkSmartPointer<vtkOBBTree>::New();
+    treeB = vtkSmartPointer<vtkOBBTree>::New();
     treeB->SetDataSet(newPdB);
     treeB->BuildLocator();
+}
 
-    treeA->IntersectWithOBBTree(treeB, nullptr, InterNodes, this);
+vtkSmartPointer<vtkPolyData> Contact::GetLines (vtkPolyData *pdA, vtkLinearTransform *transA, vtkPolyData *pdB, vtkLinearTransform *transB) {
+
+    auto matrix = vtkSmartPointer<vtkMatrix4x4>::New();
+
+    if (pdA != nullptr) {
+        newPdA = pdA;
+    }
+
+    if (pdB != nullptr) {
+        newPdB = pdB;
+    }
+
+    if (transA != nullptr || transB != nullptr) {
+        auto tmpMatrix = vtkSmartPointer<vtkMatrix4x4>::New();
+
+        vtkMatrix4x4::Invert(transA->GetMatrix(), tmpMatrix);
+        vtkMatrix4x4::Multiply4x4(tmpMatrix, transB->GetMatrix(), matrix);
+    }
+
+    sourcesA->Reset();
+    sourcesB->Reset();
+    contA->Reset();
+    contB->Reset();
+
+    lines->Reset();
+
+    treeA->IntersectWithOBBTree(treeB, matrix, InterNodes, this);
 
     IntersectReplacements();
 
@@ -572,13 +597,8 @@ void Contact::InterPolys (vtkIdType idA, vtkIdType idB) {
         return;
     }
 
-    double ptA[3], ptB[3];
-
-    newPdA->GetPoint(ptsA[0], ptA);
-    newPdB->GetPoint(ptsB[0], ptB);
-
-    double dA = vtkMath::Dot(nA, ptA);
-    double dB = vtkMath::Dot(nB, ptB);
+    double dA = polyA[0].x*nA[0]+polyA[0].y*nA[1]+polyA[0].z*nA[2];
+    double dB = polyB[0].x*nB[0]+polyB[0].y*nB[1]+polyB[0].z*nB[2];
 
     vtkMath::Cross(nA, nB, r);
     vtkMath::Normalize(r);

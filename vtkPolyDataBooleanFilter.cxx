@@ -47,6 +47,7 @@ limitations under the License.
 #include <vtkCellArrayIterator.h>
 #include <vtkKdTree.h>
 #include <vtkCellIterator.h>
+#include <vtkTransformPolyDataFilter.h>
 
 #include "vtkPolyDataBooleanFilter.h"
 
@@ -78,10 +79,30 @@ vtkPolyDataBooleanFilter::vtkPolyDataBooleanFilter () {
 
     OperMode = OPER_UNION;
 
+    matrices[0] = nullptr;
+    matrices[1] = nullptr;
+
+    transforms[0] = nullptr;
+    transforms[1] = nullptr;
+
 }
 
 vtkPolyDataBooleanFilter::~vtkPolyDataBooleanFilter () {
-    // nix mehr
+    if (matrices[0] != nullptr) {
+        matrices[0]->Delete();
+    }
+
+    if (matrices[1] != nullptr) {
+        matrices[1]->Delete();
+    }
+
+    if (transforms[0] != nullptr) {
+        transforms[0]->Delete();
+    }
+
+    if (transforms[1] != nullptr) {
+        transforms[1]->Delete();
+    }
 }
 
 int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformationVector **inputVector, vtkInformationVector *outputVector) {
@@ -106,36 +127,63 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
         std::vector<clock::duration> times;
         clock::time_point start;
 
-        if (pdA->GetMTime() > timePdA || pdB->GetMTime() > timePdB) {
+        // if (pdA->GetMTime() > timePdA || pdB->GetMTime() > timePdB)
+        {
             // CellData sichern
 
-            cellDataA->DeepCopy(pdA->GetCellData());
-            cellDataB->DeepCopy(pdB->GetCellData());
+            if (contact == nullptr) {
+                cellDataA->DeepCopy(pdA->GetCellData());
+                cellDataB->DeepCopy(pdB->GetCellData());
 
-            modPdA = Clean(pdA);
-            modPdB = Clean(pdB);
+                cleanA = Clean(pdA);
+                cleanB = Clean(pdB);
 
-            modPdA->EditableOn();
-            modPdB->EditableOn();
+    #ifdef DEBUG
+                WriteVTK("modPdA.vtk", cleanA);
+                WriteVTK("modPdB.vtk", cleanB);
+    #endif
 
-#ifdef DEBUG
-            WriteVTK("modPdA.vtk", modPdA);
-            WriteVTK("modPdB.vtk", modPdB);
-#endif
+                try {
+                    PreventEqualCaptPoints(cleanA, cleanB).Run();
+                } catch (const std::runtime_error &e) {
+                    vtkErrorMacro("Cannot prevent equal capture points.");
+                    return 1;
+                }
 
-            try {
-                PreventEqualCaptPoints(modPdA, modPdB).Run();
-            } catch (const std::runtime_error &e) {
-                vtkErrorMacro("Cannot prevent equal capture points.");
-                return 1;
+                contact = std::make_shared<Contact>(cleanA, cleanB);
             }
 
             start = clock::now();
 
-            Contact contact(modPdA, modPdB);
+            if (transforms[0] != nullptr) {
+                auto tfA = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+                tfA->SetInputData(cleanA);
+                tfA->SetTransform(transforms[0]);
+                tfA->Update();
+
+                modPdA = vtkSmartPointer<vtkPolyData>::New();
+                modPdA->DeepCopy(tfA->GetOutput());
+            } else {
+                modPdA = cleanA;
+            }
+
+            if (transforms[1] != nullptr) {
+                auto tfB = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+                tfB->SetInputData(cleanB);
+                tfB->SetTransform(transforms[1]);
+                tfB->Update();
+
+                modPdB = vtkSmartPointer<vtkPolyData>::New();
+                modPdB->DeepCopy(tfB->GetOutput());
+            } else {
+                modPdB = cleanB;
+            }
+
+            modPdA->EditableOn();
+            modPdB->EditableOn();
 
             try {
-                contLines = contact.GetLines();
+                contLines = contact->GetLines(modPdA, transforms[0], modPdB, transforms[1]);
             } catch (const std::runtime_error &e) {
                 std::stringstream ss;
                 ss << std::quoted(e.what());
@@ -154,7 +202,7 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
 #endif
 
             if (contLines->GetNumberOfCells() == 0) {
-                vtkErrorMacro("There is no contact.");
+                vtkErrorMacro("There is no contact 1.");
                 return 1;
             }
 
@@ -210,7 +258,7 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
             // löscht bestimmte strips
 
             if (CleanStrips()) {
-                vtkErrorMacro("There is no contact.");
+                vtkErrorMacro("There is no contact 2.");
                 return 1;
             }
 
@@ -3023,4 +3071,34 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
 
     return false;
 
+}
+
+void vtkPolyDataBooleanFilter::SetMatrix (int i, vtkMatrix4x4 *matrix) {
+    if (transforms[i]) {
+        transforms[i]->Delete();
+        transforms[i] = nullptr;
+    }
+
+    if (matrices[i]) {
+        matrices[i]->Delete();
+        matrices[i] = nullptr;
+    }
+
+    matrices[i] = matrix;
+    matrix->Register(this);
+
+    auto transform = vtkMatrixToLinearTransform::New();
+
+    transform->Register(this);
+    transform->Delete();
+
+    transform->SetInput(matrix);
+
+    transforms[i] = transform;
+
+    Modified();
+}
+
+vtkMatrix4x4* vtkPolyDataBooleanFilter::GetMatrix (int i) {
+    return matrices[i];
 }

@@ -21,6 +21,7 @@ limitations under the License.
 
 #include <vtkOBBTree.h>
 #include <vtkMatrix4x4.h>
+#include <vtkLinearTransform.h>
 
 enum class Src {
     A,
@@ -123,7 +124,9 @@ public:
 
     NonManifoldEdgesType edgesA, edgesB;
 
-    vtkSmartPointer<vtkPolyData> GetLines ();
+    vtkSmartPointer<vtkOBBTree> treeA, treeB;
+
+    vtkSmartPointer<vtkPolyData> GetLines (vtkPolyData *pdA = nullptr, vtkLinearTransform *transA = nullptr, vtkPolyData *pdB = nullptr, vtkLinearTransform *transB = nullptr);
 
     void GetNonManifoldEdges (vtkPolyData *pd, NonManifoldEdgesType &edges);
 
