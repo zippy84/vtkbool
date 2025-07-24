@@ -186,12 +186,22 @@ vtkSmartPointer<vtkPolyData> Contact::GetLines (vtkPolyData *pdA, vtkLinearTrans
         newPdB = pdB;
     }
 
-    if (transA != nullptr || transB != nullptr) {
-        auto tmpMatrix = vtkSmartPointer<vtkMatrix4x4>::New();
+    auto matrixA = vtkSmartPointer<vtkMatrix4x4>::New();
 
-        vtkMatrix4x4::Invert(transA->GetMatrix(), tmpMatrix);
-        vtkMatrix4x4::Multiply4x4(tmpMatrix, transB->GetMatrix(), matrix);
+    if (transA != nullptr) {
+        matrixA = transA->GetMatrix();
     }
+
+    auto matrixB = vtkSmartPointer<vtkMatrix4x4>::New();
+
+    if (transB != nullptr) {
+        matrixB = transB->GetMatrix();
+    }
+
+    auto tmpMatrix = vtkSmartPointer<vtkMatrix4x4>::New();
+
+    vtkMatrix4x4::Invert(matrixA, tmpMatrix);
+    vtkMatrix4x4::Multiply4x4(tmpMatrix, matrixB, matrix);
 
     sourcesA->Reset();
     sourcesB->Reset();

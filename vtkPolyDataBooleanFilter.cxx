@@ -155,16 +155,18 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
 
             start = clock::now();
 
+            modPdA = vtkSmartPointer<vtkPolyData>::New();
+            modPdB = vtkSmartPointer<vtkPolyData>::New();
+
             if (transforms[0] != nullptr) {
                 auto tfA = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
                 tfA->SetInputData(cleanA);
                 tfA->SetTransform(transforms[0]);
                 tfA->Update();
 
-                modPdA = vtkSmartPointer<vtkPolyData>::New();
                 modPdA->DeepCopy(tfA->GetOutput());
             } else {
-                modPdA = cleanA;
+                modPdA->DeepCopy(cleanA);
             }
 
             if (transforms[1] != nullptr) {
@@ -173,10 +175,9 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
                 tfB->SetTransform(transforms[1]);
                 tfB->Update();
 
-                modPdB = vtkSmartPointer<vtkPolyData>::New();
                 modPdB->DeepCopy(tfB->GetOutput());
             } else {
-                modPdB = cleanB;
+                modPdB->DeepCopy(cleanB);
             }
 
             modPdA->EditableOn();
@@ -202,7 +203,7 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
 #endif
 
             if (contLines->GetNumberOfCells() == 0) {
-                vtkErrorMacro("There is no contact 1.");
+                vtkErrorMacro("There is no contact.");
                 return 1;
             }
 
@@ -258,7 +259,7 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
             // löscht bestimmte strips
 
             if (CleanStrips()) {
-                vtkErrorMacro("There is no contact 2.");
+                vtkErrorMacro("There is no contact.");
                 return 1;
             }
 

@@ -23,14 +23,12 @@ moveBoxTransform = vtkTransform()
 moveBoxTransform.Translate(20.076142063093318, -8.288617300972092, -53.29349952031101)
 moveBoxMatrix = moveBoxTransform.GetMatrix()
 
-identityMatrix = vtkMatrix4x4()
-
 bf = vtkPolyDataBooleanFilter()
 bf.SetInputData(0, mandibleReader.GetOutput())
 bf.SetInputData(1, boxReader.GetOutput())
 
-bf.SetMatrix(0, identityMatrix)
-bf.SetMatrix(1, moveBoxMatrix)
+# identityMatrix = vtkMatrix4x4()
+# bf.SetMatrix(0, identityMatrix)
 
 for i in range(10):
     moveBoxTransform.Translate(0, -10, 0)
@@ -38,15 +36,15 @@ for i in range(10):
 
     print(moveBoxMatrix.GetElement(1, 3))
 
-    transformFilter = vtkTransformPolyDataFilter()
-    transformFilter.SetInputData(boxReader.GetOutput())
-    transformFilter.SetTransform(moveBoxTransform)
-    transformFilter.Update()
+    # transformFilter = vtkTransformPolyDataFilter()
+    # transformFilter.SetInputData(boxReader.GetOutput())
+    # transformFilter.SetTransform(moveBoxTransform)
+    # transformFilter.Update()
 
-    _writer = vtkPolyDataWriter()
-    _writer.SetFileName(f'out/pdB_{i}.vtk')
-    _writer.SetInputConnection(transformFilter.GetOutputPort())
-    _writer.Update()
+    # _writer = vtkPolyDataWriter()
+    # _writer.SetFileName(f'out/pdB_{i}.vtk')
+    # _writer.SetInputConnection(transformFilter.GetOutputPort())
+    # _writer.Update()
 
     bf.SetMatrix(1, moveBoxMatrix)
 
