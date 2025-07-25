@@ -130,9 +130,12 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
         std::vector<clock::duration> times;
         clock::time_point start;
 
-        if (pdA->GetMTime() > timePdA || pdB->GetMTime() > timePdB || (matrices[0] != nullptr && matrices[0]->GetMTime() > timeMatrixA) || (matrices[1] != nullptr && matrices[1]->GetMTime() > timeMatrixB)) {
+        vtkMTimeType timeA = pdA->GetMTime();
+        vtkMTimeType timeB = pdB->GetMTime();
 
-            if (contact == nullptr) {
+        if (timeA > timePdA || timeB > timePdB || (matrices[0] != nullptr && matrices[0]->GetMTime() > timeMatrixA) || (matrices[1] != nullptr && matrices[1]->GetMTime() > timeMatrixB)) {
+
+            if (contact == nullptr || timeA > timePdA || timeB > timePdB) {
                 // CellData sichern
 
                 cellDataA->DeepCopy(pdA->GetCellData());
