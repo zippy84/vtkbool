@@ -30,11 +30,13 @@ bf.SetInputData(1, boxReader.GetOutput())
 # identityMatrix = vtkMatrix4x4()
 # bf.SetMatrix(0, identityMatrix)
 
+bf.SetMatrix(1, moveBoxMatrix)
+
 for i in range(10):
     moveBoxTransform.Translate(0, -10, 0)
     moveBoxMatrix = moveBoxTransform.GetMatrix()
 
-    print(moveBoxMatrix.GetElement(1, 3))
+    print(moveBoxMatrix.GetElement(1, 3), moveBoxMatrix.GetMTime())
 
     # transformFilter = vtkTransformPolyDataFilter()
     # transformFilter.SetInputData(boxReader.GetOutput())
@@ -46,7 +48,7 @@ for i in range(10):
     # _writer.SetInputConnection(transformFilter.GetOutputPort())
     # _writer.Update()
 
-    bf.SetMatrix(1, moveBoxMatrix)
+    # bf.SetMatrix(1, moveBoxMatrix)
 
     writer = vtkPolyDataWriter()
     writer.SetFileName(f'out/transformed_{i}.vtk')

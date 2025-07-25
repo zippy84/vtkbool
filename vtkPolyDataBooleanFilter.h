@@ -174,7 +174,7 @@ class VTK_EXPORT vtkPolyDataBooleanFilter : public vtkPolyDataAlgorithm {
 
     vtkIdTypeArray *contsA, *contsB;
 
-    unsigned long timePdA, timePdB;
+    vtkMTimeType timePdA, timePdB;
 
     PolyStripsType polyStripsA, polyStripsB;
 
@@ -201,6 +201,8 @@ class VTK_EXPORT vtkPolyDataBooleanFilter : public vtkPolyDataAlgorithm {
 
     std::shared_ptr<Contact> contact;
 
+    vtkMTimeType timeMatrixA, timeMatrixB;
+
 public:
     vtkTypeMacro(vtkPolyDataBooleanFilter, vtkPolyDataAlgorithm);
     static vtkPolyDataBooleanFilter* New ();
@@ -216,6 +218,8 @@ public:
 
     void SetMatrix (int i, vtkMatrix4x4 *matrix);
     vtkMatrix4x4* GetMatrix (int i);
+
+    vtkMTimeType GetMTime () override;
 
 protected:
     vtkPolyDataBooleanFilter ();

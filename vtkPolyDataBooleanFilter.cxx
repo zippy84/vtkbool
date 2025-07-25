@@ -85,6 +85,9 @@ vtkPolyDataBooleanFilter::vtkPolyDataBooleanFilter () {
     transforms[0] = nullptr;
     transforms[1] = nullptr;
 
+    timeMatrixA = 0;
+    timeMatrixB = 0;
+
 }
 
 vtkPolyDataBooleanFilter::~vtkPolyDataBooleanFilter () {
@@ -127,11 +130,11 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
         std::vector<clock::duration> times;
         clock::time_point start;
 
-        // if (pdA->GetMTime() > timePdA || pdB->GetMTime() > timePdB)
-        {
-            // CellData sichern
+        if (pdA->GetMTime() > timePdA || pdB->GetMTime() > timePdB || (matrices[0] != nullptr && matrices[0]->GetMTime() > timeMatrixA) || (matrices[1] != nullptr && matrices[1]->GetMTime() > timeMatrixB)) {
 
             if (contact == nullptr) {
+                // CellData sichern
+
                 cellDataA->DeepCopy(pdA->GetCellData());
                 cellDataB->DeepCopy(pdB->GetCellData());
 
@@ -345,6 +348,14 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
 
             timePdA = pdA->GetMTime();
             timePdB = pdB->GetMTime();
+
+            if (matrices[0] != nullptr) {
+                timeMatrixA = matrices[0]->GetMTime();
+            }
+
+            if (matrices[1] != nullptr) {
+                timeMatrixB = matrices[1]->GetMTime();
+            }
 
         }
 
@@ -3075,6 +3086,14 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
 }
 
 void vtkPolyDataBooleanFilter::SetMatrix (int i, vtkMatrix4x4 *matrix) {
+    if (i != 0 && i != 1) {
+        return;
+    }
+
+    if (matrices[i] == matrix) {
+        return;
+    }
+
     if (transforms[i]) {
         transforms[i]->Delete();
         transforms[i] = nullptr;
@@ -3085,21 +3104,41 @@ void vtkPolyDataBooleanFilter::SetMatrix (int i, vtkMatrix4x4 *matrix) {
         matrices[i] = nullptr;
     }
 
-    matrices[i] = matrix;
-    matrix->Register(this);
+    if (matrix != nullptr) {
+        matrices[i] = matrix;
+        matrix->Register(this);
 
-    auto transform = vtkMatrixToLinearTransform::New();
+        auto transform = vtkMatrixToLinearTransform::New();
 
-    transform->Register(this);
-    transform->Delete();
+        transform->Register(this);
+        transform->Delete();
 
-    transform->SetInput(matrix);
+        transform->SetInput(matrix);
 
-    transforms[i] = transform;
+        transforms[i] = transform;
+    }
 
     Modified();
 }
 
 vtkMatrix4x4* vtkPolyDataBooleanFilter::GetMatrix (int i) {
+    if (i != 0 && i != 1) {
+        return nullptr;
+    }
+
     return matrices[i];
+}
+
+vtkMTimeType vtkPolyDataBooleanFilter::GetMTime () {
+    std::vector<vtkMTimeType> times = { MTime.GetMTime() };
+
+    if (matrices[0] != nullptr) {
+        times.push_back(matrices[0]->GetMTime());
+    }
+
+    if (matrices[1] != nullptr) {
+        times.push_back(matrices[1]->GetMTime());
+    }
+
+    return *std::max_element(times.begin(), times.end());
 }
