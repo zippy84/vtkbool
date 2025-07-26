@@ -966,6 +966,8 @@ def test_transform_matrix(tmp_path):
 
         # bf.SetMatrix(1, matrix)
 
+        print(bf.GetMatrix(1))
+
         bf.Update()
 
         path = tmp_path / f'transformed_{i}'

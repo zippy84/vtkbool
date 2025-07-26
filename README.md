@@ -2,7 +2,7 @@
 
 ## About
 
-This is an extension of the graphics library VTK. The goal of the extension is to equip the library with boolean operations on polygonal meshes. I started the project at the end of my studies in mechanical engineering at the University of Applied Sciences ([HTWK](http://htwk-leipzig.de/)) in Leipzig. I used VTK to develop a program, which I had to create for a paper. At this time I would have wished, that this feature already exists. There was several implementations from third parties, but after some tests, I came to the conclusion, that none of them worked correct. I decided to start with my own implementation. This library is the result of my efforts.
+This is an extension of the graphics library VTK. The goal of the extension is to equip the library with rebust boolean operations on polygonal meshes. I started the project at the end of my studies in mechanical engineering at the University of Applied Sciences ([HTWK](http://htwk-leipzig.de/)) in Leipzig. I used VTK to develop a program, which I had to create for a paper. At this time I would have wished, that this feature already exists. There was several implementations from third parties, but after some tests, I came to the conclusion, that none of them worked correct. I decided to start with my own implementation. This library is the result of my efforts.
 
 ## Features
 
@@ -229,11 +229,21 @@ from vtkbool.vtkbool import vtkPolyDataBooleanFilter
 
 - *Contact failed with ...*
 
-  tbd
+  - *Found invalid intersection points.*
+
+    This problem occurs when an intersection point is located on congruent edges of a self-intersecting polygon.
+
+  - *Intersection points do not lie on the edges (cells a, b).*
+
+    At least one intersection point does not lie on the boundary of the intersected polygon. The points of the polygon do not lie on a plane. The polygon is degenerated.
+
+  - *Intersection goes through non-manifold edges.*
+
+    Non-manifold edges are generally not a problem. Unless they are part of the intersection.
 
 - *Cannot prevent equal capture points.*
 
-  tbd
+  A capture point is the projection of a point onto one of the edges of the intersected polygon. This point, not the projection, is usually used by two lines that are assigned to the two adjacent polygons, sharing this edge. There is a case where two different points have the same projection. The error occurs when the problem could not be solved.
 
 - *There is no contact.*
 
@@ -245,11 +255,11 @@ from vtkbool.vtkbool import vtkPolyDataBooleanFilter
 
 - *Strips are invalid.*
 
-  tbd
+  There are intersection lines that intersect themselves. Either one of the inputs contains an assembly or there is one self-intersecting polygon that is involved in the intersection.
 
 - *CutCells failed.*
 
-  Will be printed out only, if some holes couldn't be merged into their outer cells.
+  Will be printed out only, if some holes couldn't be merged into their outer polygons.
 
 - *Boolean operation failed.*
 

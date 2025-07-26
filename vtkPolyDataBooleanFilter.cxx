@@ -3097,12 +3097,12 @@ void vtkPolyDataBooleanFilter::SetMatrix (int i, vtkMatrix4x4 *matrix) {
         return;
     }
 
-    if (transforms[i]) {
+    if (transforms[i] != nullptr) {
         transforms[i]->Delete();
         transforms[i] = nullptr;
     }
 
-    if (matrices[i]) {
+    if (matrices[i] != nullptr) {
         matrices[i]->Delete();
         matrices[i] = nullptr;
     }
