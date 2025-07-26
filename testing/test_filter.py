@@ -62,12 +62,14 @@ def check_result(bf, expected_regs=None):
     assert isinstance(regionsA, vtkIdTypeArray)
     assert isinstance(regionsB, vtkIdTypeArray)
 
-    if isinstance(expected_regs, list):
-        valuesA = set(regionsA.GetValue(i) for i in range(regionsA.GetNumberOfValues()))
-        valuesB = set(regionsB.GetValue(i) for i in range(regionsB.GetNumberOfValues()))
+    valuesA = set(regionsA.GetValue(i) for i in range(regionsA.GetNumberOfValues()))
+    valuesB = set(regionsB.GetValue(i) for i in range(regionsB.GetNumberOfValues()))
 
+    if isinstance(expected_regs, list):
         assert len(valuesA) == expected_regs[0]
         assert len(valuesB) == expected_regs[1]
+    else:
+        print([len(valuesA), len(valuesB)])
 
     for name, pd in [('pdA', pdA), ('pdB', pdB)]:
         print(f'checking {name}')
@@ -938,3 +940,36 @@ def test_equal_capt_pts_3(tmp_path):
 
     write_result(bf, tmp_path)
     check_result(bf, [6, 6])
+
+def test_transform_matrix(tmp_path):
+    cubeA = vtkCubeSource()
+    cubeA.SetBounds(-1.5, 1.5, -1.5, 1.5, -1.5, 1.5)
+
+    cubeB = vtkCubeSource()
+    cubeB.SetBounds(-3, 3, -.5, .5, -.5, .5)
+
+    transform = vtkTransform()
+    matrix = transform.GetMatrix()
+
+    bf = vtkPolyDataBooleanFilter()
+    bf.SetInputConnection(0, cubeA.GetOutputPort())
+    bf.SetInputConnection(1, cubeB.GetOutputPort())
+    bf.SetOperModeToNone()
+
+    bf.SetMatrix(1, matrix)
+
+    for i in range(18):
+        transform.Identity()
+        transform.RotateY(i*10)
+
+        matrix = transform.GetMatrix()
+
+        # bf.SetMatrix(1, matrix)
+
+        bf.Update()
+
+        path = tmp_path / f'transformed_{i}'
+        path.mkdir()
+
+        write_result(bf, path)
+        check_result(bf, [3, 3])

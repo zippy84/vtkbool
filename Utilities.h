@@ -91,7 +91,6 @@ public:
         return dx*dx+dy*dy+dz*dz;
     }
 
-
 };
 
 typedef std::vector<vtkIdType> IdsType;

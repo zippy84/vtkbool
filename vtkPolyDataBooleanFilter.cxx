@@ -144,10 +144,10 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
                 cleanA = Clean(pdA);
                 cleanB = Clean(pdB);
 
-    #ifdef DEBUG
+#ifdef DEBUG
                 WriteVTK("modPdA.vtk", cleanA);
                 WriteVTK("modPdB.vtk", cleanB);
-    #endif
+#endif
 
                 try {
                     PreventEqualCaptPoints(cleanA, cleanB).Run();
