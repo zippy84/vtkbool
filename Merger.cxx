@@ -57,7 +57,7 @@ Merger::Merger (vtkPolyData *pd, const PStrips &pStrips, const StripsType &strip
             double proj[2];
             Transform(pt, proj, base);
 
-            p.emplace_back(proj[0], proj[1], 0, NOTSET, sp.ind);
+            p.emplace_back(proj[0], proj[1], 0, std::nullopt, sp.ind);
         }
 
         p.pop_back();
@@ -138,22 +138,22 @@ void Merger::Run () {
             auto newCell = vtkSmartPointer<vtkIdList>::New();
 
             for (auto &p : poly) {
-                vtkIdType id = p.id;
+                auto id = p.id;
 
-                if (id == NOTSET) {
-                    auto itr = newIds.find(p.otherId);
+                if (!id) {
+                    auto itr = newIds.find(*p.otherId);
 
                     if (itr == newIds.end()) {
-                        auto &q = pStrips.pts.at(p.otherId);
+                        auto &q = pStrips.pts.at(*p.otherId);
 
-                        id = pdPts->InsertNextPoint(q.pt);
-                        newIds.emplace(p.otherId, id);
+                        *id = pdPts->InsertNextPoint(q.pt);
+                        newIds.emplace(*p.otherId, *id);
                     } else {
-                        id = itr->second;
+                        *id = itr->second;
                     }
                 }
 
-                newCell->InsertNextId(id);
+                newCell->InsertNextId(*id);
 
             }
 

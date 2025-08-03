@@ -23,6 +23,8 @@ limitations under the License.
 #include <vtkTriangleStrip.h>
 #include <vtkArrayIteratorTemplate.h>
 
+#include <sstream>
+
 // #define _debA 0
 // #define _debB 0
 
@@ -144,21 +146,6 @@ Contact::Contact (vtkPolyData *newPdA, vtkPolyData *newPdB) : newPdA(newPdA), ne
     lines->GetCellData()->AddArray(contA);
     lines->GetCellData()->AddArray(contB);
 
-    sourcesA = vtkSmartPointer<vtkIdTypeArray>::New();
-    sourcesB = vtkSmartPointer<vtkIdTypeArray>::New();
-
-    sourcesA->Allocate(1000);
-    sourcesB->Allocate(1000);
-
-    sourcesA->SetNumberOfComponents(2);
-    sourcesB->SetNumberOfComponents(2);
-
-    sourcesA->SetName("sourcesA");
-    sourcesB->SetName("sourcesB");
-
-    lines->GetCellData()->AddArray(sourcesA);
-    lines->GetCellData()->AddArray(sourcesB);
-
     touchesEdgesA = false;
     touchesEdgesB = false;
 
@@ -203,8 +190,6 @@ vtkSmartPointer<vtkPolyData> Contact::GetLines (vtkPolyData *pdA, vtkLinearTrans
     vtkMatrix4x4::Invert(matrixA, tmpMatrix);
     vtkMatrix4x4::Multiply4x4(tmpMatrix, matrixB, matrix);
 
-    sourcesA->Reset();
-    sourcesB->Reset();
     contA->Reset();
     contB->Reset();
 
@@ -326,8 +311,8 @@ void Contact::InterEdgeLine (InterPtsType &interPts, const Point3d &pA, const Po
 
     if (std::abs(w[0]) < 1e-10) {
         if (std::abs(pA.y) < 1e-5 && std::abs(pB.y) < 1e-5) {
-            interPts.emplace_back(pA.x, 0, 0, pA.x, pA.id, pB.id, End::A, src, PointSrc::Copied);
-            interPts.emplace_back(pB.x, 0, 0, pB.x, pA.id, pB.id, End::B, src, PointSrc::Copied);
+            interPts.emplace_back(pA.x, 0, 0, pA.x, *pA.id, *pB.id, End::A, src, PointSrc::Copied);
+            interPts.emplace_back(pB.x, 0, 0, pB.x, *pA.id, *pB.id, End::B, src, PointSrc::Copied);
         }
     } else {
         double yA = pA.y-1e-6*v[1];
@@ -344,7 +329,7 @@ void Contact::InterEdgeLine (InterPtsType &interPts, const Point3d &pA, const Po
 
             End end = dA < 1e-12 ? End::A : (dB < 1e-12 ? End::B : End::None);
 
-            interPts.emplace_back(x, 0, 0, x, pA.id, pB.id, end, src, PointSrc::Calculated);
+            interPts.emplace_back(x, 0, 0, x, *pA.id, *pB.id, end, src, PointSrc::Calculated);
         }
     }
 
@@ -476,7 +461,7 @@ bool Contact::InterPolyLine (InterPtsType &interPts, const Base2 &base, const Po
     std::map<vtkIdType, std::reference_wrapper<const Point3d>> pts;
 
     for (auto &p : poly) {
-        pts.emplace(p.id, p);
+        pts.emplace(*p.id, p);
     }
 
     vtkIdType ind;
@@ -495,12 +480,12 @@ bool Contact::InterPolyLine (InterPtsType &interPts, const Base2 &base, const Po
 
             next = p.edge.g;
 
-            auto _itr = std::find_if(poly.begin(), poly.end(), [&ind](auto &p) { return p.id == ind; });
+            auto _itr = std::find_if(poly.begin(), poly.end(), [&ind](auto &p) { return *p.id == ind; });
 
             if (_itr == poly.begin()) {
-                prev = poly.back().id;
+                prev = *poly.back().id;
             } else {
-                prev = std::prev(_itr)->id;
+                prev = *std::prev(_itr)->id;
             }
 
         } else {
@@ -508,12 +493,12 @@ bool Contact::InterPolyLine (InterPtsType &interPts, const Base2 &base, const Po
 
             prev = p.edge.f;
 
-            auto _itr = std::find_if(poly.begin(), poly.end(), [&ind](auto &p) { return p.id == ind; });
+            auto _itr = std::find_if(poly.begin(), poly.end(), [&ind](auto &p) { return *p.id == ind; });
 
             if (_itr == poly.end()-1) {
-                next = poly.front().id;
+                next = *poly.front().id;
             } else {
-                next = std::next(_itr)->id;
+                next = *std::next(_itr)->id;
             }
         }
 
@@ -781,10 +766,7 @@ bool Contact::CheckInters (const InterPtsType &interPts, vtkPolyData *pd) {
 
 void Contact::OverlapLines (OverlapsType &overlaps, InterPtsType &intersA, InterPtsType &intersB) {
 
-    auto Add = [](InterPt &a, InterPt &b, InterPt &c, InterPt &d) {
-        a.Merge(c);
-        b.Merge(d);
-
+    auto Add = [](InterPt &a, InterPt &b, [[maybe_unused]] InterPt &c, [[maybe_unused]] InterPt &d) {
         return std::make_tuple(a, b);
     };
 
@@ -841,12 +823,6 @@ void Contact::AddContactLines (InterPtsType &intersA, InterPtsType &intersB, vtk
         lines->InsertNextCell(VTK_LINE, linePts);
 
         linePts->Delete();
-
-        const vtkIdType tupleA[] = {f.srcA, s.srcA};
-        const vtkIdType tupleB[] = {f.srcB, s.srcB};
-
-        sourcesA->InsertNextTypedTuple(tupleA);
-        sourcesB->InsertNextTypedTuple(tupleB);
 
         contA->InsertNextValue(idA);
         contB->InsertNextValue(idB);
@@ -937,9 +913,6 @@ void Contact::IntersectReplacements () {
 
     contA = vtkIdTypeArray::SafeDownCast(lines->GetCellData()->GetScalars("cA"));
     contB = vtkIdTypeArray::SafeDownCast(lines->GetCellData()->GetScalars("cB"));
-
-    sourcesA = vtkIdTypeArray::SafeDownCast(lines->GetCellData()->GetScalars("sourcesA"));
-    sourcesB = vtkIdTypeArray::SafeDownCast(lines->GetCellData()->GetScalars("sourcesB"));
 
     // contA und contB aktualisieren
 

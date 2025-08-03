@@ -231,9 +231,6 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
             contsA = vtkIdTypeArray::SafeDownCast(contLines->GetCellData()->GetScalars("cA"));
             contsB = vtkIdTypeArray::SafeDownCast(contLines->GetCellData()->GetScalars("cB"));
 
-            vtkIdTypeArray *sourcesA = vtkIdTypeArray::SafeDownCast(contLines->GetCellData()->GetScalars("sourcesA"));
-            vtkIdTypeArray *sourcesB = vtkIdTypeArray::SafeDownCast(contLines->GetCellData()->GetScalars("sourcesB"));
-
             // sichert die OrigCellIds
 
             vtkIdTypeArray *origCellIdsA = vtkIdTypeArray::SafeDownCast(modPdA->GetCellData()->GetScalars("OrigCellIds"));
@@ -255,8 +252,8 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
 
             start = clock::now();
 
-            if (GetPolyStrips(modPdA, contsA, sourcesA, polyStripsA) ||
-                GetPolyStrips(modPdB, contsB, sourcesB, polyStripsB)) {
+            if (GetPolyStrips(modPdA, contsA, polyStripsA) ||
+                GetPolyStrips(modPdB, contsB, polyStripsB)) {
 
                 vtkErrorMacro("Strips are invalid.");
                 return 1;
@@ -390,7 +387,7 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
 
 }
 
-void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, vtkIdTypeArray *sources, PStrips &pStrips, IdsType &lines) {
+void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, PStrips &pStrips, IdsType &lines) {
 
 #ifdef DEBUG
     std::cout << "GetStripPoints()" << std::endl;
@@ -401,7 +398,7 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, vtkIdTypeArray *
 
     double a[3], b[3], sA[3], sB[3], u[3], v[3], w[3], n, t, d;
 
-    std::map<vtkIdType, vtkIdType> allPts;
+    _IdsType allInds;
 
     std::map<vtkIdType, vtkIdType> links;
 
@@ -417,18 +414,16 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, vtkIdTypeArray *
         //     << "]"
         //     << std::endl;
 
-        allPts.emplace(line->GetId(0), sources->GetTypedComponent(lineId, 0));
-        allPts.emplace(line->GetId(1), sources->GetTypedComponent(lineId, 1));
+        allInds.emplace(line->GetId(0));
+        allInds.emplace(line->GetId(1));
 
         links[line->GetId(0)]++;
         links[line->GetId(1)]++;
     }
 
-    decltype(allPts)::const_iterator itr;
-
-    for (itr = allPts.begin(); itr != allPts.end(); ++itr) {
+    for (auto ind : allInds) {
         StripPt sp;
-        sp.ind = itr->first;
+        sp.ind = ind;
 
         // die koordinaten
         contLines->GetPoint(sp.ind, sp.pt);
@@ -440,10 +435,6 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, vtkIdTypeArray *
 
             if (itrB == poly.end()) {
                 itrB = poly.begin();
-            }
-
-            if (itr->second != NOTSET && *itrA != itr->second) {
-                continue;
             }
 
             pd->GetPoint(*itrA, a);
@@ -466,8 +457,7 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, vtkIdTypeArray *
             d = vtkMath::Norm(w)/n;
 
             if (d < 1e-5 && t > -1e-5 && t < 1+1e-5) {
-                sp.edge[0] = *itrA;
-                sp.edge[1] = *itrB;
+                sp.edge = {*itrA, *itrB};
 
                 sp.t = std::min(1., std::max(0., t));
 
@@ -502,10 +492,6 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, vtkIdTypeArray *
             //     << std::endl;
         }
 
-        if (itr->second != NOTSET && sp.edge[0] == NOTSET) {
-            sp.catched = false;
-        }
-
         if (sp.capt == Capt::Not && links[sp.ind] > 2) {
             sp.capt = Capt::Branched;
         }
@@ -523,16 +509,16 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, vtkIdTypeArray *
             if (sp.capt == Capt::B) {
                 sp.t = 0;
 
-                sp.edge[0] = sp.edge[1];
+                (*sp.edge)[0] = (*sp.edge)[1];
 
-                auto itrA = std::find(poly.begin(), poly.end(), sp.edge[0]),
+                auto itrA = std::find(poly.begin(), poly.end(), (*sp.edge)[0]),
                     itrB = itrA+1;
 
                 if (itrB == poly.end()) {
                     itrB = poly.begin();
                 }
 
-                sp.edge[1] = *itrB;
+                (*sp.edge)[1] = *itrB;
 
                 sp.capt = Capt::A;
 
@@ -556,7 +542,7 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, vtkIdTypeArray *
 
 }
 
-bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *conts, vtkIdTypeArray *sources, PolyStripsType &polyStrips) {
+bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *conts, PolyStripsType &polyStrips) {
 #ifdef DEBUG
     std::cout << "GetPolyStrips()" << std::endl;
 #endif
@@ -575,7 +561,7 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
         polyLines[poly].push_back(i);
     }
 
-    std::vector<std::reference_wrapper<StripPt>> notCatched;
+    // std::vector<std::reference_wrapper<StripPt>> notCatched;
 
     std::map<vtkIdType, IdsType>::iterator itr;
 
@@ -590,17 +576,19 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
 
         PStrips &pStrips = polyStrips.at(itr->first);
 
-        GetStripPoints(pd, sources, pStrips, lines);
+        GetStripPoints(pd, pStrips, lines);
 
         for (auto &sp : pStrips.pts) {
             sp.second.polyId = itr->first;
 
-            if (!sp.second.catched) {
-                notCatched.push_back(sp.second);
-            }
+            // if (!sp.second.catched) {
+            //     notCatched.push_back(sp.second);
+            // }
         }
 
     }
+
+    /*
 
     auto Next = [](const IdsType &ids, vtkIdType id) -> vtkIdType {
         IdsType::const_iterator itr;
@@ -624,8 +612,8 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
                 if (&corr != &sp) {
                     if (corr.capt == Capt::A) {
                         sp.capt = Capt::A;
-                        sp.edge[0] = corr.edge[0];
-                        sp.edge[1] = Next(polyStrips.at(sp.polyId).poly, sp.edge[0]);
+                        (*sp.edge)[0] = (*corr.edge)[0];
+                        (*sp.edge)[1] = Next(polyStrips.at(sp.polyId).poly, (*sp.edge)[0]);
 
                         sp.t = 0;
 
@@ -649,6 +637,8 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
         assert(sp.catched);
 
     }
+
+    */
 
     // sucht nach gleichen captPts
 
@@ -1194,7 +1184,7 @@ bool vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
 #endif
 
             // enden auf gleichem edge
-            if (pts[strip.front().ind].edge[0] == pts[strip.back().ind].edge[0]
+            if ((*pts[strip.front().ind].edge)[0] == (*pts[strip.back().ind].edge)[0]
                 && strip.front().ind != strip.back().ind
                 && pts[strip.front().ind].t > pts[strip.back().ind].t) {
 
@@ -1212,18 +1202,17 @@ bool vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
                 &end = pts[strip.back().ind];
 
             strip.front().side = Side::Start;
-            strip.front().ref = start.edge[0];
+            *strip.front().ref = (*start.edge)[0];
 
             if (end.capt & Capt::Boundary) {
                 strip.back().side = Side::End;
-                strip.back().ref = end.edge[0];
+                *strip.back().ref = (*end.edge)[0];
             }
 
             for (auto &p : strip) {
                 StripPt &sp = pts[p.ind];
 
-                p.desc[0] = pdPts->InsertNextPoint(sp.cutPt);
-                p.desc[1] = pdPts->InsertNextPoint(sp.cutPt);
+                p.desc = {pdPts->InsertNextPoint(sp.cutPt), pdPts->InsertNextPoint(sp.cutPt)};
 
 #ifdef DEBUG
                 std::cout << sp << " => " << p << std::endl;
@@ -1271,14 +1260,14 @@ bool vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
                     const StripPt &pA = pts[a.front().ind],
                         &pB = pts[b.front().ind];
 
-                    return absoluteT[pA.edge[0]]+pA.t < absoluteT[pB.edge[0]]+pB.t;
+                    return absoluteT[(*pA.edge)[0]]+pA.t < absoluteT[(*pB.edge)[0]]+pB.t;
                 }
             });
 
             // die klassische sanduhr
 
             auto next = std::find_if(polys.begin(), polys.end(), [&_strips](const IdsType &p) {
-                return std::find(p.begin(), p.end(), _strips.front().get().front().ref) != p.end();
+                return std::find(p.begin(), p.end(), *_strips.front().get().front().ref) != p.end();
             });
 
             assert(next != polys.end());
@@ -1308,18 +1297,18 @@ bool vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
                 IdsType newPoly;
 
                 for (_itrC = stripB.begin(); _itrC != stripB.end(); ++_itrC) {
-                    newPoly.push_back(_itrC->desc[0]);
+                    newPoly.push_back((*_itrC->desc)[0]);
                 }
 
                 for (_itrD = stripA.rbegin()+1; _itrD != stripA.rend(); ++_itrD) {
-                    newPoly.push_back(_itrD->desc[1]);
+                    newPoly.push_back((*_itrD->desc)[1]);
                 }
 
                 // punkte zw. den enden einfügen
 
-                if (stripA.front().ref != stripB.front().ref) {
-                    auto posA = std::find(next->begin(), next->end(), stripA.front().ref);
-                    auto posB = std::find(next->begin(), next->end(), stripB.front().ref);
+                if (*stripA.front().ref != *stripB.front().ref) {
+                    auto posA = std::find(next->begin(), next->end(), *stripA.front().ref);
+                    auto posB = std::find(next->begin(), next->end(), *stripB.front().ref);
 
                     for (;;) {
                         posA++;
@@ -1362,37 +1351,37 @@ bool vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
                         &endB = pts[s.back().ind];
 
                     if (endA.capt & Capt::Boundary
-                        && pA.edge[0] == endA.edge[0]
+                        && (*pA.edge)[0] == (*endA.edge)[0]
                         && endA.t > pA.t
-                        && (pA.edge[0] != pB.edge[0] || endA.t < pB.t)) {
-                        s.front().ref = stripA.front().desc[1];
+                        && ((*pA.edge)[0] != (*pB.edge)[0] || endA.t < pB.t)) {
+                        *s.front().ref = (*stripA.front().desc)[1];
 
                         if (endB.ind == pA.ind) {
-                            s.back().ref = stripA.front().desc[1];
+                            *s.back().ref = (*stripA.front().desc)[1];
                         } else if (endB.ind == pB.ind) {
-                            s.back().ref = stripB.front().desc[0];
+                            *s.back().ref = (*stripB.front().desc)[0];
                         }
                     }
 
                     if (endB.capt & Capt::Boundary
-                        && pA.edge[0] == endB.edge[0]
+                        && (*pA.edge)[0] == (*endB.edge)[0]
                         && endB.t > pA.t
-                        && (pA.edge[0] != pB.edge[0] || endB.t < pB.t)) {
-                        s.back().ref = stripA.front().desc[1];
+                        && ((*pA.edge)[0] != (*pB.edge)[0] || endB.t < pB.t)) {
+                        *s.back().ref = (*stripA.front().desc)[1];
 
                         if (endA.ind == pA.ind) {
-                            s.front().ref = stripA.front().desc[1];
+                            *s.front().ref = (*stripA.front().desc)[1];
                         } else if (endA.ind == pB.ind) {
-                            s.front().ref = stripB.front().desc[0];
+                            *s.front().ref = (*stripB.front().desc)[0];
                         }
                     }
 
                     if (endA.ind == pA.ind && endB.ind == pB.ind) {
-                        s.front().ref = stripA.front().desc[1];
-                        s.back().ref = stripB.front().desc[0];
+                        *s.front().ref = (*stripA.front().desc)[1];
+                        *s.back().ref = (*stripB.front().desc)[0];
                     } else if (endB.ind == pA.ind && endA.ind == pB.ind) {
-                        s.back().ref = stripA.front().desc[1];
-                        s.front().ref = stripB.front().desc[0];
+                        *s.back().ref = (*stripA.front().desc)[1];
+                        *s.front().ref = (*stripB.front().desc)[0];
                     }
 
                     if (endB.capt == Capt::Branched) {
@@ -1400,9 +1389,9 @@ bool vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
 
                         if (PointInPoly(_poly, {proj[0], proj[1], 0})) {
                             if (endA.ind == pA.ind) {
-                                s.front().ref = stripA.front().desc[1];
+                                *s.front().ref = (*stripA.front().desc)[1];
                             } else if (endA.ind == pB.ind) {
-                                s.front().ref = stripB.front().desc[0];
+                                *s.front().ref = (*stripB.front().desc)[0];
                             }
                         }
                     }
@@ -1428,7 +1417,7 @@ bool vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
 
             for (auto &strip : strips) {
                 if (pts[strip.back().ind].capt != Capt::Branched
-                    && std::find(next.begin(), next.end(), strip.front().ref) != next.end()) {
+                    && std::find(next.begin(), next.end(), *strip.front().ref) != next.end()) {
 
                     _strips.emplace_back(strip);
                 }
@@ -1449,8 +1438,8 @@ bool vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
                 const StripPt &a = pts[strip.front().ind],
                     &b = pts[strip.back().ind];
 
-                edges[a.edge[0]].push_back(std::ref(strip.front()));
-                edges[b.edge[0]].push_back(std::ref(strip.back()));
+                edges[(*a.edge)[0]].push_back(std::ref(strip.front()));
+                edges[(*b.edge)[0]].push_back(std::ref(strip.back()));
             }
 
             // sortiert die punkte auf den kanten
@@ -1490,8 +1479,8 @@ bool vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
 
                             if (eA_.ind != eB_.ind) {
                                 r = absoluteT[id]+a_.t;
-                                rA = absoluteT[eA_.edge[0]]+eA_.t;
-                                rB = absoluteT[eB_.edge[0]]+eB_.t;
+                                rA = absoluteT[(*eA_.edge)[0]]+eA_.t;
+                                rB = absoluteT[(*eB_.edge)[0]]+eB_.t;
 
                                 rA = rA > r ? rA-r : rA+_t-r,
                                 rB = rB > r ? rB-r : rB+_t-r;
@@ -1569,7 +1558,7 @@ bool vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
 
 #ifdef DEBUG
                 std::cout << "strip " << start.strip
-                    << ", refs (" << start.ref << ", " << end.ref << ")"
+                    << ", refs (" << *start.ref << ", " << *end.ref << ")"
                     << std::endl;
 #endif
 
@@ -1585,8 +1574,8 @@ bool vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
 
                     std::vector<IdsType> splitted(2);
 
-                    if (std::find(_next.begin(), _next.end(), start.ref) != _next.end()) {
-                        if (start.ref == end.ref) {
+                    if (std::find(_next.begin(), _next.end(), *start.ref) != _next.end()) {
+                        if (*start.ref == *end.ref) {
                             for (_itrA = _next.begin(); _itrA != _next.end(); ++_itrA) {
                                 splitted[0].push_back(*_itrA);
 
@@ -1594,12 +1583,12 @@ bool vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
                                 std::cout << "adding " << *_itrA << " to 0" << std::endl;
 #endif
 
-                                if (*_itrA == start.ref) {
+                                if (*_itrA == *start.ref) {
                                     for (auto &p : strip) {
-                                        splitted[0].push_back(p.desc[0]);
+                                        splitted[0].push_back((*p.desc)[0]);
 
 #ifdef DEBUG
-                                        std::cout << "adding " << p.desc[0] << " to 0" << std::endl;
+                                        std::cout << "adding " << (*p.desc)[0] << " to 0" << std::endl;
 #endif
 
                                     }
@@ -1609,10 +1598,10 @@ bool vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
                             // strip selbst ist ein polygon
 
                             for (_itrB = strip.rbegin(); _itrB != strip.rend(); ++_itrB) {
-                                splitted[1].push_back(_itrB->desc[1]);
+                                splitted[1].push_back((*_itrB->desc)[1]);
 
 #ifdef DEBUG
-                                std::cout << "adding " << _itrB->desc[1] << " to 1" << std::endl;
+                                std::cout << "adding " << (*_itrB->desc)[1] << " to 1" << std::endl;
 #endif
 
                             }
@@ -1629,24 +1618,24 @@ bool vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
                                 std::cout << "adding " << *_itrA << " to " << curr << std::endl;
 #endif
 
-                                if (*_itrA == start.ref) {
+                                if (*_itrA == *start.ref) {
                                     for (auto &p : strip) {
-                                        poly.push_back(p.desc[0]);
+                                        poly.push_back((*p.desc)[0]);
 
 #ifdef DEBUG
-                                        std::cout << "adding " << p.desc[0] << " to " << curr << std::endl;
+                                        std::cout << "adding " << (*p.desc)[0] << " to " << curr << std::endl;
 #endif
 
                                     }
 
                                     curr = curr == 0 ? 1 : 0;
 
-                                } else if (*_itrA == end.ref) {
+                                } else if (*_itrA == *end.ref) {
                                     for (_itrB = strip.rbegin(); _itrB != strip.rend(); ++_itrB) {
-                                        poly.push_back(_itrB->desc[1]);
+                                        poly.push_back((*_itrB->desc)[1]);
 
 #ifdef DEBUG
-                                        std::cout << "adding " << _itrB->desc[1] << " to " << curr << std::endl;
+                                        std::cout << "adding " << (*_itrB->desc)[1] << " to " << curr << std::endl;
 #endif
 
                                     }
@@ -1686,18 +1675,18 @@ bool vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
                                                 vtkIdType _ref;
 
                                                 if (p.side == Side::End) {
-                                                    _ref = p.desc[0];
+                                                    _ref = (*p.desc)[0];
                                                 } else {
-                                                    _ref = p.desc[1];
+                                                    _ref = (*p.desc)[1];
                                                 }
 
 #ifdef DEBUG
-                                                if (sp.ref != _ref) {
-                                                    std::cout << "*1 ref " << sp.ref << " -> " << _ref << " (from strip " << p.strip << ", ind " << p.ind << ")" << std::endl;
+                                                if ((*sp.ref) != _ref) {
+                                                    std::cout << "*1 ref " << *sp.ref << " -> " << _ref << " (from strip " << p.strip << ", ind " << p.ind << ")" << std::endl;
                                                 }
 #endif
 
-                                                sp.ref = _ref;
+                                                *sp.ref = _ref;
 
                                                 _p = std::make_shared<StripPtR>(p);
 
@@ -1706,12 +1695,12 @@ bool vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
                                             }
                                         } else {
 #ifdef DEBUG
-                                            if (sp.ref != p.ref) {
-                                                std::cout << "*2 ref " << sp.ref << " -> " << p.ref << " (from strip " << p.strip << ", ind " << p.ind << ")" << std::endl;
+                                            if (*sp.ref != *p.ref) {
+                                                std::cout << "*2 ref " << *sp.ref << " -> " << *p.ref << " (from strip " << p.strip << ", ind " << p.ind << ")" << std::endl;
                                             }
 #endif
 
-                                            sp.ref = p.ref;
+                                            *sp.ref = *p.ref;
                                             break;
                                         }
                                     }
@@ -1735,18 +1724,18 @@ bool vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
                                             vtkIdType _ref;
 
                                             if (p.side == Side::Start) {
-                                                _ref = p.desc[0];
+                                                _ref = (*p.desc)[0];
                                             } else {
-                                                _ref = p.desc[1];
+                                                _ref = (*p.desc)[1];
                                             }
 
 #ifdef DEBUG
-                                            if (sp.ref != _ref) {
-                                                std::cout << "*3 ref " << sp.ref << " -> " << _ref << " (from strip " << p.strip << ", ind " << p.ind << ")" << std::endl;
+                                            if (*sp.ref != _ref) {
+                                                std::cout << "*3 ref " << *sp.ref << " -> " << _ref << " (from strip " << p.strip << ", ind " << p.ind << ")" << std::endl;
                                             }
 #endif
 
-                                            sp.ref = _ref;
+                                            *sp.ref = _ref;
 
                                             break;
                                         }
@@ -1767,18 +1756,18 @@ bool vtkPolyDataBooleanFilter::CutCells (vtkPolyData *pd, PolyStripsType &polySt
                                     vtkIdType _ref;
 
                                     if (b.side == Side::Start) {
-                                        _ref = b.desc[0];
+                                        _ref = (*b.desc)[0];
                                     } else {
-                                        _ref = b.desc[1];
+                                        _ref = (*b.desc)[1];
                                     }
 
 #ifdef DEBUG
-                                    if (a.ref != _ref) {
-                                        std::cout << "*4 ref " << a.ref << " -> " << _ref << " (from strip " << b.strip << ", ind " << b.ind << ")" << std::endl;
+                                    if (*a.ref != _ref) {
+                                        std::cout << "*4 ref " << *a.ref << " -> " << _ref << " (from strip " << b.strip << ", ind " << b.ind << ")" << std::endl;
                                     }
 #endif
 
-                                    a.ref = _ref;
+                                    *a.ref = _ref;
 
                                 }
                             }
@@ -1999,21 +1988,21 @@ void vtkPolyDataBooleanFilter::ResolveOverlaps (vtkPolyData *pd, PolyStripsType 
             auto &pairA = pairs[0];
             auto &pairB = pairs[1];
 
-            if (pairA.second.get().edge[1] != pairB.second.get().edge[0]) {
+            if ((*pairA.second.get().edge)[1] != (*pairB.second.get().edge)[0]) {
                 pairA.swap(pairB);
             }
 
             auto edgeA = pairA.second.get().edge;
             auto edgeB = pairB.second.get().edge;
 
-            if (edgeA[1] == edgeB[0] && edgeA[0] != edgeB[1]) {
+            if ((*edgeA)[1] == (*edgeB)[0] && (*edgeA)[0] != (*edgeB)[1]) {
 
 #ifdef DEBUG
                 std::cout << itr3->first << ": "
-                    << edgeA[0] << ", "
-                    << edgeA[1] << ", "
-                    << edgeB[0] << ", "
-                    << edgeB[1] << std::endl;
+                    << (*edgeA)[0] << ", "
+                    << (*edgeA)[1] << ", "
+                    << (*edgeB)[0] << ", "
+                    << (*edgeB)[1] << std::endl;
 #endif
 
                 auto &ptsA = pairA.first.get();
@@ -2023,14 +2012,14 @@ void vtkPolyDataBooleanFilter::ResolveOverlaps (vtkPolyData *pd, PolyStripsType 
 
                 for (itr4 = ptsA.begin(); itr4 != ptsA.end(); ++itr4) {
                     auto &sp = itr4->second;
-                    if (sp.edge[0] == edgeA[0] && sp.edge[1] == edgeA[1]) {
+                    if ((*sp.edge)[0] == (*edgeA)[0] && (*sp.edge)[1] == (*edgeA)[1]) {
                         _edgeA.emplace_back(sp);
                     }
                 }
 
                 for (itr4 = ptsB.begin(); itr4 != ptsB.end(); ++itr4) {
                     auto &sp = itr4->second;
-                    if (sp.edge[0] == edgeB[0] && sp.edge[1] == edgeB[1]) {
+                    if ((*sp.edge)[0] == (*edgeB)[0] && (*sp.edge)[1] == (*edgeB)[1]) {
                         _edgeB.emplace_back(sp);
                     }
                 }
@@ -2057,13 +2046,13 @@ void vtkPolyDataBooleanFilter::ResolveOverlaps (vtkPolyData *pd, PolyStripsType 
                 double pA[3], pB[3];
 
                 if (_edgeA.empty()) {
-                    pd->GetPoint(edgeA[0], pA);
+                    pd->GetPoint((*edgeA)[0], pA);
                 } else {
                     std::copy_n(_edgeA.back().get().pt, 3, pA);
                 }
 
                 if (_edgeB.empty()) {
-                    pd->GetPoint(edgeB[1], pB);
+                    pd->GetPoint((*edgeB)[1], pB);
                 } else {
                     std::copy_n(_edgeB.front().get().pt, 3, pB);
                 }
@@ -2074,7 +2063,7 @@ void vtkPolyDataBooleanFilter::ResolveOverlaps (vtkPolyData *pd, PolyStripsType 
                 auto cells = vtkSmartPointer<vtkIdList>::New(),
                     cell = vtkSmartPointer<vtkIdList>::New();
 
-                pd->GetPointCells(edgeA[1], cells);
+                pd->GetPointCells((*edgeA)[1], cells);
                 vtkIdType i, j, numCells = cells->GetNumberOfIds();
 
                 double pt[3];
@@ -2097,11 +2086,11 @@ void vtkPolyDataBooleanFilter::ResolveOverlaps (vtkPolyData *pd, PolyStripsType 
 
 #ifdef DEBUG
                         std::cout << cells->GetId(i)
-                            << ": " << edgeA[1] << " -> " << id
+                            << ": " << (*edgeA)[1] << " -> " << id
                             << std::endl;
 #endif
 
-                        pd->ReplaceCellPoint(cells->GetId(i), edgeA[1], id);
+                        pd->ReplaceCellPoint(cells->GetId(i), (*edgeA)[1], id);
 
                         break;
 
@@ -2168,7 +2157,7 @@ void vtkPolyDataBooleanFilter::AddAdjacentPoints (vtkPolyData *pd, vtkIdTypeArra
             const StripPt &sp = itr2->second;
 
             if (sp.capt == Capt::Edge) {
-                edgePts[{sp.edge[0], sp.edge[1]}].emplace(sp);
+                edgePts[{(*sp.edge)[0], (*sp.edge)[1]}].emplace(sp);
             }
         }
 

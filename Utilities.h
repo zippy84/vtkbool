@@ -25,6 +25,7 @@ limitations under the License.
 #include <map>
 #include <set>
 #include <memory>
+#include <optional>
 
 #include <vtkPolyData.h>
 #include <vtkKdTreePointLocator.h>
@@ -32,8 +33,6 @@ limitations under the License.
 #include <vtkIdList.h>
 #include <vtkMath.h>
 #include <vtkSmartPointer.h>
-
-#define NOTSET -1
 
 double GetAngle (const double *vA, const double *vB, const double *n);
 
@@ -48,10 +47,11 @@ void WriteVTK (const char *name, vtkPolyData *pd);
 class Point3d {
 public:
     const double x, y, z;
-    vtkIdType id, otherId;
+    std::optional<vtkIdType> id, otherId;
 
     Point3d () = delete;
-    Point3d (const double x, const double y, const double z, vtkIdType id = NOTSET, vtkIdType otherId = NOTSET) : x(x), y(y), z(z), id(id), otherId(otherId) {}
+    Point3d (const double x, const double y, const double z, std::optional<vtkIdType> id = std::nullopt, std::optional<vtkIdType> otherId = std::nullopt) : x(x), y(y), z(z), id(id), otherId(otherId) {}
+
     bool operator< (const Point3d &other) const {
         const long x1 = std::lround(x*1e5),
             y1 = std::lround(y*1e5),
@@ -62,6 +62,7 @@ public:
 
         return std::tie(x1, y1, z1) < std::tie(x2, y2, z2);
     }
+
     bool operator== (const Point3d &other) const {
         return !(*this < other) && !(other < *this);
     }
@@ -69,9 +70,18 @@ public:
     friend std::ostream& operator<< (std::ostream &out, const Point3d &p) {
         out << "Point3d(x=" << p.x
             << ", y=" << p.y
-            << ", z=" << p.z
-            << ", id=" << p.id
-            << ", otherId=" << p.otherId << ")";
+            << ", z=" << p.z;
+
+        if (p.id) {
+            out << ", id=" << *p.id;
+        }
+
+        if (p.otherId) {
+            out << ", otherId=" << *p.otherId;
+        }
+
+        out << ")";
+
         return out;
     }
 

@@ -150,7 +150,7 @@ void PreventEqualCaptPoints::Find (vtkPolyData *pd, vtkPolyData *other, [[maybe_
                 if (snap != polyA.end()) {
                     double d = Point3d::GetDist(*snap, sA);
 
-                    pointSnaps[snap->id].emplace_back(cellId, line, *snap, sA, d);
+                    pointSnaps[*snap->id].emplace_back(cellId, line, *snap, sA, d);
 
                 } else {
                     // projektion auf kante
@@ -431,8 +431,8 @@ IdsType PreventEqualCaptPoints::TriangulateCell (vtkPolyData *pd, vtkIdType cell
     FlattenPoly(_poly, flattened, base);
 
     for (const auto &p : flattened) {
-        vtkPoly->GetPointIds()->SetId(p.id, p.id);
-        vtkPoly->GetPoints()->SetPoint(p.id, p.x, p.y, p.z);
+        vtkPoly->GetPointIds()->SetId(*p.id, *p.id);
+        vtkPoly->GetPoints()->SetPoint(*p.id, p.x, p.y, p.z);
     }
 
     auto triangles = vtkSmartPointer<vtkIdList>::New();
@@ -450,7 +450,7 @@ IdsType PreventEqualCaptPoints::TriangulateCell (vtkPolyData *pd, vtkIdType cell
     auto ids = vtkSmartPointer<vtkIdList>::New();
 
     for (const auto &p : _poly) {
-        ids->InsertNextId(p.id);
+        ids->InsertNextId(*p.id);
     }
 
     double pA[3], pB[3], pC[3];

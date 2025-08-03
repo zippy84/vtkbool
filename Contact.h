@@ -43,7 +43,7 @@ class InterPt {
 public:
     InterPt () = delete;
 
-    InterPt (double x, double y, double z, double t, vtkIdType a, vtkIdType b, End end, Src src, PointSrc pointSrc) : t(t), edge(a, b), end(end), src(src), srcA(NOTSET), srcB(NOTSET), pointSrc(pointSrc) {
+    InterPt (double x, double y, double z, double t, vtkIdType a, vtkIdType b, End end, Src src, PointSrc pointSrc) : t(t), edge(a, b), end(end), src(src), pointSrc(pointSrc) {
         pt[0] = x;
         pt[1] = y;
         pt[2] = z;
@@ -53,7 +53,6 @@ public:
     Pair edge;
     End end;
     Src src;
-    vtkIdType srcA, srcB;
 
     PointSrc pointSrc;
 
@@ -68,34 +67,15 @@ public:
         return out;
     }
 
-    void Merge (const InterPt &other) {
-        assert(src != other.src);
-
-        if (src == Src::A) {
-            srcA = GetEnd();
-        } else {
-            srcB = GetEnd();
-        }
-
-        if (std::abs(other.t-t) < 1e-5) {
-            if (other.src == Src::A) {
-                srcA = other.GetEnd();
-            } else {
-                srcB = other.GetEnd();
-            }
-        }
-    }
-
     inline vtkIdType GetEnd () const {
+        assert(end == End::A || end == End::B);
+
         if (end == End::A) {
             return edge.f;
         }
 
-        if (end == End::B) {
-            return edge.g;
-        }
 
-        return NOTSET;
+        return edge.g;
     }
 
 };
@@ -118,7 +98,7 @@ public:
 
     vtkSmartPointer<vtkPoints> pts;
     vtkSmartPointer<vtkPolyData> lines;
-    vtkSmartPointer<vtkIdTypeArray> contA, contB, sourcesA, sourcesB;
+    vtkSmartPointer<vtkIdTypeArray> contA, contB;
 
     bool touchesEdgesA, touchesEdgesB;
 

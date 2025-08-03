@@ -289,7 +289,7 @@ std::shared_ptr<Proj> GetEdgeProj (const Poly &poly, const Point3d &p) {
         ProjOnLine(*itrA, *itrB, p, &d, &t, proj);
 
         if (d > 0 && d < 1e-5 && t > 0 && t < 1) {
-            return std::make_shared<Proj>(itrA->id, itrB->id, *proj, d);
+            return std::make_shared<Proj>(*itrA->id, *itrB->id, *proj, d);
         }
 
     }

@@ -24,6 +24,8 @@ limitations under the License.
 #include <utility>
 #include <iostream>
 #include <type_traits>
+#include <optional>
+#include <array>
 
 #include <vtkPolyDataAlgorithm.h>
 #include <vtkKdTree.h>
@@ -76,54 +78,66 @@ enum class Loc {
 
 class StripPt {
 public:
-    StripPt () : t(0), capt(Capt::Not), catched(true) {
-        edge[0] = NOTSET;
-        edge[1] = NOTSET;
-    }
+    StripPt () : t(0), capt(Capt::Not)/*, catched(true)*/ {}
 
     double t;
     Capt capt;
     double captPt[3];
 
-    vtkIdType ind, edge[2];
+    vtkIdType ind;
+
+    std::optional<std::array<vtkIdType, 2>> edge;
 
     double pt[3];
     double cutPt[3];
 
     friend std::ostream& operator<< (std::ostream &out, const StripPt &s) {
-        out << "ind " << s.ind
-            << ", edge [" << s.edge[0] << ", " << s.edge[1] << "]"
-            << ", t " << s.t
+        out << "ind " << s.ind;
+
+        if (s.edge) {
+            out << ", edge [" << (*s.edge)[0] << ", " << (*s.edge)[1] << "]";
+        }
+
+        out << ", t " << s.t
             << ", capt " << s.capt
             << ", polyId " << s.polyId;
+
         return out;
     }
 
     vtkIdType polyId;
 
-    bool catched;
+    // bool catched;
 };
 
 class StripPtR {
 public:
     StripPtR () = delete;
 
-    StripPtR (vtkIdType ind, std::size_t strip) : ind(ind), strip(strip), ref(NOTSET), side(Side::None) {
-        desc[0] = NOTSET;
-        desc[1] = NOTSET;
-    }
+    StripPtR (vtkIdType ind, std::size_t strip) : ind(ind), strip(strip), side(Side::None) {}
 
     vtkIdType ind;
     std::size_t strip;
-    vtkIdType ref, desc[2];
+
+    std::optional<vtkIdType> ref;
+    std::optional<std::array<vtkIdType, 2>> desc;
+
     Side side;
 
     friend std::ostream& operator<< (std::ostream &out, const StripPtR &s) {
-        out << "ind " << s.ind
-            << ", desc [" << s.desc[0] << ", " << s.desc[1] << "]"
-            << ", strip " << s.strip
-            << ", side " << s.side
-            << ", ref " << s.ref;
+        out << "ind " << s.ind;
+
+        if (s.desc) {
+            out << ", desc [" << (*s.desc)[0] << ", " << (*s.desc)[1] << "]";
+        }
+
+        out << ", strip " << s.strip
+            << ", side " << s.side;
+
+        if (s.ref) {
+            out << ", ref " << *s.ref;
+        }
+
         return out;
     }
 };
@@ -178,8 +192,8 @@ class VTK_EXPORT vtkPolyDataBooleanFilter : public vtkPolyDataAlgorithm {
 
     PolyStripsType polyStripsA, polyStripsB;
 
-    void GetStripPoints (vtkPolyData *pd, vtkIdTypeArray *sources, PStrips &pStrips, IdsType &lines);
-    bool GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *conts, vtkIdTypeArray *sources, PolyStripsType &polyStrips);
+    void GetStripPoints (vtkPolyData *pd, PStrips &pStrips, IdsType &lines);
+    bool GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *conts, PolyStripsType &polyStrips);
     bool CleanStrips ();
     void RemoveDuplicates (IdsType &lines);
     void CompleteStrips (PStrips &pStrips);
