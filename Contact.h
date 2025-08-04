@@ -74,7 +74,6 @@ public:
             return edge.f;
         }
 
-
         return edge.g;
     }
 
@@ -90,10 +89,6 @@ typedef std::vector<std::pair<vtkIdType, vtkIdType>> PairsType;
 vtkSmartPointer<vtkPolyData> Clean (vtkPolyData *pd);
 
 class Contact {
-public:
-    Contact () = delete;
-    Contact (vtkPolyData *newPdA, vtkPolyData *newPdB);
-
     vtkPolyData *newPdA, *newPdB;
 
     vtkSmartPointer<vtkPoints> pts;
@@ -106,7 +101,15 @@ public:
 
     vtkSmartPointer<vtkOBBTree> treeA, treeB;
 
+public:
+    Contact () = delete;
+    Contact (vtkPolyData *newPdA, vtkPolyData *newPdB);
+
     vtkSmartPointer<vtkPolyData> GetLines (vtkPolyData *pdA = nullptr, vtkLinearTransform *transA = nullptr, vtkPolyData *pdB = nullptr, vtkLinearTransform *transB = nullptr);
+
+    static int InterNodes (vtkOBBNode *nodeA, vtkOBBNode *nodeB, vtkMatrix4x4 *vtkNotUsed(matrix), void *ptr);
+
+private:
 
     void GetNonManifoldEdges (vtkPolyData *pd, NonManifoldEdgesType &edges);
 
@@ -121,8 +124,6 @@ public:
     void OverlapLines (OverlapsType &overlaps, InterPtsType &intersA, InterPtsType &intersB);
 
     void AddContactLines (InterPtsType &intersA, InterPtsType &intersB, vtkIdType idA, vtkIdType idB);
-
-    static int InterNodes (vtkOBBNode *nodeA, vtkOBBNode *nodeB, vtkMatrix4x4 *vtkNotUsed(matrix), void *ptr);
 
     PairsType pairs;
 
