@@ -26,14 +26,9 @@ limitations under the License.
 #include <algorithm>
 #include <execution>
 #include <cmath>
-#include <array>
-#include <iostream>
 
 struct Vector3 {
     double x, y, z;
-    Vector3 operator- (const Vector3 &other) const {
-        return {x - other.x, y - other.y, z - other.z};
-    }
 };
 
 struct Plane {

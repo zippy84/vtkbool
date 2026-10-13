@@ -14,8 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#ifndef __Optimize2_h
+#define __Optimize2_h
+
 class vtkPolyData;
 
 void PlanarizeMesh (vtkPolyData *pd, int maxIter = 50);
 
 double ComputeMaxPlanarityError (vtkPolyData *polyData);
+
+#endif
