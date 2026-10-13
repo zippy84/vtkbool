@@ -638,11 +638,6 @@ def test_non_manifolds():
     cyl.SetRadius(.75)
     cyl.SetResolution(18)
 
-    writer = vtkPolyDataWriter()
-    writer.SetFileName('cyl.vtk')
-    writer.SetInputConnection(cyl.GetOutputPort())
-    writer.Update()
-
     bf = vtkPolyDataBooleanFilter()
     bf.SetInputConnection(0, reader.GetOutputPort())
     bf.SetInputConnection(1, cyl.GetOutputPort())
