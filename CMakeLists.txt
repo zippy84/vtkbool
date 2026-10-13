@@ -74,8 +74,8 @@ else()
 
     if(VTK_FOUND)
 
-        if(VTK_VERSION VERSION_LESS "9.0.0")
-            message(FATAL_ERROR "vtkbool requires VTK 9.0.0 or newer.")
+        if(VTK_VERSION VERSION_LESS "9.7.0")
+            message(FATAL_ERROR "vtkbool requires VTK 9.7.0 or newer.")
         endif()
 
         vtk_module_scan(

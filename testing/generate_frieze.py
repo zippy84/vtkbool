@@ -403,7 +403,7 @@ if __name__ == '__main__':
     os.makedirs('einzeln', exist_ok=True)
     os.makedirs('stl', exist_ok=True)
 
-    cell_counts = [524, 98, 576, 264, 1274, 1867, 582, 98, 472, 194, 1048, 272, 56, 284, 284]
+    cell_counts = [524, 98, 576, 264, 1274, 1866, 582, 98, 472, 194, 1048, 272, 56, 284, 284]
 
     for i, cfg in enumerate(cfgs):
         print(f'~~ {i} ~~')

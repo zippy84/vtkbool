@@ -107,7 +107,7 @@ typedef std::set<Pair> NonManifoldEdgesType;
 
 typedef std::vector<std::pair<vtkIdType, vtkIdType>> PairsType;
 
-vtkSmartPointer<vtkPolyData> Clean (vtkPolyData *pd);
+vtkSmartPointer<vtkPolyData> CleanMesh (vtkPolyData *pd);
 
 class Contact {
 public:

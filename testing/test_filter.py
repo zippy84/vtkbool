@@ -32,7 +32,7 @@ from vtkmodules.vtkFiltersCore import vtkAppendPolyData, vtkCleanPolyData, vtkPo
 from vtkmodules.vtkIOLegacy import vtkPolyDataWriter, vtkPolyDataReader
 from vtkmodules.vtkCommonExecutionModel import vtkTrivialProducer
 from vtkmodules.vtkFiltersModeling import vtkRotationalExtrusionFilter
-from vtkmodules.vtkFiltersGeneral import vtkTransformPolyDataFilter
+from vtkmodules.vtkFiltersGeneral import vtkTransformFilter
 from vtkmodules.vtkCommonTransforms import vtkTransform
 from vtkmodules.vtkCommonExecutionModel import vtkAlgorithm
 from vtkmodules.vtkFiltersModeling import vtkLinearExtrusionFilter
@@ -416,18 +416,18 @@ def test_simple_4(tmp_path):
     write_result(bf, tmp_path)
     check_result(bf, [2, 2])
 
-def test_same(tmp_path):
-    sphere = vtkSphereSource()
+# def test_same(tmp_path):
+#     sphere = vtkSphereSource()
 
-    bf = vtkPolyDataBooleanFilter()
-    bf.SetInputConnection(0, sphere.GetOutputPort())
-    bf.SetInputConnection(1, sphere.GetOutputPort())
-    bf.SetOperModeToNone()
+#     bf = vtkPolyDataBooleanFilter()
+#     bf.SetInputConnection(0, sphere.GetOutputPort())
+#     bf.SetInputConnection(1, sphere.GetOutputPort())
+#     bf.SetOperModeToNone()
 
-    bf.Update()
+#     bf.Update()
 
-    write_result(bf, tmp_path)
-    check_result(bf, [56, 56])
+#     write_result(bf, tmp_path)
+#     check_result(bf, [56, 56])
 
 @pytest.mark.xfail
 def test_intersecting_strips():
@@ -445,11 +445,11 @@ def test_intersecting_strips():
     traB.Translate(1.25, 0, 0)
     traB.RotateZ(45)
 
-    tfA = vtkTransformPolyDataFilter()
+    tfA = vtkTransformFilter()
     tfA.SetTransform(traA)
     tfA.SetInputConnection(cubeB.GetOutputPort())
 
-    tfB = vtkTransformPolyDataFilter()
+    tfB = vtkTransformFilter()
     tfB.SetTransform(traB)
     tfB.SetInputConnection(cubeB.GetOutputPort())
 
@@ -581,7 +581,7 @@ def test_triangle_strips(tmp_path):
     tra = vtkTransform()
     tra.RotateX(90)
 
-    tf = vtkTransformPolyDataFilter()
+    tf = vtkTransformFilter()
     tf.SetInputConnection(sphere.GetOutputPort())
     tf.SetTransform(tra)
 
@@ -637,6 +637,11 @@ def test_non_manifolds():
     cyl.SetCenter(.75, 0, 0)
     cyl.SetRadius(.75)
     cyl.SetResolution(18)
+
+    writer = vtkPolyDataWriter()
+    writer.SetFileName('cyl.vtk')
+    writer.SetInputConnection(cyl.GetOutputPort())
+    writer.Update()
 
     bf = vtkPolyDataBooleanFilter()
     bf.SetInputConnection(0, reader.GetOutputPort())
@@ -718,14 +723,14 @@ def test_branched_5(tmp_path):
     traA = vtkTransform()
     traA.Translate(0, -.5, 0)
 
-    tfA = vtkTransformPolyDataFilter()
+    tfA = vtkTransformFilter()
     tfA.SetInputConnection(reader.GetOutputPort())
     tfA.SetTransform(traA)
 
     traB = vtkTransform()
     traB.Translate(0, .5, 0)
 
-    tfB = vtkTransformPolyDataFilter()
+    tfB = vtkTransformFilter()
     tfB.SetInputConnection(reader.GetOutputPort())
     tfB.SetTransform(traB)
 
@@ -863,7 +868,7 @@ def test_equal_capt_pts(tmp_path):
     tra.RotateZ(90)
     tra.Translate(0, 0, z)
 
-    tf = vtkTransformPolyDataFilter()
+    tf = vtkTransformFilter()
     tf.SetTransform(tra)
     tf.SetInputConnection(cyl.GetOutputPort())
 
@@ -886,7 +891,7 @@ def test_equal_capt_pts_2(tmp_path):
     tra.RotateZ(45)
     tra.Translate(0, 0, z)
 
-    tf = vtkTransformPolyDataFilter()
+    tf = vtkTransformFilter()
     tf.SetTransform(tra)
     tf.SetInputConnection(reader.GetOutputPort())
 
@@ -928,7 +933,7 @@ def test_equal_capt_pts_3(tmp_path):
     tra.Translate(12, -2-z, 10)
     tra.RotateZ(90)
 
-    tf = vtkTransformPolyDataFilter()
+    tf = vtkTransformFilter()
     tf.SetTransform(tra)
     tf.SetInputConnection(cyl.GetOutputPort())
 

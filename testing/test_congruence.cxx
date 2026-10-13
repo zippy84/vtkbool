@@ -26,8 +26,8 @@ int main() {
         { {1, .5, 0}, {0, .5, 0}, {0, 1, z}, {1, 1, z} }
     });
 
-    auto _pdA = Clean(pdA);
-    auto _pdB = Clean(pdB);
+    auto _pdA = CleanMesh(pdA);
+    auto _pdB = CleanMesh(pdB);
 
     auto lines = Contact(_pdA, _pdB).GetLines();
 

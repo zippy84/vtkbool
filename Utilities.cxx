@@ -372,3 +372,19 @@ double GetTriangleQuality (const Poly &poly) {
 
     return 10.392304845413264*l/(d*d);
 }
+
+Point3d GetCentroid (const Poly &poly) {
+    double x = 0, y = 0, z = 0;
+
+    for (auto &p : poly) {
+        x += p.x;
+        y += p.y;
+        z += p.z;
+    }
+
+    x /= static_cast<double>(poly.size());
+    y /= static_cast<double>(poly.size());
+    z /= static_cast<double>(poly.size());
+
+    return { x, y, z};
+}

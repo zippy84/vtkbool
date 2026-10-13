@@ -21,7 +21,7 @@ limitations under the License.
 #include <vtkCellIterator.h>
 #include <vtkCellData.h>
 #include <vtkTriangleStrip.h>
-#include <vtkArrayIteratorTemplate.h>
+#include <vtkDataArrayRange.h>
 
 // #define _debA 0
 // #define _debB 0
@@ -30,7 +30,7 @@ limitations under the License.
 vtkIdType _idA, _idB;
 #endif
 
-vtkSmartPointer<vtkPolyData> Clean (vtkPolyData *pd) {
+vtkSmartPointer<vtkPolyData> CleanMesh (vtkPolyData *pd) {
 
     auto clean = vtkSmartPointer<vtkCleanPolyData>::New();
     clean->SetOutputPointsPrecision(vtkAlgorithm::DOUBLE_PRECISION);
@@ -54,7 +54,7 @@ vtkSmartPointer<vtkPolyData> Clean (vtkPolyData *pd) {
 
     auto cellIds = vtkSmartPointer<vtkIdTypeArray>::New();
     cellIds->SetName("OrigCellIds");
-    cellIds->Allocate(numCells);
+    cellIds->ReserveTuples(numCells);
 
     vtkCellIterator *cellItr = cleaned->NewCellIterator();
 
@@ -135,8 +135,8 @@ Contact::Contact (vtkPolyData *newPdA, vtkPolyData *newPdB) : newPdA(newPdA), ne
     contA = vtkSmartPointer<vtkIdTypeArray>::New();
     contB = vtkSmartPointer<vtkIdTypeArray>::New();
 
-    contA->Allocate(1000);
-    contB->Allocate(1000);
+    contA->ReserveTuples(1000);
+    contB->ReserveTuples(1000);
 
     contA->SetName("cA");
     contB->SetName("cB");
@@ -147,8 +147,8 @@ Contact::Contact (vtkPolyData *newPdA, vtkPolyData *newPdB) : newPdA(newPdA), ne
     sourcesA = vtkSmartPointer<vtkIdTypeArray>::New();
     sourcesB = vtkSmartPointer<vtkIdTypeArray>::New();
 
-    sourcesA->Allocate(1000);
-    sourcesB->Allocate(1000);
+    sourcesA->ReserveTuples(1000);
+    sourcesB->ReserveTuples(1000);
 
     sourcesA->SetNumberOfComponents(2);
     sourcesB->SetNumberOfComponents(2);
@@ -591,10 +591,27 @@ void Contact::InterPolys (vtkIdType idA, vtkIdType idB) {
     GetPoly(newPdA->GetPoints(), numA, ptsA, polyA);
     GetPoly(newPdB->GetPoints(), numB, ptsB, polyB);
 
-    double nA[3], nB[3], r[3], s[3];
+    double nA[3], nB[3];
 
     ComputeNormal(polyA, nA);
     ComputeNormal(polyB, nB);
+
+    Point3d cA = GetCentroid(polyA);
+    Point3d cB = GetCentroid(polyB);
+
+    double dets[3];
+
+    vtkMath::Cross(nA, nB, dets);
+
+    double r[] = {
+        dets[0],
+        dets[1],
+        dets[2]
+    };
+
+    double s[3];
+
+    vtkMath::Normalize(r);
 
 #if (defined(_debA) && defined(_debB))
     if (_idA == _debA && _idB == _debB) {
@@ -603,31 +620,44 @@ void Contact::InterPolys (vtkIdType idA, vtkIdType idB) {
     }
 #endif
 
-    if (vtkMath::Dot(nA, nB) > .9999999999) {
-        return;
-    }
-
-    double dA = polyA[0].x*nA[0]+polyA[0].y*nA[1]+polyA[0].z*nA[2];
-    double dB = polyB[0].x*nB[0]+polyB[0].y*nB[1]+polyB[0].z*nB[2];
+    double dA = cA.x*nA[0]+cA.y*nA[1]+cA.z*nA[2];
+    double dB = cB.x*nB[0]+cB.y*nB[1]+cB.z*nB[2];
 
     vtkMath::Cross(nA, nB, r);
     vtkMath::Normalize(r);
 
-    std::array<std::tuple<int, int, int, double>, 3> dets {
-        std::make_tuple(0, 1, 2, nA[0]*nB[1]-nB[0]*nA[1]),
-        std::make_tuple(0, 2, 1, nA[0]*nB[2]-nB[0]*nA[2]),
-        std::make_tuple(1, 2, 0, nA[1]*nB[2]-nB[1]*nA[2])
-    };
+    int k = 0;
+    if (std::abs(dets[1]) > std::abs(dets[k])) {
+        k = 1;
+    }
 
-    const auto& [i, j, k, det] = *std::max_element(dets.begin(), dets.end(), [](auto &a, auto &b) { return std::abs(std::get<3>(a)) < std::abs(std::get<3>(b)); });
+    if (std::abs(dets[2]) > std::abs(dets[k])) {
+        k = 2;
+    }
 
-    s[i] = (dA*nB[j]-dB*nA[j])/det;
-    s[j] = (dB*nA[i]-dA*nB[i])/det;
+#if (defined(_debA) && defined(_debB))
+    if (_idA == _debA && _idB == _debB) {
+        std::cout << "det " << dets[k] << std::endl;
+    }
+#endif
+
+    if (std::abs(dets[k]) < 1e-8) {
+        return;
+    }
+
+    // k=0 -> i=1, j=2
+    // k=1 -> i=2, j=0
+    // k=2 -> i=0, j=1
+
+    int i = (k + 1) % 3;
+    int j = (k + 2) % 3;
+
+    s[i] = (dA*nB[j]-dB*nA[j])/dets[k];
+    s[j] = (dB*nA[i]-dA*nB[i])/dets[k];
     s[k] = 0;
 
 #if (defined(_debA) && defined(_debB))
     if (_idA == _debA && _idB == _debB) {
-        std::cout << "det " << det << std::endl;
         std::cout << "r [" << r[0] << ", " << r[1] << ", " << r[2] << "]" << std::endl;
         std::cout << "s [" << s[0] << ", " << s[1] << ", " << s[2] << "]" << std::endl;
     }
@@ -886,17 +916,13 @@ void Contact::IntersectReplacements () {
     while (!pairs.empty()) {
         vtkIdType i;
 
-        auto iterA = vtkArrayIteratorTemplate<vtkIdType>::New();
-        iterA->Initialize(contA);
+        auto rangeA = vtk::DataArrayValueRange<1>(contA);
+        auto rangeB = vtk::DataArrayValueRange<1>(contB);
 
-        auto iterB = vtkArrayIteratorTemplate<vtkIdType>::New();
-        iterB->Initialize(contB);
-
-        for (i = 0; i < iterA->GetNumberOfValues(); i++) {
-            if (replsA.count(iterA->GetValue(i)) == 1 || replsB.count(iterB->GetValue(i)) == 1) {
+        for (i = 0; i < contA->GetNumberOfTuples(); i++) {
+            if (replsA.count(rangeA[i]) == 1 || replsB.count(rangeB[i]) == 1) {
                 lines->DeleteCell(i);
-
-                pairs.emplace_back(iterA->GetValue(i), iterB->GetValue(i));
+                pairs.emplace_back(rangeA[i], rangeB[i]);
             }
         }
 
@@ -987,36 +1013,30 @@ void Contact::IntersectReplacements () {
 
     std::map<vtkIdType, vtkIdType> newCellIdsA, newCellIdsB;
 
-    auto iterA = vtkArrayIteratorTemplate<vtkIdType>::New();
-    iterA->Initialize(oldCellIdsA);
+    auto rangeA = vtk::DataArrayValueRange<1>(oldCellIdsA);
+    auto rangeB = vtk::DataArrayValueRange<1>(oldCellIdsB);
 
     for (i = 0; i < numCellsA; i++) {
-        newCellIdsA.emplace(iterA->GetValue(i), i);
+        newCellIdsA.emplace(rangeA[i], i);
     }
 
-    auto iterB = vtkArrayIteratorTemplate<vtkIdType>::New();
-    iterB->Initialize(oldCellIdsB);
-
     for (i = 0; i < numCellsB; i++) {
-        newCellIdsB.emplace(iterB->GetValue(i), i);
+        newCellIdsB.emplace(rangeB[i], i);
     }
 
     vtkIdType numLines = lines->GetNumberOfCells();
 
     try {
 
-        auto _iterA = vtkArrayIteratorTemplate<vtkIdType>::New();
-        _iterA->Initialize(contA);
+        auto _rangeA = vtk::DataArrayValueRange<1>(contA);
+        auto _rangeB = vtk::DataArrayValueRange<1>(contB);
 
         for (i = 0; i < numLines; i++) {
-            _iterA->SetValue(i, newCellIdsA.at(_iterA->GetValue(i)));
+            _rangeA[i] = newCellIdsA.at(_rangeA[i]);
         }
 
-        auto _iterB = vtkArrayIteratorTemplate<vtkIdType>::New();
-        _iterB->Initialize(contB);
-
         for (i = 0; i < numLines; i++) {
-            _iterB->SetValue(i, newCellIdsB.at(_iterB->GetValue(i)));
+            _rangeB[i] = newCellIdsB.at(_rangeB[i]);
         }
 
     } catch (const std::out_of_range &e) {

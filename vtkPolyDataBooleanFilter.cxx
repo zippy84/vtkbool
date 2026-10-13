@@ -47,7 +47,7 @@ limitations under the License.
 #include <vtkCellArrayIterator.h>
 #include <vtkKdTree.h>
 #include <vtkCellIterator.h>
-#include <vtkTransformPolyDataFilter.h>
+#include <vtkTransformFilter.h>
 
 #include "vtkPolyDataBooleanFilter.h"
 
@@ -55,6 +55,8 @@ limitations under the License.
 #include "Optimize.h"
 #include "Contact.h"
 #include "Merger.h"
+
+#include "Optimize2.h"
 
 vtkStandardNewMacro(vtkPolyDataBooleanFilter);
 
@@ -141,8 +143,14 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
                 cellDataA->DeepCopy(pdA->GetCellData());
                 cellDataB->DeepCopy(pdB->GetCellData());
 
-                cleanA = Clean(pdA);
-                cleanB = Clean(pdB);
+                cleanA = CleanMesh(pdA);
+                cleanB = CleanMesh(pdB);
+
+                PlanarizeMesh(cleanA);
+                PlanarizeMesh(cleanB);
+
+                // std::cout << ComputeMaxPlanarityError(cleanA) << std::endl;
+                // std::cout << ComputeMaxPlanarityError(cleanB) << std::endl;
 
 #ifdef DEBUG
                 WriteVTK("modPdA.vtk", cleanA);
@@ -165,7 +173,7 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
             modPdB = vtkSmartPointer<vtkPolyData>::New();
 
             if (transforms[0] != nullptr) {
-                auto tfA = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+                auto tfA = vtkSmartPointer<vtkTransformFilter>::New();
                 tfA->SetInputData(cleanA);
                 tfA->SetTransform(transforms[0]);
                 tfA->Update();
@@ -176,7 +184,7 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
             }
 
             if (transforms[1] != nullptr) {
-                auto tfB = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+                auto tfB = vtkSmartPointer<vtkTransformFilter>::New();
                 tfB->SetInputData(cleanB);
                 tfB->SetTransform(transforms[1]);
                 tfB->Update();

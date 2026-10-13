@@ -1,6 +1,7 @@
 set(srcs
     ../Utilities.cxx
     ../Optimize.cxx
+    ../Optimize2.cxx
     ../Contact.cxx
     ../Merger.cxx
     ../vtkPolyDataBooleanFilter.cxx

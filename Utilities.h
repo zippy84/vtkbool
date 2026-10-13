@@ -220,4 +220,6 @@ vtkSmartPointer<vtkPolyData> CreatePolyData (const PolysType &polys);
 
 double GetTriangleQuality (const Poly &poly);
 
+Point3d GetCentroid (const Poly &poly);
+
 #endif
