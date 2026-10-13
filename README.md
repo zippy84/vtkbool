@@ -267,7 +267,7 @@ from vtkbool.vtkbool import vtkPolyDataBooleanFilter
 
 ## Copyright
 
-2012-2025 Ronald Römer
+2012-2026 Ronald Römer
 
 ## License
 
