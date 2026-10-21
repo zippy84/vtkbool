@@ -19,6 +19,15 @@ limitations under the License.
 
 class vtkPolyData;
 
+struct Vector3 {
+    double x, y, z;
+};
+
+struct Plane {
+    Vector3 normal;
+    Vector3 centroid;
+};
+
 void PlanarizeMesh (vtkPolyData *pd, int maxIter = 50);
 
 double ComputeMaxPlanarityError (vtkPolyData *polyData);

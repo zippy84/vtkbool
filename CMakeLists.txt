@@ -138,6 +138,12 @@ else()
 
             set_property(TEST "generate_frieze" APPEND PROPERTY ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/${python_default_destination}/vtkbool")
 
+            add_executable(test1 test1.cxx)
+            target_link_libraries(test1 PRIVATE vtkbool ${VTK_LIBRARIES})
+
+            add_executable(test2 test2.cxx Optimize2.cxx)
+            target_link_libraries(test2 PRIVATE vtkbool ${VTK_LIBRARIES})
+
         endif()
 
     endif()

@@ -27,15 +27,6 @@ limitations under the License.
 #include <execution>
 #include <cmath>
 
-struct Vector3 {
-    double x, y, z;
-};
-
-struct Plane {
-    Vector3 normal;
-    Vector3 centroid;
-};
-
 inline bool Solve3x3 (const double A[3][3], const double b[3], Vector3 &out) {
     double det = A[0][0] * (A[1][1] * A[2][2] - A[1][2] * A[2][1])
        - A[0][1] * (A[1][0] * A[2][2] - A[1][2] * A[2][0])
