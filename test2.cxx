@@ -256,6 +256,11 @@ void ExtendPlanes (std::vector<Plane3> &planes, vtkPolyData *pd) {
     }
 }
 
+struct NewPoint {
+    double x, y, z;
+    std::vector<vtkIdType> cellIds;
+};
+
 int main () {
     auto readerA = vtkSmartPointer<vtkPolyDataReader>::New();
     readerA->SetFileName("../bug3/MeshA.vtk");
@@ -392,6 +397,8 @@ int main () {
         }
     }
 
+    std::map<vtkIdType, vtkIdType> usedCountsA, usedCountsB;
+
     for (const auto &group : groups) {
         for (const Node &node : group) {
             std::cout << "(" << node.src << node.index << "), ";
@@ -436,49 +443,108 @@ int main () {
 
         std::cout << " -> " << normal << ", " << d << std::endl;
 
+        std::map<vtkIdType, NewPoint> collectedA, collectedB;
+
         for (auto &plane : resolvedA) {
             for (auto &pt : plane.points) {
-                double distance = normal.x * std::get<0>(pt) + normal.y * std::get<1>(pt) + normal.z * std::get<2>(pt) - d;
+                auto& [x, y, z, ptId] = pt;
 
-                double x = std::get<0>(pt) + normal.x * distance;
-                double y = std::get<1>(pt) + normal.y * distance;
-                double z = std::get<2>(pt) + normal.z * distance;
+                double distance = normal.x * x + normal.y * y + normal.z * z - d;
 
-                std::cout << std::fixed << std::setprecision(6)
-                    << "A " << std::get<3>(pt)
-                    << ": [" << std::get<0>(pt)
-                    << ", " << std::get<1>(pt)
-                    << ", " << std::get<2>(pt)
-                    << "] -> ["
+                x += normal.x * distance;
+                y += normal.y * distance;
+                z += normal.z * distance;
+
+                std::cout << std::fixed
+                    << std::setprecision(9)
+                    << "A " << distance << " -> ["
+                    << std::setprecision(6)
                     << x
                     << ", " << y
                     << ", " << z
                     << "]"
                     << std::endl;
+
+                if (collectedA.find(ptId) == collectedA.end()) {
+                    collectedA[ptId] = NewPoint{x, y, z, {plane.cellId}};
+                } else {
+                    collectedA[ptId].cellIds.push_back(plane.cellId);
+                }
             }
         }
 
         for (auto &plane : resolvedB) {
             for (auto &pt : plane.points) {
-                double distance = normal.x * std::get<0>(pt) + normal.y * std::get<1>(pt) + normal.z * std::get<2>(pt) - d;
+                auto& [x, y, z, ptId] = pt;
 
-                double x = std::get<0>(pt) + normal.x * distance;
-                double y = std::get<1>(pt) + normal.y * distance;
-                double z = std::get<2>(pt) + normal.z * distance;
+                double distance = normal.x * x + normal.y * y + normal.z * z - d;
 
-                std::cout << std::fixed << std::setprecision(6)
-                    << "B " << std::get<3>(pt)
-                    << ": [" << std::get<0>(pt)
-                    << ", " << std::get<1>(pt)
-                    << ", " << std::get<2>(pt)
-                    << "] -> ["
+                x += normal.x * distance;
+                y += normal.y * distance;
+                z += normal.z * distance;
+
+                std::cout << std::fixed
+                    << std::setprecision(9)
+                    << "B " << distance << " -> ["
+                    << std::setprecision(6)
                     << x
                     << ", " << y
                     << ", " << z
                     << "]"
                     << std::endl;
+
+                if (collectedB.find(ptId) == collectedB.end()) {
+                    collectedB[ptId] = NewPoint{x, y, z, {plane.cellId}};
+                } else {
+                    collectedB[ptId].cellIds.push_back(plane.cellId);
+                }
             }
         }
 
+        auto pointsA = pdA->GetPoints();
+        auto pointsB = pdB->GetPoints();
+
+        auto ids = vtkSmartPointer<vtkIdList>::New();
+
+        for (const auto& [k, v] : collectedA) {
+            pdA->GetPointCells(k, ids);
+
+            for (vtkIdType i = 0; i < ids->GetNumberOfIds(); i++) {
+                if (pdA->GetCellType(ids->GetId(i)) == VTK_POLYGON && std::find(v.cellIds.begin(), v.cellIds.end(), ids->GetId(i)) == v.cellIds.end()) {
+                    std::cout << ids->GetId(i) << std::endl;
+                }
+            }
+
+            pointsA->SetPoint(k, v.x, v.y, v.z);
+
+            usedCountsA[k]++;
+        }
+
+        for (const auto& [k, v] : collectedB) {
+            pdB->GetPointCells(k, ids);
+
+            for (vtkIdType i = 0; i < ids->GetNumberOfIds(); i++) {
+                if (pdB->GetCellType(ids->GetId(i)) == VTK_POLYGON && std::find(v.cellIds.begin(), v.cellIds.end(), ids->GetId(i)) == v.cellIds.end()) {
+                    std::cout << ids->GetId(i) << std::endl;
+                }
+            }
+
+            pointsB->SetPoint(k, v.x, v.y, v.z);
+
+            usedCountsB[k]++;
+        }
+
+    }
+
+    for (auto& [k, v] : usedCountsA) {
+        if (v > 1) {
+            std::cout << "A " << k << ": " << v << std::endl;
+        }
+    }
+
+    for (auto& [k, v] : usedCountsB) {
+        if (v > 1) {
+            std::cout << "B " << k << ": " << v << std::endl;
+        }
     }
 }
