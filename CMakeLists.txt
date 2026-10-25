@@ -144,6 +144,9 @@ else()
             add_executable(test2 test2.cxx Optimize2.cxx)
             target_link_libraries(test2 PRIVATE vtkbool ${VTK_LIBRARIES})
 
+            add_executable(test3 test3.cxx Optimize2.cxx)
+            target_link_libraries(test3 PRIVATE vtkbool ${VTK_LIBRARIES})
+
         endif()
 
     endif()
