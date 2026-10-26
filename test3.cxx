@@ -674,20 +674,20 @@ InterPts IntersectFaceAndLine (const Base &base, const std::vector<TransformedVe
         grouped[p].push_back(p);
     }
 
-    std::vector<InterPts> sortedGroups;
+    std::vector<InterPts> sorted;
 
     for (auto& [k, v] : grouped) {
-        sortedGroups.push_back(v);
+        sorted.push_back(std::move(v));
     }
 
-    decltype(sortedGroups)::iterator itr;
+    decltype(sorted)::iterator itr;
 
-    for (itr = sortedGroups.begin(); itr != sortedGroups.end(); ++itr) {
-        if (itr == sortedGroups.begin()) {
+    for (itr = sorted.begin(); itr != sorted.end(); ++itr) {
+        if (itr == sorted.begin()) {
             if (itr->size() == 2) {
                 itr->pop_back();
             }
-        } else if (itr == sortedGroups.end()-1) {
+        } else if (itr == sorted.end()-1) {
             if (itr->size() == 2) {
                 itr->pop_back();
             }
@@ -699,8 +699,12 @@ InterPts IntersectFaceAndLine (const Base &base, const std::vector<TransformedVe
 
     InterPts cleanedInterPts;
 
-    for (const auto &group : sortedGroups) {
-        std::copy(group.begin(), group.end(), std::back_inserter(cleanedInterPts));
+    for (auto &group : sorted) {
+        cleanedInterPts.insert(
+            cleanedInterPts.end(),
+            std::make_move_iterator(group.begin()),
+            std::make_move_iterator(group.end())
+        );
     }
 
     return cleanedInterPts;
@@ -943,21 +947,19 @@ void Go (vtkPolyData *pdA, vtkPolyData *pdB) {
         }
     }
 
-    auto groupsA = vtkSmartPointer<vtkIdTypeArray>::New();
-    auto groupsB = vtkSmartPointer<vtkIdTypeArray>::New();
+    auto planesA = vtkSmartPointer<vtkIdTypeArray>::New();
+    auto planesB = vtkSmartPointer<vtkIdTypeArray>::New();
 
-    groupsA->SetNumberOfTuples(pdA->GetNumberOfPolys());
-    groupsB->SetNumberOfTuples(pdB->GetNumberOfPolys());
+    planesA->SetNumberOfTuples(pdA->GetNumberOfPolys());
+    planesB->SetNumberOfTuples(pdB->GetNumberOfPolys());
 
     for (vtkIdType i = 0; i < pdA->GetNumberOfPolys(); i++) {
-        groupsA->SetValue(i, -1);
+        planesA->SetValue(i, -1);
     }
 
     for (vtkIdType i = 0; i < pdB->GetNumberOfPolys(); i++) {
-        groupsB->SetValue(i, -1);
+        planesB->SetValue(i, -1);
     }
-
-    vtkIdType groupId = 0;
 
     for (const auto &group : groups) {
         for (const Node &node : group) {
@@ -1007,16 +1009,14 @@ void Go (vtkPolyData *pdA, vtkPolyData *pdB) {
         for (auto &faceId : faceIdsA) {
             meshA.faces[faceId].globalPlaneId = planeId;
 
-            groupsA->SetValue(faceId, groupId);
+            planesA->SetValue(faceId, planeId);
         }
 
         for (auto &faceId : faceIdsB) {
             meshB.faces[faceId].globalPlaneId = planeId;
 
-            groupsB->SetValue(faceId, groupId);
+            planesB->SetValue(faceId, planeId);
         }
-
-        groupId++;
 
     }
 
@@ -1058,11 +1058,11 @@ void Go (vtkPolyData *pdA, vtkPolyData *pdB) {
 
     }
 
-    groupsA->SetName("groupsA");
-    groupsB->SetName("groupsB");
+    planesA->SetName("planesA");
+    planesB->SetName("planesB");
 
-    pdA->GetCellData()->AddArray(groupsA);
-    pdB->GetCellData()->AddArray(groupsB);
+    pdA->GetCellData()->AddArray(planesA);
+    pdB->GetCellData()->AddArray(planesB);
 
     SaveMesh(pdA, meshA, "modified_MeshA.vtk");
     SaveMesh(pdB, meshB, "modified_MeshB.vtk");
