@@ -23,6 +23,7 @@
 #include <vtkSphereSource.h>
 #include <vtkTransformFilter.h>
 #include <vtkTransform.h>
+#include <vtkStripper.h>
 
 std::ostream& operator<< (std::ostream &out, const Vector3 &vec) {
     out << "[" << vec.x << ", " << vec.y << ", " << vec.z << "]";
@@ -87,41 +88,87 @@ Mesh GetMesh (vtkPolyData *pd) {
     }
 
     const vtkIdType numPoints = points->GetNumberOfPoints();
-    const vtkIdType numFaces = pd->GetNumberOfPolys();
 
-    if (numPoints == 0 || numFaces == 0) {
+    if (numPoints == 0) {
         return {};
     }
 
-    std::vector<Face> faces(numFaces);
-    std::vector<std::vector<vtkIdType>> pointToFaces(numPoints);
+    Mesh mesh;
+    mesh.pointToFaces.resize(numPoints);
+
+    vtkIdType npts;
+    const vtkIdType *pts;
+
+    vtkIdType faceId{0};
 
     vtkCellArray *polys = pd->GetPolys();
-    auto ids = vtkSmartPointer<vtkIdList>::New();
+    if (polys) {
+        polys->InitTraversal();
 
-    polys->InitTraversal();
-    for (vtkIdType i = 0; i < numFaces; i++) {
-        polys->GetNextCell(ids);
-        vtkIdType npts = ids->GetNumberOfIds();
-        faces[i].vertIds.reserve(npts);
+        while (polys->GetNextCell(npts, pts)) {
+            Face face;
+            face.vertIds.reserve(npts);
 
-        for (vtkIdType j = 0; j < npts; j++) {
-            vtkIdType id = ids->GetId(j);
-            faces[i].vertIds.push_back(id);
-            pointToFaces[id].push_back(i);
+            face.vertIds.assign(pts, pts + npts);
+
+            for(vtkIdType i = 0; i < npts; i++) {
+                mesh.pointToFaces[pts[i]].push_back(faceId);
+            }
+
+            mesh.faces.push_back(std::move(face));
+
+            faceId++;
         }
     }
 
-    std::vector<Vector3> verts(numPoints);
+    vtkCellArray *strips = pd->GetStrips();
+    if (strips) {
+        strips->InitTraversal();
+
+        while (strips->GetNextCell(npts, pts)) {
+            if (npts < 3) {
+                continue;
+            }
+
+            for (vtkIdType i = 0; i < npts - 2; i++) {
+                vtkIdType v0 = pts[i];
+                vtkIdType v1 = pts[i + 1];
+                vtkIdType v2 = pts[i + 2];
+
+                if (v0 != v1 && v1 != v2 && v2 != v0) {
+                    Face face;
+
+                    if (i % 2 == 1) {
+                        face.vertIds = {v0, v2, v1};
+
+                        mesh.pointToFaces[v0].push_back(faceId);
+                        mesh.pointToFaces[v2].push_back(faceId);
+                        mesh.pointToFaces[v1].push_back(faceId);
+                    } else {
+                        face.vertIds = {v0, v1, v2};
+
+                        mesh.pointToFaces[v0].push_back(faceId);
+                        mesh.pointToFaces[v1].push_back(faceId);
+                        mesh.pointToFaces[v2].push_back(faceId);
+                    }
+
+                    mesh.faces.push_back(std::move(face));
+                    faceId++;
+                }
+            }
+        }
+    }
+
+    mesh.verts.resize(numPoints);
 
     double p[3];
 
     for (vtkIdType i = 0; i < numPoints; i++) {
         points->GetPoint(i, p);
-        verts[i] = {p[0], p[1], p[2]};
+        mesh.verts[i] = {p[0], p[1], p[2]};
     }
 
-    return { verts, faces, pointToFaces };
+    return mesh;
 }
 
 void UpdatePlanes (Mesh &mesh) {
@@ -668,26 +715,26 @@ InterPts IntersectFaceAndLine (const Base &base, const std::vector<TransformedVe
         }
     };
 
-    std::map<InterPt, InterPts, Cmp> grouped;
+    std::map<InterPt, InterPts, Cmp> groupedInterPts;
 
     for (auto &p : interPts) {
-        grouped[p].push_back(p);
+        groupedInterPts[p].push_back(p);
     }
 
-    std::vector<InterPts> sorted;
+    std::vector<InterPts> sortedInterPts;
 
-    for (auto& [k, v] : grouped) {
-        sorted.push_back(std::move(v));
+    for (auto& [k, v] : groupedInterPts) {
+        sortedInterPts.push_back(std::move(v));
     }
 
-    decltype(sorted)::iterator itr;
+    decltype(sortedInterPts)::iterator itr;
 
-    for (itr = sorted.begin(); itr != sorted.end(); ++itr) {
-        if (itr == sorted.begin()) {
+    for (itr = sortedInterPts.begin(); itr != sortedInterPts.end(); ++itr) {
+        if (itr == sortedInterPts.begin()) {
             if (itr->size() == 2) {
                 itr->pop_back();
             }
-        } else if (itr == sorted.end()-1) {
+        } else if (itr == sortedInterPts.end()-1) {
             if (itr->size() == 2) {
                 itr->pop_back();
             }
@@ -699,7 +746,7 @@ InterPts IntersectFaceAndLine (const Base &base, const std::vector<TransformedVe
 
     InterPts cleanedInterPts;
 
-    for (auto &group : sorted) {
+    for (auto &group : sortedInterPts) {
         cleanedInterPts.insert(
             cleanedInterPts.end(),
             std::make_move_iterator(group.begin()),
@@ -813,8 +860,46 @@ public:
     vtkSmartPointer<vtkIdTypeArray> contA, contB;
 };
 
+vtkSmartPointer<vtkPolyData> GetPolyData (const Mesh &mesh) {
+    auto polyData = vtkSmartPointer<vtkPolyData>::New();
+    auto points = vtkSmartPointer<vtkPoints>::New();
 
-void Go (vtkPolyData *pdA, vtkPolyData *pdB) {
+    points->SetNumberOfPoints(mesh.verts.size());
+    for (vtkIdType i = 0; i < mesh.verts.size(); ++i) {
+        points->SetPoint(i, mesh.verts[i].x, mesh.verts[i].y, mesh.verts[i].z);
+    }
+    polyData->SetPoints(points);
+
+    auto polys = vtkSmartPointer<vtkCellArray>::New();
+
+    for (const auto &face : mesh.faces) {
+        polys->InsertNextCell(face.vertIds.size());
+        for (vtkIdType id : face.vertIds) {
+            polys->InsertCellPoint(id);
+        }
+    }
+    polyData->SetPolys(polys);
+
+    return polyData;
+}
+
+void Go (vtkPolyData *origPdA, vtkPolyData *origPdB) {
+    auto meshA = GetMesh(origPdA);
+    auto meshB = GetMesh(origPdB);
+
+    std::cout << meshA.verts.size() << std::endl;
+    std::cout << meshB.verts.size() << std::endl;
+
+    if (meshA.faces.empty() || meshB.faces.empty()) {
+        return;
+    }
+
+    UpdatePlanes(meshA);
+    UpdatePlanes(meshB);
+
+    auto pdA = GetPolyData(meshA);
+    auto pdB = GetPolyData(meshB);
+
     std::cout << ComputeMaxPlanarityError(pdA) << std::endl;
     std::cout << ComputeMaxPlanarityError(pdB) << std::endl;
 
@@ -828,15 +913,6 @@ void Go (vtkPolyData *pdA, vtkPolyData *pdB) {
     treeB->BuildLocator();
 
     treeA->IntersectWithOBBTree(treeB, nullptr, Intersect, nullptr);
-
-    auto meshA = GetMesh(pdA);
-    auto meshB = GetMesh(pdB);
-
-    std::cout << meshA.verts.size() << std::endl;
-    std::cout << meshB.verts.size() << std::endl;
-
-    UpdatePlanes(meshA);
-    UpdatePlanes(meshB);
 
     std::vector<Pair> congruentPairs;
     std::vector<Pair> nonCongruentPairs;
@@ -1206,7 +1282,7 @@ void Go (vtkPolyData *pdA, vtkPolyData *pdB) {
 }
 
 int main () {
-    auto readerA = vtkSmartPointer<vtkPolyDataReader>::New();
+    /*auto readerA = vtkSmartPointer<vtkPolyDataReader>::New();
     readerA->SetFileName("../bug3/MeshA.vtk");
 
     auto readerB = vtkSmartPointer<vtkPolyDataReader>::New();
@@ -1215,14 +1291,14 @@ int main () {
     readerA->Update();
     readerB->Update();
 
-    Go(readerA->GetOutput(), readerB->GetOutput());
+    Go(readerA->GetOutput(), readerB->GetOutput());*/
 
-    /*auto sphereA = vtkSmartPointer<vtkSphereSource>::New();
+    auto sphereA = vtkSmartPointer<vtkSphereSource>::New();
     auto sphereB = vtkSmartPointer<vtkSphereSource>::New();
 
     std::cout << "theta " << sphereA->GetThetaResolution() << ", phi " << sphereA->GetPhiResolution() << std::endl;
 
-    const vtkIdType resolution = 100;
+    const vtkIdType resolution = 30;
 
     sphereA->SetThetaResolution(resolution);
     sphereA->SetPhiResolution(resolution);
@@ -1241,7 +1317,10 @@ int main () {
     tf->SetInputConnection(sphereB->GetOutputPort());
     tf->SetTransform(transform);
 
-    tf->Update();
+    auto stripper = vtkSmartPointer<vtkStripper>::New();
+    stripper->SetInputConnection(tf->GetOutputPort());
 
-    Go(sphereA->GetOutput(), tf->GetPolyDataOutput());*/
+    stripper->Update();
+
+    Go(sphereA->GetOutput(), stripper->GetOutput());
 }
