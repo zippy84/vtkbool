@@ -24,6 +24,7 @@
 #include <vtkTransformFilter.h>
 #include <vtkTransform.h>
 #include <vtkStripper.h>
+#include <vtkCellIterator.h>
 
 std::ostream& operator<< (std::ostream &out, const Vector3 &vec) {
     out << "[" << vec.x << ", " << vec.y << ", " << vec.z << "]";
@@ -81,7 +82,19 @@ struct Mesh {
 };
 
 Mesh GetMesh (vtkPolyData *pd) {
-    vtkPoints *points = pd->GetPoints();
+    auto clean = vtkSmartPointer<vtkCleanPolyData>::New();
+    clean->SetOutputPointsPrecision(vtkAlgorithm::DOUBLE_PRECISION);
+    clean->SetToleranceIsAbsolute(true);
+    clean->SetAbsoluteTolerance(1e-6);
+    clean->ConvertLinesToPointsOff();
+    clean->ConvertPolysToLinesOff();
+    clean->ConvertStripsToPolysOff();
+    clean->SetInputData(pd);
+    clean->Update();
+
+    vtkPolyData *cleanedPd = clean->GetOutput();
+
+    vtkPoints *points = cleanedPd->GetPoints();
 
      if (!points) {
         return {};
@@ -96,44 +109,92 @@ Mesh GetMesh (vtkPolyData *pd) {
     Mesh mesh;
     mesh.pointToFaces.resize(numPoints);
 
-    vtkIdType npts;
-    const vtkIdType *pts;
-
     vtkIdType faceId{0};
 
-    vtkCellArray *polys = pd->GetPolys();
-    if (polys) {
-        polys->InitTraversal();
+    // vtkIdType cellId;
+    vtkIdList *pts;
+    vtkIdType npts;
 
-        while (polys->GetNextCell(npts, pts)) {
+    vtkCellIterator *cellItr = cleanedPd->NewCellIterator();
+
+    for (cellItr->InitTraversal(); !cellItr->IsDoneWithTraversal(); cellItr->GoToNextCell()) {
+        // cellId = cellItr->GetCellId();
+        pts = cellItr->GetPointIds();
+        npts = pts->GetNumberOfIds();
+
+        if (cellItr->GetCellType() == VTK_TRIANGLE || cellItr->GetCellType() == VTK_POLYGON) {
             Face face;
-            face.vertIds.reserve(npts);
-
-            face.vertIds.assign(pts, pts + npts);
+            face.vertIds.resize(npts);
 
             for(vtkIdType i = 0; i < npts; i++) {
-                mesh.pointToFaces[pts[i]].push_back(faceId);
+                face.vertIds[i] = pts->GetId(i);
+                mesh.pointToFaces[pts->GetId(i)].push_back(faceId);
             }
 
             mesh.faces.push_back(std::move(face));
 
             faceId++;
-        }
-    }
+        } else if (cellItr->GetCellType() == VTK_QUAD) {
+            vtkIdType v0 = pts->GetId(0);
+            vtkIdType v1 = pts->GetId(1);
+            vtkIdType v2 = pts->GetId(2);
+            vtkIdType v3 = pts->GetId(3);
 
-    vtkCellArray *strips = pd->GetStrips();
-    if (strips) {
-        strips->InitTraversal();
+            double p0[3], p1[3], p2[3], p3[3];
+            points->GetPoint(v0, p0);
+            points->GetPoint(v1, p1);
+            points->GetPoint(v2, p2);
+            points->GetPoint(v3, p3);
 
-        while (strips->GetNextCell(npts, pts)) {
-            if (npts < 3) {
-                continue;
+            auto GetDistance = [](const double a[3], const double b[3]) {
+                double dx = a[0] - b[0], dy = a[1] - b[1], dz = a[2] - b[2];
+                return dx * dx + dy * dy + dz * dz;
+            };
+
+            if (GetDistance(p0, p2) < GetDistance(p1, p3)) {
+                {
+                    Face face;
+                    face.vertIds = {v0, v1, v2};
+                    mesh.pointToFaces[v0].push_back(faceId);
+                    mesh.pointToFaces[v1].push_back(faceId);
+                    mesh.pointToFaces[v2].push_back(faceId);
+                    mesh.faces.push_back(std::move(face));
+                    faceId++;
+                }
+                {
+                    Face face;
+                    face.vertIds = {v2, v3, v0};
+                    mesh.pointToFaces[v2].push_back(faceId);
+                    mesh.pointToFaces[v3].push_back(faceId);
+                    mesh.pointToFaces[v0].push_back(faceId);
+                    mesh.faces.push_back(std::move(face));
+                    faceId++;
+                }
+            } else {
+                {
+                    Face face;
+                    face.vertIds = {v1, v2, v3};
+                    mesh.pointToFaces[v1].push_back(faceId);
+                    mesh.pointToFaces[v2].push_back(faceId);
+                    mesh.pointToFaces[v3].push_back(faceId);
+                    mesh.faces.push_back(std::move(face));
+                    faceId++;
+                }
+                {
+                    Face face;
+                    face.vertIds = {v3, v0, v1};
+                    mesh.pointToFaces[v3].push_back(faceId);
+                    mesh.pointToFaces[v0].push_back(faceId);
+                    mesh.pointToFaces[v1].push_back(faceId);
+                    mesh.faces.push_back(std::move(face));
+                    faceId++;
+                }
             }
-
+        } else if (cellItr->GetCellType() == VTK_TRIANGLE_STRIP) {
             for (vtkIdType i = 0; i < npts - 2; i++) {
-                vtkIdType v0 = pts[i];
-                vtkIdType v1 = pts[i + 1];
-                vtkIdType v2 = pts[i + 2];
+                vtkIdType v0 = pts->GetId(i);
+                vtkIdType v1 = pts->GetId(i + 1);
+                vtkIdType v2 = pts->GetId(i + 2);
 
                 if (v0 != v1 && v1 != v2 && v2 != v0) {
                     Face face;
@@ -158,6 +219,8 @@ Mesh GetMesh (vtkPolyData *pd) {
             }
         }
     }
+
+    cellItr->Delete();
 
     mesh.verts.resize(numPoints);
 
@@ -861,26 +924,27 @@ public:
 };
 
 vtkSmartPointer<vtkPolyData> GetPolyData (const Mesh &mesh) {
-    auto polyData = vtkSmartPointer<vtkPolyData>::New();
+    auto pd = vtkSmartPointer<vtkPolyData>::New();
     auto points = vtkSmartPointer<vtkPoints>::New();
 
-    points->SetNumberOfPoints(mesh.verts.size());
-    for (vtkIdType i = 0; i < mesh.verts.size(); ++i) {
+    const vtkIdType numVerts = static_cast<vtkIdType>(mesh.verts.size());
+    points->SetNumberOfPoints(numVerts);
+    for (vtkIdType i = 0; i < numVerts; i++) {
         points->SetPoint(i, mesh.verts[i].x, mesh.verts[i].y, mesh.verts[i].z);
     }
-    polyData->SetPoints(points);
+    pd->SetPoints(points);
 
     auto polys = vtkSmartPointer<vtkCellArray>::New();
 
     for (const auto &face : mesh.faces) {
-        polys->InsertNextCell(face.vertIds.size());
-        for (vtkIdType id : face.vertIds) {
-            polys->InsertCellPoint(id);
-        }
+        polys->InsertNextCell(
+            static_cast<vtkIdType>(face.vertIds.size()),
+            face.vertIds.data()
+        );
     }
-    polyData->SetPolys(polys);
+    pd->SetPolys(polys);
 
-    return polyData;
+    return pd;
 }
 
 void Go (vtkPolyData *origPdA, vtkPolyData *origPdB) {
@@ -1302,6 +1366,7 @@ int main () {
 
     sphereA->SetThetaResolution(resolution);
     sphereA->SetPhiResolution(resolution);
+    sphereA->LatLongTessellationOn();
 
     sphereB->SetThetaResolution(resolution);
     sphereB->SetPhiResolution(resolution);
