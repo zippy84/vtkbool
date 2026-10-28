@@ -782,34 +782,18 @@ InterPts IntersectFaceAndLine (const Base &base, const std::vector<TransformedVe
         groupedInterPts[p].push_back(p);
     }
 
+    std::map<vtkIdType, double> positions;
+
     std::vector<InterPts> sortedInterPts;
 
     for (auto& [k, v] : groupedInterPts) {
+        if (v.back().end == End::A) {
+            positions.emplace(v.back().edge.a, v.back().t);
+        } else if (v.back().end == End::B) {
+            positions.emplace(v.back().edge.b, v.back().t);
+        }
+
         sortedInterPts.push_back(std::move(v));
-    }
-
-    std::map<vtkIdType, double> endPositions;
-
-    decltype(sortedInterPts)::iterator itr;
-
-    for (itr = sortedInterPts.begin(); itr != sortedInterPts.end(); ++itr) {
-        if (itr == sortedInterPts.begin()) {
-            if (itr->size() == 2) {
-                itr->pop_back();
-            }
-        } else if (itr == sortedInterPts.end()-1) {
-            if (itr->size() == 2) {
-                itr->pop_back();
-            }
-        } else if (itr->size() == 1 && itr->back().end != End::None) {
-            itr->push_back(itr->back());
-        }
-
-        if (itr->back().end == End::A) {
-            endPositions.emplace(itr->back().edge.a, itr->back().t);
-        } else if (itr->back().end == End::B) {
-            endPositions.emplace(itr->back().edge.b, itr->back().t);
-        }
     }
 
     std::map<vtkIdType, TransformedVert> allVerts;
@@ -818,63 +802,78 @@ InterPts IntersectFaceAndLine (const Base &base, const std::vector<TransformedVe
         allVerts.emplace(v.id, v);
     }
 
-    vtkIdType id, beforeId, afterId;
+    for (size_t i = 0; i < sortedInterPts.size(); i++) {
+        auto &group = sortedInterPts[i];
 
-    for (itr = sortedInterPts.begin(); itr != sortedInterPts.end(); ++itr) {
-        if (itr->back().end == End::A || itr->back().end == End::B) {
-            if (itr->back().end == End::A) {
-                id = itr->back().edge.a;
+        if (i == 0 || i == sortedInterPts.size() - 1) {
+            if (group.size() == 2) {
+                group.pop_back();
+            }
+        } else if (group.size() == 1 && group.back().end != End::None) {
+            group.push_back(group.back());
+        }
 
-                auto currItr = std::find_if(verts.begin(), verts.end(), [&id](auto &v) { return v.id == id; });
+        if (group.back().end == End::None) {
+            continue;
+        }
 
-                afterId = itr->back().edge.b;
+        vtkIdType id, beforeId, afterId;
 
-                if (currItr == verts.begin()) {
-                    beforeId = (verts.end() - 1)->id;
-                } else {
-                    beforeId = (currItr - 1)->id;
-                }
+        if (group.back().end == End::A) {
+            id = group.back().edge.a;
 
+            afterId = group.back().edge.b;
+
+            auto currItr = std::find_if(verts.begin(), verts.end(), [&id](auto &v) { return v.id == id; });
+
+            if (currItr == verts.begin()) {
+                beforeId = (verts.end() - 1)->id;
             } else {
-                id = itr->back().edge.b;
-
-                auto currItr = std::find_if(verts.begin(), verts.end(), [&id](auto &v) { return v.id == id; });
-
-                beforeId = itr->back().edge.a;
-
-                if (currItr == verts.end() - 1) {
-                    afterId = verts.begin()->id;
-                } else {
-                    afterId = (currItr + 1)->id;
-                }
+                beforeId = (currItr - 1)->id;
             }
 
-            if (itr->size() == 2) {
-                if (endPositions.count(beforeId) == 0 && endPositions.count(afterId) == 1) {
-                    if ((endPositions[afterId] < itr->back().t && allVerts[beforeId].y < 0) ||
-                        (endPositions[afterId] > itr->back().t && allVerts[beforeId].y > 0)) {
-                        itr->pop_back();
-                    }
+        } else {
+            id = group.back().edge.b;
 
-                } else if (endPositions.count(beforeId) == 1 && endPositions.count(afterId) == 0) {
-                    if ((endPositions[beforeId] < itr->back().t && allVerts[afterId].y > 0) ||
-                        (endPositions[beforeId] > itr->back().t && allVerts[afterId].y < 0)) {
-                        itr->pop_back();                    }
+            beforeId = group.back().edge.a;
+
+            auto currItr = std::find_if(verts.begin(), verts.end(), [&id](auto &v) { return v.id == id; });
+
+            if (currItr == verts.end() - 1) {
+                afterId = verts.begin()->id;
+            } else {
+                afterId = (currItr + 1)->id;
+            }
+        }
+
+        const auto &searchBefore = positions.find(beforeId);
+        const auto &searchAfter = positions.find(afterId);
+
+        if (group.size() == 2) {
+            if (searchBefore == positions.end() && searchAfter != positions.end()) {
+                if ((searchAfter->second < group.back().t && allVerts[beforeId].y < 0) ||
+                    (searchAfter->second > group.back().t && allVerts[beforeId].y > 0)) {
+                    group.pop_back();
+                }
+            } else if (searchBefore != positions.end() && searchAfter == positions.end()) {
+                if ((searchBefore->second < group.back().t && allVerts[afterId].y > 0) ||
+                    (searchBefore->second > group.back().t && allVerts[afterId].y < 0)) {
+                    group.pop_back();
                 }
             }
+        }
 
-            if (endPositions.count(beforeId) == 0 && endPositions.count(afterId) == 0) {
-                const auto &a = allVerts[beforeId];
-                const auto &b = allVerts[afterId];
+        if (searchBefore == positions.end() && searchAfter == positions.end()) {
+            const auto &a = allVerts[beforeId];
+            const auto &b = allVerts[afterId];
 
-                if (std::signbit(a.y) != std::signbit(b.y)) {
-                    if (itr->size() == 2) {
-                        itr->pop_back();
-                    }
-                } else {
-                    if ((a.x > b.x) == std::signbit(a.y)) {
-                        itr->clear();
-                    }
+            if (std::signbit(a.y) != std::signbit(b.y)) {
+                if (group.size() == 2) {
+                    group.pop_back();
+                }
+            } else {
+                if ((a.x > b.x) == std::signbit(a.y)) {
+                    group.clear();
                 }
             }
         }
