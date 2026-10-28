@@ -696,18 +696,29 @@ void IntersectEdgeAndLine (InterPts &interPts, const TransformedVert &pA, const 
         return;
     }
 
-    if (std::min(pA.y, pB.y) < 1e-6 && std::max(pA.y, pB.y) > -1e-6) {
-        double div = pB.y - pA.y;
+    double yA = pA.y;
+    double yB = pB.y;
+
+    if (std::abs(yA) < 1e-6) {
+        yA = 0;
+    }
+
+    if (std::abs(yB) < 1e-6) {
+        yB = 0;
+    }
+
+    if (std::min(yA, yB) < 1e-6 && std::max(yA, yB) > -1e-6) {
+        double div = yB - yA;
 
         if (std::abs(div) < 1e-12) {
             return;
         }
 
-        double t = -pA.y / div;
+        double t = -yA / div;
 
         // std::cout << "t " << t << std::endl;
 
-        if (t > -1e6 && t < 1+1e-6) {
+        if (t > -1e-6 && t < 1+1e-6) {
             // std::cout << "-> 2" << std::endl;
 
             double x = pA.x + t * (pB.x - pA.x);
@@ -1339,7 +1350,7 @@ void Go (vtkPolyData *origPdA, vtkPolyData *origPdB) {
             const auto &faceA = meshA.faces[pair.a];
             const auto &faceB = meshB.faces[pair.b];
 
-            /*if (pair.a == 6 && pair.b == 1) {
+            /*if (pair.a == 18298 && pair.b == 1567) {
                 std::cout << pair.a << " [";
                 for (auto id : faceA.vertIds) {
                     std::cout << id << ", ";
@@ -1435,7 +1446,7 @@ void Go (vtkPolyData *origPdA, vtkPolyData *origPdB) {
 }
 
 int main () {
-    /*auto readerA = vtkSmartPointer<vtkPolyDataReader>::New();
+    auto readerA = vtkSmartPointer<vtkPolyDataReader>::New();
     readerA->SetFileName("../bug3/MeshA.vtk");
 
     auto readerB = vtkSmartPointer<vtkPolyDataReader>::New();
@@ -1444,7 +1455,7 @@ int main () {
     readerA->Update();
     readerB->Update();
 
-    Go(readerA->GetOutput(), readerB->GetOutput());*/
+    Go(readerA->GetOutput(), readerB->GetOutput());
 
     /*auto sphereA = vtkSmartPointer<vtkSphereSource>::New();
     auto sphereB = vtkSmartPointer<vtkSphereSource>::New();
@@ -1477,7 +1488,7 @@ int main () {
 
     Go(sphereA->GetOutput(), stripper->GetOutput());*/
 
-    auto transform = vtkSmartPointer<vtkTransform>::New();
+    /*auto transform = vtkSmartPointer<vtkTransform>::New();
     transform->RotateX(5);
     transform->RotateY(5);
 
@@ -1498,6 +1509,6 @@ int main () {
     tfA->Update();
     tfB->Update();
 
-    Go(tfA->GetPolyDataOutput(), tfB->GetPolyDataOutput());
+    Go(tfA->GetPolyDataOutput(), tfB->GetPolyDataOutput());*/
 
 }
