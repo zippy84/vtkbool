@@ -69,9 +69,9 @@ std::vector<GlobalPlane> globalPlanes;
 
 struct Face {
     std::vector<vtkIdType> vertIds;
-    Vector3 normal;
-    Vector3 centroid;
-    double d;
+    Vector3 normal{};
+    Vector3 centroid{};
+    double d = 0;
     std::optional<size_t> globalPlaneId;
     vtkIdType origCellId;
 };
@@ -943,6 +943,29 @@ void OverlapLines (OverlapedLines &overlaps, InterPts &intersA, InterPts &inters
 
 }
 
+typedef std::set<std::pair<vtkIdType, vtkIdType>> NonManifoldEdges;
+
+NonManifoldEdges GetNonManifoldEdges (const Mesh &mesh) {
+    NonManifoldEdges edges;
+    NonManifoldEdges nonManifoldEdges;
+
+    for (const auto &face : mesh.faces) {
+        size_t numVerts = face.vertIds.size();
+
+        for (size_t i = 0; i < numVerts; i++) {
+            vtkIdType u = face.vertIds[i];
+            vtkIdType v = face.vertIds[(i + 1) % numVerts];
+
+            if (!edges.emplace(u, v).second) {
+                nonManifoldEdges.emplace(u, v);
+                nonManifoldEdges.emplace(v, u);
+            }
+        }
+    }
+
+    return nonManifoldEdges;
+}
+
 class Contact {
 public:
     Contact () {
@@ -966,7 +989,7 @@ public:
         lines->GetCellData()->AddArray(contB);
     }
 
-    void AddLines (InterPts &interA, InterPts &interB, vtkIdType idA, vtkIdType idB) {
+    void AddLines (InterPts &interA, InterPts &interB, vtkIdType idA, vtkIdType idB, const NonManifoldEdges &nonManifoldEdgesA, const NonManifoldEdges &nonManifoldEdgesB) {
         if (interA.size() == 0 || interB.size() == 0) {
             return;
         }
@@ -979,6 +1002,17 @@ public:
         for (itr = overlaps.begin(); itr != overlaps.end(); ++itr) {
             auto &f = std::get<0>(*itr);
             auto &s = std::get<1>(*itr);
+
+            auto edgeF = std::make_pair(f.edge.a, f.edge.b);
+            auto edgeS = std::make_pair(s.edge.a, s.edge.b);
+
+            if ((f.src == Src::A && nonManifoldEdgesA.count(edgeF)) ||
+                (s.src == Src::A && nonManifoldEdgesA.count(edgeS)) ||
+                (f.src == Src::B && nonManifoldEdgesB.count(edgeF)) ||
+                (s.src == Src::B && nonManifoldEdgesB.count(edgeS))) {
+
+                throw "";
+            }
 
             auto linePts = vtkSmartPointer<vtkIdList>::New();
 
@@ -1057,6 +1091,12 @@ void Go (vtkPolyData *origPdA, vtkPolyData *origPdB) {
     if (meshA.faces.empty() || meshB.faces.empty()) {
         return;
     }
+
+    auto nonManifoldEdgesA = GetNonManifoldEdges(meshA);
+    auto nonManifoldEdgesB = GetNonManifoldEdges(meshB);
+
+    std::cout << nonManifoldEdgesA.size() << std::endl;
+    std::cout << nonManifoldEdgesB.size() << std::endl;
 
     UpdatePlanes(meshA);
     UpdatePlanes(meshB);
@@ -1433,15 +1473,19 @@ void Go (vtkPolyData *origPdA, vtkPolyData *origPdB) {
             results[index] = PairResult{pair.a, pair.b, std::move(interPtsA), std::move(interPtsB)};
         });
 
-    Contact contact;
+    try {
+        Contact contact;
 
-    for (auto &result : results) {
-        if ((result.interPtsA.size() & 1) == 0 && (result.interPtsB.size() & 1) == 0) {
-            contact.AddLines(result.interPtsA, result.interPtsB, result.pairA, result.pairB);
+        for (auto &result : results) {
+            if ((result.interPtsA.size() & 1) == 0 && (result.interPtsB.size() & 1) == 0) {
+                contact.AddLines(result.interPtsA, result.interPtsB, result.pairA, result.pairB, nonManifoldEdgesA, nonManifoldEdgesB);
+            }
         }
-    }
 
-    contact.Save("lines.vtk");
+        contact.Save("lines.vtk");
+    } catch (...) {
+        std::cerr << "Contact failed" << std::endl;
+    }
 
 }
 
