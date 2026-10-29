@@ -52,11 +52,9 @@ limitations under the License.
 #include "vtkPolyDataBooleanFilter.h"
 
 #include "Utilities.h"
-#include "Optimize.h"
-#include "Contact.h"
+// #include "Optimize.h"
+#include "Contact2.h"
 #include "Merger.h"
-
-#include "Optimize2.h"
 
 vtkStandardNewMacro(vtkPolyDataBooleanFilter);
 
@@ -81,19 +79,19 @@ vtkPolyDataBooleanFilter::vtkPolyDataBooleanFilter () {
 
     OperMode = OPER_UNION;
 
-    matrices[0] = nullptr;
+    /*matrices[0] = nullptr;
     matrices[1] = nullptr;
 
     transforms[0] = nullptr;
     transforms[1] = nullptr;
 
     timeMatrixA = 0;
-    timeMatrixB = 0;
+    timeMatrixB = 0;*/
 
 }
 
 vtkPolyDataBooleanFilter::~vtkPolyDataBooleanFilter () {
-    if (matrices[0] != nullptr) {
+    /*if (matrices[0] != nullptr) {
         matrices[0]->Delete();
     }
 
@@ -107,7 +105,7 @@ vtkPolyDataBooleanFilter::~vtkPolyDataBooleanFilter () {
 
     if (transforms[1] != nullptr) {
         transforms[1]->Delete();
-    }
+    }*/
 }
 
 int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformationVector **inputVector, vtkInformationVector *outputVector) {
@@ -135,86 +133,28 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
         vtkMTimeType timeA = pdA->GetMTime();
         vtkMTimeType timeB = pdB->GetMTime();
 
-        if (timeA > timePdA || timeB > timePdB || (matrices[0] != nullptr && matrices[0]->GetMTime() > timeMatrixA) || (matrices[1] != nullptr && matrices[1]->GetMTime() > timeMatrixB)) {
+        if (timeA > timePdA || timeB > timePdB) {
 
-            if (contact == nullptr || timeA > timePdA || timeB > timePdB) {
-                // CellData sichern
+start = clock::now();
+            Contact contact(pdA, pdB);
 
-                cellDataA->DeepCopy(pdA->GetCellData());
-                cellDataB->DeepCopy(pdB->GetCellData());
+            modPdA = contact.GetPolyDataA();
+            modPdB = contact.GetPolyDataB();
 
-                cleanA = CleanMesh(pdA);
-                cleanB = CleanMesh(pdB);
-
-                PlanarizeMesh(cleanA);
-                PlanarizeMesh(cleanB);
-
-                // std::cout << ComputeMaxPlanarityError(cleanA) << std::endl;
-                // std::cout << ComputeMaxPlanarityError(cleanB) << std::endl;
+            contLines = contact.GetLines();
 
 #ifdef DEBUG
-                WriteVTK("modPdA.vtk", cleanA);
-                WriteVTK("modPdB.vtk", cleanB);
+            WriteVTK("modPdA.vtk", modPdA);
+            WriteVTK("modPdB.vtk", modPdB);
+            WriteVTK("contLines.vtk", contLines);
 #endif
-
-                try {
-                    PreventEqualCaptPoints(cleanA, cleanB).Run();
-                } catch (const std::runtime_error &e) {
-                    vtkErrorMacro("Cannot prevent equal capture points.");
-                    return 1;
-                }
-
-                contact = std::make_shared<Contact>(cleanA, cleanB);
-            }
-
-            start = clock::now();
-
-            modPdA = vtkSmartPointer<vtkPolyData>::New();
-            modPdB = vtkSmartPointer<vtkPolyData>::New();
-
-            if (transforms[0] != nullptr) {
-                auto tfA = vtkSmartPointer<vtkTransformFilter>::New();
-                tfA->SetInputData(cleanA);
-                tfA->SetTransform(transforms[0]);
-                tfA->Update();
-
-                modPdA->DeepCopy(tfA->GetOutput());
-            } else {
-                modPdA->DeepCopy(cleanA);
-            }
-
-            if (transforms[1] != nullptr) {
-                auto tfB = vtkSmartPointer<vtkTransformFilter>::New();
-                tfB->SetInputData(cleanB);
-                tfB->SetTransform(transforms[1]);
-                tfB->Update();
-
-                modPdB->DeepCopy(tfB->GetOutput());
-            } else {
-                modPdB->DeepCopy(cleanB);
-            }
-
-            modPdA->EditableOn();
-            modPdB->EditableOn();
-
-            try {
-                contLines = contact->GetLines(modPdA, transforms[0], modPdB, transforms[1]);
-            } catch (const std::runtime_error &e) {
-                std::stringstream ss;
-                ss << std::quoted(e.what());
-
-                vtkErrorMacro("Contact failed with " << ss.str());
-
-                return 1;
-            }
 
             times.push_back(clock::now()-start);
 
-#ifdef DEBUG
-            WriteVTK("modPdA_1.vtk", modPdA);
-            WriteVTK("modPdB_1.vtk", modPdB);
-            WriteVTK("contLines.vtk", contLines);
-#endif
+            if (contLines == nullptr) {
+                vtkErrorMacro("Contact failed");
+                return 1;
+            }
 
             if (contLines->GetNumberOfCells() == 0) {
                 vtkErrorMacro("There is no contact.");
@@ -239,9 +179,6 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
             contsA = vtkIdTypeArray::SafeDownCast(contLines->GetCellData()->GetScalars("cA"));
             contsB = vtkIdTypeArray::SafeDownCast(contLines->GetCellData()->GetScalars("cB"));
 
-            vtkIdTypeArray *sourcesA = vtkIdTypeArray::SafeDownCast(contLines->GetCellData()->GetScalars("sourcesA"));
-            vtkIdTypeArray *sourcesB = vtkIdTypeArray::SafeDownCast(contLines->GetCellData()->GetScalars("sourcesB"));
-
             // sichert die OrigCellIds
 
             vtkIdTypeArray *origCellIdsA = vtkIdTypeArray::SafeDownCast(modPdA->GetCellData()->GetScalars("OrigCellIds"));
@@ -263,8 +200,8 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
 
             start = clock::now();
 
-            if (GetPolyStrips(modPdA, contsA, sourcesA, polyStripsA) ||
-                GetPolyStrips(modPdB, contsB, sourcesB, polyStripsB)) {
+            if (GetPolyStrips(modPdA, contsA, polyStripsA) ||
+                GetPolyStrips(modPdB, contsB, polyStripsB)) {
 
                 vtkErrorMacro("Strips are invalid.");
                 return 1;
@@ -360,13 +297,13 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
             timePdA = pdA->GetMTime();
             timePdB = pdB->GetMTime();
 
-            if (matrices[0] != nullptr) {
+            /*if (matrices[0] != nullptr) {
                 timeMatrixA = matrices[0]->GetMTime();
             }
 
             if (matrices[1] != nullptr) {
                 timeMatrixB = matrices[1]->GetMTime();
-            }
+            }*/
 
         }
 
@@ -398,7 +335,7 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
 
 }
 
-void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, vtkIdTypeArray *sources, PStrips &pStrips, IdsType &lines) {
+void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, PStrips &pStrips, IdsType &lines) {
 
 #ifdef DEBUG
     std::cout << "GetStripPoints()" << std::endl;
@@ -409,7 +346,7 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, vtkIdTypeArray *
 
     double a[3], b[3], sA[3], sB[3], u[3], v[3], w[3], n, t, d;
 
-    std::map<vtkIdType, vtkIdType> allPts;
+    std::set<vtkIdType> allInds;
 
     std::map<vtkIdType, vtkIdType> links;
 
@@ -425,18 +362,16 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, vtkIdTypeArray *
         //     << "]"
         //     << std::endl;
 
-        allPts.emplace(line->GetId(0), sources->GetTypedComponent(lineId, 0));
-        allPts.emplace(line->GetId(1), sources->GetTypedComponent(lineId, 1));
+        allInds.emplace(line->GetId(0));
+        allInds.emplace(line->GetId(1));
 
         links[line->GetId(0)]++;
         links[line->GetId(1)]++;
     }
 
-    decltype(allPts)::const_iterator itr;
-
-    for (itr = allPts.begin(); itr != allPts.end(); ++itr) {
+    for (auto ind : allInds) {
         StripPt sp;
-        sp.ind = itr->first;
+        sp.ind = ind;
 
         // die koordinaten
         contLines->GetPoint(sp.ind, sp.pt);
@@ -448,10 +383,6 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, vtkIdTypeArray *
 
             if (itrB == poly.end()) {
                 itrB = poly.begin();
-            }
-
-            if (itr->second != NOTSET && *itrA != itr->second) {
-                continue;
             }
 
             pd->GetPoint(*itrA, a);
@@ -510,10 +441,6 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, vtkIdTypeArray *
             //     << std::endl;
         }
 
-        if (itr->second != NOTSET && sp.edge[0] == NOTSET) {
-            sp.catched = false;
-        }
-
         if (sp.capt == Capt::Not && links[sp.ind] > 2) {
             sp.capt = Capt::Branched;
         }
@@ -564,7 +491,7 @@ void vtkPolyDataBooleanFilter::GetStripPoints (vtkPolyData *pd, vtkIdTypeArray *
 
 }
 
-bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *conts, vtkIdTypeArray *sources, PolyStripsType &polyStrips) {
+bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *conts, PolyStripsType &polyStrips) {
 #ifdef DEBUG
     std::cout << "GetPolyStrips()" << std::endl;
 #endif
@@ -598,7 +525,7 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
 
         PStrips &pStrips = polyStrips.at(itr->first);
 
-        GetStripPoints(pd, sources, pStrips, lines);
+        GetStripPoints(pd, pStrips, lines);
 
         for (auto &sp : pStrips.pts) {
             sp.second.polyId = itr->first;
@@ -3096,7 +3023,7 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
 
 }
 
-void vtkPolyDataBooleanFilter::SetMatrix (int i, vtkMatrix4x4 *matrix) {
+/*void vtkPolyDataBooleanFilter::SetMatrix (int i, vtkMatrix4x4 *matrix) {
     if (i != 0 && i != 1) {
         return;
     }
@@ -3152,4 +3079,4 @@ vtkMTimeType vtkPolyDataBooleanFilter::GetMTime () {
     }
 
     return *std::max_element(times.begin(), times.end());
-}
+}*/

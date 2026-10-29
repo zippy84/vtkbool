@@ -1,4 +1,4 @@
-#include "Optimize2.h"
+#include "Contact2.h"
 
 #include <iostream>
 #include <vector>
@@ -31,13 +31,9 @@ std::ostream& operator<< (std::ostream &out, const Vector3 &vec) {
     return out;
 }
 
-struct Pair {
-    vtkIdType a, b;
-};
+int Intersect (vtkOBBNode *nodeA, vtkOBBNode *nodeB, vtkMatrix4x4 *, void *data) {
+    auto* intersections = static_cast<std::vector<Pair2>*>(data);
 
-std::vector<Pair> intersections;
-
-int Intersect (vtkOBBNode *nodeA, vtkOBBNode *nodeB, vtkMatrix4x4 *, void *) {
     vtkIdList *cellsA = nodeA->Cells;
     vtkIdList *cellsB = nodeB->Cells;
 
@@ -52,35 +48,12 @@ int Intersect (vtkOBBNode *nodeA, vtkOBBNode *nodeB, vtkMatrix4x4 *, void *) {
         for (j = 0; j < numCellsB; j++) {
             cellB = cellsB->GetId(j);
 
-            intersections.emplace_back(Pair{cellA, cellB});
+            intersections->emplace_back(Pair2{cellA, cellB});
         }
     }
 
     return 1;
 }
-
-struct GlobalPlane {
-    Vector3 normal;
-    double d;
-    std::vector<size_t> faceIdsA, faceIdsB;
-};
-
-std::vector<GlobalPlane> globalPlanes;
-
-struct Face {
-    std::vector<vtkIdType> vertIds;
-    Vector3 normal{};
-    Vector3 centroid{};
-    double d = 0;
-    std::optional<size_t> globalPlaneId;
-    vtkIdType origCellId;
-};
-
-struct Mesh {
-    std::vector<Vector3> verts;
-    std::vector<Face> faces;
-    std::vector<std::vector<vtkIdType>> pointToFaces;
-};
 
 Mesh GetMesh (vtkPolyData *pd) {
     auto clean = vtkSmartPointer<vtkCleanPolyData>::New();
@@ -411,7 +384,7 @@ inline bool Solve3x3 (const double A[3][3], const double b[3], Vector3 &out) {
     return true;
 }
 
-double FindNewVerts (Mesh &mesh) {
+double FindNewVerts (Mesh &mesh, std::vector<GlobalPlane> &globalPlanes) {
     std::vector<size_t> indsVerts(mesh.verts.size());
 
     for (size_t i = 0; i < mesh.verts.size(); i++) {
@@ -508,7 +481,7 @@ double FindNewVerts (Mesh &mesh) {
     return maxDisp;
 }
 
-void SaveMesh (vtkPolyData *pd, const Mesh &mesh, const std::string &filename) {
+void UpdatePoints (vtkPolyData *pd, const Mesh &mesh) {
     vtkPoints *points = pd->GetPoints();
 
     for (size_t i = 0; i < mesh.verts.size(); i++) {
@@ -517,34 +490,6 @@ void SaveMesh (vtkPolyData *pd, const Mesh &mesh, const std::string &filename) {
 
     points->Modified();
     pd->Modified();
-
-    auto writer = vtkSmartPointer<vtkPolyDataWriter>::New();
-    writer->SetFileName(filename.c_str());
-    writer->SetInputData(pd);
-    writer->Write();
-
-    std::cout << filename << " saved" << std::endl;
-}
-
-enum class Src {
-    A,
-    B
-};
-
-enum class End {
-    None,
-    A,
-    B
-};
-
-enum class PointSrc {
-    Calculated,
-    Copied
-};
-
-template<typename T>
-std::ostream& operator<< (typename std::enable_if<std::is_enum<T>::value, std::ostream>::type& stream, const T& e) {
-    return stream << static_cast<typename std::underlying_type<T>::type>(e);
 }
 
 class Base {
@@ -615,68 +560,6 @@ std::vector<TransformedVert> TransformFace2d (const Mesh &mesh, const Face &face
 
     return newVerts;
 }
-
-class InterPt {
-public:
-    InterPt () = delete;
-
-    InterPt (double x, double y, double z, double t, vtkIdType a, vtkIdType b, End end, Src src, PointSrc pointSrc = PointSrc::Calculated) : t(t), edge{a, b}, end(end), src(src), srcA(std::nullopt), srcB(std::nullopt), pointSrc(pointSrc) {
-        pt[0] = x;
-        pt[1] = y;
-        pt[2] = z;
-    }
-
-    double pt[3], t;
-    Pair edge;
-    End end;
-    Src src;
-    std::optional<vtkIdType> srcA, srcB;
-    PointSrc pointSrc;
-
-    friend std::ostream& operator<< (std::ostream &out, const InterPt &s) {
-        out << "pt [" << s.pt[0] << ", " << s.pt[1] << ", " << s.pt[2] << "]"
-            << ", t " << s.t
-            << ", edge (" << s.edge.a << ", " << s.edge.b << ")"
-            << ", end " << s.end
-            << ", src " << s.src
-            << ", pointSrc " << s.pointSrc;
-
-        return out;
-    }
-
-    void Merge (const InterPt &other) {
-        assert(src != other.src);
-
-        if (src == Src::A) {
-            srcA = GetEnd();
-        } else {
-            srcB = GetEnd();
-        }
-
-        if (std::abs(other.t-t) < 1e-5) {
-            if (other.src == Src::A) {
-                srcA = other.GetEnd();
-            } else {
-                srcB = other.GetEnd();
-            }
-        }
-    }
-
-    inline std::optional<vtkIdType> GetEnd () const {
-        if (end == End::A) {
-            return edge.a;
-        }
-
-        if (end == End::B) {
-            return edge.b;
-        }
-
-        return std::nullopt;
-    }
-
-};
-
-typedef std::vector<InterPt> InterPts;
 
 void IntersectEdgeAndLine (InterPts &interPts, const TransformedVert &pA, const TransformedVert &pB, Src src) {
     // schnitt mit x-achse
@@ -943,8 +826,6 @@ void OverlapLines (OverlapedLines &overlaps, InterPts &intersA, InterPts &inters
 
 }
 
-typedef std::set<std::pair<vtkIdType, vtkIdType>> NonManifoldEdges;
-
 NonManifoldEdges GetNonManifoldEdges (const Mesh &mesh) {
     NonManifoldEdges edges;
     NonManifoldEdges nonManifoldEdges;
@@ -965,87 +846,6 @@ NonManifoldEdges GetNonManifoldEdges (const Mesh &mesh) {
 
     return nonManifoldEdges;
 }
-
-class Contact {
-public:
-    Contact () {
-        pts = vtkSmartPointer<vtkPoints>::New();
-        pts->SetDataTypeToDouble();
-
-        lines = vtkSmartPointer<vtkPolyData>::New();
-        lines->SetPoints(pts);
-        lines->Allocate(1000);
-
-        contA = vtkSmartPointer<vtkIdTypeArray>::New();
-        contB = vtkSmartPointer<vtkIdTypeArray>::New();
-
-        contA->ReserveTuples(1000);
-        contB->ReserveTuples(1000);
-
-        contA->SetName("cA");
-        contB->SetName("cB");
-
-        lines->GetCellData()->AddArray(contA);
-        lines->GetCellData()->AddArray(contB);
-    }
-
-    void AddLines (InterPts &interA, InterPts &interB, vtkIdType idA, vtkIdType idB, const NonManifoldEdges &nonManifoldEdgesA, const NonManifoldEdges &nonManifoldEdgesB) {
-        if (interA.size() == 0 || interB.size() == 0) {
-            return;
-        }
-
-        OverlapedLines overlaps;
-        OverlapLines(overlaps, interA, interB);
-
-        OverlapedLines::const_iterator itr;
-
-        for (itr = overlaps.begin(); itr != overlaps.end(); ++itr) {
-            auto &f = std::get<0>(*itr);
-            auto &s = std::get<1>(*itr);
-
-            auto edgeF = std::make_pair(f.edge.a, f.edge.b);
-            auto edgeS = std::make_pair(s.edge.a, s.edge.b);
-
-            if ((f.src == Src::A && nonManifoldEdgesA.count(edgeF)) ||
-                (s.src == Src::A && nonManifoldEdgesA.count(edgeS)) ||
-                (f.src == Src::B && nonManifoldEdgesB.count(edgeF)) ||
-                (s.src == Src::B && nonManifoldEdgesB.count(edgeS))) {
-
-                throw "";
-            }
-
-            auto linePts = vtkSmartPointer<vtkIdList>::New();
-
-            linePts->InsertNextId(pts->InsertNextPoint(f.pt));
-            linePts->InsertNextId(pts->InsertNextPoint(s.pt));
-
-            lines->InsertNextCell(VTK_LINE, linePts);
-
-            contA->InsertNextValue(idA);
-            contB->InsertNextValue(idB);
-        }
-
-    }
-
-    void Save (const std::string &filename) {
-        auto clean = vtkSmartPointer<vtkCleanPolyData>::New();
-        clean->SetInputData(lines);
-        clean->ToleranceIsAbsoluteOn();
-        clean->SetAbsoluteTolerance(1e-5);
-        clean->ConvertLinesToPointsOff();
-
-        auto writer = vtkSmartPointer<vtkPolyDataWriter>::New();
-        writer->SetFileName(filename.c_str());
-        writer->SetInputConnection(clean->GetOutputPort());
-        writer->Update();
-
-        std::cout << filename << " saved" << std::endl;
-    }
-
-    vtkSmartPointer<vtkPoints> pts;
-    vtkSmartPointer<vtkPolyData> lines;
-    vtkSmartPointer<vtkIdTypeArray> contA, contB;
-};
 
 vtkSmartPointer<vtkPolyData> GetPolyData (const Mesh &mesh) {
     auto pd = vtkSmartPointer<vtkPolyData>::New();
@@ -1081,31 +881,92 @@ vtkSmartPointer<vtkPolyData> GetPolyData (const Mesh &mesh) {
     return pd;
 }
 
-void Go (vtkPolyData *origPdA, vtkPolyData *origPdB) {
-    auto meshA = GetMesh(origPdA);
-    auto meshB = GetMesh(origPdB);
+double ComputeMaxPlanarityError (vtkPolyData *pd) {
+    double maxError = 0;
+
+    vtkPoints *pts = pd->GetPoints();
+    vtkCellArray *polys = pd->GetPolys();
+
+    auto ids = vtkSmartPointer<vtkIdList>::New();
+    polys->InitTraversal();
+
+    while (polys->GetNextCell(ids)) {
+        vtkIdType npts = ids->GetNumberOfIds();
+
+        if (npts < 4) {
+            continue;
+        }
+
+        Vector3 centroid{0, 0, 0};
+        Vector3 normal{0, 0, 0};
+
+        double p1[3], p2[3];
+
+        for (vtkIdType i = 0; i < npts; i++) {
+            pts->GetPoint(ids->GetId(i), p1);
+            pts->GetPoint(ids->GetId((i + 1) % npts), p2);
+
+            centroid.x += p1[0]; centroid.y += p1[1]; centroid.z += p1[2];
+
+            normal.x += (p1[1] - p2[1]) * (p1[2] + p2[2]);
+            normal.y += (p1[2] - p2[2]) * (p1[0] + p2[0]);
+            normal.z += (p1[0] - p2[0]) * (p1[1] + p2[1]);
+        }
+
+        centroid.x /= static_cast<double>(npts);
+        centroid.y /= static_cast<double>(npts);
+        centroid.z /= static_cast<double>(npts);
+
+        double len = std::sqrt(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z);
+
+        if (len > 1e-12) {
+            normal.x /= len; normal.y /= len; normal.z /= len;
+        }
+
+        double p[3];
+
+        for (vtkIdType i = 0; i < npts; i++) {
+            pts->GetPoint(ids->GetId(i), p);
+
+            double dist = std::abs(normal.x * (p[0] - centroid.x) + normal.y * (p[1] - centroid.y) + normal.z * (p[2] - centroid.z));
+
+            maxError = std::max(maxError, dist);
+        }
+    }
+
+    return maxError;
+}
+
+Contact::Contact (vtkPolyData *origPdA, vtkPolyData *origPdB) {
+    meshA = GetMesh(origPdA);
+    meshB = GetMesh(origPdB);
 
     std::cout << meshA.verts.size() << std::endl;
     std::cout << meshB.verts.size() << std::endl;
 
-    if (meshA.faces.empty() || meshB.faces.empty()) {
-        return;
-    }
-
-    auto nonManifoldEdgesA = GetNonManifoldEdges(meshA);
-    auto nonManifoldEdgesB = GetNonManifoldEdges(meshB);
-
-    std::cout << nonManifoldEdgesA.size() << std::endl;
-    std::cout << nonManifoldEdgesB.size() << std::endl;
-
-    UpdatePlanes(meshA);
-    UpdatePlanes(meshB);
-
-    auto pdA = GetPolyData(meshA);
-    auto pdB = GetPolyData(meshB);
+    pdA = GetPolyData(meshA);
+    pdB = GetPolyData(meshB);
 
     std::cout << ComputeMaxPlanarityError(pdA) << std::endl;
     std::cout << ComputeMaxPlanarityError(pdB) << std::endl;
+
+    lines = CreateLines();
+}
+
+vtkSmartPointer<vtkPolyData> Contact::GetPolyDataA () {
+    return pdA;
+}
+
+vtkSmartPointer<vtkPolyData> Contact::GetPolyDataB () {
+    return pdB;
+}
+
+vtkSmartPointer<vtkPolyData> Contact::GetLines () {
+    return lines;
+}
+
+vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
+    std::vector<Pair2> intersections;
 
     auto treeA = vtkSmartPointer<vtkOBBTree>::New();
     treeA->SetDataSet(pdA);
@@ -1116,10 +977,13 @@ void Go (vtkPolyData *origPdA, vtkPolyData *origPdB) {
     treeA->BuildLocator();
     treeB->BuildLocator();
 
-    treeA->IntersectWithOBBTree(treeB, nullptr, Intersect, nullptr);
+    treeA->IntersectWithOBBTree(treeB, nullptr, Intersect, &intersections);
 
-    std::vector<Pair> congruentPairs;
-    std::vector<Pair> nonCongruentPairs;
+    UpdatePlanes(meshA);
+    UpdatePlanes(meshB);
+
+    std::vector<Pair2> congruentPairs;
+    std::vector<Pair2> nonCongruentPairs;
 
     for (auto pair : intersections) {
         auto faceA = meshA.faces[pair.a];
@@ -1241,6 +1105,8 @@ void Go (vtkPolyData *origPdA, vtkPolyData *origPdB) {
         planesB->SetValue(i, -1);
     }
 
+    std::vector<GlobalPlane> globalPlanes;
+
     for (const auto &group : groups) {
         for (const Node &node : group) {
             std::cout << "(" << node.src << node.index << "), ";
@@ -1303,8 +1169,8 @@ void Go (vtkPolyData *origPdA, vtkPolyData *origPdB) {
     const int maxIters = 100;
 
     for (int iter = 0; iter < maxIters; iter++) {
-        double dispA = FindNewVerts(meshA);
-        double dispB = FindNewVerts(meshB);
+        double dispA = FindNewVerts(meshA, globalPlanes);
+        double dispB = FindNewVerts(meshB, globalPlanes);
 
         double maxDisp = std::max(dispA, dispB);
 
@@ -1344,8 +1210,8 @@ void Go (vtkPolyData *origPdA, vtkPolyData *origPdB) {
     pdA->GetCellData()->AddArray(planesA);
     pdB->GetCellData()->AddArray(planesB);
 
-    SaveMesh(pdA, meshA, "modified_MeshA.vtk");
-    SaveMesh(pdB, meshB, "modified_MeshB.vtk");
+    UpdatePoints(pdA, meshA);
+    UpdatePoints(pdB, meshB);
 
     double maxDisp = 0;
 
@@ -1473,86 +1339,106 @@ void Go (vtkPolyData *origPdA, vtkPolyData *origPdB) {
             results[index] = PairResult{pair.a, pair.b, std::move(interPtsA), std::move(interPtsB)};
         });
 
-    try {
-        Contact contact;
+    auto pts = vtkSmartPointer<vtkPoints>::New();
+    pts->SetDataTypeToDouble();
 
-        for (auto &result : results) {
-            if ((result.interPtsA.size() & 1) == 0 && (result.interPtsB.size() & 1) == 0) {
-                contact.AddLines(result.interPtsA, result.interPtsB, result.pairA, result.pairB, nonManifoldEdgesA, nonManifoldEdgesB);
-            }
+    auto lines = vtkSmartPointer<vtkPolyData>::New();
+    lines->SetPoints(pts);
+    lines->Allocate(1000);
+
+    auto contA = vtkSmartPointer<vtkIdTypeArray>::New();
+    auto contB = vtkSmartPointer<vtkIdTypeArray>::New();
+
+    contA->ReserveTuples(1000);
+    contB->ReserveTuples(1000);
+
+    contA->SetName("cA");
+    contB->SetName("cB");
+
+    lines->GetCellData()->AddArray(contA);
+    lines->GetCellData()->AddArray(contB);
+
+    auto nonManifoldEdgesA = GetNonManifoldEdges(meshA);
+    auto nonManifoldEdgesB = GetNonManifoldEdges(meshB);
+
+    auto AddLines = [&](InterPts &interA, InterPts &interB, vtkIdType idA, vtkIdType idB) {
+        if (interA.size() == 0 || interB.size() == 0) {
+            return;
         }
 
-        contact.Save("lines.vtk");
+        OverlapedLines overlaps;
+        OverlapLines(overlaps, interA, interB);
+
+        OverlapedLines::const_iterator itr;
+
+        for (itr = overlaps.begin(); itr != overlaps.end(); ++itr) {
+            auto &f = std::get<0>(*itr);
+            auto &s = std::get<1>(*itr);
+
+            auto edgeF = std::make_pair(f.edge.a, f.edge.b);
+            auto edgeS = std::make_pair(s.edge.a, s.edge.b);
+
+            if ((f.src == Src::A && nonManifoldEdgesA.count(edgeF)) ||
+                (s.src == Src::A && nonManifoldEdgesA.count(edgeS)) ||
+                (f.src == Src::B && nonManifoldEdgesB.count(edgeF)) ||
+                (s.src == Src::B && nonManifoldEdgesB.count(edgeS))) {
+
+                throw "";
+            }
+
+            auto linePts = vtkSmartPointer<vtkIdList>::New();
+
+            linePts->InsertNextId(pts->InsertNextPoint(f.pt));
+            linePts->InsertNextId(pts->InsertNextPoint(s.pt));
+
+            lines->InsertNextCell(VTK_LINE, linePts);
+
+            contA->InsertNextValue(idA);
+            contB->InsertNextValue(idB);
+        }
+    };
+
+    try {
+        for (auto &result : results) {
+            if ((result.interPtsA.size() & 1) == 0 && (result.interPtsB.size() & 1) == 0) {
+                AddLines(result.interPtsA, result.interPtsB, result.pairA, result.pairB);
+            }
+        }
     } catch (...) {
         std::cerr << "Contact failed" << std::endl;
+
+        return nullptr;
     }
 
+    auto clean = vtkSmartPointer<vtkCleanPolyData>::New();
+    clean->SetInputData(lines);
+    clean->ToleranceIsAbsoluteOn();
+    clean->SetAbsoluteTolerance(1e-5);
+    clean->ConvertLinesToPointsOff();
+    clean->Update();
+
+    return clean->GetOutput();
 }
 
-int main () {
-    auto readerA = vtkSmartPointer<vtkPolyDataReader>::New();
-    readerA->SetFileName("../bug3/MeshA.vtk");
+void Contact::Save (vtkPolyData *pd, const std::string &filename) {
+    auto writer = vtkSmartPointer<vtkPolyDataWriter>::New();
+    writer->SetFileName(filename.c_str());
+    writer->SetInputData(pd);
+    writer->Update();
 
-    auto readerB = vtkSmartPointer<vtkPolyDataReader>::New();
-    readerB->SetFileName("../bug3/MeshB.vtk");
+    std::cout << filename << " saved" << std::endl;
+}
 
-    readerA->Update();
-    readerB->Update();
+void Contact::SaveAll (const std::string prefix) {
+    if (pdA) {
+        Save(pdA, prefix + "pdA.vtk");
+    }
 
-    Go(readerA->GetOutput(), readerB->GetOutput());
+    if (pdB) {
+        Save(pdB, prefix + "pdB.vtk");
+    }
 
-    /*auto sphereA = vtkSmartPointer<vtkSphereSource>::New();
-    auto sphereB = vtkSmartPointer<vtkSphereSource>::New();
-
-    const vtkIdType resolution = 30;
-
-    sphereA->SetThetaResolution(resolution);
-    sphereA->SetPhiResolution(resolution);
-    sphereA->LatLongTessellationOn();
-
-    sphereB->SetThetaResolution(resolution);
-    sphereB->SetPhiResolution(resolution);
-
-    sphereA->Update();
-    sphereB->Update();
-
-    auto transform = vtkSmartPointer<vtkTransform>::New();
-    transform->RotateZ(180/resolution);
-    transform->RotateX(180/resolution);
-
-    auto tf = vtkSmartPointer<vtkTransformFilter>::New();
-    tf->SetInputConnection(sphereB->GetOutputPort());
-    tf->SetTransform(transform);
-
-    auto stripper = vtkSmartPointer<vtkStripper>::New();
-    stripper->SetInputConnection(tf->GetOutputPort());
-    stripper->SetMaximumLength(10);
-
-    stripper->Update();
-
-    Go(sphereA->GetOutput(), stripper->GetOutput());*/
-
-    /*auto transform = vtkSmartPointer<vtkTransform>::New();
-    transform->RotateX(5);
-    transform->RotateY(5);
-
-    auto readerA = vtkSmartPointer<vtkPolyDataReader>::New();
-    readerA->SetFileName("../bug3/CubeA.vtk");
-
-    auto readerB = vtkSmartPointer<vtkPolyDataReader>::New();
-    readerB->SetFileName("../bug3/CubeB.vtk");
-
-    auto tfA = vtkSmartPointer<vtkTransformFilter>::New();
-    tfA->SetInputConnection(readerA->GetOutputPort());
-    tfA->SetTransform(transform);
-
-    auto tfB = vtkSmartPointer<vtkTransformFilter>::New();
-    tfB->SetInputConnection(readerB->GetOutputPort());
-    tfB->SetTransform(transform);
-
-    tfA->Update();
-    tfB->Update();
-
-    Go(tfA->GetPolyDataOutput(), tfB->GetPolyDataOutput());*/
-
+    if (lines) {
+        Save(lines, prefix + "lines.vtk");
+    }
 }

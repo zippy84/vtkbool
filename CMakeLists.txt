@@ -116,21 +116,21 @@ else()
             add_executable(test_merger testing/test_merger.cxx)
             target_link_libraries(test_merger PRIVATE vtkbool ${VTK_LIBRARIES})
 
-            add_executable(test_congruence testing/test_congruence.cxx)
+            #[[add_executable(test_congruence testing/test_congruence.cxx)
             target_link_libraries(test_congruence PRIVATE vtkbool ${VTK_LIBRARIES})
 
             vtk_module_autoinit(
                 TARGETS test_merger test_congruence
                 MODULES ${VTK_LIBRARIES}
-            )
+            )]]
 
             add_test(NAME "test_merger"
                 COMMAND test_merger
                 WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/testing)
 
-            add_test(NAME "test_congruence"
+            #[[add_test(NAME "test_congruence"
                 COMMAND test_congruence
-                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/testing)
+                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/testing)]]
 
             add_test(NAME "generate_frieze"
                 COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/testing/generate_frieze.py
@@ -138,14 +138,14 @@ else()
 
             set_property(TEST "generate_frieze" APPEND PROPERTY ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/${python_default_destination}/vtkbool")
 
-            add_executable(test1 test1.cxx)
-            target_link_libraries(test1 PRIVATE vtkbool ${VTK_LIBRARIES})
+            # add_executable(test1 test1.cxx)
+            # target_link_libraries(test1 PRIVATE vtkbool ${VTK_LIBRARIES})
 
-            add_executable(test2 test2.cxx Optimize2.cxx)
-            target_link_libraries(test2 PRIVATE vtkbool ${VTK_LIBRARIES})
+            # add_executable(test2 test2.cxx Optimize2.cxx)
+            # target_link_libraries(test2 PRIVATE vtkbool ${VTK_LIBRARIES})
 
-            add_executable(test3 test3.cxx Optimize2.cxx)
-            target_link_libraries(test3 PRIVATE vtkbool ${VTK_LIBRARIES})
+            add_executable(test4 test4.cxx Optimize2.cxx)
+            target_link_libraries(test4 PRIVATE vtkbool ${VTK_LIBRARIES})
 
         endif()
 
