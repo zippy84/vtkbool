@@ -315,7 +315,7 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
 
         times.push_back(clock::now()-start);
 
-#ifdef DEBUG
+// #ifdef DEBUG
         double sum = std::chrono::duration_cast<std::chrono::duration<double>>(std::accumulate(times.begin(), times.end(), clock::duration())).count();
 
         std::vector<clock::duration>::const_iterator itr;
@@ -326,7 +326,7 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
                 << ": " << time << "s (" << (time/sum*100) << "%)"
                 << std::endl;
         }
-#endif
+// #endif
 
     }
 

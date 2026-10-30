@@ -258,21 +258,7 @@ void FlattenPoly (const Poly &poly, Poly &out, const Base &base) {
     }
 }
 
-void FlattenPoly2 (const Poly &poly, Poly &out, const Base2 &base) {
-    double pt[3], tr[3];
-
-    for (auto &p : poly) {
-        pt[0] = p.x;
-        pt[1] = p.y;
-        pt[2] = p.z;
-
-        base.Transform(pt, tr);
-
-        out.emplace_back(tr[0], tr[1], tr[2], p.id);
-    }
-}
-
-std::shared_ptr<Proj> GetEdgeProj (const Poly &poly, const Point3d &p) {
+/*std::shared_ptr<Proj> GetEdgeProj (const Poly &poly, const Point3d &p) {
     Poly::const_iterator itrA, itrB;
 
     double d, t;
@@ -328,29 +314,6 @@ void ProjOnLine (vtkPolyData *pd, const Pair &line, const Point3d &p, std::share
     ProjOnLine(a, b, p, &d, &t, proj);
 }
 
-vtkSmartPointer<vtkPolyData> CreatePolyData (const PolysType &polys) {
-    auto pts = vtkSmartPointer<vtkPoints>::New();
-    pts->SetDataTypeToDouble();
-
-    auto pd = vtkSmartPointer<vtkPolyData>::New();
-    pd->SetPoints(pts);
-    pd->Allocate(100);
-
-    for (const auto &poly : polys) {
-        auto cell = vtkSmartPointer<vtkIdList>::New();
-
-        for (const auto &p : poly) {
-            cell->InsertNextId(pts->InsertNextPoint(p.x, p.y, p.z));
-        }
-
-        pd->InsertNextCell(VTK_POLYGON, cell);
-    }
-
-    pd->Squeeze();
-
-    return pd;
-}
-
 double GetTriangleQuality (const Poly &poly) {
     double n[3];
 
@@ -387,4 +350,27 @@ Point3d GetCentroid (const Poly &poly) {
     z /= static_cast<double>(poly.size());
 
     return { x, y, z};
+}*/
+
+vtkSmartPointer<vtkPolyData> CreatePolyData (const PolysType &polys) {
+    auto pts = vtkSmartPointer<vtkPoints>::New();
+    pts->SetDataTypeToDouble();
+
+    auto pd = vtkSmartPointer<vtkPolyData>::New();
+    pd->SetPoints(pts);
+    pd->Allocate(100);
+
+    for (const auto &poly : polys) {
+        auto cell = vtkSmartPointer<vtkIdList>::New();
+
+        for (const auto &p : poly) {
+            cell->InsertNextId(pts->InsertNextPoint(p.x, p.y, p.z));
+        }
+
+        pd->InsertNextCell(VTK_POLYGON, cell);
+    }
+
+    pd->Squeeze();
+
+    return pd;
 }
