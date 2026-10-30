@@ -74,7 +74,7 @@ void FindPoints (vtkKdTreePointLocator *pl, const double *pt, vtkIdList *pts, do
     closest->Delete();
 }
 
-#ifdef DEBUG
+// #ifdef DEBUG
 void WriteVTK (const char *name, vtkPolyData *pd) {
     std::cout << "Writing " << name << std::endl;
 
@@ -84,7 +84,7 @@ void WriteVTK (const char *name, vtkPolyData *pd) {
     w->Update();
     w->Delete();
 }
-#endif
+// #endif
 
 double GetAngle (const double *vA, const double *vB, const double *n) {
     // http://math.stackexchange.com/questions/878785/how-to-find-an-angle-in-range0-360-between-2-vectors

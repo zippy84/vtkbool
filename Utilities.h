@@ -41,9 +41,9 @@ double ComputeNormal (vtkPoints *pts, double *n, vtkIdType num, const vtkIdType 
 
 void FindPoints (vtkKdTreePointLocator *pl, const double *pt, vtkIdList *pts, double tol = 1e-6);
 
-#ifdef DEBUG
+// #ifdef DEBUG
 void WriteVTK (const char *name, vtkPolyData *pd);
-#endif
+// #endif
 
 class Point3d {
 public:

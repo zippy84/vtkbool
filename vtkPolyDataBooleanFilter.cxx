@@ -133,8 +133,8 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
         vtkMTimeType timeB = pdB->GetMTime();
 
         if (timeA > timePdA || timeB > timePdB) {
+            start = clock::now();
 
-start = clock::now();
             Contact contact(pdA, pdB);
 
             modPdA = contact.GetPolyDataA();
@@ -142,11 +142,11 @@ start = clock::now();
 
             contLines = contact.GetLines();
 
-#ifdef DEBUG
+// #ifdef DEBUG
             WriteVTK("modPdA1.vtk", modPdA);
             WriteVTK("modPdB1.vtk", modPdB);
             WriteVTK("contLines.vtk", contLines);
-#endif
+// #endif
 
             times.push_back(clock::now()-start);
 

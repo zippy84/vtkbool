@@ -10,10 +10,10 @@
 int main () {
     {
         auto readerA = vtkSmartPointer<vtkPolyDataReader>::New();
-        readerA->SetFileName("../bug3/MeshA.vtk");
+        readerA->SetFileName("../testing/data_bug/MeshA.vtk");
 
         auto readerB = vtkSmartPointer<vtkPolyDataReader>::New();
-        readerB->SetFileName("../bug3/MeshB.vtk");
+        readerB->SetFileName("../testing/data_bug/MeshB.vtk");
 
         readerA->Update();
         readerB->Update();
@@ -60,10 +60,10 @@ int main () {
         transform->RotateY(5);
 
         auto readerA = vtkSmartPointer<vtkPolyDataReader>::New();
-        readerA->SetFileName("../bug3/CubeA.vtk");
+        readerA->SetFileName("../testing/data_bug/CubeA.vtk");
 
         auto readerB = vtkSmartPointer<vtkPolyDataReader>::New();
-        readerB->SetFileName("../bug3/CubeB.vtk");
+        readerB->SetFileName("../testing/data_bug/CubeB.vtk");
 
         auto tfA = vtkSmartPointer<vtkTransformFilter>::New();
         tfA->SetInputConnection(readerA->GetOutputPort());
