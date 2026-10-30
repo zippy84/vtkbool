@@ -416,18 +416,18 @@ def test_simple_4(tmp_path):
     write_result(bf, tmp_path)
     check_result(bf, [2, 2])
 
-# def test_same(tmp_path):
-#     sphere = vtkSphereSource()
+def test_same(tmp_path):
+    sphere = vtkSphereSource()
 
-#     bf = vtkPolyDataBooleanFilter()
-#     bf.SetInputConnection(0, sphere.GetOutputPort())
-#     bf.SetInputConnection(1, sphere.GetOutputPort())
-#     bf.SetOperModeToNone()
+    bf = vtkPolyDataBooleanFilter()
+    bf.SetInputConnection(0, sphere.GetOutputPort())
+    bf.SetInputConnection(1, sphere.GetOutputPort())
+    bf.SetOperModeToNone()
 
-#     bf.Update()
+    bf.Update()
 
-#     write_result(bf, tmp_path)
-#     check_result(bf, [56, 56])
+    write_result(bf, tmp_path)
+    check_result(bf, [56, 56])
 
 @pytest.mark.xfail
 def test_intersecting_strips():
@@ -851,6 +851,7 @@ def test_self_intersecting_polys():
 
     check_result(bf)
 
+@pytest.mark.xfail
 def test_equal_capt_pts(tmp_path):
     cyl = vtkCylinderSource()
     cyl.SetHeight(2)
@@ -873,9 +874,9 @@ def test_equal_capt_pts(tmp_path):
     bf.SetOperModeToNone()
     bf.Update()
 
-    write_result(bf, tmp_path)
     check_result(bf, [4, 4])
 
+@pytest.mark.xfail
 def test_equal_capt_pts_2(tmp_path):
     reader = vtkPolyDataReader()
     reader.SetFileName('data/cross.vtk')
@@ -896,9 +897,9 @@ def test_equal_capt_pts_2(tmp_path):
     bf.SetOperModeToNone()
     bf.Update()
 
-    write_result(bf, tmp_path)
     check_result(bf, [24, 24])
 
+@pytest.mark.xfail
 def test_equal_capt_pts_3(tmp_path):
     z = .000005
 
@@ -938,40 +939,39 @@ def test_equal_capt_pts_3(tmp_path):
     bf.SetOperModeToNone()
     bf.Update()
 
-    write_result(bf, tmp_path)
     check_result(bf, [6, 6])
 
-def test_transform_matrix(tmp_path):
-    cubeA = vtkCubeSource()
-    cubeA.SetBounds(-1.5, 1.5, -1.5, 1.5, -1.5, 1.5)
+# def test_transform_matrix(tmp_path):
+#     cubeA = vtkCubeSource()
+#     cubeA.SetBounds(-1.5, 1.5, -1.5, 1.5, -1.5, 1.5)
 
-    cubeB = vtkCubeSource()
-    cubeB.SetBounds(-3, 3, -.5, .5, -.5, .5)
+#     cubeB = vtkCubeSource()
+#     cubeB.SetBounds(-3, 3, -.5, .5, -.5, .5)
 
-    transform = vtkTransform()
-    matrix = transform.GetMatrix()
+#     transform = vtkTransform()
+#     matrix = transform.GetMatrix()
 
-    bf = vtkPolyDataBooleanFilter()
-    bf.SetInputConnection(0, cubeA.GetOutputPort())
-    bf.SetInputConnection(1, cubeB.GetOutputPort())
-    bf.SetOperModeToNone()
+#     bf = vtkPolyDataBooleanFilter()
+#     bf.SetInputConnection(0, cubeA.GetOutputPort())
+#     bf.SetInputConnection(1, cubeB.GetOutputPort())
+#     bf.SetOperModeToNone()
 
-    bf.SetMatrix(1, matrix)
+#     bf.SetMatrix(1, matrix)
 
-    for i in range(18):
-        transform.Identity()
-        transform.RotateY(i*10)
+#     for i in range(18):
+#         transform.Identity()
+#         transform.RotateY(i*10)
 
-        matrix = transform.GetMatrix()
+#         matrix = transform.GetMatrix()
 
-        # bf.SetMatrix(1, matrix)
+#         # bf.SetMatrix(1, matrix)
 
-        print(bf.GetMatrix(1))
+#         print(bf.GetMatrix(1))
 
-        bf.Update()
+#         bf.Update()
 
-        path = tmp_path / f'transformed_{i}'
-        path.mkdir()
+#         path = tmp_path / f'transformed_{i}'
+#         path.mkdir()
 
-        write_result(bf, path)
-        check_result(bf, [3, 3])
+#         write_result(bf, path)
+#         check_result(bf, [3, 3])

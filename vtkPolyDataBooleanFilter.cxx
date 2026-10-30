@@ -52,7 +52,6 @@ limitations under the License.
 #include "vtkPolyDataBooleanFilter.h"
 
 #include "Utilities.h"
-// #include "Optimize.h"
 #include "Contact2.h"
 #include "Merger.h"
 
@@ -144,8 +143,8 @@ start = clock::now();
             contLines = contact.GetLines();
 
 #ifdef DEBUG
-            WriteVTK("modPdA.vtk", modPdA);
-            WriteVTK("modPdB.vtk", modPdB);
+            WriteVTK("modPdA1.vtk", modPdA);
+            WriteVTK("modPdB1.vtk", modPdB);
             WriteVTK("contLines.vtk", contLines);
 #endif
 
