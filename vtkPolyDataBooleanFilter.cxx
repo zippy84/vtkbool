@@ -65,10 +65,10 @@ vtkPolyDataBooleanFilter::vtkPolyDataBooleanFilter () {
     timePdA = 0;
     timePdB = 0;
 
-    contLines = vtkSmartPointer<vtkPolyData>::New();
+    // contLines = vtkSmartPointer<vtkPolyData>::New();
 
-    modPdA = vtkSmartPointer<vtkPolyData>::New();
-    modPdB = vtkSmartPointer<vtkPolyData>::New();
+    // modPdA = vtkSmartPointer<vtkPolyData>::New();
+    // modPdB = vtkSmartPointer<vtkPolyData>::New();
 
     cellDataA = vtkSmartPointer<vtkCellData>::New();
     cellDataB = vtkSmartPointer<vtkCellData>::New();

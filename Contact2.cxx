@@ -86,7 +86,7 @@ Mesh GetMesh (vtkPolyData *pd) {
 
     vtkPoints *points = cleanedPd->GetPoints();
 
-     if (!points) {
+    if (!points) {
         return {};
     }
 
@@ -104,6 +104,38 @@ Mesh GetMesh (vtkPolyData *pd) {
     vtkIdType cellId;
     vtkIdList *pts;
     vtkIdType npts;
+
+    /*auto IsValidTriangle = [](const double a[3], const double b[3], const double c[3]) {
+        double ab[3] = { b[0] - a[0], b[1] - a[1], b[2] - a[2] };
+        double ac[3] = { c[0] - a[0], c[1] - a[1], c[2] - a[2] };
+
+        double cross[3] = {
+            ab[1] * ac[2] - ab[2] * ac[1],
+            ab[2] * ac[0] - ab[0] * ac[2],
+            ab[0] * ac[1] - ab[1] * ac[0]
+        };
+
+        double doubleAreaSq = cross[0] * cross[0] + cross[1] * cross[1] + cross[2] * cross[2];
+        return doubleAreaSq > 1e-14;
+    };*/
+
+    auto AddTriangle = [&](vtkIdType id0, vtkIdType id1, vtkIdType id2) {
+        Face face;
+        face.origCellId = cellId;
+        face.vertIds = {id0, id1, id2};
+
+        mesh.pointToFaces[id0].push_back(faceId);
+        mesh.pointToFaces[id1].push_back(faceId);
+        mesh.pointToFaces[id2].push_back(faceId);
+
+        mesh.faces.push_back(std::move(face));
+        faceId++;
+    };
+
+    auto GetDistance = [](const double a[3], const double b[3]) {
+        double dx = a[0] - b[0], dy = a[1] - b[1], dz = a[2] - b[2];
+        return dx * dx + dy * dy + dz * dz;
+    };
 
     vtkCellIterator *cellItr = cleanedPd->NewCellIterator();
 
@@ -137,53 +169,12 @@ Mesh GetMesh (vtkPolyData *pd) {
             points->GetPoint(v2, p2);
             points->GetPoint(v3, p3);
 
-            auto GetDistance = [](const double a[3], const double b[3]) {
-                double dx = a[0] - b[0], dy = a[1] - b[1], dz = a[2] - b[2];
-                return dx * dx + dy * dy + dz * dz;
-            };
-
             if (GetDistance(p0, p2) < GetDistance(p1, p3)) {
-                {
-                    Face face;
-                    face.origCellId = cellId;
-                    face.vertIds = {v0, v1, v2};
-                    mesh.pointToFaces[v0].push_back(faceId);
-                    mesh.pointToFaces[v1].push_back(faceId);
-                    mesh.pointToFaces[v2].push_back(faceId);
-                    mesh.faces.push_back(std::move(face));
-                    faceId++;
-                }
-                {
-                    Face face;
-                    face.origCellId = cellId;
-                    face.vertIds = {v2, v3, v0};
-                    mesh.pointToFaces[v2].push_back(faceId);
-                    mesh.pointToFaces[v3].push_back(faceId);
-                    mesh.pointToFaces[v0].push_back(faceId);
-                    mesh.faces.push_back(std::move(face));
-                    faceId++;
-                }
+                AddTriangle(v0, v1, v2);
+                AddTriangle(v2, v3, v0);
             } else {
-                {
-                    Face face;
-                    face.origCellId = cellId;
-                    face.vertIds = {v1, v2, v3};
-                    mesh.pointToFaces[v1].push_back(faceId);
-                    mesh.pointToFaces[v2].push_back(faceId);
-                    mesh.pointToFaces[v3].push_back(faceId);
-                    mesh.faces.push_back(std::move(face));
-                    faceId++;
-                }
-                {
-                    Face face;
-                    face.origCellId = cellId;
-                    face.vertIds = {v3, v0, v1};
-                    mesh.pointToFaces[v3].push_back(faceId);
-                    mesh.pointToFaces[v0].push_back(faceId);
-                    mesh.pointToFaces[v1].push_back(faceId);
-                    mesh.faces.push_back(std::move(face));
-                    faceId++;
-                }
+                AddTriangle(v1, v2, v3);
+                AddTriangle(v3, v0, v1);
             }
         } else if (cellItr->GetCellType() == VTK_TRIANGLE_STRIP) {
             for (vtkIdType i = 0; i < npts - 2; i++) {
@@ -192,7 +183,6 @@ Mesh GetMesh (vtkPolyData *pd) {
                 vtkIdType v2 = pts->GetId(i + 2);
 
                 if (v0 == v1 || v1 == v2 || v2 == v0) {
-                    std::cout << "[" << v0 << ", " << v1 << ", " << v2 << "]" << std::endl;
                     continue;
                 }
 
@@ -257,9 +247,14 @@ void UpdatePlanes (Mesh &mesh) {
             face.centroid.y /= static_cast<double>(numVerts);
             face.centroid.z /= static_cast<double>(numVerts);
 
-            double len = std::sqrt(face.normal.x * face.normal.x + face.normal.y * face.normal.y + face.normal.z * face.normal.z);
+            double lenSq = face.normal.x * face.normal.x + face.normal.y * face.normal.y + face.normal.z * face.normal.z;
 
-            face.normal.x /= len; face.normal.y /= len; face.normal.z /= len;
+            if (lenSq > 1e-12) {
+                double len = std::sqrt(lenSq);
+                face.normal.x /= len;
+                face.normal.y /= len;
+                face.normal.z /= len;
+            }
 
             face.d = face.normal.x * face.centroid.x + face.normal.y * face.centroid.y + face.normal.z * face.centroid.z;
         });
@@ -357,9 +352,10 @@ bool FitPlane (const std::vector<Vector3> &points, Vector3 &normal, double &d, i
         normal.z += delta[2];
         d += delta[3];
 
-        double len = std::sqrt(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z);
+        double lenSq = normal.x * normal.x + normal.y * normal.y + normal.z * normal.z;
 
-        if (len > 1e-12) {
+        if (lenSq > 1e-12) {
+            double len = std::sqrt(lenSq);
             normal.x /= len;
             normal.y /= len;
             normal.z /= len;
@@ -933,9 +929,10 @@ double ComputeMaxPlanarityError (vtkPolyData *pd) {
         centroid.y /= static_cast<double>(npts);
         centroid.z /= static_cast<double>(npts);
 
-        double len = std::sqrt(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z);
+        double lenSq = normal.x * normal.x + normal.y * normal.y + normal.z * normal.z;
 
-        if (len > 1e-12) {
+        if (lenSq > 1e-12) {
+            double len = std::sqrt(lenSq);
             normal.x /= len; normal.y /= len; normal.z /= len;
         }
 
@@ -1272,16 +1269,16 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
             const auto &faceA = meshA.faces[pair.a];
             const auto &faceB = meshB.faces[pair.b];
 
-            /*if (pair.a == 18298 && pair.b == 1567) {
+            /*if (pair.a == 0 && pair.b == 2247) {
                 std::cout << pair.a << " [";
                 for (auto id : faceA.vertIds) {
-                    std::cout << id << ", ";
+                    std::cout << id << " " << meshA.verts[id] << ", ";
                 }
                 std::cout << "]" << std::endl;
 
                 std::cout << pair.b << " [";
                 for (auto id : faceB.vertIds) {
-                    std::cout << id << ", ";
+                    std::cout << id << " " << meshB.verts[id] << ", ";
                 }
                 std::cout << "]" << std::endl;
             } else {
