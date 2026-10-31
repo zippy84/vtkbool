@@ -105,20 +105,6 @@ Mesh GetMesh (vtkPolyData *pd) {
     vtkIdList *pts;
     vtkIdType npts;
 
-    /*auto IsValidTriangle = [](const double a[3], const double b[3], const double c[3]) {
-        double ab[3] = { b[0] - a[0], b[1] - a[1], b[2] - a[2] };
-        double ac[3] = { c[0] - a[0], c[1] - a[1], c[2] - a[2] };
-
-        double cross[3] = {
-            ab[1] * ac[2] - ab[2] * ac[1],
-            ab[2] * ac[0] - ab[0] * ac[2],
-            ab[0] * ac[1] - ab[1] * ac[0]
-        };
-
-        double doubleAreaSq = cross[0] * cross[0] + cross[1] * cross[1] + cross[2] * cross[2];
-        return doubleAreaSq > 1e-14;
-    };*/
-
     auto AddTriangle = [&](vtkIdType id0, vtkIdType id1, vtkIdType id2) {
         Face face;
         face.origCellId = cellId;
@@ -135,6 +121,17 @@ Mesh GetMesh (vtkPolyData *pd) {
     auto GetDistance = [](const double a[3], const double b[3]) {
         double dx = a[0] - b[0], dy = a[1] - b[1], dz = a[2] - b[2];
         return dx * dx + dy * dy + dz * dz;
+    };
+
+    auto IsNonConvex = [](const double a[3], const double b[3], const double c[3], const double nx, const double ny, const double nz) {
+        double ax = b[0] - a[0], ay = b[1] - a[1], az = b[2] - a[2];
+        double bx = c[0] - b[0], by = c[1] - b[1], bz = c[2] - b[2];
+
+        double cx = ay * bz - az * by;
+        double cy = az * bx - ax * bz;
+        double cz = ax * by - ay * bx;
+
+        return cx * nx + cy * ny + cz * nz < 0;
     };
 
     vtkCellIterator *cellItr = cleanedPd->NewCellIterator();
@@ -169,12 +166,76 @@ Mesh GetMesh (vtkPolyData *pd) {
             points->GetPoint(v2, p2);
             points->GetPoint(v3, p3);
 
-            if (GetDistance(p0, p2) < GetDistance(p1, p3)) {
-                AddTriangle(v0, v1, v2);
-                AddTriangle(v2, v3, v0);
+            double nx = (p0[1] - p1[1]) * (p0[2] + p1[2]) +
+                (p1[1] - p2[1]) * (p1[2] + p2[2]) +
+                (p2[1] - p3[1]) * (p2[2] + p3[2]) +
+                (p3[1] - p0[1]) * (p3[2] + p0[2]);
+
+            double ny = (p0[2] - p1[2]) * (p0[0] + p1[0]) +
+                (p1[2] - p2[2]) * (p1[0] + p2[0]) +
+                (p2[2] - p3[2]) * (p2[0] + p3[0]) +
+                (p3[2] - p0[2]) * (p3[0] + p0[0]);
+
+            double nz = (p0[0] - p1[0]) * (p0[1] + p1[1]) +
+                (p1[0] - p2[0]) * (p1[1] + p2[1]) +
+                (p2[0] - p3[0]) * (p2[1] + p3[1]) +
+                (p3[0] - p0[0]) * (p3[1] + p0[1]);
+
+            double lenSq = nx * nx + ny * ny + nz * nz;
+
+            if (lenSq > 1e-12) {
+                double len = std::sqrt(lenSq);
+
+                nx /= len;
+                ny /= len;
+                nz /= len;
+            }
+
+            double cx = (p0[0] + p1[0] + p2[0] + p3[0]) / 4;
+            double cy = (p0[1] + p1[1] + p2[1] + p3[1]) / 4;
+            double cz = (p0[2] + p1[2] + p2[2] + p3[2]) / 4;
+
+            double d = nx * cx + ny * cy + nz * cz;
+
+            double d0 = nx * p0[0] + ny * p0[1] + nz * p0[2] - d;
+            double d1 = nx * p1[0] + ny * p1[1] + nz * p1[2] - d;
+            double d2 = nx * p2[0] + ny * p2[1] + nz * p2[2] - d;
+            double d3 = nx * p3[0] + ny * p3[1] + nz * p3[2] - d;
+
+            if (std::abs(d0) < 1e-6 && std::abs(d1) < 1e-6 && std::abs(d2) < 1e-6 && std::abs(d3) < 1e-6) {
+                Face face;
+                face.origCellId = cellId;
+                face.vertIds = {v0, v1, v2, v3};
+
+                mesh.pointToFaces[v0].push_back(faceId);
+                mesh.pointToFaces[v1].push_back(faceId);
+                mesh.pointToFaces[v2].push_back(faceId);
+                mesh.pointToFaces[v3].push_back(faceId);
+
+                mesh.faces.push_back(std::move(face));
+                faceId++;
             } else {
-                AddTriangle(v1, v2, v3);
-                AddTriangle(v3, v0, v1);
+                if (IsNonConvex(p3, p0, p1, nx, ny, nz)) {
+                    AddTriangle(v0, v1, v2);
+                    AddTriangle(v2, v3, v0);
+                } else if (IsNonConvex(p0, p1, p2, nx, ny, nz)) {
+                    AddTriangle(v1, v2, v3);
+                    AddTriangle(v3, v0, v1);
+                } else if (IsNonConvex(p1, p2, p3, nx, ny, nz)) {
+                    AddTriangle(v2, v3, v0);
+                    AddTriangle(v0, v1, v2);
+                } else if (IsNonConvex(p2, p3, p0, nx, ny, nz)) {
+                    AddTriangle(v3, v0, v1);
+                    AddTriangle(v1, v2, v3);
+                } else {
+                    if (GetDistance(p0, p2) < GetDistance(p1, p3)) {
+                        AddTriangle(v0, v1, v2);
+                        AddTriangle(v2, v3, v0);
+                    } else {
+                        AddTriangle(v1, v2, v3);
+                        AddTriangle(v3, v0, v1);
+                    }
+                }
             }
         } else if (cellItr->GetCellType() == VTK_TRIANGLE_STRIP) {
             for (vtkIdType i = 0; i < npts - 2; i++) {
@@ -186,25 +247,11 @@ Mesh GetMesh (vtkPolyData *pd) {
                     continue;
                 }
 
-                Face face;
-                face.origCellId = cellId;
-
-                if (i % 2 == 1) {
-                    face.vertIds = {v0, v2, v1};
-
-                    mesh.pointToFaces[v0].push_back(faceId);
-                    mesh.pointToFaces[v2].push_back(faceId);
-                    mesh.pointToFaces[v1].push_back(faceId);
+                if (i % 2 == 0) {
+                    AddTriangle(v0, v1, v2);
                 } else {
-                    face.vertIds = {v0, v1, v2};
-
-                    mesh.pointToFaces[v0].push_back(faceId);
-                    mesh.pointToFaces[v1].push_back(faceId);
-                    mesh.pointToFaces[v2].push_back(faceId);
+                    AddTriangle(v0, v2, v1);
                 }
-
-                mesh.faces.push_back(std::move(face));
-                faceId++;
             }
         }
     }
