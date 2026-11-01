@@ -7,7 +7,7 @@ pushd testing
 
 # pytest test_filter.py
 
-# ./generate_frieze.py
+./generate_frieze.py
 
 # pytest test_filter.py::test_simple -s
 # pytest test_filter.py::test_simple_2 -s
@@ -28,7 +28,7 @@ pushd testing
 # pytest test_filter.py::test_branched_3 -s
 # pytest test_filter.py::test_branched_4 -s
 # pytest test_filter.py::test_branched_5 -s
-pytest test_filter.py::test_branched_6 -s
+# pytest test_filter.py::test_branched_6 -s
 # pytest test_filter.py::test_self_intersecting_polys -s
 # pytest test_filter.py::test_equal_capt_pts -s
 # pytest test_filter.py::test_equal_capt_pts_2 -s

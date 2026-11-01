@@ -18,10 +18,13 @@ limitations under the License.
 
 #include <vtkSmartPointer.h>
 #include <vtkPolyDataReader.h>
+#include <vtkPolyDataWriter.h>
 #include <vtkSphereSource.h>
 #include <vtkTransform.h>
 #include <vtkTransformFilter.h>
 #include <vtkStripper.h>
+
+#include "vtkPolyDataBooleanFilter.h"
 
 int main () {
     {
@@ -35,6 +38,15 @@ int main () {
         readerB->Update();
 
         Contact(readerA->GetOutput(), readerB->GetOutput()).SaveAll("Test1_");
+
+        auto bf = vtkSmartPointer<vtkPolyDataBooleanFilter>::New();
+        bf->SetInputConnection(0, readerA->GetOutputPort());
+        bf->SetInputConnection(1, readerB->GetOutputPort());
+
+        auto writer = vtkSmartPointer<vtkPolyDataWriter>::New();
+        writer->SetInputConnection(bf->GetOutputPort());
+        writer->SetFileName("Test1_result.vtk");
+        writer->Update();
     }
 
     {
@@ -68,6 +80,15 @@ int main () {
         stripper->Update();
 
         Contact(sphereA->GetOutput(), stripper->GetOutput()).SaveAll("Test2_");
+
+        auto bf = vtkSmartPointer<vtkPolyDataBooleanFilter>::New();
+        bf->SetInputConnection(0, sphereA->GetOutputPort());
+        bf->SetInputConnection(1, stripper->GetOutputPort());
+
+        auto writer = vtkSmartPointer<vtkPolyDataWriter>::New();
+        writer->SetInputConnection(bf->GetOutputPort());
+        writer->SetFileName("Test2_result.vtk");
+        writer->Update();
     }
 
     {
@@ -93,6 +114,15 @@ int main () {
         tfB->Update();
 
         Contact(tfA->GetPolyDataOutput(), tfB->GetPolyDataOutput()).SaveAll("Test3_");
+
+        auto bf = vtkSmartPointer<vtkPolyDataBooleanFilter>::New();
+        bf->SetInputConnection(0, tfA->GetOutputPort());
+        bf->SetInputConnection(1, tfB->GetOutputPort());
+
+        auto writer = vtkSmartPointer<vtkPolyDataWriter>::New();
+        writer->SetInputConnection(bf->GetOutputPort());
+        writer->SetFileName("Test3_result.vtk");
+        writer->Update();
     }
 
 }

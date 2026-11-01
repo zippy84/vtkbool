@@ -1273,8 +1273,8 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
     planesA->SetName("planes");
     planesB->SetName("planes");
 
-    pdA->GetCellData()->AddArray(planesA);
-    pdB->GetCellData()->AddArray(planesB);
+    // pdA->GetCellData()->AddArray(planesA);
+    // pdB->GetCellData()->AddArray(planesB);
 
     UpdatePoints(pdA, meshA);
     UpdatePoints(pdB, meshB);

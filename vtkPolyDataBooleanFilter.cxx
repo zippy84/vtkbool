@@ -151,7 +151,7 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
             times.push_back(clock::now()-start);
 
             if (contLines == nullptr) {
-                vtkErrorMacro("Contact failed");
+                vtkErrorMacro("Contact failed.");
                 return 1;
             }
 
@@ -159,6 +159,9 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
                 vtkErrorMacro("There is no contact.");
                 return 1;
             }
+
+            modPdA->EditableOn();
+            modPdB->EditableOn();
 
             vtkIdType i;
 
@@ -2939,11 +2942,11 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
     vtkIdTypeArray *newOrigCellIdsB = vtkIdTypeArray::New();
     newOrigCellIdsB->SetName("OrigCellIdsB");
 
-    vtkCellData *newCellDataA = vtkCellData::New();
-    newCellDataA->CopyAllocate(cellDataA);
+    // vtkCellData *newCellDataA = vtkCellData::New();
+    // newCellDataA->CopyAllocate(cellDataA);
 
-    vtkCellData *newCellDataB = vtkCellData::New();
-    newCellDataB->CopyAllocate(cellDataB);
+    // vtkCellData *newCellDataB = vtkCellData::New();
+    // newCellDataB->CopyAllocate(cellDataB);
 
     vtkIdType cellId;
 
@@ -2953,7 +2956,7 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
         newOrigCellIdsA->InsertNextValue(cellId);
         newOrigCellIdsB->InsertNextValue(-1);
 
-        newCellDataA->CopyData(cellDataA, cellId, i);
+        // newCellDataA->CopyData(cellDataA, cellId, i);
     }
 
     for (i = 0; i < regsB->GetNumberOfCells(); i++) {
@@ -2962,17 +2965,17 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
         newOrigCellIdsB->InsertNextValue(cellId);
         newOrigCellIdsA->InsertNextValue(-1);
 
-        newCellDataB->CopyData(cellDataB, cellId, i);
+        // newCellDataB->CopyData(cellDataB, cellId, i);
     }
 
     regsA->GetCellData()->Initialize();
     regsB->GetCellData()->Initialize();
 
-    regsA->GetCellData()->ShallowCopy(newCellDataA);
-    regsB->GetCellData()->ShallowCopy(newCellDataB);
+    // regsA->GetCellData()->ShallowCopy(newCellDataA);
+    // regsB->GetCellData()->ShallowCopy(newCellDataB);
 
-    newCellDataA->Delete();
-    newCellDataB->Delete();
+    // newCellDataA->Delete();
+    // newCellDataB->Delete();
 
     // zusammenführung
 
