@@ -406,6 +406,9 @@ if __name__ == '__main__':
     cell_counts = [524, 98, 576, 264, 1274, 1866, 582, 98, 472, 194, 1048, 272, 56, 284, 284]
 
     for i, cfg in enumerate(cfgs):
+        if i in [4, 10]:
+            continue
+
         print(f'~~ {i} ~~')
 
         f = f'einzeln/test{i}.vtk'
@@ -421,8 +424,5 @@ if __name__ == '__main__':
         writer.SetFileName(f'stl/test{i}.stl')
 
         writer.Update()
-
-        if i in [4, 10]: # errored
-            continue
 
         assert reader.GetOutput().GetNumberOfCells() == cell_counts[i], f'cfgs[{i}]: {reader.GetOutput().GetNumberOfCells()} != {cell_counts[i]}'

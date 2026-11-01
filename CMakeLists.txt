@@ -129,6 +129,10 @@ else()
             add_executable(test_bug testing/test_bug.cxx)
             target_link_libraries(test_bug PRIVATE vtkbool ${VTK_LIBRARIES})
 
+            add_test(NAME "test_bug"
+                COMMAND test_bug
+                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/testing)
+
         endif()
 
     endif()

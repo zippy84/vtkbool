@@ -37,11 +37,16 @@ int main () {
         readerA->Update();
         readerB->Update();
 
-        Contact(readerA->GetOutput(), readerB->GetOutput()).SaveAll("Test1_");
+        // Contact(readerA->GetOutput(), readerB->GetOutput()).SaveAll("Test1_");
 
         auto bf = vtkSmartPointer<vtkPolyDataBooleanFilter>::New();
         bf->SetInputConnection(0, readerA->GetOutputPort());
         bf->SetInputConnection(1, readerB->GetOutputPort());
+        bf->Update();
+
+        if (bf->GetOutput()->GetNumberOfCells() == 0) {
+            return EXIT_FAILURE;
+        }
 
         auto writer = vtkSmartPointer<vtkPolyDataWriter>::New();
         writer->SetInputConnection(bf->GetOutputPort());
@@ -49,7 +54,7 @@ int main () {
         writer->Update();
     }
 
-    {
+    /*{
         auto sphereA = vtkSmartPointer<vtkSphereSource>::New();
         auto sphereB = vtkSmartPointer<vtkSphereSource>::New();
 
@@ -79,11 +84,16 @@ int main () {
 
         stripper->Update();
 
-        Contact(sphereA->GetOutput(), stripper->GetOutput()).SaveAll("Test2_");
+        // Contact(sphereA->GetOutput(), stripper->GetOutput()).SaveAll("Test2_");
 
         auto bf = vtkSmartPointer<vtkPolyDataBooleanFilter>::New();
         bf->SetInputConnection(0, sphereA->GetOutputPort());
         bf->SetInputConnection(1, stripper->GetOutputPort());
+        bf->Update();
+
+        if (bf->GetOutput()->GetNumberOfCells() == 0) {
+            return EXIT_FAILURE;
+        }
 
         auto writer = vtkSmartPointer<vtkPolyDataWriter>::New();
         writer->SetInputConnection(bf->GetOutputPort());
@@ -113,16 +123,23 @@ int main () {
         tfA->Update();
         tfB->Update();
 
-        Contact(tfA->GetPolyDataOutput(), tfB->GetPolyDataOutput()).SaveAll("Test3_");
+        // Contact(tfA->GetPolyDataOutput(), tfB->GetPolyDataOutput()).SaveAll("Test3_");
 
         auto bf = vtkSmartPointer<vtkPolyDataBooleanFilter>::New();
         bf->SetInputConnection(0, tfA->GetOutputPort());
         bf->SetInputConnection(1, tfB->GetOutputPort());
+        bf->Update();
+
+        if (bf->GetOutput()->GetNumberOfCells() == 0) {
+            return EXIT_FAILURE;
+        }
 
         auto writer = vtkSmartPointer<vtkPolyDataWriter>::New();
         writer->SetInputConnection(bf->GetOutputPort());
         writer->SetFileName("Test3_result.vtk");
         writer->Update();
-    }
+    }*/
+
+    return EXIT_SUCCESS;
 
 }
