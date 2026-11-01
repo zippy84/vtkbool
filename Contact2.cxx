@@ -914,7 +914,12 @@ vtkSmartPointer<vtkPolyData> GetPolyData (const Mesh &mesh) {
 
     auto cellIds = vtkSmartPointer<vtkIdTypeArray>::New();
     cellIds->SetName("OrigCellIds");
+
+#if VTK_VERSION_NUMBER >= VTK_VERSION_CHECK(9, 7, 0)
     cellIds->ReserveTuples(numCells);
+#else
+    cellIds->Allocate(numCells);
+#endif
 
     const vtkIdType numVerts = static_cast<vtkIdType>(mesh.verts.size());
     points->SetNumberOfPoints(numVerts);
@@ -1409,8 +1414,13 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
     auto contA = vtkSmartPointer<vtkIdTypeArray>::New();
     auto contB = vtkSmartPointer<vtkIdTypeArray>::New();
 
+#if VTK_VERSION_NUMBER >= VTK_VERSION_CHECK(9, 7, 0)
     contA->ReserveTuples(1000);
     contB->ReserveTuples(1000);
+#else
+    contA->Allocate(1000);
+    contB->Allocate(1000);
+#endif
 
     contA->SetName("cA");
     contB->SetName("cB");

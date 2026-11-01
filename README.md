@@ -1,4 +1,4 @@
-# vtkbool [![CMake](https://github.com/zippy84/vtkbool/actions/workflows/cmake.yml/badge.svg)](https://github.com/zippy84/vtkbool/actions/workflows/cmake.yml) [![codecov](https://codecov.io/gh/zippy84/vtkbool/branch/master/graph/badge.svg?token=EUV9QKEW1M)](https://codecov.io/gh/zippy84/vtkbool) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10461186.svg)](https://zenodo.org/doi/10.5281/zenodo.10461186)
+# vtkbool [![CMake](https://github.com/zippy84/vtkbool/actions/workflows/cmake.yml/badge.svg)](https://github.com/zippy84/vtkbool/actions/workflows/cmake.yml) [![codecov](https://codecov.io/gh/zippy84/vtkbool/branch/master/graph/badge.svg?token=EUV9QKEW1M)](https://codecov.io/gh/zippy84/vtkbool) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10461186.svg)](https://zenodo.org/doi/10.5281/zenodo.10461186) [![Conda](https://img.shields.io/conda/vn/conda-forge/vtkbool?color=%2343b02a)](https://anaconda.org/conda-forge/vtkbool)
 
 ## About
 
@@ -12,7 +12,7 @@ This is an extension of the graphics library VTK. The goal of the extension is t
 - all types of polygonal cells are supported (triangles, quads, polygons, triangle-strips)
 - triangle-strips and quads will be transformed into triangles (quads only if their points are not on the same plane)
 - non-convex polygons are allowed
-- meshes can be stacked (coplanar polygons are right handled)
+- meshes can be stacked
 - the meshes don’t need to be watertight
 - CellData is passed (attached by the rules of vtkAppendPolyData)
 - contact-lines are available in the 3th output
@@ -22,7 +22,7 @@ This is an extension of the graphics library VTK. The goal of the extension is t
 
 ## Limitations
 
-- the filter assumes well defined triangles, quads and polygons
+- ~~the filter assumes well defined triangles, quads and polygons~~
 - PointData is not preserved - you have to do your own mapping with *OrigCellIdsA* and *OrigCellIdsB*
 
 ## Requirements
@@ -231,11 +231,11 @@ from vtkbool.vtkbool import vtkPolyDataBooleanFilter
 
   - *Found invalid intersection points.*
 
-    This problem occurs when an intersection point is located on congruent edges of a self-intersecting polygon.
+    ~~This problem occurs when an intersection point is located on congruent edges of a self-intersecting polygon.~~
 
   - *Intersection points do not lie on the edges (cells a, b).*
 
-    At least one intersection point does not lie on the boundary of the intersected polygon. The points of the polygon do not lie on a plane. The polygon is degenerated.
+    ~~At least one intersection point does not lie on the boundary of the intersected polygon. The points of the polygon do not lie on a plane. The polygon is degenerated.~~
 
   - *Intersection goes through non-manifold edges.*
 
@@ -243,7 +243,7 @@ from vtkbool.vtkbool import vtkPolyDataBooleanFilter
 
 - *Cannot prevent equal capture points.*
 
-  A capture point is the projection of a point onto one of the edges of the intersected polygon. This point, not the projection, is usually used by two lines that are assigned to the two adjacent polygons, sharing this edge. There is a case where two different points have the same projection. The error occurs when the problem could not be solved.
+  A capture point is the projection of a point onto one of the edges of the intersected polygon. This point, not the projection, is usually used by two lines that are assigned to the two adjacent polygons, sharing this edge. There is a case where two different points have the same projection. ~~The error occurs when the problem could not be solved.~~
 
 - *There is no contact.*
 
