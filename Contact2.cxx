@@ -41,6 +41,7 @@ limitations under the License.
 #include <vtkTransform.h>
 #include <vtkStripper.h>
 #include <vtkCellIterator.h>
+#include <vtkVersionMacros.h>
 
 std::ostream& operator<< (std::ostream &out, const Vector3 &vec) {
     out << "[" << vec.x << ", " << vec.y << ", " << vec.z << "]";
