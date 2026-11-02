@@ -1180,6 +1180,8 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
 
     std::vector<GlobalPlane> globalPlanes;
 
+    std::vector<size_t> isolatedA, isolatedB;
+
     for (const auto &group : groups) {
         for (const Node &node : group) {
             std::cout << "(" << node.src << node.index << "), ";
@@ -1197,6 +1199,14 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
         }
 
         if (faceIdsA.size() == 0 || faceIdsB.size() == 0) {
+            for (auto index : faceIdsA) {
+                isolatedA.push_back(index);
+            }
+
+            for (auto index : faceIdsB) {
+                isolatedB.push_back(index);
+            }
+
             continue; // hm, warum tritt das auf?
         }
 
@@ -1241,6 +1251,26 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
             planesB->SetValue(faceId, planeId);
         }
 
+    }
+
+    std::cout << "isolatedA [";
+    for (auto index : isolatedA) {
+        std::cout << index << ", ";
+    }
+    std::cout << "]" << std::endl;
+
+    std::cout << "isolatedB [";
+    for (auto index : isolatedB) {
+        std::cout << index << ", ";
+    }
+    std::cout << "]" << std::endl;
+
+    for (auto pair : congruentPairs) {
+        if (std::find(isolatedA.begin(), isolatedA.end(), pair.a) != isolatedA.end()) {
+            nonCongruentPairs.push_back(pair);
+        } else if (std::find(isolatedB.begin(), isolatedB.end(), pair.b) != isolatedB.end()) {
+            nonCongruentPairs.push_back(pair);
+        }
     }
 
     const int maxIters = 100;
