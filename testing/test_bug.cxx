@@ -27,7 +27,7 @@ limitations under the License.
 #include "vtkPolyDataBooleanFilter.h"
 
 int main () {
-    {
+    /*{
         auto readerA = vtkSmartPointer<vtkPolyDataReader>::New();
         readerA->SetFileName("../testing/data_bug/MeshA.vtk");
 
@@ -52,11 +52,14 @@ int main () {
         writer->SetInputConnection(bf->GetOutputPort());
         writer->SetFileName("Test1_result.vtk");
         writer->Update();
-    }
+    }*/
 
-    /*{
+    {
         auto sphereA = vtkSmartPointer<vtkSphereSource>::New();
         auto sphereB = vtkSmartPointer<vtkSphereSource>::New();
+
+        // sphereA->SetOutputPointsPrecision(vtkAlgorithm::DOUBLE_PRECISION);
+        // sphereB->SetOutputPointsPrecision(vtkAlgorithm::DOUBLE_PRECISION);
 
         const vtkIdType resolution = 30;
 
@@ -101,7 +104,7 @@ int main () {
         writer->Update();
     }
 
-    {
+    /*{
         auto transform = vtkSmartPointer<vtkTransform>::New();
         transform->RotateX(5);
         transform->RotateY(5);

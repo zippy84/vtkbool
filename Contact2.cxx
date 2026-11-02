@@ -910,6 +910,7 @@ NonManifoldEdges GetNonManifoldEdges (const Mesh &mesh) {
 vtkSmartPointer<vtkPolyData> GetPolyData (const Mesh &mesh) {
     auto pd = vtkSmartPointer<vtkPolyData>::New();
     auto points = vtkSmartPointer<vtkPoints>::New();
+    points->SetDataTypeToDouble();
 
     vtkIdType numCells = static_cast<vtkIdType>(mesh.faces.size());
 
@@ -1003,7 +1004,13 @@ double ComputeMaxPlanarityError (vtkPolyData *pd) {
     return maxError;
 }
 
-Contact::Contact (vtkPolyData *origPdA, vtkPolyData *origPdB) {
+Contact::Contact (vtkPolyData *origPdA, vtkPolyData *origPdB) : tol(1e-5) {
+    if ((origPdA->GetPoints() && origPdA->GetPoints()->GetDataType() == VTK_FLOAT) ||
+        (origPdB->GetPoints() && origPdB->GetPoints()->GetDataType() == VTK_FLOAT)) {
+
+        tol = 1e-3;
+    }
+
     meshA = GetMesh(origPdA);
     meshB = GetMesh(origPdB);
 
@@ -1073,7 +1080,7 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
             for (auto &id : faceA.vertIds) {
                 double distance = faceB.normal.x * meshA.verts[id].x + faceB.normal.y * meshA.verts[id].y + faceB.normal.z * meshA.verts[id].z - faceB.d;
 
-                if (std::abs(distance) > 1e-5) {
+                if (std::abs(distance) > tol) {
                     congruent = false;
                     break;
                 }
@@ -1144,7 +1151,7 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
 
                             const double prod = normal.x * seedNormal.x + normal.y * seedNormal.y + normal.z * seedNormal.z;
 
-                            if (std::abs(prod) > maxProd) {
+                            if (std::abs(prod) > maxProd) { // hängt hiermit zusammen
                                 visited.insert(neighbor);
                                 stack.push(neighbor);
                             }
@@ -1187,6 +1194,10 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
             } else {
                 faceIdsB.push_back(node.index);
             }
+        }
+
+        if (faceIdsA.size() == 0 || faceIdsB.size() == 0) {
+            continue; // hm, warum tritt das auf?
         }
 
         std::vector<Vector3> allPoints;
@@ -1273,8 +1284,8 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
     planesA->SetName("planes");
     planesB->SetName("planes");
 
-    // pdA->GetCellData()->AddArray(planesA);
-    // pdB->GetCellData()->AddArray(planesB);
+    pdA->GetCellData()->AddArray(planesA);
+    pdB->GetCellData()->AddArray(planesB);
 
     UpdatePoints(pdA, meshA);
     UpdatePoints(pdB, meshB);

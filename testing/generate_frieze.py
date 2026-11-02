@@ -266,7 +266,6 @@ class Frieze:
         result = bf3
 
         if self.cfg['end'] == 'D':
-
             _v = [math.cos(-ang)*v[0]-math.sin(-ang)*v[1],
                 math.sin(-ang)*v[0]+math.cos(-ang)*v[1]]
 
@@ -406,9 +405,6 @@ if __name__ == '__main__':
     cell_counts = [524, 98, 576, 264, 1274, 1866, 582, 98, 472, 194, 1048, 272, 56, 284, 284]
 
     for i, cfg in enumerate(cfgs):
-        if i in [4, 10]:
-            continue
-
         print(f'~~ {i} ~~')
 
         f = f'einzeln/test{i}.vtk'

@@ -143,6 +143,8 @@ class Contact {
     Mesh meshA, meshB;
     vtkSmartPointer<vtkPolyData> pdA, pdB, lines;
 
+    double tol;
+
     vtkSmartPointer<vtkPolyData> CreateLines ();
 public:
     Contact (vtkPolyData *origPdA, vtkPolyData *origPdB);

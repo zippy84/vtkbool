@@ -171,6 +171,8 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
                 contLines->GetPointCells(i, cells);
 
                 if (cells->GetNumberOfIds() == 1) {
+                    std::cout << "Index " << i << std::endl;
+
                     vtkErrorMacro("At least one line-end has only one neighbor.");
                     return 1;
                 }
@@ -231,10 +233,10 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
 
             times.push_back(clock::now()-start);
 
-#ifdef DEBUG
+// #ifdef DEBUG
             WriteVTK("modPdA_2.vtk", modPdA);
             WriteVTK("modPdB_2.vtk", modPdB);
-#endif
+// #endif
 
             start = clock::now();
 
@@ -243,10 +245,10 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
 
             times.push_back(clock::now()-start);
 
-#ifdef DEBUG
+// #ifdef DEBUG
             WriteVTK("modPdA_3.vtk", modPdA);
             WriteVTK("modPdB_3.vtk", modPdB);
-#endif
+// #endif
 
             start = clock::now();
 
@@ -255,10 +257,10 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
 
             times.push_back(clock::now()-start);
 
-#ifdef DEBUG
+// #ifdef DEBUG
             WriteVTK("modPdA_4.vtk", modPdA);
             WriteVTK("modPdB_4.vtk", modPdB);
-#endif
+// #endif
 
             start = clock::now();
 
@@ -267,10 +269,10 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
 
             times.push_back(clock::now()-start);
 
-#ifdef DEBUG
+// #ifdef DEBUG
             WriteVTK("modPdA_5.vtk", modPdA);
             WriteVTK("modPdB_5.vtk", modPdB);
-#endif
+// #endif
 
             start = clock::now();
 
@@ -279,10 +281,10 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
 
             times.push_back(clock::now()-start);
 
-#ifdef DEBUG
+// #ifdef DEBUG
             WriteVTK("modPdA_6.vtk", modPdA);
             WriteVTK("modPdB_6.vtk", modPdB);
-#endif
+// #endif
 
             start = clock::now();
 
@@ -291,10 +293,10 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
 
             times.push_back(clock::now()-start);
 
-#ifdef DEBUG
+// #ifdef DEBUG
             WriteVTK("modPdA_7.vtk", modPdA);
             WriteVTK("modPdB_7.vtk", modPdB);
-#endif
+// #endif
 
             timePdA = pdA->GetMTime();
             timePdB = pdB->GetMTime();
