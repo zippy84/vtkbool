@@ -99,7 +99,7 @@ Mesh GetMesh (vtkPolyData *pd) {
     }
 
     Mesh mesh;
-    mesh.pointToFaces.resize(numPoints);
+    mesh.vertToFaces.resize(numPoints);
 
     vtkIdType faceId{0};
 
@@ -112,9 +112,9 @@ Mesh GetMesh (vtkPolyData *pd) {
         face.origCellId = cellId;
         face.vertIds = {id0, id1, id2};
 
-        mesh.pointToFaces[id0].push_back(faceId);
-        mesh.pointToFaces[id1].push_back(faceId);
-        mesh.pointToFaces[id2].push_back(faceId);
+        mesh.vertToFaces[id0].push_back(faceId);
+        mesh.vertToFaces[id1].push_back(faceId);
+        mesh.vertToFaces[id2].push_back(faceId);
 
         mesh.faces.push_back(std::move(face));
         faceId++;
@@ -173,9 +173,9 @@ Mesh GetMesh (vtkPolyData *pd) {
 
             face.vertIds = {a, b, c};
 
-            mesh.pointToFaces[a].push_back(faceId);
-            mesh.pointToFaces[b].push_back(faceId);
-            mesh.pointToFaces[c].push_back(faceId);
+            mesh.vertToFaces[a].push_back(faceId);
+            mesh.vertToFaces[b].push_back(faceId);
+            mesh.vertToFaces[c].push_back(faceId);
 
             mesh.faces.push_back(std::move(face));
 
@@ -187,7 +187,7 @@ Mesh GetMesh (vtkPolyData *pd) {
 
             for(vtkIdType i = 0; i < npts; i++) {
                 face.vertIds[i] = pts->GetId(i);
-                mesh.pointToFaces[pts->GetId(i)].push_back(faceId);
+                mesh.vertToFaces[pts->GetId(i)].push_back(faceId);
             }
 
             mesh.faces.push_back(std::move(face));
@@ -246,10 +246,10 @@ Mesh GetMesh (vtkPolyData *pd) {
                 face.origCellId = cellId;
                 face.vertIds = {v0, v1, v2, v3};
 
-                mesh.pointToFaces[v0].push_back(faceId);
-                mesh.pointToFaces[v1].push_back(faceId);
-                mesh.pointToFaces[v2].push_back(faceId);
-                mesh.pointToFaces[v3].push_back(faceId);
+                mesh.vertToFaces[v0].push_back(faceId);
+                mesh.vertToFaces[v1].push_back(faceId);
+                mesh.vertToFaces[v2].push_back(faceId);
+                mesh.vertToFaces[v3].push_back(faceId);
 
                 mesh.faces.push_back(std::move(face));
                 faceId++;
@@ -495,7 +495,7 @@ double FindNewVerts (Mesh &mesh, std::vector<GlobalPlane> &globalPlanes) {
 
     std::for_each(std::execution::par, indsVerts.begin(), indsVerts.end(),
         [&](size_t v) {
-            const auto &neigs = mesh.pointToFaces[v];
+            const auto &neigs = mesh.vertToFaces[v];
             if (neigs.empty()) {
                 return;
             }
@@ -947,12 +947,18 @@ NonManifoldEdges GetNonManifoldEdges (const Mesh &mesh) {
     return nonManifoldEdges;
 }
 
-vtkSmartPointer<vtkPolyData> GetPolyData (const Mesh &mesh) {
+vtkSmartPointer<vtkPolyData> GetPolyData (const Mesh &mesh, FaceSource source = FaceSource::Unknown) {
     auto pd = vtkSmartPointer<vtkPolyData>::New();
     auto points = vtkSmartPointer<vtkPoints>::New();
     points->SetDataTypeToDouble();
 
-    vtkIdType numCells = static_cast<vtkIdType>(mesh.faces.size());
+    vtkIdType numCells = 0;
+
+    for (const auto &face : mesh.faces) {
+        if (source == FaceSource::Unknown || face.source == source) {
+            numCells++;
+        }
+    }
 
     auto cellIds = vtkSmartPointer<vtkIdTypeArray>::New();
     cellIds->SetName("OrigCellIds");
@@ -973,18 +979,25 @@ vtkSmartPointer<vtkPolyData> GetPolyData (const Mesh &mesh) {
     auto polys = vtkSmartPointer<vtkCellArray>::New();
 
     for (const auto &face : mesh.faces) {
-        polys->InsertNextCell(
-            static_cast<vtkIdType>(face.vertIds.size()),
-            face.vertIds.data()
-        );
+        if (source == FaceSource::Unknown || face.source == source) {
+            polys->InsertNextCell(
+                static_cast<vtkIdType>(face.vertIds.size()),
+                face.vertIds.data()
+            );
 
-        cellIds->InsertNextValue(face.origCellId);
+            cellIds->InsertNextValue(face.origCellId);
+        }
     }
     pd->SetPolys(polys);
 
     pd->GetCellData()->SetScalars(cellIds);
 
-    return pd;
+    auto clean = vtkSmartPointer<vtkCleanPolyData>::New();
+    clean->SetInputData(pd);
+    clean->SetPointMerging(false);
+    clean->Update();
+
+    return clean->GetOutput();
 }
 
 double ComputeMaxPlanarityError (vtkPolyData *pd) {
@@ -1049,11 +1062,15 @@ void Contact::MergeMeshes () {
     locator->SetDataSet(pdA);
     locator->BuildLocator();
 
-    std::vector<Face> allFaces(meshA.faces);
-    allFaces.reserve(allFaces.size() + meshB.faces.size());
+    auto &faces = mergedMesh.faces;
+    auto &verts = mergedMesh.verts;
+    auto &vertToFaces = mergedMesh.vertToFaces;
 
-    std::vector<Vector3> allVerts(meshA.verts);
-    allVerts.reserve(allVerts.size() + meshB.verts.size());
+    faces.insert(faces.end(), meshA.faces.begin(), meshA.faces.end());
+    faces.reserve(faces.size() + meshB.faces.size());
+
+    verts.insert(verts.end(), meshA.verts.begin(), meshA.verts.end());
+    verts.reserve(verts.size() + meshB.verts.size());
 
     size_t numVertsA = meshA.verts.size();
     size_t numVertsB = meshB.verts.size();
@@ -1077,7 +1094,7 @@ void Contact::MergeMeshes () {
         if (distSq < 1e-10) {
             newVertIds[i] = vertId;
         } else {
-            allVerts.push_back(vert);
+            verts.push_back(vert);
 
             newVertIds[i] = numVertsA + j++;
         }
@@ -1087,15 +1104,16 @@ void Contact::MergeMeshes () {
 
     for (auto &face : meshB.faces) {
         auto newFace(face);
+        newFace.source = FaceSource::B;
 
         for (size_t i = 0; i < newFace.vertIds.size(); i++) {
             newFace.vertIds[i] = newVertIds[newFace.vertIds[i]];
         }
 
-        allFaces.push_back(std::move(newFace));
+        faces.push_back(std::move(newFace));
     }
 
-    std::vector<std::vector<vtkIdType>> vertToFaces(allVerts.size());
+    vertToFaces.resize(verts.size());
 
     for (auto &v : vertToFaces) {
         v.reserve(6);
@@ -1103,18 +1121,12 @@ void Contact::MergeMeshes () {
 
     size_t faceId = 0;
 
-    for (auto &face : allFaces) {
+    for (auto &face : faces) {
         for (auto &vertId : face.vertIds) {
             vertToFaces[vertId].push_back(faceId);
         }
         faceId++;
     }
-
-    Mesh newMesh{allVerts, allFaces, vertToFaces};
-
-    auto newPd = GetPolyData(newMesh);
-
-    Save(newPd, "newPd.vtk");
 }
 
 Contact::Contact (vtkPolyData *origPdA, vtkPolyData *origPdB) : tol(1e-5) {
@@ -1129,10 +1141,22 @@ Contact::Contact (vtkPolyData *origPdA, vtkPolyData *origPdB) : tol(1e-5) {
 
     MergeMeshes();
 
-    throw "";
+    newPd = GetPolyData(mergedMesh);
 
-    std::cout << ComputeMaxPlanarityError(pdA) << std::endl;
-    std::cout << ComputeMaxPlanarityError(pdB) << std::endl;
+    Save(newPd, "newPd.vtk");
+
+    /*std::cout << ComputeMaxPlanarityError(pdA) << std::endl;
+    std::cout << ComputeMaxPlanarityError(pdB) << std::endl;*/
+
+    std::cout << ComputeMaxPlanarityError(newPd) << std::endl;
+
+    pdA = GetPolyData(mergedMesh, FaceSource::A);
+    pdB = GetPolyData(mergedMesh, FaceSource::B);
+
+    Save(pdA, "newPdA.vtk");
+    Save(pdB, "newPdB.vtk");
+
+    throw "";
 
     lines = CreateLines();
 }

@@ -29,6 +29,10 @@ struct Vector3 {
     double x, y, z;
 };
 
+enum class FaceSource {
+    Unknown, A, B
+};
+
 struct Face {
     std::vector<vtkIdType> vertIds;
     Vector3 normal{};
@@ -37,12 +41,13 @@ struct Face {
     std::optional<size_t> globalPlaneId;
     vtkIdType origCellId;
     double quality = 0;
+    FaceSource source = FaceSource::A;
 };
 
 struct Mesh {
     std::vector<Vector3> verts;
     std::vector<Face> faces;
-    std::vector<std::vector<vtkIdType>> pointToFaces;
+    std::vector<std::vector<vtkIdType>> vertToFaces;
 };
 
 struct GlobalPlane {
@@ -145,6 +150,10 @@ class Contact {
     vtkSmartPointer<vtkPolyData> pdA, pdB, lines;
 
     double tol;
+
+    Mesh mergedMesh;
+
+    vtkSmartPointer<vtkPolyData> newPd;
 
     vtkSmartPointer<vtkPolyData> CreateLines ();
 public:
