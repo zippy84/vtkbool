@@ -2681,10 +2681,10 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
     vtkPolyData *pdA = cfA->GetOutput();
     vtkPolyData *pdB = cfB->GetOutput();
 
-#ifdef DEBUG
+// #ifdef DEBUG
     WriteVTK("modPdA_8.vtk", pdA);
     WriteVTK("modPdB_8.vtk", pdB);
-#endif
+// #endif
 
     if (OperMode == OPER_NONE) {
         resultA->ShallowCopy(pdA);
@@ -2727,7 +2727,6 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
     IdsType _failed;
 
     for (i = 0; i < numLines; i++) {
-
         if (contLines->GetCellType(i) == VTK_EMPTY_CELL) {
             continue;
         }
@@ -2823,12 +2822,12 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
     }
 
     if (_failed.size() > 0) {
-#ifdef DEBUG
+// #ifdef DEBUG
         for (auto i : _failed) {
             std::cout << "failed at " << i
                 << std::endl;
         }
-#endif
+// #endif
 
         return true;
     }

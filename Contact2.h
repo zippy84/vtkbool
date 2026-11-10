@@ -36,6 +36,7 @@ struct Face {
     double d = 0;
     std::optional<size_t> globalPlaneId;
     vtkIdType origCellId;
+    double quality = 0;
 };
 
 struct Mesh {
@@ -154,6 +155,8 @@ public:
 
     void Save (vtkPolyData *pd, const std::string &filename);
     void SaveAll (const std::string prefix = "");
+
+    void MergeMeshes ();
 };
 
 #endif

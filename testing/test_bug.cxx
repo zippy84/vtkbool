@@ -27,7 +27,7 @@ limitations under the License.
 #include "vtkPolyDataBooleanFilter.h"
 
 int main () {
-    /*{
+    {
         auto readerA = vtkSmartPointer<vtkPolyDataReader>::New();
         readerA->SetFileName("../testing/data_bug/MeshA.vtk");
 
@@ -37,9 +37,9 @@ int main () {
         readerA->Update();
         readerB->Update();
 
-        // Contact(readerA->GetOutput(), readerB->GetOutput()).SaveAll("Test1_");
+        Contact(readerA->GetOutput(), readerB->GetOutput()).SaveAll("Test1_");
 
-        auto bf = vtkSmartPointer<vtkPolyDataBooleanFilter>::New();
+        /*auto bf = vtkSmartPointer<vtkPolyDataBooleanFilter>::New();
         bf->SetInputConnection(0, readerA->GetOutputPort());
         bf->SetInputConnection(1, readerB->GetOutputPort());
         bf->Update();
@@ -51,10 +51,10 @@ int main () {
         auto writer = vtkSmartPointer<vtkPolyDataWriter>::New();
         writer->SetInputConnection(bf->GetOutputPort());
         writer->SetFileName("Test1_result.vtk");
-        writer->Update();
-    }*/
+        writer->Update();*/
+    }
 
-    {
+    /*{
         auto sphereA = vtkSmartPointer<vtkSphereSource>::New();
         auto sphereB = vtkSmartPointer<vtkSphereSource>::New();
 
@@ -102,7 +102,7 @@ int main () {
         writer->SetInputConnection(bf->GetOutputPort());
         writer->SetFileName("Test2_result.vtk");
         writer->Update();
-    }
+    }*/
 
     /*{
         auto transform = vtkSmartPointer<vtkTransform>::New();
