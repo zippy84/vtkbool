@@ -992,12 +992,7 @@ vtkSmartPointer<vtkPolyData> GetPolyData (const Mesh &mesh, FaceSource source = 
 
     pd->GetCellData()->SetScalars(cellIds);
 
-    auto clean = vtkSmartPointer<vtkCleanPolyData>::New();
-    clean->SetInputData(pd);
-    clean->SetPointMerging(false);
-    clean->Update();
-
-    return clean->GetOutput();
+    return pd;
 }
 
 double ComputeMaxPlanarityError (vtkPolyData *pd) {
@@ -1160,11 +1155,21 @@ Contact::Contact (vtkPolyData *origPdA, vtkPolyData *origPdB) : tol(1e-5) {
 }
 
 vtkSmartPointer<vtkPolyData> Contact::GetPolyDataA () {
-    return pdA;
+    auto clean = vtkSmartPointer<vtkCleanPolyData>::New();
+    clean->SetInputData(pdA);
+    clean->SetPointMerging(false);
+    clean->Update();
+
+    return clean->GetOutput();
 }
 
 vtkSmartPointer<vtkPolyData> Contact::GetPolyDataB () {
-    return pdB;
+    auto clean = vtkSmartPointer<vtkCleanPolyData>::New();
+    clean->SetInputData(pdB);
+    clean->SetPointMerging(false);
+    clean->Update();
+
+    return clean->GetOutput();
 }
 
 vtkSmartPointer<vtkPolyData> Contact::GetLines () {
@@ -1184,21 +1189,6 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
     treeB->BuildLocator();
 
     treeA->IntersectWithOBBTree(treeB, nullptr, Intersect, &intersections);
-
-    /*for (size_t i = 0; i < meshA.faces.size(); i++) {
-        if (meshA.faces[i].vertIds.size() == 3) {
-            std::cout << "meshA[" << i << "] " << meshA.faces[i].quality << std::endl;
-        }
-    }
-
-    for (size_t i = 0; i < meshB.faces.size(); i++) {
-        if (meshB.faces[i].vertIds.size() == 3) {
-            std::cout << "meshB[" << i << "] " << meshB.faces[i].quality << std::endl;
-        }
-    }*/
-
-    /*UpdatePlanes(meshA);
-    UpdatePlanes(meshB);*/
 
     UpdatePlanes(mergedMesh);
 
@@ -1426,26 +1416,26 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
 
     }
 
-    // std::cout << "isolatedA [";
-    // for (auto index : isolatedA) {
-    //     std::cout << index << ", ";
-    // }
-    // std::cout << "]" << std::endl;
+    /*std::cout << "isolatedA [";
+    for (auto index : isolatedA) {
+        std::cout << index << ", ";
+    }
+    std::cout << "]" << std::endl;
 
-    // std::cout << "isolatedB [";
-    // for (auto index : isolatedB) {
-    //     std::cout << index << ", ";
-    // }
-    // std::cout << "]" << std::endl;
+    std::cout << "isolatedB [";
+    for (auto index : isolatedB) {
+        std::cout << index << ", ";
+    }
+    std::cout << "]" << std::endl;
 
-    // std::vector<Pair2> tempPairs;
+    std::vector<Pair2> tempPairs;
 
-    // for (auto pair : congruentPairs) {
-    //     if (std::find(isolatedA.begin(), isolatedA.end(), pair.a) != isolatedA.end() ||
-    //         std::find(isolatedB.begin(), isolatedB.end(), pair.b) != isolatedB.end()) {
-    //         tempPairs.push_back(pair);
-    //     }
-    // }
+    for (auto pair : congruentPairs) {
+        if (std::find(isolatedA.begin(), isolatedA.end(), pair.a) != isolatedA.end() ||
+            std::find(isolatedB.begin(), isolatedB.end(), pair.b) != isolatedB.end()) {
+            tempPairs.push_back(pair);
+        }
+    }*/
 
     const int maxIters = 500;
 
@@ -1487,57 +1477,57 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
                 FitPlane(allPoints, plane.normal, plane.d);
             });
 
-        // std::vector<Pair2> newTempPairs;
-        // newTempPairs.reserve(tempPairs.size());
+        /*std::vector<Pair2> newTempPairs;
+        newTempPairs.reserve(tempPairs.size());
 
-        // for (auto &pair : tempPairs) {
-        //     if (!meshA.faces[pair.a].globalPlaneId.has_value() &&
-        //         meshB.faces[pair.b].globalPlaneId.has_value()) {
+        for (auto &pair : tempPairs) {
+            if (!meshA.faces[pair.a].globalPlaneId.has_value() &&
+                meshB.faces[pair.b].globalPlaneId.has_value()) {
 
-        //         size_t planeId = *meshB.faces[pair.b].globalPlaneId;
+                size_t planeId = *meshB.faces[pair.b].globalPlaneId;
 
-        //         const auto &plane = globalPlanes[planeId];
+                const auto &plane = globalPlanes[planeId];
 
-        //         auto &face = meshA.faces[pair.a];
+                auto &face = meshA.faces[pair.a];
 
-        //         double prod = face.normal.x * plane.normal.x + face.normal.y * plane.normal.y + face.normal.z * plane.normal.z;
+                double prod = face.normal.x * plane.normal.x + face.normal.y * plane.normal.y + face.normal.z * plane.normal.z;
 
-        //         if (std::abs(prod) > maxProd) {
-        //             face.globalPlaneId = planeId;
+                if (std::abs(prod) > maxProd) {
+                    face.globalPlaneId = planeId;
 
-        //             globalPlanes[planeId].faceIdsA.push_back(pair.a);
-        //             // planesA->SetValue(pair.a, static_cast<vtkIdType>(planeId));
+                    globalPlanes[planeId].faceIdsA.push_back(pair.a);
+                    // planesA->SetValue(pair.a, static_cast<vtkIdType>(planeId));
 
-        //             std::cout << "globalPlaneId added to meshA.faces[" << pair.a << "]" << std::endl;
-        //         }
-        //     } else if (!meshB.faces[pair.b].globalPlaneId.has_value() &&
-        //         meshA.faces[pair.a].globalPlaneId.has_value()) {
+                    std::cout << "globalPlaneId added to meshA.faces[" << pair.a << "]" << std::endl;
+                }
+            } else if (!meshB.faces[pair.b].globalPlaneId.has_value() &&
+                meshA.faces[pair.a].globalPlaneId.has_value()) {
 
-        //         size_t planeId = *meshA.faces[pair.a].globalPlaneId;
+                size_t planeId = *meshA.faces[pair.a].globalPlaneId;
 
-        //         const auto &plane = globalPlanes[planeId];
+                const auto &plane = globalPlanes[planeId];
 
-        //         auto &face = meshB.faces[pair.b];
+                auto &face = meshB.faces[pair.b];
 
-        //         double prod = face.normal.x * plane.normal.x + face.normal.y * plane.normal.y + face.normal.z * plane.normal.z;
+                double prod = face.normal.x * plane.normal.x + face.normal.y * plane.normal.y + face.normal.z * plane.normal.z;
 
-        //         if (std::abs(prod) > maxProd) {
-        //             face.globalPlaneId = planeId;
+                if (std::abs(prod) > maxProd) {
+                    face.globalPlaneId = planeId;
 
-        //             globalPlanes[planeId].faceIdsB.push_back(pair.b);
-        //             // planesB->SetValue(pair.b, static_cast<vtkIdType>(planeId));
+                    globalPlanes[planeId].faceIdsB.push_back(pair.b);
+                    // planesB->SetValue(pair.b, static_cast<vtkIdType>(planeId));
 
-        //             std::cout << "globalPlaneId added to meshB.faces[" << pair.b << "]" << std::endl;
-        //         }
-        //     }
+                    std::cout << "globalPlaneId added to meshB.faces[" << pair.b << "]" << std::endl;
+                }
+            }
 
-        //     if (!meshA.faces[pair.a].globalPlaneId.has_value() ||
-        //         !meshB.faces[pair.b].globalPlaneId.has_value()) {
-        //         newTempPairs.push_back(pair);
-        //     }
-        // }
+            if (!meshA.faces[pair.a].globalPlaneId.has_value() ||
+                !meshB.faces[pair.b].globalPlaneId.has_value()) {
+                newTempPairs.push_back(pair);
+            }
+        }
 
-        // newTempPairs.swap(tempPairs);
+        newTempPairs.swap(tempPairs);*/
 
         std::cout << iter << " maxDisp " << maxDisp << std::endl;
 
@@ -1547,16 +1537,14 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
 
     }
 
-    // planesA->SetName("planes");
-    // planesB->SetName("planes");
+    /*planesA->SetName("planes");
+    planesB->SetName("planes");
 
-    // pdA->GetCellData()->AddArray(planesA);
-    // pdB->GetCellData()->AddArray(planesB);
+    pdA->GetCellData()->AddArray(planesA);
+    pdB->GetCellData()->AddArray(planesB);*/
 
-    // wichtig! pdA und pdB haben allerdings reduzierte punktmengen gegenüber mergedMesh.verts
-
-    // UpdatePoints(pdA, meshA);
-    // UpdatePoints(pdB, meshB);
+    UpdatePoints(pdA, mergedMesh);
+    UpdatePoints(pdB, mergedMesh);
 
     double maxDisp = 0;
 
@@ -1612,7 +1600,7 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
             const auto &faceA = mergedMesh.faces[pair.a];
             const auto &faceB = mergedMesh.faces[offset + pair.b];
 
-            /*if (pair.a == 0 && pair.b == 2247) {
+            /*if (pair.a == 17705 && pair.b == 29850) {
                 std::cout << pair.a << " [";
                 for (auto id : faceA.vertIds) {
                     std::cout << id << " " << meshA.verts[id] << ", ";
@@ -1684,13 +1672,13 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
             auto interPtsA = IntersectFaceAndLine(baseA, transA, Src::A);
             auto interPtsB = IntersectFaceAndLine(baseB, transB, Src::B);
 
-            // for (auto &p : interPtsA) {
-            //     std::cout << "A " << p << std::endl;
-            // }
+            /*for (auto &p : interPtsA) {
+                std::cout << "A " << p << std::endl;
+            }
 
-            // for (auto &p : interPtsB) {
-            //     std::cout << "B " << p << std::endl;
-            // }
+            for (auto &p : interPtsB) {
+                std::cout << "B " << p << std::endl;
+            }*/
 
             results[index] = PairResult{pair.a, pair.b, std::move(interPtsA), std::move(interPtsB)};
         });
@@ -1736,16 +1724,16 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
             auto &f = std::get<0>(*itr);
             auto &s = std::get<1>(*itr);
 
-            auto edgeF = std::make_pair(f.edge.a, f.edge.b);
+            /*auto edgeF = std::make_pair(f.edge.a, f.edge.b);
             auto edgeS = std::make_pair(s.edge.a, s.edge.b);
 
-            // if ((f.src == Src::A && nonManifoldEdgesA.count(edgeF)) ||
-            //     (s.src == Src::A && nonManifoldEdgesA.count(edgeS)) ||
-            //     (f.src == Src::B && nonManifoldEdgesB.count(edgeF)) ||
-            //     (s.src == Src::B && nonManifoldEdgesB.count(edgeS))) {
+            if ((f.src == Src::A && nonManifoldEdgesA.count(edgeF)) ||
+                (s.src == Src::A && nonManifoldEdgesA.count(edgeS)) ||
+                (f.src == Src::B && nonManifoldEdgesB.count(edgeF)) ||
+                (s.src == Src::B && nonManifoldEdgesB.count(edgeS))) {
 
-            //     throw "";
-            // }
+                throw "";
+            }*/
 
             auto linePts = vtkSmartPointer<vtkIdList>::New();
 
