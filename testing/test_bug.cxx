@@ -39,70 +39,70 @@ int main () {
 
         Contact(readerA->GetOutput(), readerB->GetOutput()).SaveAll("Test1_");
 
-        /*auto bf = vtkSmartPointer<vtkPolyDataBooleanFilter>::New();
-        bf->SetInputConnection(0, readerA->GetOutputPort());
-        bf->SetInputConnection(1, readerB->GetOutputPort());
-        bf->Update();
+        // auto bf = vtkSmartPointer<vtkPolyDataBooleanFilter>::New();
+        // bf->SetInputConnection(0, readerA->GetOutputPort());
+        // bf->SetInputConnection(1, readerB->GetOutputPort());
+        // bf->Update();
 
-        if (bf->GetOutput()->GetNumberOfCells() == 0) {
-            return EXIT_FAILURE;
-        }
+        // if (bf->GetOutput()->GetNumberOfCells() == 0) {
+        //     return EXIT_FAILURE;
+        // }
 
-        auto writer = vtkSmartPointer<vtkPolyDataWriter>::New();
-        writer->SetInputConnection(bf->GetOutputPort());
-        writer->SetFileName("Test1_result.vtk");
-        writer->Update();*/
+        // auto writer = vtkSmartPointer<vtkPolyDataWriter>::New();
+        // writer->SetInputConnection(bf->GetOutputPort());
+        // writer->SetFileName("Test1_result.vtk");
+        // writer->Update();
     }
 
-    /*{
-        auto sphereA = vtkSmartPointer<vtkSphereSource>::New();
-        auto sphereB = vtkSmartPointer<vtkSphereSource>::New();
+    {
+        // auto sphereA = vtkSmartPointer<vtkSphereSource>::New();
+        // auto sphereB = vtkSmartPointer<vtkSphereSource>::New();
 
-        // sphereA->SetOutputPointsPrecision(vtkAlgorithm::DOUBLE_PRECISION);
-        // sphereB->SetOutputPointsPrecision(vtkAlgorithm::DOUBLE_PRECISION);
+        // // sphereA->SetOutputPointsPrecision(vtkAlgorithm::DOUBLE_PRECISION);
+        // // sphereB->SetOutputPointsPrecision(vtkAlgorithm::DOUBLE_PRECISION);
 
-        const vtkIdType resolution = 30;
+        // const vtkIdType resolution = 30;
 
-        sphereA->SetThetaResolution(resolution);
-        sphereA->SetPhiResolution(resolution);
-        sphereA->LatLongTessellationOn();
+        // sphereA->SetThetaResolution(resolution);
+        // sphereA->SetPhiResolution(resolution);
+        // sphereA->LatLongTessellationOn();
 
-        sphereB->SetThetaResolution(resolution);
-        sphereB->SetPhiResolution(resolution);
+        // sphereB->SetThetaResolution(resolution);
+        // sphereB->SetPhiResolution(resolution);
 
-        sphereA->Update();
-        sphereB->Update();
+        // sphereA->Update();
+        // sphereB->Update();
 
-        auto transform = vtkSmartPointer<vtkTransform>::New();
-        transform->RotateZ(180/resolution);
-        transform->RotateX(180/resolution);
+        // auto transform = vtkSmartPointer<vtkTransform>::New();
+        // transform->RotateZ(180/resolution);
+        // transform->RotateX(180/resolution);
 
-        auto tf = vtkSmartPointer<vtkTransformFilter>::New();
-        tf->SetInputConnection(sphereB->GetOutputPort());
-        tf->SetTransform(transform);
+        // auto tf = vtkSmartPointer<vtkTransformFilter>::New();
+        // tf->SetInputConnection(sphereB->GetOutputPort());
+        // tf->SetTransform(transform);
 
-        auto stripper = vtkSmartPointer<vtkStripper>::New();
-        stripper->SetInputConnection(tf->GetOutputPort());
-        stripper->SetMaximumLength(10);
+        // auto stripper = vtkSmartPointer<vtkStripper>::New();
+        // stripper->SetInputConnection(tf->GetOutputPort());
+        // stripper->SetMaximumLength(10);
 
-        stripper->Update();
+        // stripper->Update();
 
         // Contact(sphereA->GetOutput(), stripper->GetOutput()).SaveAll("Test2_");
 
-        auto bf = vtkSmartPointer<vtkPolyDataBooleanFilter>::New();
-        bf->SetInputConnection(0, sphereA->GetOutputPort());
-        bf->SetInputConnection(1, stripper->GetOutputPort());
-        bf->Update();
+        // auto bf = vtkSmartPointer<vtkPolyDataBooleanFilter>::New();
+        // bf->SetInputConnection(0, sphereA->GetOutputPort());
+        // bf->SetInputConnection(1, stripper->GetOutputPort());
+        // bf->Update();
 
-        if (bf->GetOutput()->GetNumberOfCells() == 0) {
-            return EXIT_FAILURE;
-        }
+        // if (bf->GetOutput()->GetNumberOfCells() == 0) {
+        //     return EXIT_FAILURE;
+        // }
 
-        auto writer = vtkSmartPointer<vtkPolyDataWriter>::New();
-        writer->SetInputConnection(bf->GetOutputPort());
-        writer->SetFileName("Test2_result.vtk");
-        writer->Update();
-    }*/
+        // auto writer = vtkSmartPointer<vtkPolyDataWriter>::New();
+        // writer->SetInputConnection(bf->GetOutputPort());
+        // writer->SetFileName("Test2_result.vtk");
+        // writer->Update();
+    }
 
     /*{
         auto transform = vtkSmartPointer<vtkTransform>::New();

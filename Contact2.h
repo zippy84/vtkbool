@@ -53,7 +53,7 @@ struct Mesh {
 struct GlobalPlane {
     Vector3 normal;
     double d;
-    std::vector<size_t> faceIdsA, faceIdsB;
+    std::vector<size_t> faceIds;
 };
 
 struct Pair2 {
