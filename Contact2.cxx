@@ -1230,18 +1230,6 @@ void Contact::SnapToEdges () {
                         if (faceA.source != referenceFace.source &&
                             faceB.source != referenceFace.source) {
 
-                            /*std::cout << "dist " << std::sqrt(distSq)
-                                << ", t " << t
-                                << ", edge (" << edge.a << ", " << edge.b
-                                << "), i " << i
-                                << std::endl;
-
-                            std::cout << "filtered [";
-                            for (auto &faceId : filtered) {
-                                std::cout << faceId << ", ";
-                            }
-                            std::cout << "]" << std::endl;*/
-
                             std::lock_guard<std::mutex> lock(mutex);
 
                             edgeSnaps[edge].push_back(Snap{i, t, std::move(filtered)});
@@ -1251,17 +1239,51 @@ void Contact::SnapToEdges () {
             }
         });
 
-    for (auto& [k, v] : edgeSnaps) {
-        std::sort(v.begin(), v.end(), [](const Snap &a, const Snap &b) {
+    for (auto& [edge, snaps] : edgeSnaps) {
+        std::sort(snaps.begin(), snaps.end(), [](const Snap &a, const Snap &b) {
             return a.t < b.t;
         });
 
-        std::cout << "edge " << k.a << ", " << k.b << std::endl;
+        std::cout << "edge " << edge.a << ", " << edge.b << std::endl;
 
-        for (auto &snap : v) {
+        for (auto &snap : snaps) {
             std::cout << "vertId " << snap.vertId
                 << ", t " << snap.t
                 << std::endl;
+        }
+
+        for (auto faceId : snaps[0].targetFaces) {
+            auto &face = mergedMesh.faces[faceId];
+
+            size_t numVerts = face.vertIds.size();
+
+            for (size_t i = 0; i < numVerts; i++) {
+                vtkIdType a = face.vertIds[i];
+                vtkIdType b = face.vertIds[(i + 1) % numVerts];
+
+                if ((a == edge.a && b == edge.b) ||
+                    (a == edge.b && b == edge.a)) {
+
+                    std::vector<vtkIdType> newIds;
+                    newIds.reserve(snaps.size());
+
+                    for (auto &snap : snaps) {
+                        newIds.push_back(snap.vertId);
+                    }
+
+                    if (b == edge.a) {
+                        std::reverse(newIds.begin(), newIds.end());
+                    }
+
+                    face.vertIds.insert(face.vertIds.begin() + i + 1, newIds.begin(), newIds.end());
+
+                    for (auto vertId : newIds) {
+                        mergedMesh.vertToFaces[vertId].push_back(faceId);
+                    }
+
+                    break;
+                }
+            }
         }
     }
 }
@@ -1280,11 +1302,11 @@ Contact::Contact (vtkPolyData *origPdA, vtkPolyData *origPdB) : tol(1e-5) {
 
     SnapToEdges();
 
-    throw "";
-
     newPd = GetPolyData(mergedMesh);
 
     Save(newPd, "newPd.vtk");
+
+    // throw "";
 
     /*std::cout << ComputeMaxPlanarityError(pdA) << std::endl;
     std::cout << ComputeMaxPlanarityError(pdB) << std::endl;*/
