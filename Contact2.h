@@ -58,6 +58,12 @@ struct GlobalPlane {
 
 struct Pair2 {
     vtkIdType a, b;
+    bool operator< (const Pair2& other) const {
+        return std::tie(a, b) < std::tie(other.a, other.b);
+    }
+    bool operator== (const Pair2& other) const {
+        return a == other.a && b == other.b;
+    }
 };
 
 enum class Src {

@@ -1145,13 +1145,19 @@ void Contact::SnapToEdges () {
         }
     }
 
-    std::sort(edges.begin(), edges.end(), [](const Pair2 &l, const Pair2 &r) {
-        return std::tie(l.a, l.b) < std::tie(r.a, r.b);
-    });
+    std::sort(edges.begin(), edges.end());
 
-    edges.erase(std::unique(edges.begin(), edges.end(), [](const Pair2 &l, const Pair2 &r) {
-        return l.a == r.a && l.b == r.b;
-    }), edges.end());
+    edges.erase(std::unique(edges.begin(), edges.end()), edges.end());
+
+    std::mutex mutex;
+
+    struct Snap {
+        size_t vertId;
+        double t;
+        std::vector<vtkIdType> targetFaces;
+    };
+
+    std::map<Pair2, std::vector<Snap>> edgeSnaps;
 
     std::vector<size_t> vertIndices(mergedMesh.verts.size());
     std::iota(vertIndices.begin(), vertIndices.end(), 0);
@@ -1193,9 +1199,8 @@ void Contact::SnapToEdges () {
                 pB[2] = vertB.z;
 
                 double t;
-                double closest[3];
 
-                double distSq = vtkLine::DistanceToLine(x, pA, pB, t, closest);
+                double distSq = vtkLine::DistanceToLine(x, pA, pB, t);
 
                 if (distSq < 1e-10 && t > 0 && t < 1) {
                     const auto& facesA = mergedMesh.vertToFaces[edge.a];
@@ -1225,7 +1230,7 @@ void Contact::SnapToEdges () {
                         if (faceA.source != referenceFace.source &&
                             faceB.source != referenceFace.source) {
 
-                            std::cout << "dist " << std::sqrt(distSq)
+                            /*std::cout << "dist " << std::sqrt(distSq)
                                 << ", t " << t
                                 << ", edge (" << edge.a << ", " << edge.b
                                 << "), i " << i
@@ -1235,12 +1240,30 @@ void Contact::SnapToEdges () {
                             for (auto &faceId : filtered) {
                                 std::cout << faceId << ", ";
                             }
-                            std::cout << "]" << std::endl;
+                            std::cout << "]" << std::endl;*/
+
+                            std::lock_guard<std::mutex> lock(mutex);
+
+                            edgeSnaps[edge].push_back(Snap{i, t, std::move(filtered)});
                         }
                     }
                 }
             }
         });
+
+    for (auto& [k, v] : edgeSnaps) {
+        std::sort(v.begin(), v.end(), [](const Snap &a, const Snap &b) {
+            return a.t < b.t;
+        });
+
+        std::cout << "edge " << k.a << ", " << k.b << std::endl;
+
+        for (auto &snap : v) {
+            std::cout << "vertId " << snap.vertId
+                << ", t " << snap.t
+                << std::endl;
+        }
+    }
 }
 
 Contact::Contact (vtkPolyData *origPdA, vtkPolyData *origPdB) : tol(1e-5) {
