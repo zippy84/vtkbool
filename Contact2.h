@@ -166,6 +166,7 @@ public:
     void SaveAll (const std::string prefix = "");
 
     void MergeMeshes ();
+    void SnapToEdges ();
 };
 
 #endif

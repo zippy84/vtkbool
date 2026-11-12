@@ -43,6 +43,7 @@ limitations under the License.
 #include <vtkCellIterator.h>
 #include <vtkVersionMacros.h>
 #include <vtkStaticPointLocator.h>
+#include <vtkLine.h>
 
 std::ostream& operator<< (std::ostream &out, const Vector3 &vec) {
     out << "[" << vec.x << ", " << vec.y << ", " << vec.z << "]";
@@ -1124,6 +1125,107 @@ void Contact::MergeMeshes () {
     }
 }
 
+void Contact::SnapToEdges () {
+    std::vector<Pair2> edges;
+
+    edges.reserve(mergedMesh.faces.size() * 3);
+
+    for (auto &face : mergedMesh.faces) {
+        size_t numVerts = face.vertIds.size();
+
+        for (size_t i = 0; i < numVerts; i++) {
+            auto a = face.vertIds[i];
+            auto b = face.vertIds[(i + 1) % numVerts];
+
+            if (a < b) {
+                edges.emplace_back(Pair2{a, b});
+            } else {
+                edges.emplace_back(Pair2{b, a});
+            }
+        }
+    }
+
+    std::sort(edges.begin(), edges.end(), [](const Pair2 &l, const Pair2 &r) {
+        return std::tie(l.a, l.b) < std::tie(r.a, r.b);
+    });
+
+    edges.erase(std::unique(edges.begin(), edges.end(), [](const Pair2 &l, const Pair2 &r) {
+        return l.a == r.a && l.b == r.b;
+    }), edges.end());
+
+    std::vector<size_t> vertIndices(mergedMesh.verts.size());
+    std::iota(vertIndices.begin(), vertIndices.end(), 0);
+
+    std::for_each(std::execution::par, vertIndices.begin(), vertIndices.end(),
+        [&](size_t i) {
+            double x[3], pA[3], pB[3];
+
+            auto &vert = mergedMesh.verts[i];
+
+            x[0] = vert.x; x[1] = vert.y; x[2] = vert.z;
+
+            for (auto &edge : edges) {
+                if (edge.a == i || edge.b == i) {
+                    continue;
+                }
+
+                auto &vertA = mergedMesh.verts[edge.a];
+                auto &vertB = mergedMesh.verts[edge.b];
+
+                pA[0] = vertA.x;
+                pA[1] = vertA.y;
+                pA[2] = vertA.z;
+
+                pB[0] = vertB.x;
+                pB[1] = vertB.y;
+                pB[2] = vertB.z;
+
+                double t;
+                double closest[3];
+
+                double distSq = vtkLine::DistanceToLine(x, pA, pB, t, closest);
+
+                if (distSq < 1e-10 && t > 0 && t < 1) {
+                    const auto& facesA = mergedMesh.vertToFaces[edge.a];
+                    const auto& facesB = mergedMesh.vertToFaces[edge.b];
+
+                    std::vector<vtkIdType> sharedFaces;
+
+                    std::set_intersection(
+                        facesA.begin(), facesA.end(),
+                        facesB.begin(), facesB.end(),
+                        std::back_inserter(sharedFaces)
+                    );
+
+                    const auto& vertFaces = mergedMesh.vertToFaces[i];
+
+                    std::vector<vtkIdType> filtered;
+                    filtered.reserve(sharedFaces.size());
+
+                    std::set_difference(
+                        sharedFaces.begin(), sharedFaces.end(),
+                        vertFaces.begin(), vertFaces.end(),
+                        std::back_inserter(filtered)
+                    );
+
+                    if (filtered.size() == 2) {
+                        std::cout << "dist " << std::sqrt(distSq)
+                            << ", t " << t
+                            << ", edge (" << edge.a << ", " << edge.b
+                            << "), i " << i
+                            << std::endl;
+
+                        std::cout << "filtered [";
+                        for (auto &faceId : filtered) {
+                            std::cout << faceId << ", ";
+                        }
+                        std::cout << "]" << std::endl;
+                    }
+                }
+            }
+        });
+}
+
 Contact::Contact (vtkPolyData *origPdA, vtkPolyData *origPdB) : tol(1e-5) {
     meshA = GetMesh(origPdA);
     meshB = GetMesh(origPdB);
@@ -1135,6 +1237,10 @@ Contact::Contact (vtkPolyData *origPdA, vtkPolyData *origPdB) : tol(1e-5) {
     pdB = GetPolyData(meshB);
 
     MergeMeshes();
+
+    SnapToEdges();
+
+    throw "";
 
     newPd = GetPolyData(mergedMesh);
 
