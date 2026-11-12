@@ -1158,6 +1158,18 @@ void Contact::SnapToEdges () {
 
     std::for_each(std::execution::par, vertIndices.begin(), vertIndices.end(),
         [&](size_t i) {
+            const auto& vertFaces = mergedMesh.vertToFaces[i];
+
+            auto &referenceFace = mergedMesh.faces[vertFaces[0]];
+
+            bool sameSource = std::all_of(vertFaces.begin(), vertFaces.end(), [&](vtkIdType faceId) {
+                return mergedMesh.faces[faceId].source == referenceFace.source;
+            });
+
+            if (!sameSource) {
+                return;
+            }
+
             double x[3], pA[3], pB[3];
 
             auto &vert = mergedMesh.verts[i];
@@ -1197,8 +1209,6 @@ void Contact::SnapToEdges () {
                         std::back_inserter(sharedFaces)
                     );
 
-                    const auto& vertFaces = mergedMesh.vertToFaces[i];
-
                     std::vector<vtkIdType> filtered;
                     filtered.reserve(sharedFaces.size());
 
@@ -1209,17 +1219,24 @@ void Contact::SnapToEdges () {
                     );
 
                     if (filtered.size() == 2) {
-                        std::cout << "dist " << std::sqrt(distSq)
-                            << ", t " << t
-                            << ", edge (" << edge.a << ", " << edge.b
-                            << "), i " << i
-                            << std::endl;
+                        auto &faceA = mergedMesh.faces[filtered[0]];
+                        auto &faceB = mergedMesh.faces[filtered[1]];
 
-                        std::cout << "filtered [";
-                        for (auto &faceId : filtered) {
-                            std::cout << faceId << ", ";
+                        if (faceA.source != referenceFace.source &&
+                            faceB.source != referenceFace.source) {
+
+                            std::cout << "dist " << std::sqrt(distSq)
+                                << ", t " << t
+                                << ", edge (" << edge.a << ", " << edge.b
+                                << "), i " << i
+                                << std::endl;
+
+                            std::cout << "filtered [";
+                            for (auto &faceId : filtered) {
+                                std::cout << faceId << ", ";
+                            }
+                            std::cout << "]" << std::endl;
                         }
-                        std::cout << "]" << std::endl;
                     }
                 }
             }
