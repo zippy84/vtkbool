@@ -5,9 +5,9 @@ pushd testing
 # pytest test_filter.py::test_simple -s
 # gdb --args python -m pytest test_filter.py::test_simple -s
 
-# pytest test_filter.py
+pytest test_filter.py
 
-./generate_frieze.py
+# ./generate_frieze.py
 
 # pytest test_filter.py::test_simple -s
 # pytest test_filter.py::test_simple_2 -s

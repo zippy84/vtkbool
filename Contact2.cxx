@@ -927,20 +927,22 @@ void OverlapLines (OverlapedLines &overlaps, InterPts &intersA, InterPts &inters
 
 }
 
-NonManifoldEdges GetNonManifoldEdges (const Mesh &mesh) {
+NonManifoldEdges GetNonManifoldEdges (const Mesh &mesh, FaceSource source) {
     NonManifoldEdges edges;
     NonManifoldEdges nonManifoldEdges;
 
     for (const auto &face : mesh.faces) {
-        size_t numVerts = face.vertIds.size();
+        if (face.source == source) {
+            size_t numVerts = face.vertIds.size();
 
-        for (size_t i = 0; i < numVerts; i++) {
-            vtkIdType u = face.vertIds[i];
-            vtkIdType v = face.vertIds[(i + 1) % numVerts];
+            for (size_t i = 0; i < numVerts; i++) {
+                vtkIdType u = face.vertIds[i];
+                vtkIdType v = face.vertIds[(i + 1) % numVerts];
 
-            if (!edges.emplace(u, v).second) {
-                nonManifoldEdges.emplace(u, v);
-                nonManifoldEdges.emplace(v, u);
+                if (!edges.emplace(u, v).second) {
+                    nonManifoldEdges.emplace(u, v);
+                    nonManifoldEdges.emplace(v, u);
+                }
             }
         }
     }
@@ -1306,11 +1308,6 @@ Contact::Contact (vtkPolyData *origPdA, vtkPolyData *origPdB) : tol(1e-5) {
 
     Save(newPd, "newPd.vtk");
 
-    // throw "";
-
-    /*std::cout << ComputeMaxPlanarityError(pdA) << std::endl;
-    std::cout << ComputeMaxPlanarityError(pdB) << std::endl;*/
-
     std::cout << ComputeMaxPlanarityError(newPd) << std::endl;
 
     pdA = GetPolyData(mergedMesh, FaceSource::A);
@@ -1533,18 +1530,6 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
 
         std::vector<Vector3> allPoints;
 
-        /*for (auto &faceId : faceIdsA) {
-            for (auto &id : meshA.faces[faceId].vertIds) {
-                allPoints.emplace_back(meshA.verts[id]);
-            }
-        }
-
-        for (auto &faceId : faceIdsB) {
-            for (auto &id : meshB.faces[faceId].vertIds) {
-                allPoints.emplace_back(meshB.verts[id]);
-            }
-        }*/
-
         for (auto faceId : faceIds) {
             for (auto &id : mergedMesh.faces[faceId].vertIds) {
                 allPoints.emplace_back(mergedMesh.verts[id]);
@@ -1608,33 +1593,13 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
     const int maxIters = 500;
 
     for (int iter = 0; iter < maxIters; iter++) {
-        /*double dispA = FindNewVerts(meshA, globalPlanes);
-        double dispB = FindNewVerts(meshB, globalPlanes);
-
-        double maxDisp = std::max(dispA, dispB);*/
-
         double maxDisp = FindNewVerts(mergedMesh, globalPlanes);
-
-        // UpdatePlanes(meshA);
-        // UpdatePlanes(meshB);
 
         UpdatePlanes(mergedMesh);
 
         std::for_each(std::execution::par, globalPlanes.begin(), globalPlanes.end(),
             [&](GlobalPlane &plane) {
                 std::vector<Vector3> allPoints;
-
-                /*for (auto &faceId : plane.faceIdsA) {
-                    for (auto &id : meshA.faces[faceId].vertIds) {
-                        allPoints.emplace_back(meshA.verts[id]);
-                    }
-                }
-
-                for (auto &faceId : plane.faceIdsB) {
-                    for (auto &id : meshB.faces[faceId].vertIds) {
-                        allPoints.emplace_back(meshB.verts[id]);
-                    }
-                }*/
 
                 for (auto &faceId : plane.faceIds) {
                     for (auto &id : mergedMesh.faces[faceId].vertIds) {
@@ -1717,24 +1682,6 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
     double maxDisp = 0;
 
     for (const auto &plane : globalPlanes) {
-        /*for (auto &faceId : plane.faceIdsA) {
-            for (auto &id : meshA.faces[faceId].vertIds) {
-                const auto &p = meshA.verts[id];
-                double dist = std::abs(plane.normal.x * p.x + plane.normal.y * p.y + plane.normal.z * p.z - plane.d);
-
-                maxDisp = std::max(maxDisp, dist);
-            }
-        }
-
-        for (auto &faceId : plane.faceIdsB) {
-            for (auto &id : meshB.faces[faceId].vertIds) {
-                const auto &p = meshB.verts[id];
-                double dist = std::abs(plane.normal.x * p.x + plane.normal.y * p.y + plane.normal.z * p.z - plane.d);
-
-                maxDisp = std::max(maxDisp, dist);
-            }
-        }*/
-
         for (auto &faceId : plane.faceIds) {
             for (auto &id : mergedMesh.faces[faceId].vertIds) {
                 const auto &p = mergedMesh.verts[id];
@@ -1875,8 +1822,8 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
     lines->GetCellData()->AddArray(contA);
     lines->GetCellData()->AddArray(contB);
 
-    // auto nonManifoldEdgesA = GetNonManifoldEdges(meshA);
-    // auto nonManifoldEdgesB = GetNonManifoldEdges(meshB);
+    auto nonManifoldEdgesA = GetNonManifoldEdges(mergedMesh, FaceSource::A);
+    auto nonManifoldEdgesB = GetNonManifoldEdges(mergedMesh, FaceSource::B);
 
     auto AddLines = [&](InterPts &interA, InterPts &interB, vtkIdType idA, vtkIdType idB) {
         if (interA.size() == 0 || interB.size() == 0) {
@@ -1892,7 +1839,7 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
             auto &f = std::get<0>(*itr);
             auto &s = std::get<1>(*itr);
 
-            /*auto edgeF = std::make_pair(f.edge.a, f.edge.b);
+            auto edgeF = std::make_pair(f.edge.a, f.edge.b);
             auto edgeS = std::make_pair(s.edge.a, s.edge.b);
 
             if ((f.src == Src::A && nonManifoldEdgesA.count(edgeF)) ||
@@ -1901,7 +1848,7 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
                 (s.src == Src::B && nonManifoldEdgesB.count(edgeS))) {
 
                 throw "";
-            }*/
+            }
 
             auto linePts = vtkSmartPointer<vtkIdList>::New();
 

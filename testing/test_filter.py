@@ -876,7 +876,6 @@ def test_equal_capt_pts(tmp_path):
 
     check_result(bf, [4, 4])
 
-@pytest.mark.xfail
 def test_equal_capt_pts_2(tmp_path):
     reader = vtkPolyDataReader()
     reader.SetFileName('data/cross.vtk')

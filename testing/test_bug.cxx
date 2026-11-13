@@ -58,8 +58,8 @@ int main () {
         /*auto sphereA = vtkSmartPointer<vtkSphereSource>::New();
         auto sphereB = vtkSmartPointer<vtkSphereSource>::New();
 
-        // sphereA->SetOutputPointsPrecision(vtkAlgorithm::DOUBLE_PRECISION);
-        // sphereB->SetOutputPointsPrecision(vtkAlgorithm::DOUBLE_PRECISION);
+        sphereA->SetOutputPointsPrecision(vtkAlgorithm::DOUBLE_PRECISION);
+        sphereB->SetOutputPointsPrecision(vtkAlgorithm::DOUBLE_PRECISION);
 
         const vtkIdType resolution = 30;
 
@@ -85,9 +85,9 @@ int main () {
         stripper->SetInputConnection(tf->GetOutputPort());
         stripper->SetMaximumLength(10);
 
-        stripper->Update();
+        stripper->Update();*/
 
-        Contact(sphereA->GetOutput(), stripper->GetOutput()).SaveAll("Test2_");*/
+        // Contact(sphereA->GetOutput(), stripper->GetOutput()).SaveAll("Test2_");
 
         /*auto bf = vtkSmartPointer<vtkPolyDataBooleanFilter>::New();
         bf->SetInputConnection(0, sphereA->GetOutputPort());
@@ -124,9 +124,9 @@ int main () {
         tfB->SetTransform(transform);
 
         tfA->Update();
-        tfB->Update();
+        tfB->Update();*/
 
-        Contact(tfA->GetPolyDataOutput(), tfB->GetPolyDataOutput()).SaveAll("Test3_");*/
+        // Contact(tfA->GetPolyDataOutput(), tfB->GetPolyDataOutput()).SaveAll("Test3_");
 
         /*auto bf = vtkSmartPointer<vtkPolyDataBooleanFilter>::New();
         bf->SetInputConnection(0, tfA->GetOutputPort());
