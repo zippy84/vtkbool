@@ -28,8 +28,8 @@ limitations under the License.
 #include <vtkPolyDataAlgorithm.h>
 #include <vtkKdTree.h>
 #include <vtkModifiedBSPTree.h>
-// #include <vtkMatrixToLinearTransform.h>
-// #include <vtkMatrix4x4.h>
+#include <vtkMatrixToLinearTransform.h>
+#include <vtkMatrix4x4.h>
 
 #include "Utilities.h"
 
@@ -167,7 +167,7 @@ class VTK_EXPORT vtkPolyDataBooleanFilter : public vtkPolyDataAlgorithm {
 
     vtkSmartPointer<vtkPolyData> modPdA, modPdB, contLines;
 
-    vtkSmartPointer<vtkCellData> cellDataA, cellDataB;
+    // vtkSmartPointer<vtkCellData> cellDataA, cellDataB;
     vtkSmartPointer<vtkIdTypeArray> cellIdsA, cellIdsB;
 
     vtkIdTypeArray *contsA, *contsB;
@@ -192,14 +192,10 @@ class VTK_EXPORT vtkPolyDataBooleanFilter : public vtkPolyDataAlgorithm {
 
     int OperMode;
 
-    /*vtkMatrix4x4 *matrices[2];
-    vtkLinearTransform *transforms[2];
+    vtkSmartPointer<vtkMatrix4x4> matrices[2];
+    vtkSmartPointer<vtkMatrixToLinearTransform> transforms[2];
 
-    vtkSmartPointer<vtkPolyData> cleanA, cleanB;
-
-    std::shared_ptr<Contact> contact;
-
-    vtkMTimeType timeMatrixA, timeMatrixB;*/
+    vtkMTimeType timeMatrixA, timeMatrixB;
 
 public:
     vtkTypeMacro(vtkPolyDataBooleanFilter, vtkPolyDataAlgorithm);
@@ -214,10 +210,10 @@ public:
     void SetOperModeToDifference () { OperMode = OPER_DIFFERENCE; Modified(); }
     void SetOperModeToDifference2 () { OperMode = OPER_DIFFERENCE2; Modified(); }
 
-    /*void SetMatrix (int i, vtkMatrix4x4 *matrix);
-    vtkMatrix4x4* GetMatrix (int i);*/
+    void SetMatrix (int i, vtkMatrix4x4 *matrix);
+    vtkMatrix4x4* GetMatrix (int i);
 
-    /*vtkMTimeType GetMTime () override;*/
+    vtkMTimeType GetMTime () override;
 
 protected:
     vtkPolyDataBooleanFilter ();

@@ -65,11 +65,6 @@ vtkPolyDataBooleanFilter::vtkPolyDataBooleanFilter () {
     timePdA = 0;
     timePdB = 0;
 
-    // contLines = vtkSmartPointer<vtkPolyData>::New();
-
-    // modPdA = vtkSmartPointer<vtkPolyData>::New();
-    // modPdB = vtkSmartPointer<vtkPolyData>::New();
-
     // cellDataA = vtkSmartPointer<vtkCellData>::New();
     // cellDataB = vtkSmartPointer<vtkCellData>::New();
 
@@ -78,33 +73,13 @@ vtkPolyDataBooleanFilter::vtkPolyDataBooleanFilter () {
 
     OperMode = OPER_UNION;
 
-    /*matrices[0] = nullptr;
-    matrices[1] = nullptr;
-
-    transforms[0] = nullptr;
-    transforms[1] = nullptr;
-
     timeMatrixA = 0;
-    timeMatrixB = 0;*/
+    timeMatrixB = 0;
 
 }
 
 vtkPolyDataBooleanFilter::~vtkPolyDataBooleanFilter () {
-    /*if (matrices[0] != nullptr) {
-        matrices[0]->Delete();
-    }
-
-    if (matrices[1] != nullptr) {
-        matrices[1]->Delete();
-    }
-
-    if (transforms[0] != nullptr) {
-        transforms[0]->Delete();
-    }
-
-    if (transforms[1] != nullptr) {
-        transforms[1]->Delete();
-    }*/
+    // ...
 }
 
 int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformationVector **inputVector, vtkInformationVector *outputVector) {
@@ -132,10 +107,36 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
         vtkMTimeType timeA = pdA->GetMTime();
         vtkMTimeType timeB = pdB->GetMTime();
 
-        if (timeA > timePdA || timeB > timePdB) {
+        if (timeA > timePdA ||
+            timeB > timePdB ||
+            (matrices[0] != nullptr && matrices[0]->GetMTime() > timeMatrixA) ||
+            (matrices[1] != nullptr && matrices[1]->GetMTime() > timeMatrixB)) {
+
             start = clock::now();
 
-            Contact contact(pdA, pdB);
+            vtkSmartPointer<vtkPolyData> newPdA = pdA, newPdB = pdB;
+
+            if (transforms[0] != nullptr) {
+                auto tf = vtkSmartPointer<vtkTransformFilter>::New();
+                tf->SetInputData(pdA);
+                tf->SetTransform(transforms[0]);
+                tf->SetOutputPointsPrecision(vtkAlgorithm::DOUBLE_PRECISION);
+                tf->Update();
+
+                newPdA = tf->GetPolyDataOutput();
+            }
+
+            if (transforms[1] != nullptr) {
+                auto tf = vtkSmartPointer<vtkTransformFilter>::New();
+                tf->SetInputData(pdB);
+                tf->SetTransform(transforms[1]);
+                tf->SetOutputPointsPrecision(vtkAlgorithm::DOUBLE_PRECISION);
+                tf->Update();
+
+                newPdB = tf->GetPolyDataOutput();
+            }
+
+            Contact contact(newPdA, newPdB);
 
             modPdA = contact.GetPolyDataA();
             modPdB = contact.GetPolyDataB();
@@ -286,13 +287,13 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
             timePdA = pdA->GetMTime();
             timePdB = pdB->GetMTime();
 
-            /*if (matrices[0] != nullptr) {
+            if (matrices[0] != nullptr) {
                 timeMatrixA = matrices[0]->GetMTime();
             }
 
             if (matrices[1] != nullptr) {
                 timeMatrixB = matrices[1]->GetMTime();
-            }*/
+            }
 
         }
 
@@ -3011,37 +3012,17 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
 
 }
 
-/*void vtkPolyDataBooleanFilter::SetMatrix (int i, vtkMatrix4x4 *matrix) {
-    if (i != 0 && i != 1) {
+void vtkPolyDataBooleanFilter::SetMatrix (int i, vtkMatrix4x4 *matrix) {
+    if ((i != 0 && i != 1) || matrices[i] == matrix) {
         return;
     }
 
-    if (matrices[i] == matrix) {
-        return;
-    }
-
-    if (transforms[i] != nullptr) {
-        transforms[i]->Delete();
-        transforms[i] = nullptr;
-    }
-
-    if (matrices[i] != nullptr) {
-        matrices[i]->Delete();
-        matrices[i] = nullptr;
-    }
+    matrices[i] = matrix;
+    transforms[i] = nullptr;
 
     if (matrix != nullptr) {
-        matrices[i] = matrix;
-        matrix->Register(this);
-
-        auto transform = vtkMatrixToLinearTransform::New();
-
-        transform->Register(this);
-        transform->Delete();
-
-        transform->SetInput(matrix);
-
-        transforms[i] = transform;
+        transforms[i] = vtkSmartPointer<vtkMatrixToLinearTransform>::New();
+        transforms[i]->SetInput(matrix);
     }
 
     Modified();
@@ -3067,4 +3048,4 @@ vtkMTimeType vtkPolyDataBooleanFilter::GetMTime () {
     }
 
     return *std::max_element(times.begin(), times.end());
-}*/
+}

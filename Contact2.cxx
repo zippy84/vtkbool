@@ -1438,8 +1438,6 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
             stack.push(k);
             visited.insert(k);
 
-            // const auto &seed = k.src == 'A' ? meshA.faces[k.index] : meshB.faces[k.index];
-
             const auto &seed = mergedMesh.faces[k.index];
 
             /*if (seed.vertIds.size() == 3) {
@@ -1457,8 +1455,6 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
                 if (itr != graph.end()) {
                     for (const auto &neighbor : itr->second) {
                         if (visited.find(neighbor) == visited.end()) {
-                            // const auto &normal = neighbor.src == 'A' ? meshA.faces[neighbor.index].normal : meshB.faces[neighbor.index].normal;
-
                             const auto &normal = mergedMesh.faces[neighbor.index].normal;
 
                             const double prod = normal.x * seed.normal.x + normal.y * seed.normal.y + normal.z * seed.normal.z;
@@ -1475,20 +1471,6 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
             groups.push_back(group);
         }
     }
-
-    /*auto planesA = vtkSmartPointer<vtkIdTypeArray>::New();
-    auto planesB = vtkSmartPointer<vtkIdTypeArray>::New();
-
-    planesA->SetNumberOfTuples(pdA->GetNumberOfPolys());
-    planesB->SetNumberOfTuples(pdB->GetNumberOfPolys());
-
-    for (vtkIdType i = 0; i < pdA->GetNumberOfPolys(); i++) {
-        planesA->SetValue(i, -1);
-    }
-
-    for (vtkIdType i = 0; i < pdB->GetNumberOfPolys(); i++) {
-        planesB->SetValue(i, -1);
-    }*/
 
     std::vector<GlobalPlane> globalPlanes;
 
@@ -1550,18 +1532,6 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
         size_t planeId = globalPlanes.size();
 
         globalPlanes.emplace_back(GlobalPlane{normal, d, faceIds});
-
-        /*for (auto &faceId : faceIdsA) {
-            meshA.faces[faceId].globalPlaneId = planeId;
-
-            // planesA->SetValue(faceId, planeId);
-        }
-
-        for (auto &faceId : faceIdsB) {
-            meshB.faces[faceId].globalPlaneId = planeId;
-
-            // planesB->SetValue(faceId, planeId);
-        }*/
 
         for (auto &faceId : faceIds) {
             mergedMesh.faces[faceId].globalPlaneId = planeId;
@@ -1629,7 +1599,6 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
                     face.globalPlaneId = planeId;
 
                     globalPlanes[planeId].faceIdsA.push_back(pair.a);
-                    // planesA->SetValue(pair.a, static_cast<vtkIdType>(planeId));
 
                     std::cout << "globalPlaneId added to meshA.faces[" << pair.a << "]" << std::endl;
                 }
@@ -1648,7 +1617,6 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
                     face.globalPlaneId = planeId;
 
                     globalPlanes[planeId].faceIdsB.push_back(pair.b);
-                    // planesB->SetValue(pair.b, static_cast<vtkIdType>(planeId));
 
                     std::cout << "globalPlaneId added to meshB.faces[" << pair.b << "]" << std::endl;
                 }
@@ -1669,12 +1637,6 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
         }
 
     }
-
-    /*planesA->SetName("planes");
-    planesB->SetName("planes");
-
-    pdA->GetCellData()->AddArray(planesA);
-    pdB->GetCellData()->AddArray(planesB);*/
 
     UpdatePoints(pdA, mergedMesh);
     UpdatePoints(pdB, mergedMesh);

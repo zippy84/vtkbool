@@ -33,5 +33,6 @@ pytest test_filter.py
 # pytest test_filter.py::test_equal_capt_pts -s
 # pytest test_filter.py::test_equal_capt_pts_2 -s
 # pytest test_filter.py::test_equal_capt_pts_3 -s
+# pytest test_filter.py::test_transform_matrix -s
 
 popd

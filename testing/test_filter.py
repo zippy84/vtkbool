@@ -761,46 +761,6 @@ def test_branched_6(tmp_path):
     write_result(bf, tmp_path)
     check_result(bf, [6, 5])
 
-# def test_bad_shaped(tmp_path):
-#     cubeA = vtkCubeSource()
-#     cubeA.SetBounds(-2.5, 2.5, 0, 5, 0, 5)
-
-#     z = 4.75
-
-#     pts = [
-#         [2.5, -2.5, 0],
-#         [2.5, -2.5, 5],
-#         [0, -2.5, z],
-#         [-2.5, -2.5, 5],
-#         [-2.5, -2.5, 0],
-
-#         [-2.5, 2.5, 0],
-#         [-2.5, 2.5, 5],
-#         [0, 2.5, z],
-#         [2.5, 2.5, 5],
-#         [2.5, 2.5, 0],
-#     ]
-
-#     polys = [
-#         [0, 1, 2, 3, 4],
-#         [5, 6, 7, 8, 9],
-#         [9, 8, 1, 0],
-#         [4, 3, 6, 5],
-#         [9, 0, 4, 5],
-#         [1, 8, 7, 6, 3, 2]
-#     ]
-
-#     cubeB = create_polydata(pts, polys)
-
-#     bf = vtkPolyDataBooleanFilter()
-#     bf.SetInputConnection(0, cubeA.GetOutputPort())
-#     bf.SetInputConnection(1, cubeB.GetOutputPort())
-#     bf.SetOperModeToNone()
-#     bf.Update()
-
-#     write_result(bf, tmp_path)
-#     check_result(bf, [5, 5])
-
 @pytest.mark.xfail
 def test_self_intersecting_polys():
     cubeA = vtkCubeSource()
@@ -940,37 +900,37 @@ def test_equal_capt_pts_3(tmp_path):
 
     check_result(bf, [6, 6])
 
-# def test_transform_matrix(tmp_path):
-#     cubeA = vtkCubeSource()
-#     cubeA.SetBounds(-1.5, 1.5, -1.5, 1.5, -1.5, 1.5)
+def test_transform_matrix(tmp_path):
+    cubeA = vtkCubeSource()
+    cubeA.SetBounds(-1.5, 1.5, -1.5, 1.5, -1.5, 1.5)
 
-#     cubeB = vtkCubeSource()
-#     cubeB.SetBounds(-3, 3, -.5, .5, -.5, .5)
+    cubeB = vtkCubeSource()
+    cubeB.SetBounds(-3, 3, -.5, .5, -.5, .5)
 
-#     transform = vtkTransform()
-#     matrix = transform.GetMatrix()
+    transform = vtkTransform()
+    matrix = transform.GetMatrix()
 
-#     bf = vtkPolyDataBooleanFilter()
-#     bf.SetInputConnection(0, cubeA.GetOutputPort())
-#     bf.SetInputConnection(1, cubeB.GetOutputPort())
-#     bf.SetOperModeToNone()
+    bf = vtkPolyDataBooleanFilter()
+    bf.SetInputConnection(0, cubeA.GetOutputPort())
+    bf.SetInputConnection(1, cubeB.GetOutputPort())
+    bf.SetOperModeToNone()
 
-#     bf.SetMatrix(1, matrix)
+    bf.SetMatrix(1, matrix)
 
-#     for i in range(18):
-#         transform.Identity()
-#         transform.RotateY(i*10)
+    for i in range(18):
+        transform.Identity()
+        transform.RotateY(i*10)
 
-#         matrix = transform.GetMatrix()
+        matrix = transform.GetMatrix()
 
-#         # bf.SetMatrix(1, matrix)
+        # bf.SetMatrix(1, matrix)
 
-#         print(bf.GetMatrix(1))
+        print(bf.GetMatrix(1))
 
-#         bf.Update()
+        bf.Update()
 
-#         path = tmp_path / f'transformed_{i}'
-#         path.mkdir()
+        path = tmp_path / f'transformed_{i}'
+        path.mkdir()
 
-#         write_result(bf, path)
-#         check_result(bf, [3, 3])
+        write_result(bf, path)
+        check_result(bf, [3, 3])
