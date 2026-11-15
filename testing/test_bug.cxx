@@ -27,7 +27,7 @@ limitations under the License.
 #include "vtkPolyDataBooleanFilter.h"
 
 int main () {
-    /*{
+    {
         auto readerA = vtkSmartPointer<vtkPolyDataReader>::New();
         readerA->SetFileName("../testing/data_bug/MeshA.vtk");
 
@@ -52,10 +52,10 @@ int main () {
         writer->SetInputConnection(bf->GetOutputPort());
         writer->SetFileName("Test1_result.vtk");
         writer->Update();
-    }*/
+    }
 
     {
-        /*auto sphereA = vtkSmartPointer<vtkSphereSource>::New();
+        auto sphereA = vtkSmartPointer<vtkSphereSource>::New();
         auto sphereB = vtkSmartPointer<vtkSphereSource>::New();
 
         sphereA->SetOutputPointsPrecision(vtkAlgorithm::DOUBLE_PRECISION);
@@ -85,11 +85,11 @@ int main () {
         stripper->SetInputConnection(tf->GetOutputPort());
         stripper->SetMaximumLength(10);
 
-        stripper->Update();*/
+        stripper->Update();
 
         // Contact(sphereA->GetOutput(), stripper->GetOutput()).SaveAll("Test2_");
 
-        /*auto bf = vtkSmartPointer<vtkPolyDataBooleanFilter>::New();
+        auto bf = vtkSmartPointer<vtkPolyDataBooleanFilter>::New();
         bf->SetInputConnection(0, sphereA->GetOutputPort());
         bf->SetInputConnection(1, stripper->GetOutputPort());
         bf->Update();
@@ -101,7 +101,7 @@ int main () {
         auto writer = vtkSmartPointer<vtkPolyDataWriter>::New();
         writer->SetInputConnection(bf->GetOutputPort());
         writer->SetFileName("Test2_result.vtk");
-        writer->Update();*/
+        writer->Update();
     }
 
     {
@@ -133,20 +133,6 @@ int main () {
         }
 
         contact.SaveAll("Test3_");
-
-        /*auto bf = vtkSmartPointer<vtkPolyDataBooleanFilter>::New();
-        bf->SetInputConnection(0, tfA->GetOutputPort());
-        bf->SetInputConnection(1, tfB->GetOutputPort());
-        bf->Update();
-
-        if (bf->GetOutput()->GetNumberOfCells() == 0) {
-            return EXIT_FAILURE;
-        }
-
-        auto writer = vtkSmartPointer<vtkPolyDataWriter>::New();
-        writer->SetInputConnection(bf->GetOutputPort());
-        writer->SetFileName("Test3_result.vtk");
-        writer->Update();*/
     }
 
     return EXIT_SUCCESS;
