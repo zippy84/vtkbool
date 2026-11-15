@@ -126,9 +126,15 @@ int main () {
         tfA->Update();
         tfB->Update();
 
-        // Contact(tfA->GetPolyDataOutput(), tfB->GetPolyDataOutput()).SaveAll("Test3_");
+        Contact contact(tfA->GetPolyDataOutput(), tfB->GetPolyDataOutput());
 
-        auto bf = vtkSmartPointer<vtkPolyDataBooleanFilter>::New();
+        if (contact.GetLines() == nullptr) {
+            return EXIT_FAILURE;
+        }
+
+        contact.SaveAll("Test3_");
+
+        /*auto bf = vtkSmartPointer<vtkPolyDataBooleanFilter>::New();
         bf->SetInputConnection(0, tfA->GetOutputPort());
         bf->SetInputConnection(1, tfB->GetOutputPort());
         bf->Update();
@@ -140,7 +146,7 @@ int main () {
         auto writer = vtkSmartPointer<vtkPolyDataWriter>::New();
         writer->SetInputConnection(bf->GetOutputPort());
         writer->SetFileName("Test3_result.vtk");
-        writer->Update();
+        writer->Update();*/
     }
 
     return EXIT_SUCCESS;
