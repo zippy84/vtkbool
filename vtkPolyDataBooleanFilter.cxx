@@ -2731,7 +2731,7 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
 
         // bereits behandelte regionen werden nicht noch einmal untersucht
 
-        vtkIdType notLocated = 0;
+        /*vtkIdType notLocated = 0;
 
         for (j = 0; j < fptsA->GetNumberOfIds(); j++) {
             if (locsA.count(scalarsA->GetValue(fptsA->GetId(j))) == 0) {
@@ -2747,7 +2747,7 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
 
         if (notLocated == 0) {
             continue;
-        }
+        }*/
 
 #endif
 
