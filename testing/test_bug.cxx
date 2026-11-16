@@ -55,7 +55,7 @@ int main () {
     }
 
     {
-        auto sphereA = vtkSmartPointer<vtkSphereSource>::New();
+        /*auto sphereA = vtkSmartPointer<vtkSphereSource>::New();
         auto sphereB = vtkSmartPointer<vtkSphereSource>::New();
 
         sphereA->SetOutputPointsPrecision(vtkAlgorithm::DOUBLE_PRECISION);
@@ -85,11 +85,11 @@ int main () {
         stripper->SetInputConnection(tf->GetOutputPort());
         stripper->SetMaximumLength(10);
 
-        stripper->Update();
+        stripper->Update();*/
 
         // Contact(sphereA->GetOutput(), stripper->GetOutput()).SaveAll("Test2_");
 
-        auto bf = vtkSmartPointer<vtkPolyDataBooleanFilter>::New();
+        /*auto bf = vtkSmartPointer<vtkPolyDataBooleanFilter>::New();
         bf->SetInputConnection(0, sphereA->GetOutputPort());
         bf->SetInputConnection(1, stripper->GetOutputPort());
         bf->Update();
@@ -101,11 +101,11 @@ int main () {
         auto writer = vtkSmartPointer<vtkPolyDataWriter>::New();
         writer->SetInputConnection(bf->GetOutputPort());
         writer->SetFileName("Test2_result.vtk");
-        writer->Update();
+        writer->Update();*/
     }
 
     {
-        auto transform = vtkSmartPointer<vtkTransform>::New();
+        /*auto transform = vtkSmartPointer<vtkTransform>::New();
         transform->RotateX(5);
         transform->RotateY(5);
 
@@ -132,7 +132,7 @@ int main () {
             return EXIT_FAILURE;
         }
 
-        contact.SaveAll("Test3_");
+        contact.SaveAll("Test3_");*/
     }
 
     return EXIT_SUCCESS;

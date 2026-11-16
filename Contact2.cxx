@@ -44,6 +44,7 @@ limitations under the License.
 #include <vtkVersionMacros.h>
 #include <vtkStaticPointLocator.h>
 #include <vtkLine.h>
+#include <vtkModifiedBSPTree.h>
 
 std::ostream& operator<< (std::ostream &out, const Vector3 &vec) {
     out << "[" << vec.x << ", " << vec.y << ", " << vec.z << "]";
@@ -1128,31 +1129,6 @@ void Contact::MergeMeshes () {
 }
 
 void Contact::SnapToEdges () {
-    std::vector<Pair2> edges;
-
-    edges.reserve(mergedMesh.faces.size() * 3);
-
-    for (auto &face : mergedMesh.faces) {
-        size_t numVerts = face.vertIds.size();
-
-        for (size_t i = 0; i < numVerts; i++) {
-            auto a = face.vertIds[i];
-            auto b = face.vertIds[(i + 1) % numVerts];
-
-            if (a < b) {
-                edges.emplace_back(Pair2{a, b});
-            } else {
-                edges.emplace_back(Pair2{b, a});
-            }
-        }
-    }
-
-    std::sort(edges.begin(), edges.end());
-
-    edges.erase(std::unique(edges.begin(), edges.end()), edges.end());
-
-    std::mutex mutex;
-
     struct Snap {
         size_t vertId;
         double t;
@@ -1161,85 +1137,102 @@ void Contact::SnapToEdges () {
 
     std::map<Pair2, std::vector<Snap>> edgeSnaps;
 
-    std::vector<size_t> vertIndices(mergedMesh.verts.size());
-    std::iota(vertIndices.begin(), vertIndices.end(), 0);
+    auto GetSnaps = [&](vtkSmartPointer<vtkPolyData> pd, FaceSource source, vtkIdType offset = 0) {
+        auto bspTree = vtkSmartPointer<vtkModifiedBSPTree>::New();
+        bspTree->SetDataSet(pd);
+        bspTree->BuildLocator();
 
-    std::for_each(std::execution::par, vertIndices.begin(), vertIndices.end(),
-        [&](size_t i) {
-            const auto& vertFaces = mergedMesh.vertToFaces[i];
+        std::vector<Pair2> edges;
 
-            auto &referenceFace = mergedMesh.faces[vertFaces[0]];
+        for (auto &face : mergedMesh.faces) {
+            if (face.source != source) {
+                size_t numVerts = face.vertIds.size();
 
-            bool sameSource = std::all_of(vertFaces.begin(), vertFaces.end(), [&](vtkIdType faceId) {
-                return mergedMesh.faces[faceId].source == referenceFace.source;
-            });
+                for (size_t i = 0; i < numVerts; i++) {
+                    auto a = face.vertIds[i];
+                    auto b = face.vertIds[(i + 1) % numVerts];
 
-            if (!sameSource) {
-                return;
-            }
-
-            double x[3], pA[3], pB[3];
-
-            auto &vert = mergedMesh.verts[i];
-
-            x[0] = vert.x; x[1] = vert.y; x[2] = vert.z;
-
-            for (auto &edge : edges) {
-                if (edge.a == i || edge.b == i) {
-                    continue;
-                }
-
-                auto &vertA = mergedMesh.verts[edge.a];
-                auto &vertB = mergedMesh.verts[edge.b];
-
-                pA[0] = vertA.x;
-                pA[1] = vertA.y;
-                pA[2] = vertA.z;
-
-                pB[0] = vertB.x;
-                pB[1] = vertB.y;
-                pB[2] = vertB.z;
-
-                double t;
-
-                double distSq = vtkLine::DistanceToLine(x, pA, pB, t);
-
-                if (distSq < 1e-10 && t > 0 && t < 1) {
-                    const auto& facesA = mergedMesh.vertToFaces[edge.a];
-                    const auto& facesB = mergedMesh.vertToFaces[edge.b];
-
-                    std::vector<vtkIdType> sharedFaces;
-
-                    std::set_intersection(
-                        facesA.begin(), facesA.end(),
-                        facesB.begin(), facesB.end(),
-                        std::back_inserter(sharedFaces)
-                    );
-
-                    std::vector<vtkIdType> filtered;
-                    filtered.reserve(sharedFaces.size());
-
-                    std::set_difference(
-                        sharedFaces.begin(), sharedFaces.end(),
-                        vertFaces.begin(), vertFaces.end(),
-                        std::back_inserter(filtered)
-                    );
-
-                    if (filtered.size() == 2) {
-                        auto &faceA = mergedMesh.faces[filtered[0]];
-                        auto &faceB = mergedMesh.faces[filtered[1]];
-
-                        if (faceA.source != referenceFace.source &&
-                            faceB.source != referenceFace.source) {
-
-                            std::lock_guard<std::mutex> lock(mutex);
-
-                            edgeSnaps[edge].push_back(Snap{i, t, std::move(filtered)});
-                        }
+                    if (a < b) {
+                        edges.emplace_back(Pair2{a, b});
+                    } else {
+                        edges.emplace_back(Pair2{b, a});
                     }
                 }
             }
-        });
+        }
+
+        std::sort(edges.begin(), edges.end());
+
+        edges.erase(std::unique(edges.begin(), edges.end()), edges.end());
+
+        for (auto edge : edges) {
+            auto vertA = mergedMesh.verts[edge.a];
+            auto vertB = mergedMesh.verts[edge.b];
+
+            double pA[] = {vertA.x, vertA.y, vertA.z};
+            double pB[] = {vertB.x, vertB.y, vertB.z};
+
+            auto cells = vtkSmartPointer<vtkIdList>::New();
+
+            bspTree->FindCellsAlongLine(pA, pB, 1e-5, cells);
+
+            std::vector<vtkIdType> viewedVertIds;
+
+            for (vtkIdType i = 0; i < cells->GetNumberOfIds(); i++) {
+                vtkIdType cellId = cells->GetId(i);
+
+                auto face = mergedMesh.faces[offset + cellId];
+
+                for (auto vertId : face.vertIds) {
+                    if (std::find(viewedVertIds.begin(), viewedVertIds.end(), vertId) != viewedVertIds.end()) {
+                        continue;
+                    }
+
+                    auto &vert = mergedMesh.verts[vertId];
+
+                    double x[3];
+                    x[0] = vert.x; x[1] = vert.y; x[2] = vert.z;
+
+                    double t;
+
+                    double distSq = vtkLine::DistanceToLine(x, pA, pB, t);
+
+                    if (distSq < 1e-10 && t > 0 && t < 1) {
+                        const auto& facesA = mergedMesh.vertToFaces[edge.a];
+                        const auto& facesB = mergedMesh.vertToFaces[edge.b];
+
+                        std::vector<vtkIdType> sharedFaces;
+
+                        std::set_intersection(
+                            facesA.begin(), facesA.end(),
+                            facesB.begin(), facesB.end(),
+                            std::back_inserter(sharedFaces)
+                        );
+
+                        std::vector<vtkIdType> filtered;
+
+                        for (auto faceId : sharedFaces) {
+                            if (mergedMesh.faces[faceId].source != source) {
+                                filtered.push_back(faceId);
+                            }
+                        }
+
+                        if (filtered.size() == 2) {
+                            edgeSnaps[edge].push_back(Snap{vertId, t, std::move(filtered)});
+                        }
+                    }
+
+                    viewedVertIds.push_back(vertId);
+                }
+            }
+        }
+    };
+
+    auto pdA = GetPolyData(mergedMesh, FaceSource::A);
+    auto pdB = GetPolyData(mergedMesh, FaceSource::B);
+
+    GetSnaps(pdB, FaceSource::B, pdA->GetNumberOfCells());
+    GetSnaps(pdA, FaceSource::A);
 
     for (auto& [edge, snaps] : edgeSnaps) {
         std::sort(snaps.begin(), snaps.end(), [](const Snap &a, const Snap &b) {
