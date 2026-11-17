@@ -811,14 +811,12 @@ def test_self_intersecting_polys():
 
     check_result(bf)
 
-# @pytest.mark.xfail
 def test_equal_capt_pts(tmp_path):
     cyl = vtkCylinderSource()
     cyl.SetHeight(2)
     cyl.SetResolution(12)
 
     z = .0000025
-    # z = .0000075 # verursacht ein anderes bekanntes problem
 
     tra = vtkTransform()
     tra.RotateZ(90)
@@ -834,7 +832,7 @@ def test_equal_capt_pts(tmp_path):
     bf.SetOperModeToNone()
     bf.Update()
 
-    check_result(bf, [4, 4])
+    check_result(bf, [3, 3])
 
 def test_equal_capt_pts_2(tmp_path):
     reader = vtkPolyDataReader()
@@ -858,7 +856,6 @@ def test_equal_capt_pts_2(tmp_path):
 
     check_result(bf, [24, 24])
 
-# @pytest.mark.xfail
 def test_equal_capt_pts_3(tmp_path):
     z = .000005
 
