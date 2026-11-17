@@ -1128,6 +1128,33 @@ void Contact::MergeMeshes () {
     }
 }
 
+std::vector<Pair2> GetEdges (const Mesh &mesh, FaceSource source) {
+    std::vector<Pair2> edges;
+
+    for (auto &face : mesh.faces) {
+        if (face.source == source) {
+            size_t numVerts = face.vertIds.size();
+
+            for (size_t i = 0; i < numVerts; i++) {
+                auto a = face.vertIds[i];
+                auto b = face.vertIds[(i + 1) % numVerts];
+
+                if (a < b) {
+                    edges.emplace_back(Pair2{a, b});
+                } else {
+                    edges.emplace_back(Pair2{b, a});
+                }
+            }
+        }
+    }
+
+    std::sort(edges.begin(), edges.end());
+
+    edges.erase(std::unique(edges.begin(), edges.end()), edges.end());
+
+    return edges;
+}
+
 void Contact::SnapToEdges () {
     struct Snap {
         size_t vertId;
@@ -1142,28 +1169,7 @@ void Contact::SnapToEdges () {
         bspTree->SetDataSet(pd);
         bspTree->BuildLocator();
 
-        std::vector<Pair2> edges;
-
-        for (auto &face : mergedMesh.faces) {
-            if (face.source != source) {
-                size_t numVerts = face.vertIds.size();
-
-                for (size_t i = 0; i < numVerts; i++) {
-                    auto a = face.vertIds[i];
-                    auto b = face.vertIds[(i + 1) % numVerts];
-
-                    if (a < b) {
-                        edges.emplace_back(Pair2{a, b});
-                    } else {
-                        edges.emplace_back(Pair2{b, a});
-                    }
-                }
-            }
-        }
-
-        std::sort(edges.begin(), edges.end());
-
-        edges.erase(std::unique(edges.begin(), edges.end()), edges.end());
+        auto edges = GetEdges(mergedMesh, source);
 
         for (auto edge : edges) {
             auto vertA = mergedMesh.verts[edge.a];
@@ -1212,7 +1218,7 @@ void Contact::SnapToEdges () {
                         std::vector<vtkIdType> filtered;
 
                         for (auto faceId : sharedFaces) {
-                            if (mergedMesh.faces[faceId].source != source) {
+                            if (mergedMesh.faces[faceId].source == source) {
                                 filtered.push_back(faceId);
                             }
                         }
@@ -1231,8 +1237,8 @@ void Contact::SnapToEdges () {
     auto pdA = GetPolyData(mergedMesh, FaceSource::A);
     auto pdB = GetPolyData(mergedMesh, FaceSource::B);
 
-    GetSnaps(pdB, FaceSource::B, pdA->GetNumberOfCells());
-    GetSnaps(pdA, FaceSource::A);
+    GetSnaps(pdB, FaceSource::A, pdA->GetNumberOfCells());
+    GetSnaps(pdA, FaceSource::B);
 
     for (auto& [edge, snaps] : edgeSnaps) {
         std::sort(snaps.begin(), snaps.end(), [](const Snap &a, const Snap &b) {
@@ -1283,6 +1289,97 @@ void Contact::SnapToEdges () {
     }
 }
 
+void Contact::SnapEdges () {
+    auto bspTree = vtkSmartPointer<vtkModifiedBSPTree>::New();
+    bspTree->SetDataSet(pdA);
+    bspTree->BuildLocator();
+
+    auto lines = GetEdges(mergedMesh, FaceSource::B);
+
+    struct Snap {
+        Pair2 line;
+        Vector3 proj;
+        double t;
+    };
+
+    std::map<Pair2, std::vector<Snap>> edgeSnaps;
+
+    auto points = vtkSmartPointer<vtkPoints>::New();
+    auto cells = vtkSmartPointer<vtkIdList>::New();
+
+    for (auto line : lines) {
+        auto vertA = mergedMesh.verts[line.a];
+        auto vertB = mergedMesh.verts[line.b];
+
+        double pA[] = {vertA.x, vertA.y, vertA.z};
+        double pB[] = {vertB.x, vertB.y, vertB.z};
+
+        points->Reset();
+        cells->Reset();
+
+        bspTree->IntersectWithLine(pA, pB, points, cells);
+
+        for (vtkIdType i = 0; i < cells->GetNumberOfIds(); i++) {
+            vtkIdType faceId = cells->GetId(i);
+
+            auto &face = mergedMesh.faces[faceId];
+
+            size_t numVerts = face.vertIds.size();
+
+            for (size_t j = 0; j < numVerts; j++) {
+                vtkIdType a = face.vertIds[j];
+                vtkIdType b = face.vertIds[(j + 1) % numVerts];
+
+                auto vertA = mergedMesh.verts[a];
+                auto vertB = mergedMesh.verts[b];
+
+                double pA[] = {vertA.x, vertA.y, vertA.z};
+                double pB[] = {vertB.x, vertB.y, vertB.z};
+
+                double t;
+                double proj[3];
+
+                double distSq = vtkLine::DistanceToLine(points->GetPoint(i), pA, pB, t, proj);
+
+                if (distSq < 1e-10) {
+                    Pair2 edge;
+                    double s;
+
+                    if (a < b) {
+                        edge = Pair2{a, b};
+                        s = t;
+                    } else {
+                        edge = Pair2{b, a};
+                        s = 1 - t;
+                    }
+
+                    auto &snaps = edgeSnaps[edge];
+
+                    if (std::find_if(snaps.begin(), snaps.end(), [&line](const Snap &snap) { return snap.line == line; }) == snaps.end()) {
+                        snaps.emplace_back(Snap{line, {proj[0], proj[1], proj[2]}, s});
+                    }
+
+                }
+
+            }
+        }
+    }
+
+    for (const auto& [edge, snaps] : edgeSnaps) {
+        std::cout << "(" << edge.a << ", " << edge.b << ") => [";
+
+        for (auto &snap : snaps) {
+            std::cout << "(" << snap.line.a
+                << ", " << snap.line.b
+                << ") -> "
+                << snap.t
+                << ", ";
+        }
+
+        std::cout << "]" << std::endl;
+    }
+}
+
 Contact::Contact (vtkPolyData *origPdA, vtkPolyData *origPdB) : tol(1e-5) {
     meshA = GetMesh(origPdA);
     meshB = GetMesh(origPdB);
@@ -1296,6 +1393,8 @@ Contact::Contact (vtkPolyData *origPdA, vtkPolyData *origPdB) : tol(1e-5) {
     MergeMeshes();
 
     SnapToEdges();
+
+    SnapEdges();
 
     newPd = GetPolyData(mergedMesh);
 

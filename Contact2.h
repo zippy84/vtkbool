@@ -173,6 +173,7 @@ public:
 
     void MergeMeshes ();
     void SnapToEdges ();
+    void SnapEdges ();
 };
 
 #endif

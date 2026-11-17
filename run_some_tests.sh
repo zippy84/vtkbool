@@ -5,7 +5,7 @@ pushd testing
 # pytest test_filter.py::test_simple -s
 # gdb --args python -m pytest test_filter.py::test_simple -s
 
-pytest test_filter.py
+# pytest test_filter.py
 
 # ./generate_frieze.py
 
@@ -30,7 +30,7 @@ pytest test_filter.py
 # pytest test_filter.py::test_branched_5 -s
 # pytest test_filter.py::test_branched_6 -s
 # pytest test_filter.py::test_self_intersecting_polys -s
-# pytest test_filter.py::test_equal_capt_pts -s
+pytest test_filter.py::test_equal_capt_pts -s
 # pytest test_filter.py::test_equal_capt_pts_2 -s
 # pytest test_filter.py::test_equal_capt_pts_3 -s
 # pytest test_filter.py::test_transform_matrix -s

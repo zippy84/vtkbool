@@ -811,7 +811,7 @@ def test_self_intersecting_polys():
 
     check_result(bf)
 
-@pytest.mark.xfail
+# @pytest.mark.xfail
 def test_equal_capt_pts(tmp_path):
     cyl = vtkCylinderSource()
     cyl.SetHeight(2)
@@ -858,7 +858,7 @@ def test_equal_capt_pts_2(tmp_path):
 
     check_result(bf, [24, 24])
 
-@pytest.mark.xfail
+# @pytest.mark.xfail
 def test_equal_capt_pts_3(tmp_path):
     z = .000005
 
