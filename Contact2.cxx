@@ -1755,7 +1755,7 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
                 return;
             }
 
-            if (pair.a == 66 && (pair.b == 485 || pair.b == 495)) {
+            /*if (pair.a == 60 && pair.b == 485) {
                 std::cout << pair.a << " [";
                 for (auto id : faceA.vertIds) {
                     std::cout << id << " " << mergedMesh.verts[id] << ", ";
@@ -1767,11 +1767,9 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
                     std::cout << id << " " << mergedMesh.verts[id] << ", ";
                 }
                 std::cout << "]" << std::endl;
-
-                std::cout << std::acos(faceA.normal.x * faceB.normal.x + faceA.normal.y * faceB.normal.y + faceA.normal.z * faceB.normal.z)*180/M_PI << std::endl;
             } else {
                 return;
-            }
+            }*/
 
             const double nA[] = {faceA.normal.x, faceA.normal.y, faceA.normal.z};
             const double nB[] = {faceB.normal.x, faceB.normal.y, faceB.normal.z};
@@ -1867,7 +1865,12 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
     auto nonManifoldEdgesA = GetNonManifoldEdges(mergedMesh, FaceSource::A);
     auto nonManifoldEdgesB = GetNonManifoldEdges(mergedMesh, FaceSource::B);
 
-    using Line = std::tuple<InterPt, InterPt, vtkIdType, vtkIdType>;
+    struct Line {
+        InterPt interPtA;
+        InterPt interPtB;
+        vtkIdType faceIdA;
+        vtkIdType faceIdB;
+    };
 
     std::vector<Line> allLines;
 
@@ -1896,7 +1899,7 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
                 throw "";
             }
 
-            allLines.emplace_back(f, s, idA, idB);
+            allLines.emplace_back(Line{f, s, idA, idB});
         }
     };
 
@@ -1912,12 +1915,25 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
         return nullptr;
     }
 
+    enum class LineEnd {
+        A,
+        B
+    };
+
     struct EdgePt {
         size_t lineId;
-        size_t end;
+        LineEnd end;
         vtkIdType faceIdA;
         vtkIdType faceIdB;
         double t;
+    };
+
+    auto GetCanonicalEdge = [](Pair2 edge, double t) {
+        if (edge.b < edge.a) {
+            std::swap(edge.a, edge.b);
+            t = 1 - t;
+        }
+        return std::make_pair(edge, t);
     };
 
     std::map<Pair2, std::vector<EdgePt>> edgePts;
@@ -1925,51 +1941,113 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
     for (size_t i = 0; i < allLines.size(); i++) {
         auto &line = allLines[i];
 
-        auto edgeA = std::get<0>(line).edge;
-        double sA = std::get<0>(line).s;
+        auto [edgeA, tA] = GetCanonicalEdge(line.interPtA.edge, line.interPtA.s);
+        auto [edgeB, tB] = GetCanonicalEdge(line.interPtB.edge, line.interPtB.s);
 
-        if (edgeA.b < edgeA.a) {
-            vtkIdType tmp = edgeA.a;
-            edgeA.a = edgeA.b;
-            edgeA.b = tmp;
-
-            sA = 1 - sA;
-        }
-
-        edgePts[edgeA].emplace_back(EdgePt{i, 0, std::get<2>(line), std::get<3>(line), sA});
-
-        auto edgeB = std::get<1>(line).edge;
-        double sB = std::get<1>(line).s;
-
-        if (edgeB.b < edgeB.a) {
-            vtkIdType tmp = edgeB.a;
-            edgeB.a = edgeB.b;
-            edgeB.b = tmp;
-
-            sB = 1 - sB;
-        }
-
-        edgePts[edgeB].emplace_back(EdgePt{i, 1, std::get<2>(line), std::get<3>(line), sB});
+        edgePts[edgeA].emplace_back(EdgePt{i, LineEnd::A, line.faceIdA, line.faceIdB, tA});
+        edgePts[edgeB].emplace_back(EdgePt{i, LineEnd::B, line.faceIdA, line.faceIdB, tB});
     }
 
+    auto GetSinus = [&](vtkIdType idA, vtkIdType idB) {
+        const Vector3 &a = mergedMesh.faces[idA].normal;
+        const Vector3 &b = mergedMesh.faces[offset + idB].normal;
+
+        const double dotprod = std::clamp(a.x * b.x + a.y * b.y + a.z * b.z, -1., 1.);
+
+        return std::sqrt(std::max(0., 1 - dotprod * dotprod));
+    };
+
+    struct Group {
+        double t = 0;
+        std::vector<EdgePt> pts;
+    };
+
     for (auto& [edge, pts] : edgePts) {
-        std::cout << "(" << edge.a << ", " << edge.b << ") -> [";
+        std::sort(pts.begin(), pts.end(), [](const EdgePt &l, const EdgePt &r) { return l.t < r.t; });
+
+        /*std::cout << "(" << edge.a << ", " << edge.b << ") -> [";
         for (auto &p : pts) {
             std::cout << p.t << ", ";
         }
-        std::cout << "]" << std::endl;
+        std::cout << "]" << std::endl;*/
+
+        if (pts.size() > 1) {
+            auto &vertA = mergedMesh.verts[edge.a];
+            auto &vertB = mergedMesh.verts[edge.b];
+
+            Vector3 v{vertA.x - vertB.x, vertA.y - vertB.y, vertA.z - vertB.z};
+
+            double len = std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+
+            std::vector<Group> groups;
+
+            double sum = pts[0].t;
+
+            Group currGroup;
+            currGroup.pts.push_back(pts[0]);
+
+            for (size_t i = 0; i < pts.size() - 1; i++) {
+                auto sinA = GetSinus(pts[i].faceIdA, pts[i].faceIdB);
+                auto sinB = GetSinus(pts[i + 1].faceIdA, pts[i + 1].faceIdB);
+                double minSin = std::min(sinA, sinB);
+
+                double dist = std::abs(pts[i + 1].t - pts[i].t) * len;
+
+                double tol = std::clamp(1e-6 / std::max(minSin, .0043633), 1e-6, .1 * len);
+
+                if (dist <= tol) {
+                    sum += pts[i + 1].t;
+                    currGroup.pts.push_back(pts[i + 1]);
+                } else {
+                    currGroup.t = sum / static_cast<double>(currGroup.pts.size());
+                    groups.push_back(std::move(currGroup));
+
+                    currGroup = Group{};
+                    sum = pts[i + 1].t;
+                    currGroup.pts.push_back(pts[i + 1]);
+                }
+            }
+
+            currGroup.t = sum / static_cast<double>(currGroup.pts.size());
+            groups.push_back(std::move(currGroup));
+
+            for (auto group : groups) {
+                double t = std::clamp(group.t, 0., 1.);
+
+                double x = vertA.x + t * (vertB.x - vertA.x);
+                double y = vertA.y + t * (vertB.y - vertA.y);
+                double z = vertA.z + t * (vertB.z - vertA.z);
+
+                for (auto pt : group.pts) {
+                    if (pt.end == LineEnd::A) {
+                        auto &interPt = allLines[pt.lineId].interPtA;
+
+                        interPt.pt[0] = x;
+                        interPt.pt[1] = y;
+                        interPt.pt[2] = z;
+
+                    } else {
+                        auto &interPt = allLines[pt.lineId].interPtB;
+
+                        interPt.pt[0] = x;
+                        interPt.pt[1] = y;
+                        interPt.pt[2] = z;
+                    }
+                }
+            }
+        }
     }
 
     for (const auto &line : allLines) {
         auto linePts = vtkSmartPointer<vtkIdList>::New();
 
-        linePts->InsertNextId(pts->InsertNextPoint(std::get<0>(line).pt));
-        linePts->InsertNextId(pts->InsertNextPoint(std::get<1>(line).pt));
+        linePts->InsertNextId(pts->InsertNextPoint(line.interPtA.pt));
+        linePts->InsertNextId(pts->InsertNextPoint(line.interPtB.pt));
 
         lines->InsertNextCell(VTK_LINE, linePts);
 
-        contA->InsertNextValue(std::get<2>(line));
-        contB->InsertNextValue(std::get<3>(line));
+        contA->InsertNextValue(line.faceIdA);
+        contB->InsertNextValue(line.faceIdB);
     }
 
     auto clean = vtkSmartPointer<vtkCleanPolyData>::New();

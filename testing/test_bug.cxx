@@ -28,7 +28,7 @@ limitations under the License.
 
 int main () {
     {
-        /*auto readerA = vtkSmartPointer<vtkPolyDataReader>::New();
+        auto readerA = vtkSmartPointer<vtkPolyDataReader>::New();
         readerA->SetFileName("../testing/data_bug/MeshA.vtk");
 
         auto readerB = vtkSmartPointer<vtkPolyDataReader>::New();
@@ -51,11 +51,11 @@ int main () {
         auto writer = vtkSmartPointer<vtkPolyDataWriter>::New();
         writer->SetInputConnection(bf->GetOutputPort());
         writer->SetFileName("Test1_result.vtk");
-        writer->Update();*/
+        writer->Update();
     }
 
     {
-        auto sphereA = vtkSmartPointer<vtkSphereSource>::New();
+        /*auto sphereA = vtkSmartPointer<vtkSphereSource>::New();
         auto sphereB = vtkSmartPointer<vtkSphereSource>::New();
 
         sphereA->SetOutputPointsPrecision(vtkAlgorithm::DOUBLE_PRECISION);
@@ -87,9 +87,9 @@ int main () {
 
         stripper->Update();
 
-        Contact(sphereA->GetOutput(), stripper->GetOutput()).SaveAll("Test2_");
+        // Contact(sphereA->GetOutput(), stripper->GetOutput()).SaveAll("Test2_");
 
-        /*auto bf = vtkSmartPointer<vtkPolyDataBooleanFilter>::New();
+        auto bf = vtkSmartPointer<vtkPolyDataBooleanFilter>::New();
         bf->SetInputConnection(0, sphereA->GetOutputPort());
         bf->SetInputConnection(1, stripper->GetOutputPort());
         bf->Update();
