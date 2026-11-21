@@ -258,62 +258,7 @@ void FlattenPoly (const Poly &poly, Poly &out, const Base &base) {
     }
 }
 
-/*std::shared_ptr<Proj> GetEdgeProj (const Poly &poly, const Point3d &p) {
-    Poly::const_iterator itrA, itrB;
-
-    double d, t;
-
-    std::shared_ptr<Point3d> proj;
-
-    for (itrA = poly.begin(); itrA != poly.end(); ++itrA) {
-        itrB = itrA+1;
-
-        if (itrB == poly.end()) {
-            itrB = poly.begin();
-        }
-
-        ProjOnLine(*itrA, *itrB, p, &d, &t, proj);
-
-        if (d > 0 && d < 1e-5 && t > 0 && t < 1) {
-            return std::make_shared<Proj>(itrA->id, itrB->id, *proj, d);
-        }
-
-    }
-
-    return nullptr;
-}
-
-void ProjOnLine (const Point3d &a, const Point3d &b, const Point3d &p, double *d, double *t, std::shared_ptr<Point3d> &proj) {
-    double v[3], w[3];
-
-    double v_ = Point3d::GetVec(a, b, v);
-    double w_ = Point3d::GetVec(a, p, w);
-
-    double pr = std::min(std::max(vtkMath::Dot(v, w), -1.), 1.);
-
-    *d = std::sin(std::acos(pr))*w_;
-
-    vtkMath::MultiplyScalar(v, std::sqrt(w_*w_-*d**d));
-
-    proj = std::make_shared<Point3d>(a.x+v[0], a.y+v[1], a.z+v[2]);
-
-    *t = pr*w_/v_;
-}
-
-void ProjOnLine (vtkPolyData *pd, const Pair &line, const Point3d &p, std::shared_ptr<Point3d> &proj) {
-    double pA[3], pB[3];
-
-    pd->GetPoint(line.f, pA);
-    pd->GetPoint(line.g, pB);
-
-    Point3d a(pA[0], pA[1], pA[2]);
-    Point3d b(pB[0], pB[1], pB[2]);
-
-    double d, t;
-
-    ProjOnLine(a, b, p, &d, &t, proj);
-}
-
+/*
 double GetTriangleQuality (const Poly &poly) {
     double n[3];
 
@@ -350,7 +295,8 @@ Point3d GetCentroid (const Poly &poly) {
     z /= static_cast<double>(poly.size());
 
     return { x, y, z};
-}*/
+}
+*/
 
 vtkSmartPointer<vtkPolyData> CreatePolyData (const PolysType &polys) {
     auto pts = vtkSmartPointer<vtkPoints>::New();

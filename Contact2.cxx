@@ -673,8 +673,8 @@ void IntersectEdgeAndLine (InterPts &interPts, const TransformedVert &pA, const 
     if (std::abs(pA.y) < 1e-5 && std::abs(pB.y) < 1e-5) {
         // std::cout << "-> 1" << std::endl;
 
-        interPts.emplace_back(pA.x, 0, 0, pA.x, pA.id, pB.id, End::A, src, PointSrc::Copied);
-        interPts.emplace_back(pB.x, 0, 0, pB.x, pA.id, pB.id, End::B, src, PointSrc::Copied);
+        interPts.emplace_back(pA.x, 0, 0, pA.x, 0, pA.id, pB.id, End::A, src, PointSrc::Copied);
+        interPts.emplace_back(pB.x, 0, 0, pB.x, 1, pA.id, pB.id, End::B, src, PointSrc::Copied);
 
         // std::cout << "pA.x " << pA.x << ", pB.x " << pB.x << std::endl;
 
@@ -718,7 +718,7 @@ void IntersectEdgeAndLine (InterPts &interPts, const TransformedVert &pA, const 
                 end = End::B;
             }
 
-            interPts.emplace_back(x, 0, 0, x, pA.id, pB.id, end, src);
+            interPts.emplace_back(x, 0, 0, x, t, pA.id, pB.id, end, src);
         }
     }
 }
@@ -1253,7 +1253,7 @@ void Contact::SnapToEdges () {
 
                     double distSq = vtkLine::DistanceToLine(x, pA, pB, t);
 
-                    if (distSq < 1e-10 && t > 0 && t < 1) {
+                    if (distSq < 1e-10 && t > 1e-5 && t < 1 - 1e-5) {
                         auto filtered = GetEdge(mergedMesh, edge, source);
 
                         if (filtered.size() == 2) {
@@ -1528,7 +1528,7 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
     auto Test = [&](const Face &faceA, const Face &faceB) {
         double dotprod = faceA.normal.x * faceB.normal.x + faceA.normal.y * faceB.normal.y + faceA.normal.z * faceB.normal.z;
 
-        if (std::abs(dotprod) > .9) {
+        if (std::abs(dotprod) > .9995) {
             for (auto &id : faceA.vertIds) {
                 double distance = faceB.normal.x * mergedMesh.verts[id].x + faceB.normal.y * mergedMesh.verts[id].y + faceB.normal.z * mergedMesh.verts[id].z - faceB.d;
 
@@ -1755,7 +1755,7 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
                 return;
             }
 
-            /*if (pair.a == 16116 && pair.b == 58) {
+            if (pair.a == 66 && (pair.b == 485 || pair.b == 495)) {
                 std::cout << pair.a << " [";
                 for (auto id : faceA.vertIds) {
                     std::cout << id << " " << mergedMesh.verts[id] << ", ";
@@ -1767,9 +1767,11 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
                     std::cout << id << " " << mergedMesh.verts[id] << ", ";
                 }
                 std::cout << "]" << std::endl;
+
+                std::cout << std::acos(faceA.normal.x * faceB.normal.x + faceA.normal.y * faceB.normal.y + faceA.normal.z * faceB.normal.z)*180/M_PI << std::endl;
             } else {
                 return;
-            }*/
+            }
 
             const double nA[] = {faceA.normal.x, faceA.normal.y, faceA.normal.z};
             const double nB[] = {faceB.normal.x, faceB.normal.y, faceB.normal.z};
@@ -1865,6 +1867,10 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
     auto nonManifoldEdgesA = GetNonManifoldEdges(mergedMesh, FaceSource::A);
     auto nonManifoldEdgesB = GetNonManifoldEdges(mergedMesh, FaceSource::B);
 
+    using Line = std::tuple<InterPt, InterPt, vtkIdType, vtkIdType>;
+
+    std::vector<Line> allLines;
+
     auto AddLines = [&](InterPts &interA, InterPts &interB, vtkIdType idA, vtkIdType idB) {
         if (interA.size() == 0 || interB.size() == 0) {
             return;
@@ -1890,15 +1896,7 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
                 throw "";
             }
 
-            auto linePts = vtkSmartPointer<vtkIdList>::New();
-
-            linePts->InsertNextId(pts->InsertNextPoint(f.pt));
-            linePts->InsertNextId(pts->InsertNextPoint(s.pt));
-
-            lines->InsertNextCell(VTK_LINE, linePts);
-
-            contA->InsertNextValue(idA);
-            contB->InsertNextValue(idB);
+            allLines.emplace_back(f, s, idA, idB);
         }
     };
 
@@ -1912,6 +1910,66 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
         std::cerr << "Contact failed" << std::endl;
 
         return nullptr;
+    }
+
+    struct EdgePt {
+        size_t lineId;
+        size_t end;
+        vtkIdType faceIdA;
+        vtkIdType faceIdB;
+        double t;
+    };
+
+    std::map<Pair2, std::vector<EdgePt>> edgePts;
+
+    for (size_t i = 0; i < allLines.size(); i++) {
+        auto &line = allLines[i];
+
+        auto edgeA = std::get<0>(line).edge;
+        double sA = std::get<0>(line).s;
+
+        if (edgeA.b < edgeA.a) {
+            vtkIdType tmp = edgeA.a;
+            edgeA.a = edgeA.b;
+            edgeA.b = tmp;
+
+            sA = 1 - sA;
+        }
+
+        edgePts[edgeA].emplace_back(EdgePt{i, 0, std::get<2>(line), std::get<3>(line), sA});
+
+        auto edgeB = std::get<1>(line).edge;
+        double sB = std::get<1>(line).s;
+
+        if (edgeB.b < edgeB.a) {
+            vtkIdType tmp = edgeB.a;
+            edgeB.a = edgeB.b;
+            edgeB.b = tmp;
+
+            sB = 1 - sB;
+        }
+
+        edgePts[edgeB].emplace_back(EdgePt{i, 1, std::get<2>(line), std::get<3>(line), sB});
+    }
+
+    for (auto& [edge, pts] : edgePts) {
+        std::cout << "(" << edge.a << ", " << edge.b << ") -> [";
+        for (auto &p : pts) {
+            std::cout << p.t << ", ";
+        }
+        std::cout << "]" << std::endl;
+    }
+
+    for (const auto &line : allLines) {
+        auto linePts = vtkSmartPointer<vtkIdList>::New();
+
+        linePts->InsertNextId(pts->InsertNextPoint(std::get<0>(line).pt));
+        linePts->InsertNextId(pts->InsertNextPoint(std::get<1>(line).pt));
+
+        lines->InsertNextCell(VTK_LINE, linePts);
+
+        contA->InsertNextValue(std::get<2>(line));
+        contB->InsertNextValue(std::get<3>(line));
     }
 
     auto clean = vtkSmartPointer<vtkCleanPolyData>::New();

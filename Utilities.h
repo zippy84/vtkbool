@@ -154,23 +154,10 @@ void GetPolys (const ReferencedPointsType &pts, const IndexedPolysType &indexedP
 void GetPoly (vtkPoints *pts, vtkIdType num, const vtkIdType *poly, Poly &out);
 void FlattenPoly (const Poly &poly, Poly &out, const Base &base);
 
-/*class Proj {
-public:
-    Proj (vtkIdType a, vtkIdType b, const Point3d &proj, double d) : edge(a, b), proj(proj), d(d) {}
-
-    Pair edge;
-    Point3d proj;
-    double d;
-};
-
-std::shared_ptr<Proj> GetEdgeProj (const Poly &poly, const Point3d &p);
-
-void ProjOnLine (const Point3d &a, const Point3d &b, const Point3d &p, double *d, double *t, std::shared_ptr<Point3d> &proj);
-void ProjOnLine (vtkPolyData *pd, const Pair &line, const Point3d &p, std::shared_ptr<Point3d> &proj);
-
+/*
 double GetTriangleQuality (const Poly &poly);
-
-Point3d GetCentroid (const Poly &poly);*/
+Point3d GetCentroid (const Poly &poly);
+*/
 
 vtkSmartPointer<vtkPolyData> CreatePolyData (const PolysType &polys);
 

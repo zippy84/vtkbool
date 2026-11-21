@@ -91,13 +91,13 @@ class InterPt {
 public:
     InterPt () = delete;
 
-    InterPt (double x, double y, double z, double t, vtkIdType a, vtkIdType b, End end, Src src, PointSrc pointSrc = PointSrc::Calculated) : t(t), edge{a, b}, end(end), src(src), srcA(std::nullopt), srcB(std::nullopt), pointSrc(pointSrc) {
+    InterPt (double x, double y, double z, double t, double s, vtkIdType a, vtkIdType b, End end, Src src, PointSrc pointSrc = PointSrc::Calculated) : t(t), s(s), edge{a, b}, end(end), src(src), srcA(std::nullopt), srcB(std::nullopt), pointSrc(pointSrc) {
         pt[0] = x;
         pt[1] = y;
         pt[2] = z;
     }
 
-    double pt[3], t;
+    double pt[3], t, s;
     Pair2 edge;
     End end;
     Src src;
