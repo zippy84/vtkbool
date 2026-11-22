@@ -39,15 +39,14 @@ limitations under the License.
 #include <vtkMath.h>
 #include <vtkIdList.h>
 #include <vtkAppendPolyData.h>
-#include <vtkKdTreePointLocator.h>
 #include <vtkCleanPolyData.h>
 #include <vtkPolyDataConnectivityFilter.h>
 #include <vtkSmartPointer.h>
 #include <vtkModifiedBSPTree.h>
 #include <vtkCellArrayIterator.h>
-#include <vtkKdTree.h>
 #include <vtkCellIterator.h>
 #include <vtkTransformFilter.h>
+#include <vtkStaticPointLocator.h>
 
 #include "vtkPolyDataBooleanFilter.h"
 
@@ -1789,9 +1788,9 @@ void vtkPolyDataBooleanFilter::RestoreOrigPoints (vtkPolyData *pd, PolyStripsTyp
 
     pd->DeleteLinks(); pd->BuildLinks();
 
-    vtkKdTreePointLocator *loc = vtkKdTreePointLocator::New();
-    loc->SetDataSet(pd);
-    loc->BuildLocator();
+    auto locator = vtkSmartPointer<vtkStaticPointLocator>::New();
+    locator->SetDataSet(pd);
+    locator->BuildLocator();
 
     PolyStripsType::const_iterator itr;
     StripPtsType::const_iterator itr2;
@@ -1806,7 +1805,9 @@ void vtkPolyDataBooleanFilter::RestoreOrigPoints (vtkPolyData *pd, PolyStripsTyp
             const StripPt &sp = itr2->second;
 
             if (sp.capt & Capt::Boundary) {
-                FindPoints(loc, sp.cutPt, pts);
+                pts->Reset();
+                locator->FindPointsWithinRadius(1e-6, sp.cutPt, pts);
+
                 numPts = pts->GetNumberOfIds();
 
                 for (i = 0; i < numPts; i++) {
@@ -1818,9 +1819,6 @@ void vtkPolyDataBooleanFilter::RestoreOrigPoints (vtkPolyData *pd, PolyStripsTyp
         }
     }
 
-    loc->FreeSearchStructure();
-    loc->Delete();
-
 }
 
 void vtkPolyDataBooleanFilter::DisjoinPolys (vtkPolyData *pd, PolyStripsType &polyStrips) {
@@ -1831,8 +1829,8 @@ void vtkPolyDataBooleanFilter::DisjoinPolys (vtkPolyData *pd, PolyStripsType &po
 
     pd->DeleteLinks(); pd->BuildLinks();
 
-    vtkKdTreePointLocator *loc = vtkKdTreePointLocator::New();
-    loc->SetDataSet(pd);
+    auto locator = vtkSmartPointer<vtkStaticPointLocator>::New();
+    locator->SetDataSet(pd);
 
     struct Cmp {
         bool operator() (const StripPt &l, const StripPt &r) const {
@@ -1857,13 +1855,15 @@ void vtkPolyDataBooleanFilter::DisjoinPolys (vtkPolyData *pd, PolyStripsType &po
         }
     }
 
-    vtkIdList *pts = vtkIdList::New();
-    vtkIdList *cells = vtkIdList::New();
+    auto pts = vtkSmartPointer<vtkIdList>::New();
+    auto cells = vtkSmartPointer<vtkIdList>::New();
 
     vtkIdType i, j, numPts, numCells;
 
     for (const StripPt &sp : ends) {
-        FindPoints(loc, sp.pt, pts);
+        pts->Reset();
+        locator->FindPointsWithinRadius(1e-6, sp.pt, pts);
+
         numPts = pts->GetNumberOfIds();
 
         for (i = 0; i < numPts; i++) {
@@ -1877,13 +1877,6 @@ void vtkPolyDataBooleanFilter::DisjoinPolys (vtkPolyData *pd, PolyStripsType &po
             }
         }
     }
-
-    cells->Delete();
-    pts->Delete();
-
-    loc->FreeSearchStructure();
-    loc->Delete();
-
 }
 
 void vtkPolyDataBooleanFilter::ResolveOverlaps (vtkPolyData *pd, PolyStripsType &polyStrips) {
@@ -2057,9 +2050,9 @@ void vtkPolyDataBooleanFilter::AddAdjacentPoints (vtkPolyData *pd, vtkIdTypeArra
         }
     };
 
-    auto loc = vtkSmartPointer<vtkKdTreePointLocator>::New();
-    loc->SetDataSet(pd);
-    loc->BuildLocator();
+    auto locator = vtkSmartPointer<vtkStaticPointLocator>::New();
+    locator->SetDataSet(pd);
+    locator->BuildLocator();
 
     auto lines = vtkSmartPointer<vtkIdList>::New();
 
@@ -2141,8 +2134,11 @@ void vtkPolyDataBooleanFilter::AddAdjacentPoints (vtkPolyData *pd, vtkIdTypeArra
                 }
 
                 if (itrA+1 != itrB) {
-                    FindPoints(loc, itrA->get().pt, ptsA);
-                    FindPoints(loc, itrB->get().pt, ptsB);
+                    ptsA->Reset();
+                    ptsB->Reset();
+
+                    locator->FindPointsWithinRadius(1e-6, itrA->get().pt, ptsA);
+                    locator->FindPointsWithinRadius(1e-6, itrB->get().pt, ptsB);
 
                     numPtsA = ptsA->GetNumberOfIds();
                     numPtsB = ptsB->GetNumberOfIds();
@@ -2223,8 +2219,6 @@ void vtkPolyDataBooleanFilter::AddAdjacentPoints (vtkPolyData *pd, vtkIdTypeArra
         }
     }
 
-    loc->FreeSearchStructure();
-
     pd->RemoveDeletedCells();
 
 }
@@ -2240,8 +2234,9 @@ void vtkPolyDataBooleanFilter::MergePoints (vtkPolyData *pd, PolyStripsType &pol
 
     contLines->DeleteLinks(); contLines->BuildLinks();
 
-    auto loc = vtkSmartPointer<vtkKdTreePointLocator>::New();
-    loc->SetDataSet(pd);
+    auto locator = vtkSmartPointer<vtkStaticPointLocator>::New();
+    locator->SetDataSet(pd);
+    locator->BuildLocator();
 
     PolyStripsType::const_iterator itr;
     StripsType::const_iterator itr2;
@@ -2264,14 +2259,18 @@ void vtkPolyDataBooleanFilter::MergePoints (vtkPolyData *pd, PolyStripsType &pol
             const auto beforeA = pStrips.pts.find((strip.begin()+1)->ind),
                 beforeB = pStrips.pts.find((strip.end()-2)->ind);
 
-            FindPoints(loc, beforeA->second.pt, pts);
+            pts->Reset();
+            locator->FindPointsWithinRadius(1e-6, beforeA->second.pt, pts);
+
             numPts = pts->GetNumberOfIds();
 
             for (i = 0; i < numPts; i++) {
                 neighPts[spA.ind].insert(pts->GetId(i));
             }
 
-            FindPoints(loc, beforeB->second.pt, pts);
+            pts->Reset();
+            locator->FindPointsWithinRadius(1e-6, beforeB->second.pt, pts);
+
             numPts = pts->GetNumberOfIds();
 
             for (i = 0; i < numPts; i++) {
@@ -2296,7 +2295,9 @@ void vtkPolyDataBooleanFilter::MergePoints (vtkPolyData *pd, PolyStripsType &pol
 
         contLines->GetPoint(itr3->first, pt);
 
-        FindPoints(loc, pt, pts);
+        pts->Reset();
+        locator->FindPointsWithinRadius(1e-6, pt, pts);
+
         numPts = pts->GetNumberOfIds();
 
         for (i = 0; i < numPts; i++) {
@@ -2400,10 +2401,7 @@ void vtkPolyDataBooleanFilter::MergePoints (vtkPolyData *pd, PolyStripsType &pol
                 group.clear();
             }
         }
-
     }
-
-    loc->FreeSearchStructure();
 
 }
 
@@ -2667,6 +2665,12 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
     vtkPolyData *pdA = cfA->GetOutput();
     vtkPolyData *pdB = cfB->GetOutput();
 
+    pdA->DeleteLinks();
+    pdA->BuildLinks();
+
+    pdB->DeleteLinks();
+    pdB->BuildLinks();
+
 // #ifdef DEBUG
     WriteVTK("modPdA_8.vtk", pdA);
     WriteVTK("modPdB_8.vtk", pdB);
@@ -2682,16 +2686,13 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
         return false;
     }
 
-    auto plA = vtkSmartPointer<vtkKdTreePointLocator>::New();
-    plA->SetDataSet(pdA);
-    plA->BuildLocator();
+    auto locatorA = vtkSmartPointer<vtkStaticPointLocator>::New();
+    locatorA->SetDataSet(pdA);
+    locatorA->BuildLocator();
 
-    auto plB = vtkSmartPointer<vtkKdTreePointLocator>::New();
-    plB->SetDataSet(pdB);
-    plB->BuildLocator();
-
-    pdA->DeleteLinks(); pdA->BuildLinks();
-    pdB->DeleteLinks(); pdB->BuildLinks();
+    auto locatorB = vtkSmartPointer<vtkStaticPointLocator>::New();
+    locatorB->SetDataSet(pdB);
+    locatorB->BuildLocator();
 
     vtkIdTypeArray *scalarsA = vtkIdTypeArray::SafeDownCast(pdA->GetPointData()->GetScalars());
     vtkIdTypeArray *scalarsB = vtkIdTypeArray::SafeDownCast(pdB->GetPointData()->GetScalars());
@@ -2700,15 +2701,15 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
 
     double ptA[3], ptB[3];
 
-    auto fptsA = vtkSmartPointer<vtkIdList>::New();
-    auto lptsA = vtkSmartPointer<vtkIdList>::New();
-
-    auto fptsB = vtkSmartPointer<vtkIdList>::New();
-    auto lptsB = vtkSmartPointer<vtkIdList>::New();
-
     std::map<vtkIdType, Loc> locsA, locsB;
 
     vtkIdType i, j, numLines = contLines->GetNumberOfCells();
+
+    auto fptsA = vtkSmartPointer<vtkIdList>::New();
+    auto fptsB = vtkSmartPointer<vtkIdList>::New();
+
+    auto lptsA = vtkSmartPointer<vtkIdList>::New();
+    auto lptsB = vtkSmartPointer<vtkIdList>::New();
 
     IdsType _failed;
 
@@ -2722,8 +2723,14 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
         contLines->GetPoint(line->GetId(0), ptA);
         contLines->GetPoint(line->GetId(1), ptB);
 
-        FindPoints(plA, ptA, fptsA);
-        FindPoints(plB, ptA, fptsB);
+        fptsA->Reset();
+        fptsB->Reset();
+
+        lptsA->Reset();
+        lptsB->Reset();
+
+        locatorA->FindPointsWithinRadius(1e-6, ptA, fptsA);
+        locatorB->FindPointsWithinRadius(1e-6, ptA, fptsB);
 
 #ifdef DEBUG
         std::cout << "line " << i << std::endl;
@@ -2751,8 +2758,8 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
 
 #endif
 
-        FindPoints(plA, ptB, lptsA);
-        FindPoints(plB, ptB, lptsB);
+        locatorA->FindPointsWithinRadius(1e-6, ptB, lptsA);
+        locatorB->FindPointsWithinRadius(1e-6, ptB, lptsB);
 
         auto ppA = GetEdgePolys(pdA, fptsA, lptsA);
         auto ppB = GetEdgePolys(pdB, fptsB, lptsB);
@@ -3004,9 +3011,6 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
 
     newOrigCellIdsB->Delete();
     newOrigCellIdsA->Delete();
-
-    plB->FreeSearchStructure();
-    plA->FreeSearchStructure();
 
     return false;
 

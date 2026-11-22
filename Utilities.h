@@ -27,7 +27,6 @@ limitations under the License.
 #include <memory>
 
 #include <vtkPolyData.h>
-#include <vtkKdTreePointLocator.h>
 #include <vtkPoints.h>
 #include <vtkIdList.h>
 #include <vtkMath.h>
@@ -38,8 +37,6 @@ limitations under the License.
 double GetAngle (const double *vA, const double *vB, const double *n);
 
 double ComputeNormal (vtkPoints *pts, double *n, vtkIdType num, const vtkIdType *poly);
-
-void FindPoints (vtkKdTreePointLocator *pl, const double *pt, vtkIdList *pts, double tol = 1e-6);
 
 // #ifdef DEBUG
 void WriteVTK (const char *name, vtkPolyData *pd);

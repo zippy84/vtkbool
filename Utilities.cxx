@@ -49,31 +49,6 @@ double ComputeNormal (vtkPoints *pts, double *n, vtkIdType num, const vtkIdType 
     return vtkMath::Normalize(n);
 }
 
-void FindPoints (vtkKdTreePointLocator *pl, const double *pt, vtkIdList *pts, double tol) {
-    pts->Reset();
-
-    vtkPolyData *pd = vtkPolyData::SafeDownCast(pl->GetDataSet());
-
-    vtkIdList *closest = vtkIdList::New();
-
-    pl->FindPointsWithinRadius(std::max(1e-3, tol), pt, closest);
-
-    vtkIdType i, numPts = closest->GetNumberOfIds();
-
-    double c[3], v[3];
-
-    for (i = 0; i < numPts; i++) {
-        pd->GetPoint(closest->GetId(i), c);
-        vtkMath::Subtract(pt, c, v);
-
-        if (vtkMath::Norm(v) < tol) {
-            pts->InsertNextId(closest->GetId(i));
-        }
-    }
-
-    closest->Delete();
-}
-
 // #ifdef DEBUG
 void WriteVTK (const char *name, vtkPolyData *pd) {
     std::cout << "Writing " << name << std::endl;
