@@ -1939,7 +1939,7 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
 
         if (line.interPtB.end == End::None) {
             auto [edgeB, tB] = GetCanonicalEdge(line.interPtB.edge, line.interPtB.s);
-            edgePts[edgeB].emplace_back(EdgePt{i, vertId++, LineEnd::B, line.faceIdA, line.faceIdB, tB, });
+            edgePts[edgeB].emplace_back(EdgePt{i, vertId++, LineEnd::B, line.faceIdA, line.faceIdB, tB});
         }
     }
 

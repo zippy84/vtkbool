@@ -78,6 +78,10 @@ else()
             message(FATAL_ERROR "vtkbool requires VTK 9.0.0 or newer.")
         endif()
 
+        add_compile_options(
+            $<$<CXX_COMPILER_ID:Clang>:-Wno-sign-conversion>
+        )
+
         vtk_module_scan(
             MODULE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/module/vtk.module"
             REQUEST_MODULES vtkbool
