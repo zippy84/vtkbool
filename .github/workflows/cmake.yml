@@ -9,8 +9,8 @@ jobs:
   Build:
     runs-on: ${{matrix.os}}
     strategy:
+      fail-fast: false
       matrix:
-        fail-fast: false
         os: [ubuntu-22.04, ubuntu-latest]
         cxx: [g++, clang++]
         build_type: [Debug, Release]
