@@ -142,11 +142,12 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
 
             contLines = contact.GetLines();
 
-// #ifdef DEBUG
+#ifdef DEBUG
+            WriteVTK("contLines.vtk", contLines);
+
             WriteVTK("modPdA1.vtk", modPdA);
             WriteVTK("modPdB1.vtk", modPdB);
-            WriteVTK("contLines.vtk", contLines);
-// #endif
+#endif
 
             times.push_back(clock::now()-start);
 
@@ -218,10 +219,10 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
 
             times.push_back(clock::now()-start);
 
-// #ifdef DEBUG
+#ifdef DEBUG
             WriteVTK("modPdA_2.vtk", modPdA);
             WriteVTK("modPdB_2.vtk", modPdB);
-// #endif
+#endif
 
             start = clock::now();
 
@@ -230,10 +231,10 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
 
             times.push_back(clock::now()-start);
 
-// #ifdef DEBUG
+#ifdef DEBUG
             WriteVTK("modPdA_3.vtk", modPdA);
             WriteVTK("modPdB_3.vtk", modPdB);
-// #endif
+#endif
 
             start = clock::now();
 
@@ -242,10 +243,10 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
 
             times.push_back(clock::now()-start);
 
-// #ifdef DEBUG
+#ifdef DEBUG
             WriteVTK("modPdA_4.vtk", modPdA);
             WriteVTK("modPdB_4.vtk", modPdB);
-// #endif
+#endif
 
             start = clock::now();
 
@@ -254,10 +255,10 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
 
             times.push_back(clock::now()-start);
 
-// #ifdef DEBUG
+#ifdef DEBUG
             WriteVTK("modPdA_5.vtk", modPdA);
             WriteVTK("modPdB_5.vtk", modPdB);
-// #endif
+#endif
 
             start = clock::now();
 
@@ -266,10 +267,10 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
 
             times.push_back(clock::now()-start);
 
-// #ifdef DEBUG
+#ifdef DEBUG
             WriteVTK("modPdA_6.vtk", modPdA);
             WriteVTK("modPdB_6.vtk", modPdB);
-// #endif
+#endif
 
             start = clock::now();
 
@@ -278,10 +279,10 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
 
             times.push_back(clock::now()-start);
 
-// #ifdef DEBUG
+#ifdef DEBUG
             WriteVTK("modPdA_7.vtk", modPdA);
             WriteVTK("modPdB_7.vtk", modPdB);
-// #endif
+#endif
 
             timePdA = pdA->GetMTime();
             timePdB = pdB->GetMTime();
@@ -492,7 +493,7 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
     for (vtkIdType i = 0; i < conts->GetNumberOfTuples(); i++) {
         vtkIdType poly = conts->GetValue(i);
 
-        /*if (poly != 1641) {
+        /*if (poly != 1400) {
             continue;
         }*/
 
@@ -2163,12 +2164,14 @@ void vtkPolyDataBooleanFilter::AddAdjacentPoints (vtkPolyData *pd, vtkIdTypeArra
                         }
                     }
 
-                    /*for (const Pair &pA : polysA) {
-                        std::cout << "pA " << pA << std::endl;
-                    }
+                    /*if (edge.f == 950 && edge.g == 1127) {
+                        for (const Pair &pA : polysA) {
+                            std::cout << "pA " << pA << std::endl;
+                        }
 
-                    for (const Pair &pB : polysB) {
-                        std::cout << "pB " << pB << std::endl;
+                        for (const Pair &pB : polysB) {
+                            std::cout << "pB " << pB << std::endl;
+                        }
                     }*/
 
                     for (const Pair &pA : polysA) {
@@ -2671,10 +2674,10 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
     pdB->DeleteLinks();
     pdB->BuildLinks();
 
-// #ifdef DEBUG
+#ifdef DEBUG
     WriteVTK("modPdA_8.vtk", pdA);
     WriteVTK("modPdB_8.vtk", pdB);
-// #endif
+#endif
 
     if (OperMode == OPER_NONE) {
         resultA->ShallowCopy(pdA);
@@ -2703,7 +2706,7 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
 
     std::map<vtkIdType, Loc> locsA, locsB;
 
-    vtkIdType i, j, numLines = contLines->GetNumberOfCells();
+    vtkIdType i, numLines = contLines->GetNumberOfCells();
 
     auto fptsA = vtkSmartPointer<vtkIdList>::New();
     auto fptsB = vtkSmartPointer<vtkIdList>::New();

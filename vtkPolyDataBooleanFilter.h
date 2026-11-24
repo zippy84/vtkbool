@@ -91,6 +91,8 @@ public:
     friend std::ostream& operator<< (std::ostream &out, const StripPt &s) {
         out << "ind " << s.ind
             << ", edge [" << s.edge[0] << ", " << s.edge[1] << "]"
+            << std::setprecision(6)
+            << std::fixed
             << ", t " << s.t
             << ", capt " << s.capt
             << ", polyId " << s.polyId;

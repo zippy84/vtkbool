@@ -82,10 +82,9 @@ enum class PointSrc {
     Copied
 };
 
-/*template<typename T>
-std::ostream& operator<< (typename std::enable_if<std::is_enum<T>::value, std::ostream>::type& stream, const T& e) {
-    return stream << static_cast<typename std::underlying_type<T>::type>(e);
-}*/
+inline std::ostream& operator<< (std::ostream &os, End e) {
+    return os << static_cast<std::underlying_type<End>::type>(e);
+}
 
 class InterPt {
 public:
@@ -108,6 +107,7 @@ public:
         out << "pt [" << s.pt[0] << ", " << s.pt[1] << ", " << s.pt[2] << "]"
             << ", t " << s.t
             << ", edge (" << s.edge.a << ", " << s.edge.b << ")"
+            << ", s " << s.s
             /*<< ", end " << s.end
             << ", src " << s.src
             << ", pointSrc " << s.pointSrc*/;
@@ -150,6 +150,33 @@ public:
 typedef std::vector<InterPt> InterPts;
 
 typedef std::set<std::pair<vtkIdType, vtkIdType>> NonManifoldEdges;
+
+enum class LineEnd {
+    A,
+    B
+};
+
+inline std::ostream& operator<< (std::ostream &os, LineEnd e) {
+    return os << static_cast<std::underlying_type<LineEnd>::type>(e);
+}
+
+struct EdgePt {
+    size_t lineId;
+    size_t vertId;
+    LineEnd lineEnd;
+    vtkIdType faceIdA;
+    vtkIdType faceIdB;
+    double t;
+
+    friend std::ostream& operator<< (std::ostream &os, const EdgePt &p) {
+        return os << "lineId " << p.lineId
+            << ", vertId " << p.vertId
+            << ", end " << p.lineEnd
+            << ", faceIdA " << p.faceIdA
+            << ", faceIdB " << p.faceIdB
+            << ", t " << p.t;
+    }
+};
 
 class Contact {
     Mesh meshA, meshB;
