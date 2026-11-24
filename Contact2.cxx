@@ -316,8 +316,6 @@ void UpdatePlanes (Mesh &mesh) {
         [&](Face &face) {
             size_t numVerts = face.vertIds.size();
 
-            auto oldNormal(face.normal);
-
             face.normal.x = face.normal.y = face.normal.z = face.centroid.x = face.centroid.y = face.centroid.z = 0;
 
             for (size_t i = 0; i < numVerts; i++) {
@@ -406,8 +404,8 @@ bool FitPlane (const std::vector<Vector3> &points, Vector3 &normal, double &d, i
     const double w = 100.0;
 
     for (int iter = 0; iter < maxIters; iter++) {
-        double M[4][4] = {0.0};
-        double rhs[4] = {0.0};
+        double M[4][4]{};
+        double rhs[4]{};
 
         for (const auto &p : points) {
             double rx = p.x;
@@ -502,8 +500,8 @@ double FindNewVerts (Mesh &mesh, std::vector<GlobalPlane> &globalPlanes) {
                 return;
             }
 
-            double ATA[3][3] = {0};
-            double ATb[3] = {0};
+            double ATA[3][3]{};
+            double ATb[3]{};
 
             for (vtkIdType neig : neigs) {
                 const Face &face = mesh.faces[neig];
@@ -1207,7 +1205,7 @@ void InsertVerts (Mesh &mesh, size_t faceId, const Pair2 &edge, std::vector<vtkI
 
 void Contact::SnapToEdges () {
     struct Snap {
-        size_t vertId;
+        vtkIdType vertId;
         double t;
         std::vector<vtkIdType> targetFaces;
     };
