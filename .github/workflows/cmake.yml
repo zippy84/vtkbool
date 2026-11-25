@@ -40,7 +40,7 @@ jobs:
 
     - name: Test
       env:
-        LD_LIBRARY_PATH: /tmp/vtk-install/lib
+        LD_LIBRARY_PATH: /opt/vtk/install/lib
       run: ctest --test-dir ${{github.workspace}}/build --output-on-failure -C ${{matrix.build_type}}
 
   Coverage:
@@ -69,7 +69,7 @@ jobs:
 
     - name: Test
       env:
-        LD_LIBRARY_PATH: /tmp/vtk-install/lib
+        LD_LIBRARY_PATH: /opt/vtk/install/lib
       run: |
         ctest --test-dir ${{github.workspace}}/build --output-on-failure
         gcovr -r .. . --exclude-throw-branches --xml -o coverage.xml
