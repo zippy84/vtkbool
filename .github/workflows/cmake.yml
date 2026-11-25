@@ -83,7 +83,7 @@ jobs:
           --exclude-throw-branches \
           --xml -o ${{github.workspace}}/coverage.xml
         echo "GCDA_DIR=${{github.workspace}}" >> "$GITHUB_ENV"
-        echo "GCDA_DIR=${{github.workspace}}
+        echo "GCDA_DIR=${{github.workspace}}""
 
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v7
