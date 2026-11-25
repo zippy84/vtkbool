@@ -72,21 +72,22 @@ jobs:
     - name: Build
       run: cmake --build ${{github.workspace}}/build --parallel
 
-    - name: Test
-      env:
-        LD_LIBRARY_PATH: /opt/vtk/install/lib
-      run: |
-        ctest --test-dir ${{github.workspace}}/build --output-on-failure
-        gcovr \
-          -r "${{github.workspace}}" \
-          "${{github.workspace}}/build" \
-          --exclude-throw-branches \
-          --xml -o ${{github.workspace}}/coverage.xml
-        echo "GCDA_DIR=${{github.workspace}}" >> "$GITHUB_ENV"
+- name: Test
+  env:
+    LD_LIBRARY_PATH: /opt/vtk/install/lib
+  run: |
+    ctest --test-dir ${{github.workspace}}/build --output-on-failure
+    gcovr \
+      -r "${{github.workspace}}" \
+      "${{github.workspace}}/build" \
+      --exclude-throw-branches \
+      --xml -o ${{github.workspace}}/coverage.xml
+    echo "GCDA_DIR=${{github.workspace}}" >> "$GITHUB_ENV"
+    echo "GCDA_DIR=${{github.workspace}}
 
-    - name: Upload coverage reports to Codecov
-      uses: codecov/codecov-action@v7
-      with:
-        token: ${{secrets.CODECOV_TOKEN}}
-        files: ${{env.GCDA_DIR}}/coverage.xml
-        directory: ${{env.GCDA_DIR}}
+- name: Upload coverage reports to Codecov
+  uses: codecov/codecov-action@v7
+  with:
+    token: ${{secrets.CODECOV_TOKEN}}
+    files: ${{env.GCDA_DIR}}/coverage.xml
+    directory: ${{env.GCDA_DIR}}
