@@ -27,10 +27,13 @@ jobs:
         apt-get -y --no-install-recommends install ninja-build cmake clang python3-pytest xvfb libomp-dev libtbb-dev
 
     - name: Configure CMake
-      run: >
-          cmake -B ${{github.workspace}}/build
-          -DCMAKE_BUILD_TYPE=${{matrix.build_type}}
-          -DCMAKE_PREFIX_PATH=/opt/vtk/install
+      run: |
+        PY_VERSION=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
+        VTK_PY_DIR="/opt/vtk/install/lib/python${PY_VERSION}/site-packages"
+        cmake -B "${{ github.workspace }}/build" \
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+          -DCMAKE_PREFIX_PATH=/opt/vtk/install \
+          -DVTK_EXTRA_PYTHONPATH="$VTK_PY_DIR"
       env:
         CXX: ${{matrix.cxx}}
         CXXFLAGS: ${{matrix.cxxflags}}
@@ -41,13 +44,7 @@ jobs:
     - name: Test
       env:
         LD_LIBRARY_PATH: /opt/vtk/install/lib
-      run: |
-        grep -rn -A 5 "import_vtkbool" ${{github.workspace}}/build/
-        PY_VERSION=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
-        VTK_PY_DIR="/opt/vtk/install/lib/python${PY_VERSION}/site-packages"
-        echo "${VTK_PY_DIR}${PYTHONPATH:+:$PYTHONPATH}"
-        PYTHONPATH="${VTK_PY_DIR}${PYTHONPATH:+:$PYTHONPATH}" \
-          ctest --test-dir ${{github.workspace}}/build --output-on-failure -C ${{matrix.build_type}}
+      run: ctest --test-dir ${{github.workspace}}/build --output-on-failure -C ${{matrix.build_type}}
 
   Coverage:
     if: github.ref == 'refs/heads/master'
@@ -63,12 +60,14 @@ jobs:
         apt-get -y --no-install-recommends install ninja-build cmake clang python3-pytest xvfb libomp-dev libtbb-dev gcovr
 
     - name: Configure CMake
-      run: >
-          cmake -B ${{github.workspace}}/build
-          -DCMAKE_BUILD_TYPE=${{matrix.build_type}}
-          -DCMAKE_PREFIX_PATH=/opt/vtk/install
-          -DCMAKE_BUILD_TYPE=Profile
-          -DVTKBOOL_COVERAGE=ON
+      run: |
+        PY_VERSION=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
+        VTK_PY_DIR="/opt/vtk/install/lib/python${PY_VERSION}/site-packages"
+        cmake -B "${{ github.workspace }}/build" \
+          -DCMAKE_BUILD_TYPE=Profile \
+          -DCMAKE_PREFIX_PATH=/opt/vtk/install \
+          -DVTKBOOL_COVERAGE=ON \
+          -DVTK_EXTRA_PYTHONPATH="$VTK_PY_DIR"
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build --parallel
@@ -77,11 +76,7 @@ jobs:
       env:
         LD_LIBRARY_PATH: /opt/vtk/install/lib
       run: |
-        PY_VERSION=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
-        VTK_PY_DIR="/opt/vtk/install/lib/python${PY_VERSION}/site-packages"
-        echo "${VTK_PY_DIR}${PYTHONPATH:+:$PYTHONPATH}"
-        PYTHONPATH="${VTK_PY_DIR}${PYTHONPATH:+:$PYTHONPATH}" \
-          ctest --test-dir ${{github.workspace}}/build --output-on-failure
+        ctest --test-dir ${{github.workspace}}/build --output-on-failure
         gcovr -r .. . --exclude-throw-branches --xml -o coverage.xml
 
     - name: Upload coverage reports to Codecov
