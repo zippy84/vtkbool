@@ -13,3 +13,8 @@ vtk_module_add_module(vtkbool
     SOURCES ${srcs}
     HEADERS ${headers}
 )
+
+find_package(TBB QUIET)
+if(TARGET TBB::tbb)
+    vtk_module_link(vtkbool PRIVATE TBB::tbb)
+endif()

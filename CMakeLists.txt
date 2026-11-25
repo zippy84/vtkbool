@@ -94,12 +94,6 @@ else()
 
         vtk_module_build(MODULES ${modules})
 
-        find_package(TBB QUIET)
-
-        if(TARGET TBB::tbb)
-            target_link_libraries(vtkbool PRIVATE TBB::tbb)
-        endif()
-
         if(VTK_WrappingPythonCore_FOUND)
             vtk_module_wrap_python(
                 MODULES ${modules}
