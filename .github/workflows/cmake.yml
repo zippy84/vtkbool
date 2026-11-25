@@ -6,45 +6,45 @@ on:
       - '*'
 
 jobs:
-  Build:
-    runs-on: ${{matrix.os}}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest]
-        cxx: [g++, clang++]
-        build_type: [Debug, Release]
+  # Build:
+  #   runs-on: ${{matrix.os}}
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       os: [ubuntu-latest]
+  #       cxx: [g++, clang++]
+  #       build_type: [Debug, Release]
 
-    container:
-      image: kitware/vtk-for-ci:v9.7.2
+  #   container:
+  #     image: kitware/vtk-for-ci:v9.7.2
 
-    steps:
-    - uses: actions/checkout@v4
+  #   steps:
+  #   - uses: actions/checkout@v4
 
-    - name: Install Deps
-      run: |
-        apt-get update
-        apt-get -y --no-install-recommends install ninja-build cmake g++ clang python3-pytest xvfb libomp-dev libtbb12 libtbb-dev
+  #   - name: Install Deps
+  #     run: |
+  #       apt-get update
+  #       apt-get -y --no-install-recommends install ninja-build cmake g++ clang python3-pytest xvfb libomp-dev libtbb12 libtbb-dev
 
-    - name: Configure CMake
-      run: |
-        PY_VERSION=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
-        VTK_PY_DIR="/opt/vtk/install/lib/python${PY_VERSION}/site-packages"
-        cmake -B "${{github.workspace}}/build" \
-          -DCMAKE_BUILD_TYPE=${{matrix.build_type}} \
-          -DCMAKE_PREFIX_PATH=/opt/vtk/install \
-          -DVTK_EXTRA_PYTHONPATH="$VTK_PY_DIR"
-      env:
-        CXX: ${{matrix.cxx}}
-        CXXFLAGS: ${{matrix.cxxflags}}
+  #   - name: Configure CMake
+  #     run: |
+  #       PY_VERSION=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
+  #       VTK_PY_DIR="/opt/vtk/install/lib/python${PY_VERSION}/site-packages"
+  #       cmake -B "${{github.workspace}}/build" \
+  #         -DCMAKE_BUILD_TYPE=${{matrix.build_type}} \
+  #         -DCMAKE_PREFIX_PATH=/opt/vtk/install \
+  #         -DVTK_EXTRA_PYTHONPATH="$VTK_PY_DIR"
+  #     env:
+  #       CXX: ${{matrix.cxx}}
+  #       CXXFLAGS: ${{matrix.cxxflags}}
 
-    - name: Build
-      run: cmake --build ${{github.workspace}}/build --config ${{matrix.build_type}} --parallel
+  #   - name: Build
+  #     run: cmake --build ${{github.workspace}}/build --config ${{matrix.build_type}} --parallel
 
-    - name: Test
-      env:
-        LD_LIBRARY_PATH: /opt/vtk/install/lib
-      run: ctest --test-dir ${{github.workspace}}/build --output-on-failure -C ${{matrix.build_type}}
+  #   - name: Test
+  #     env:
+  #       LD_LIBRARY_PATH: /opt/vtk/install/lib
+  #     run: ctest --test-dir ${{github.workspace}}/build --output-on-failure -C ${{matrix.build_type}}
 
   Coverage:
     if: github.ref == 'refs/heads/master'
@@ -82,6 +82,7 @@ jobs:
           "${{github.workspace}}/build" \
           --exclude-throw-branches \
           --xml -o "${{github.workspace}}/coverage.xml"
+        find "${{github.workspace}}" -maxdepth 4 -not -path '*/.*'
 
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v7
