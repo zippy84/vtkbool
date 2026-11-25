@@ -44,7 +44,10 @@ jobs:
     - name: Test
       env:
         LD_LIBRARY_PATH: /opt/vtk/install/lib
-      run: ctest --test-dir ${{github.workspace}}/build --output-on-failure -C ${{matrix.build_type}}
+      run: |
+        ldd -r "${{ github.workspace }}/build/lib/libvtkbool.so" | grep -i tbb
+        ls -la /opt/vtk/install/lib/libtbb*
+        ctest --test-dir ${{github.workspace}}/build --output-on-failure -C ${{matrix.build_type}}
 
   Coverage:
     if: github.ref == 'refs/heads/master'
