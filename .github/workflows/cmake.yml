@@ -82,6 +82,7 @@ jobs:
           "${{github.workspace}}/build" \
           --exclude-throw-branches \
           --xml -o coverage.xml
+        find ${{github.workspace}}/build -name "*.gcda" | head -n 20
 
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v7
