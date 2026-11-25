@@ -18,6 +18,8 @@
 import sys
 sys.path.extend(['/home/zippy/vtkbool/build/lib/python3.13/site-packages/vtkbool'])
 
+print(sys.path)
+
 from vtkmodules.vtkFiltersSources import vtkCubeSource
 from vtkmodules.vtkIOLegacy import vtkPolyDataWriter
 
