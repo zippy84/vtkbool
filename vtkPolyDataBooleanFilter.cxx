@@ -64,12 +64,6 @@ vtkPolyDataBooleanFilter::vtkPolyDataBooleanFilter () {
     timePdA = 0;
     timePdB = 0;
 
-    // cellDataA = vtkSmartPointer<vtkCellData>::New();
-    // cellDataB = vtkSmartPointer<vtkCellData>::New();
-
-    cellIdsA = vtkSmartPointer<vtkIdTypeArray>::New();
-    cellIdsB = vtkSmartPointer<vtkIdTypeArray>::New();
-
     OperMode = OPER_UNION;
 
     timeMatrixA = 0;
@@ -112,6 +106,26 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
             (matrices[1] != nullptr && matrices[1]->GetMTime() > timeMatrixB)) {
 
             start = clock::now();
+
+            if (cellDataA) {
+                cellDataA->Initialize();
+            } else {
+                cellDataA = vtkSmartPointer<vtkCellData>::New();
+            }
+
+            if (cellDataB) {
+                cellDataB->Initialize();
+            } else {
+                cellDataB = vtkSmartPointer<vtkCellData>::New();
+            }
+
+            if (pdA->GetCellData()) {
+                cellDataA->DeepCopy(pdA->GetCellData());
+            }
+
+            if (pdB->GetCellData()) {
+                cellDataB->DeepCopy(pdB->GetCellData());
+            }
 
             vtkSmartPointer<vtkPolyData> newPdA = pdA, newPdB = pdB;
 
@@ -173,6 +187,9 @@ int vtkPolyDataBooleanFilter::RequestData(vtkInformation *request, vtkInformatio
 
             vtkIdTypeArray *origCellIdsA = vtkIdTypeArray::SafeDownCast(modPdA->GetCellData()->GetScalars("OrigCellIds"));
             vtkIdTypeArray *origCellIdsB = vtkIdTypeArray::SafeDownCast(modPdB->GetCellData()->GetScalars("OrigCellIds"));
+
+            cellIdsA = vtkSmartPointer<vtkIdTypeArray>::New();
+            cellIdsB = vtkSmartPointer<vtkIdTypeArray>::New();
 
             cellIdsA->DeepCopy(origCellIdsA);
             cellIdsB->DeepCopy(origCellIdsB);
@@ -2933,17 +2950,17 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
     vtkIdTypeArray *origCellIdsA = vtkIdTypeArray::SafeDownCast(regsA->GetCellData()->GetScalars("OrigCellIds"));
     vtkIdTypeArray *origCellIdsB = vtkIdTypeArray::SafeDownCast(regsB->GetCellData()->GetScalars("OrigCellIds"));
 
-    vtkIdTypeArray *newOrigCellIdsA = vtkIdTypeArray::New();
+    auto newOrigCellIdsA = vtkSmartPointer<vtkIdTypeArray>::New();
     newOrigCellIdsA->SetName("OrigCellIdsA");
 
-    vtkIdTypeArray *newOrigCellIdsB = vtkIdTypeArray::New();
+    auto newOrigCellIdsB = vtkSmartPointer<vtkIdTypeArray>::New();
     newOrigCellIdsB->SetName("OrigCellIdsB");
 
-    // vtkCellData *newCellDataA = vtkCellData::New();
-    // newCellDataA->CopyAllocate(cellDataA);
+    auto newCellDataA = vtkSmartPointer<vtkCellData>::New();
+    newCellDataA->CopyAllocate(cellDataA, regsA->GetNumberOfCells());
 
-    // vtkCellData *newCellDataB = vtkCellData::New();
-    // newCellDataB->CopyAllocate(cellDataB);
+    auto newCellDataB = vtkSmartPointer<vtkCellData>::New();
+    newCellDataB->CopyAllocate(cellDataB, regsB->GetNumberOfCells());
 
     vtkIdType cellId;
 
@@ -2953,7 +2970,7 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
         newOrigCellIdsA->InsertNextValue(cellId);
         newOrigCellIdsB->InsertNextValue(-1);
 
-        // newCellDataA->CopyData(cellDataA, cellId, i);
+        newCellDataA->CopyData(cellDataA, cellId, i);
     }
 
     for (i = 0; i < regsB->GetNumberOfCells(); i++) {
@@ -2962,58 +2979,41 @@ bool vtkPolyDataBooleanFilter::CombineRegions () {
         newOrigCellIdsB->InsertNextValue(cellId);
         newOrigCellIdsA->InsertNextValue(-1);
 
-        // newCellDataB->CopyData(cellDataB, cellId, i);
+        newCellDataB->CopyData(cellDataB, cellId, i);
     }
 
     regsA->GetCellData()->Initialize();
     regsB->GetCellData()->Initialize();
 
-    // regsA->GetCellData()->ShallowCopy(newCellDataA);
-    // regsB->GetCellData()->ShallowCopy(newCellDataB);
-
-    // newCellDataA->Delete();
-    // newCellDataB->Delete();
+    regsA->GetCellData()->ShallowCopy(newCellDataA);
+    regsB->GetCellData()->ShallowCopy(newCellDataB);
 
     // zusammenführung
 
-    vtkAppendPolyData *app = vtkAppendPolyData::New();
+    auto app = vtkSmartPointer<vtkAppendPolyData>::New();
     app->AddInputData(regsA);
     app->AddInputData(regsB);
 
-    // entfernt ungenutzte punkte
-    vtkCleanPolyData *cleanApp = vtkCleanPolyData::New();
+    auto cleanApp = vtkSmartPointer<vtkCleanPolyData>::New();
     cleanApp->PointMergingOff();
     cleanApp->SetInputConnection(app->GetOutputPort());
 
-    // färbt die regionen nochmal neu ein, damit mehrere regionen nicht die gleiche farbe haben
-
-    vtkPolyDataConnectivityFilter *cfApp = vtkPolyDataConnectivityFilter::New();
+    auto cfApp = vtkSmartPointer<vtkPolyDataConnectivityFilter>::New();
     cfApp->SetExtractionModeToAllRegions();
     cfApp->ColorRegionsOn();
     cfApp->SetInputConnection(cleanApp->GetOutputPort());
 
     cfApp->Update();
 
-    vtkPolyData *cfPd = cfApp->GetOutput();
-
     // resultB bleibt hier leer
 
-    resultA->ShallowCopy(cfPd);
+    resultA->ShallowCopy(cfApp->GetOutput());
 
     resultA->GetCellData()->AddArray(newOrigCellIdsA);
     resultA->GetCellData()->AddArray(newOrigCellIdsB);
 
     contLines->RemoveDeletedCells();
     resultC->ShallowCopy(contLines);
-
-    // aufräumen
-
-    cfApp->Delete();
-    cleanApp->Delete();
-    app->Delete();
-
-    newOrigCellIdsB->Delete();
-    newOrigCellIdsA->Delete();
 
     return false;
 

@@ -35,16 +35,11 @@ limitations under the License.
 #include <vtkMath.h>
 #include <vtkCellData.h>
 #include <vtkCleanPolyData.h>
-
-#include <vtkSphereSource.h>
-#include <vtkTransformFilter.h>
-#include <vtkTransform.h>
-#include <vtkStripper.h>
 #include <vtkCellIterator.h>
 #include <vtkVersionMacros.h>
 #include <vtkStaticPointLocator.h>
-#include <vtkLine.h>
 #include <vtkStaticCellLocator.h>
+#include <vtkLine.h>
 
 std::ostream& operator<< (std::ostream &out, const Vector3 &vec) {
     out << "[" << vec.x << ", " << vec.y << ", " << vec.z << "]";

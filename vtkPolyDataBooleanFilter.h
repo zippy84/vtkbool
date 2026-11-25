@@ -169,7 +169,7 @@ class VTK_EXPORT vtkPolyDataBooleanFilter : public vtkPolyDataAlgorithm {
 
     vtkSmartPointer<vtkPolyData> modPdA, modPdB, contLines;
 
-    // vtkSmartPointer<vtkCellData> cellDataA, cellDataB;
+    vtkSmartPointer<vtkCellData> cellDataA, cellDataB;
     vtkSmartPointer<vtkIdTypeArray> cellIdsA, cellIdsB;
 
     vtkIdTypeArray *contsA, *contsB;

@@ -78,9 +78,9 @@ else()
             message(FATAL_ERROR "vtkbool requires VTK 9.7.0 or newer.")
         endif()
 
-        add_compile_options(
-            $<$<CXX_COMPILER_ID:Clang>:-Wno-sign-conversion>
-        )
+        # add_compile_options(
+        #     $<$<CXX_COMPILER_ID:Clang>:-Wno-sign-conversion>
+        # )
 
         vtk_module_scan(
             MODULE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/module/vtk.module"
@@ -125,18 +125,18 @@ else()
 
             set_property(TEST "test_filter" APPEND PROPERTY ENVIRONMENT "PYTHONPATH=${_vtkbool_pypath}")
 
+            add_test(NAME "generate_frieze"
+                COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/testing/generate_frieze.py
+                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/testing)
+
+            set_property(TEST "generate_frieze" APPEND PROPERTY ENVIRONMENT "PYTHONPATH=${_vtkbool_pypath}")
+
             add_executable(test_merger testing/test_merger.cxx)
             target_link_libraries(test_merger PRIVATE vtkbool ${VTK_LIBRARIES})
 
             add_test(NAME "test_merger"
                 COMMAND test_merger
                 WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/testing)
-
-            add_test(NAME "generate_frieze"
-                COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/testing/generate_frieze.py
-                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/testing)
-
-            set_property(TEST "generate_frieze" APPEND PROPERTY ENVIRONMENT "PYTHONPATH=${_vtkbool_pypath}")
 
             add_executable(test_bug testing/test_bug.cxx)
             target_link_libraries(test_bug PRIVATE vtkbool ${VTK_LIBRARIES})
