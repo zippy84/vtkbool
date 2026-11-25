@@ -109,7 +109,7 @@ else()
             add_test(NAME "import_vtkbool"
                 COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/testing/test_python.py)
 
-            # set_property(TEST "import_vtkbool" APPEND PROPERTY ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/${python_default_destination}/vtkbool")
+            set_property(TEST "import_vtkbool" APPEND PROPERTY ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/${python_default_destination}/vtkbool")
 
             add_test(NAME "test_filter"
                 COMMAND ${Python3_EXECUTABLE} -m pytest

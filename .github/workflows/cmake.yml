@@ -42,6 +42,7 @@ jobs:
       env:
         LD_LIBRARY_PATH: /opt/vtk/install/lib
       run: |
+        grep -rn -A 5 "import_vtkbool" ${{github.workspace}}/build/
         PY_VERSION=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
         VTK_PY_DIR="/opt/vtk/install/lib/python${PY_VERSION}/site-packages"
         echo "${VTK_PY_DIR}${PYTHONPATH:+:$PYTHONPATH}"
