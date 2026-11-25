@@ -81,11 +81,9 @@ jobs:
           -r "${{github.workspace}}" \
           "${{github.workspace}}/build" \
           --exclude-throw-branches \
-          --xml -o "${{github.workspace}}/coverage.xml"
-        find "${{github.workspace}}" -maxdepth 4 -not -path '*/.*'
+          --xml -o coverage.xml
 
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v7
       with:
         token: ${{secrets.CODECOV_TOKEN}}
-        files: ${{github.workspace}}/coverage.xml
