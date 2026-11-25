@@ -44,9 +44,7 @@ jobs:
     - name: Test
       env:
         LD_LIBRARY_PATH: /opt/vtk/install/lib
-      run: |
-        ldd -r "${{ github.workspace }}/build/lib/libvtkbool.so" | grep -i tbb
-        ctest --test-dir ${{github.workspace}}/build --output-on-failure -C ${{matrix.build_type}}
+      run: ctest --test-dir ${{github.workspace}}/build --output-on-failure -C ${{matrix.build_type}}
 
   Coverage:
     if: github.ref == 'refs/heads/master'
@@ -59,7 +57,7 @@ jobs:
     - name: Install Deps
       run: |
         apt-get update
-        apt-get -y --no-install-recommends install ninja-build cmake clang python3-pytest xvfb libomp-dev libtbb12 libtbb-dev gcovr
+        apt-get -y --no-install-recommends install ninja-build cmake clang python3-pytest xvfb libomp-dev libtbb12 libtbb-dev curl gcovr
 
     - name: Configure CMake
       run: |
