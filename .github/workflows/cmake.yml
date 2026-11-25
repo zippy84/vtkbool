@@ -24,7 +24,7 @@ jobs:
     - name: Install Deps
       run: |
         apt-get update
-        apt-get -y --no-install-recommends install ninja-build cmake clang python3-pytest xvfb
+        apt-get -y --no-install-recommends install ninja-build cmake clang python3-pytest xvfb libomp-dev
 
     - name: Configure CMake
       run: >
@@ -39,8 +39,7 @@ jobs:
       run: cmake --build ${{github.workspace}}/build --config ${{matrix.build_type}} --parallel
 
     - name: Test
-      working-directory: ${{github.workspace}}/build
-      run: ctest --output-on-failure -C ${{matrix.build_type}}
+      ctest --test-dir {{github.workspace}}/build --output-on-failure -C ${{matrix.build_type}}
 
   Coverage:
     if: github.ref == 'refs/heads/master'
@@ -53,7 +52,7 @@ jobs:
     - name: Install Deps
       run: |
         apt-get update
-        apt-get -y --no-install-recommends install ninja-build cmake clang python3-pytest xvfb gcovr
+        apt-get -y --no-install-recommends install ninja-build cmake clang python3-pytest xvfb libomp-dev gcovr
 
     - name: Configure CMake
       run: >
@@ -67,9 +66,8 @@ jobs:
       run: cmake --build ${{github.workspace}}/build --parallel
 
     - name: Test
-      working-directory: ${{github.workspace}}/build
       run: |
-        ctest --output-on-failure
+        ctest --test-dir {{github.workspace}}/build --output-on-failure
         gcovr -r .. . --exclude-throw-branches --xml -o coverage.xml
 
     - name: Upload coverage reports to Codecov
