@@ -15,9 +15,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# import sys
-# sys.path.extend(['/home/zippy/vtkbool/build/lib/python3.13/site-packages/vtkbool'])
-
 from collections import defaultdict
 from operator import itemgetter
 import math

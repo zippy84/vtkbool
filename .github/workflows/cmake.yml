@@ -44,6 +44,7 @@ jobs:
       run: |
         PY_VERSION=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
         VTK_PY_DIR="/opt/vtk/install/lib/python${PY_VERSION}/site-packages"
+        echo "${VTK_PY_DIR}${PYTHONPATH:+:$PYTHONPATH}"
         PYTHONPATH="${VTK_PY_DIR}${PYTHONPATH:+:$PYTHONPATH}" \
           ctest --test-dir ${{github.workspace}}/build --output-on-failure -C ${{matrix.build_type}}
 
@@ -77,6 +78,7 @@ jobs:
       run: |
         PY_VERSION=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
         VTK_PY_DIR="/opt/vtk/install/lib/python${PY_VERSION}/site-packages"
+        echo "${VTK_PY_DIR}${PYTHONPATH:+:$PYTHONPATH}"
         PYTHONPATH="${VTK_PY_DIR}${PYTHONPATH:+:$PYTHONPATH}" \
           ctest --test-dir ${{github.workspace}}/build --output-on-failure
         gcovr -r .. . --exclude-throw-branches --xml -o coverage.xml
