@@ -24,14 +24,14 @@ jobs:
     - name: Install Deps
       run: |
         apt-get update
-        apt-get -y --no-install-recommends install ninja-build cmake clang python3-pytest xvfb libomp-dev libtbb12 libtbb-dev
+        apt-get -y --no-install-recommends install ninja-build cmake g++ clang python3-pytest xvfb libomp-dev libtbb12 libtbb-dev
 
     - name: Configure CMake
       run: |
         PY_VERSION=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
         VTK_PY_DIR="/opt/vtk/install/lib/python${PY_VERSION}/site-packages"
-        cmake -B "${{ github.workspace }}/build" \
-          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+        cmake -B "${{github.workspace}}/build" \
+          -DCMAKE_BUILD_TYPE=${{matrix.build_type}} \
           -DCMAKE_PREFIX_PATH=/opt/vtk/install \
           -DVTK_EXTRA_PYTHONPATH="$VTK_PY_DIR"
       env:
@@ -57,13 +57,13 @@ jobs:
     - name: Install Deps
       run: |
         apt-get update
-        apt-get -y --no-install-recommends install ninja-build cmake clang python3-pytest xvfb libomp-dev libtbb12 libtbb-dev curl gcovr
+        apt-get -y --no-install-recommends install ninja-build cmake g++ clang python3-pytest xvfb libomp-dev libtbb12 libtbb-dev curl gcovr
 
     - name: Configure CMake
       run: |
         PY_VERSION=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
         VTK_PY_DIR="/opt/vtk/install/lib/python${PY_VERSION}/site-packages"
-        cmake -B "${{ github.workspace }}/build" \
+        cmake -B "${{github.workspace}}/build" \
           -DCMAKE_BUILD_TYPE=Profile \
           -DCMAKE_PREFIX_PATH=/opt/vtk/install \
           -DVTKBOOL_COVERAGE=ON \
@@ -77,10 +77,14 @@ jobs:
         LD_LIBRARY_PATH: /opt/vtk/install/lib
       run: |
         ctest --test-dir ${{github.workspace}}/build --output-on-failure
-        gcovr -r .. . --exclude-throw-branches --xml -o coverage.xml
+        gcovr \
+          -r "${{github.workspace}}" \
+          "${{github.workspace}}/build" \
+          --exclude-throw-branches \
+          --xml -o "${{github.workspace}}/coverage.xml"
 
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v7
       with:
         token: ${{secrets.CODECOV_TOKEN}}
-
+        files: ${{github.workspace}}/coverage.xml

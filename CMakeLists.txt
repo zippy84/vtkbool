@@ -106,12 +106,12 @@ else()
             vtk_module_python_default_destination(python_default_destination)
 
             if(NOT DEFINED VTK_EXTRA_PYTHONPATH)
-              set(VTK_EXTRA_PYTHONPATH "")
+                set(VTK_EXTRA_PYTHONPATH "")
             endif()
 
             set(_vtkbool_pypath "${CMAKE_BINARY_DIR}/${python_default_destination}/vtkbool")
             if(NOT VTK_EXTRA_PYTHONPATH STREQUAL "")
-              string(APPEND _vtkbool_pypath ":${VTK_EXTRA_PYTHONPATH}")
+                string(APPEND _vtkbool_pypath ":${VTK_EXTRA_PYTHONPATH}")
             endif()
 
             add_test(NAME "import_vtkbool"
