@@ -39,6 +39,8 @@ jobs:
       run: cmake --build ${{github.workspace}}/build --config ${{matrix.build_type}} --parallel
 
     - name: Test
+      env:
+        LD_LIBRARY_PATH: /tmp/vtk-install/lib
       run: ctest --test-dir ${{github.workspace}}/build --output-on-failure -C ${{matrix.build_type}}
 
   Coverage:
@@ -66,12 +68,14 @@ jobs:
       run: cmake --build ${{github.workspace}}/build --parallel
 
     - name: Test
+      env:
+        LD_LIBRARY_PATH: /tmp/vtk-install/lib
       run: |
         ctest --test-dir ${{github.workspace}}/build --output-on-failure
         gcovr -r .. . --exclude-throw-branches --xml -o coverage.xml
 
     - name: Upload coverage reports to Codecov
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v7
       with:
         token: ${{secrets.CODECOV_TOKEN}}
 
