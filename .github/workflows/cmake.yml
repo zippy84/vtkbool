@@ -43,10 +43,9 @@ jobs:
         LD_LIBRARY_PATH: /opt/vtk/install/lib
       run: |
         PY_VERSION=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
-        VTK_PY_PATH="/opt/vtk/install/lib/python${PY_VERSION}/site-packages"
-        export PYTHONPATH="${VTK_PY_PATH}${PYTHONPATH:+:$PYTHONPATH}"
-        echo "PYTHONPATH=$PYTHONPATH" >> "$GITHUB_ENV"
-        ctest --test-dir ${{github.workspace}}/build --output-on-failure -C ${{matrix.build_type}}
+        VTK_PY_DIR="/opt/vtk/install/lib/python${PY_VERSION}/site-packages"
+        PYTHONPATH="${VTK_PY_DIR}${PYTHONPATH:+:$PYTHONPATH}" \
+          ctest --test-dir ${{github.workspace}}/build --output-on-failure -C ${{matrix.build_type}}
 
   Coverage:
     if: github.ref == 'refs/heads/master'
@@ -77,10 +76,9 @@ jobs:
         LD_LIBRARY_PATH: /opt/vtk/install/lib
       run: |
         PY_VERSION=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
-        VTK_PY_PATH="/opt/vtk/install/lib/python${PY_VERSION}/site-packages"
-        export PYTHONPATH="${VTK_PY_PATH}${PYTHONPATH:+:$PYTHONPATH}"
-        echo "PYTHONPATH=$PYTHONPATH" >> "$GITHUB_ENV"
-        ctest --test-dir ${{github.workspace}}/build --output-on-failure
+        VTK_PY_DIR="/opt/vtk/install/lib/python${PY_VERSION}/site-packages"
+        PYTHONPATH="${VTK_PY_DIR}${PYTHONPATH:+:$PYTHONPATH}" \
+          ctest --test-dir ${{github.workspace}}/build --output-on-failure
         gcovr -r .. . --exclude-throw-branches --xml -o coverage.xml
 
     - name: Upload coverage reports to Codecov
