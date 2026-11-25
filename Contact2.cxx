@@ -44,7 +44,7 @@ limitations under the License.
 #include <vtkVersionMacros.h>
 #include <vtkStaticPointLocator.h>
 #include <vtkLine.h>
-#include <vtkModifiedBSPTree.h>
+#include <vtkStaticCellLocator.h>
 
 std::ostream& operator<< (std::ostream &out, const Vector3 &vec) {
     out << "[" << vec.x << ", " << vec.y << ", " << vec.z << "]";
@@ -1213,9 +1213,9 @@ void Contact::SnapToEdges () {
     std::map<Pair2, std::vector<Snap>> edgeSnaps;
 
     auto GetSnaps = [&](vtkSmartPointer<vtkPolyData> pd, FaceSource source, vtkIdType offset = 0) {
-        auto bspTree = vtkSmartPointer<vtkModifiedBSPTree>::New();
-        bspTree->SetDataSet(pd);
-        bspTree->BuildLocator();
+        auto tree = vtkSmartPointer<vtkStaticCellLocator>::New();
+        tree->SetDataSet(pd);
+        tree->BuildLocator();
 
         auto edges = GetEdges(mergedMesh, source);
 
@@ -1228,7 +1228,7 @@ void Contact::SnapToEdges () {
 
             auto cells = vtkSmartPointer<vtkIdList>::New();
 
-            bspTree->FindCellsAlongLine(pA, pB, 1e-5, cells);
+            tree->FindCellsAlongLine(pA, pB, 1e-5, cells);
 
             std::vector<vtkIdType> viewedVertIds;
 
@@ -1305,9 +1305,9 @@ void Contact::SnapEdges () {
 
         std::map<Pair2, std::vector<Snap>> edgeSnaps;
 
-        auto bspTree = vtkSmartPointer<vtkModifiedBSPTree>::New();
-        bspTree->SetDataSet(pd);
-        bspTree->BuildLocator();
+        auto tree = vtkSmartPointer<vtkStaticCellLocator>::New();
+        tree->SetDataSet(pd);
+        tree->BuildLocator();
 
         auto lines = GetEdges(mergedMesh, source);
 
@@ -1324,7 +1324,7 @@ void Contact::SnapEdges () {
             points->Reset();
             cells->Reset();
 
-            bspTree->IntersectWithLine(_pA, _pB, points, cells);
+            tree->IntersectWithLine(_pA, _pB, points, cells);
 
             for (vtkIdType i = 0; i < cells->GetNumberOfIds(); i++) {
                 vtkIdType faceId = cells->GetId(i);
