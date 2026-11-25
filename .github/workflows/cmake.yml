@@ -39,7 +39,7 @@ jobs:
       run: cmake --build ${{github.workspace}}/build --config ${{matrix.build_type}} --parallel
 
     - name: Test
-      ctest --test-dir {{github.workspace}}/build --output-on-failure -C ${{matrix.build_type}}
+      run: ctest --test-dir {{github.workspace}}/build --output-on-failure -C ${{matrix.build_type}}
 
   Coverage:
     if: github.ref == 'refs/heads/master'
