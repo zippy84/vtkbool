@@ -24,7 +24,7 @@ jobs:
     - name: Install Deps
       run: |
         apt-get update
-        apt-get -y --no-install-recommends install ninja-build cmake clang python3-pytest xvfb libomp-dev
+        apt-get -y --no-install-recommends install ninja-build cmake clang python3-pytest xvfb libomp-dev libtbb-dev
 
     - name: Configure CMake
       run: >
@@ -59,7 +59,7 @@ jobs:
     - name: Install Deps
       run: |
         apt-get update
-        apt-get -y --no-install-recommends install ninja-build cmake clang python3-pytest xvfb libomp-dev gcovr
+        apt-get -y --no-install-recommends install ninja-build cmake clang python3-pytest xvfb libomp-dev libtbb-dev gcovr
 
     - name: Configure CMake
       run: >
