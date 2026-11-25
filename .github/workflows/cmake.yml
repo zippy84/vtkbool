@@ -24,13 +24,13 @@ jobs:
     - name: Install Deps
       run: |
         apt-get update
-        apt-get -y --no-install-recommends install ninja-build cmake g++ clang python3-pytest xvfb libomp-dev libtbb12 libtbb-dev
+        apt-get -y --no-install-recommends install cmake g++ clang python3-pytest xvfb libomp-dev libtbb12 libtbb-dev
 
     - name: Configure CMake
       run: |
         PY_VERSION=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
         VTK_PY_DIR="/opt/vtk/install/lib/python${PY_VERSION}/site-packages"
-        cmake -B "${{github.workspace}}/build" \
+        cmake -B build \
           -DCMAKE_BUILD_TYPE=${{matrix.build_type}} \
           -DCMAKE_PREFIX_PATH=/opt/vtk/install \
           -DVTK_EXTRA_PYTHONPATH="$VTK_PY_DIR"
@@ -39,12 +39,12 @@ jobs:
         CXXFLAGS: ${{matrix.cxxflags}}
 
     - name: Build
-      run: cmake --build ${{github.workspace}}/build --config ${{matrix.build_type}} --parallel
+      run: cmake --build build --config ${{matrix.build_type}} --parallel
 
     - name: Test
       env:
         LD_LIBRARY_PATH: /opt/vtk/install/lib
-      run: ctest --test-dir ${{github.workspace}}/build --output-on-failure -C ${{matrix.build_type}}
+      run: ctest --test-dir build --output-on-failure -C ${{matrix.build_type}}
 
   Coverage:
     if: github.ref == 'refs/heads/master'
@@ -57,7 +57,7 @@ jobs:
     - name: Install Deps
       run: |
         apt-get update
-        apt-get -y --no-install-recommends install ninja-build cmake g++ clang python3-pytest xvfb libomp-dev libtbb12 libtbb-dev curl gcovr
+        apt-get -y --no-install-recommends install cmake g++ clang python3-pytest xvfb libomp-dev libtbb12 libtbb-dev curl gcovr
 
     - name: Configure CMake
       run: |
