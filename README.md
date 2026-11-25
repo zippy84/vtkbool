@@ -28,7 +28,7 @@ This is an extension of the graphics library VTK. The goal of the extension is t
 ## Requirements
 
 - CMake >= 3.12
-- VTK >= 9.0
+- VTK >= 9.7
 - C++17 compiler
 
 ### Optional

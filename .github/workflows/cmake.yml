@@ -15,24 +15,28 @@ jobs:
         cxx: [g++, clang++]
         build_type: [Debug, Release]
 
+    container:
+      image: kitware/vtk-for-ci:v9.7.2
+
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Install Deps
       run: |
-        sudo apt-get update
-        sudo apt-get -y upgrade
-        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata
-        sudo apt-get -y install libvtk9-dev python3-vtk9 python3-pytest
+        apt-get update
+        apt-get -y --no-install-recommends install ninja-build cmake clang python3-pytest xvfb
 
     - name: Configure CMake
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.build_type}}
+      run: >
+          cmake -B ${{github.workspace}}/build
+          -DCMAKE_BUILD_TYPE=${{matrix.build_type}}
+          -DCMAKE_PREFIX_PATH=/opt/vtk/install
       env:
         CXX: ${{matrix.cxx}}
         CXXFLAGS: ${{matrix.cxxflags}}
 
     - name: Build
-      run: cmake --build ${{github.workspace}}/build --config ${{matrix.build_type}}
+      run: cmake --build ${{github.workspace}}/build --config ${{matrix.build_type}} --parallel
 
     - name: Test
       working-directory: ${{github.workspace}}/build
@@ -41,21 +45,26 @@ jobs:
   Coverage:
     if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
+    container:
+      image: kitware/vtk-for-ci:v9.7.2
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Install Deps
       run: |
-        sudo apt-get update
-        sudo apt-get -y upgrade
-        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata
-        sudo apt-get -y install libvtk9-dev python3-vtk9 python3-pytest gcovr
+        apt-get update
+        apt-get -y --no-install-recommends install ninja-build cmake clang python3-pytest xvfb gcovr
 
     - name: Configure CMake
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Profile -DVTKBOOL_COVERAGE=ON
+      run: >
+          cmake -B ${{github.workspace}}/build
+          -DCMAKE_BUILD_TYPE=${{matrix.build_type}}
+          -DCMAKE_PREFIX_PATH=/opt/vtk/install
+          -DCMAKE_BUILD_TYPE=Profile
+          -DVTKBOOL_COVERAGE=ON
 
     - name: Build
-      run: cmake --build ${{github.workspace}}/build
+      run: cmake --build ${{github.workspace}}/build --parallel
 
     - name: Test
       working-directory: ${{github.workspace}}/build

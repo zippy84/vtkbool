@@ -1213,9 +1213,9 @@ void Contact::SnapToEdges () {
     std::map<Pair2, std::vector<Snap>> edgeSnaps;
 
     auto GetSnaps = [&](vtkSmartPointer<vtkPolyData> pd, FaceSource source, vtkIdType offset = 0) {
-        auto tree = vtkSmartPointer<vtkStaticCellLocator>::New();
-        tree->SetDataSet(pd);
-        tree->BuildLocator();
+        auto locator = vtkSmartPointer<vtkStaticCellLocator>::New();
+        locator->SetDataSet(pd);
+        locator->BuildLocator();
 
         auto edges = GetEdges(mergedMesh, source);
 
@@ -1228,7 +1228,7 @@ void Contact::SnapToEdges () {
 
             auto cells = vtkSmartPointer<vtkIdList>::New();
 
-            tree->FindCellsAlongLine(pA, pB, 1e-5, cells);
+            locator->FindCellsAlongLine(pA, pB, 1e-5, cells);
 
             std::vector<vtkIdType> viewedVertIds;
 
@@ -1305,9 +1305,9 @@ void Contact::SnapEdges () {
 
         std::map<Pair2, std::vector<Snap>> edgeSnaps;
 
-        auto tree = vtkSmartPointer<vtkStaticCellLocator>::New();
-        tree->SetDataSet(pd);
-        tree->BuildLocator();
+        auto locator = vtkSmartPointer<vtkStaticCellLocator>::New();
+        locator->SetDataSet(pd);
+        locator->BuildLocator();
 
         auto lines = GetEdges(mergedMesh, source);
 
@@ -1324,7 +1324,7 @@ void Contact::SnapEdges () {
             points->Reset();
             cells->Reset();
 
-            tree->IntersectWithLine(_pA, _pB, points, cells);
+            locator->IntersectWithLine(_pA, _pB, points, cells);
 
             for (vtkIdType i = 0; i < cells->GetNumberOfIds(); i++) {
                 vtkIdType faceId = cells->GetId(i);
