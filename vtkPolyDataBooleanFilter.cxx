@@ -42,11 +42,11 @@ limitations under the License.
 #include <vtkCleanPolyData.h>
 #include <vtkPolyDataConnectivityFilter.h>
 #include <vtkSmartPointer.h>
-#include <vtkModifiedBSPTree.h>
 #include <vtkCellArrayIterator.h>
 #include <vtkCellIterator.h>
 #include <vtkTransformFilter.h>
 #include <vtkStaticPointLocator.h>
+#include <vtkStaticCellLocator.h>
 
 #include "vtkPolyDataBooleanFilter.h"
 
@@ -723,11 +723,11 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
             const StripPtsType &pts = pStrips.pts;
             const Base &base = pStrips.base;
 
-            auto treePts = vtkSmartPointer<vtkPoints>::New();
-            treePts->SetDataTypeToDouble();
+            auto locatorPts = vtkSmartPointer<vtkPoints>::New();
+            locatorPts->SetDataTypeToDouble();
 
-            auto treePd = vtkSmartPointer<vtkPolyData>::New();
-            treePd->Allocate(1);
+            auto locatorPd = vtkSmartPointer<vtkPolyData>::New();
+            locatorPd->Allocate(1);
 
             std::map<vtkIdType, vtkIdType> ptIds;
 
@@ -736,7 +736,7 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
             for (const auto &p : pts) {
                 Transform(p.second.pt, pt, base);
 
-                ptIds.emplace(p.first, treePts->InsertNextPoint(pt[0], pt[1], 0));
+                ptIds.emplace(p.first, locatorPts->InsertNextPoint(pt[0], pt[1], 0));
             }
 
             for (const StripType &strip : strips) {
@@ -746,37 +746,41 @@ bool vtkPolyDataBooleanFilter::GetPolyStrips (vtkPolyData *pd, vtkIdTypeArray *c
                     line->InsertNextId(ptIds[itr2->ind]);
                     line->InsertNextId(ptIds[(itr2+1)->ind]);
 
-                    treePd->InsertNextCell(VTK_LINE, line);
+                    locatorPd->InsertNextCell(VTK_LINE, line);
 
                     line->Delete();
                 }
             }
 
-            treePd->SetPoints(treePts);
+            locatorPd->SetPoints(locatorPts);
 
-            auto tree = vtkSmartPointer<vtkModifiedBSPTree>::New();
-            tree->SetDataSet(treePd);
-            tree->BuildLocator();
+            auto locator = vtkSmartPointer<vtkStaticCellLocator>::New();
+            locator->SetDataSet(locatorPd);
+            locator->BuildLocator();
 
             vtkIdType numA, numB;
             const vtkIdType *lineA, *lineB;
 
-            auto lineItr = vtk::TakeSmartPointer(treePd->GetLines()->NewIterator());
+            auto lineIds = vtkSmartPointer<vtkIdList>::New();
+
+            vtkCellArray *lines = locatorPd->GetLines();
+
+            auto lineItr = vtk::TakeSmartPointer(locatorPd->GetLines()->NewIterator());
 
             for (lineItr->GoToFirstCell(); !lineItr->IsDoneWithTraversal(); lineItr->GoToNextCell()) {
                 lineItr->GetCurrentCell(numA, lineA);
 
                 double ptA[3], ptB[3];
 
-                treePts->GetPoint(lineA[0], ptA);
-                treePts->GetPoint(lineA[1], ptB);
+                locatorPts->GetPoint(lineA[0], ptA);
+                locatorPts->GetPoint(lineA[1], ptB);
 
-                auto lineIds = vtkSmartPointer<vtkIdList>::New();
+                lineIds->Reset();
 
-                tree->IntersectWithLine(ptA, ptB, 1e-5, nullptr, lineIds);
+                locator->IntersectWithLine(ptA, ptB, 1e-5, nullptr, lineIds);
 
                 for (vtkIdType i = 0; i < lineIds->GetNumberOfIds(); i++) {
-                    treePd->GetCellPoints(lineIds->GetId(i), numB, lineB);
+                    lines->GetCellAtId(lineIds->GetId(i), numB, lineB);
 
                     if (lineB[0] != lineA[0] && lineB[1] != lineA[0] && lineB[0] != lineA[1] && lineB[1] != lineA[1]) {
                         // schnitt gefunden

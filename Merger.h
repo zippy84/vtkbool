@@ -17,6 +17,9 @@ limitations under the License.
 #ifndef __Merger_h
 #define __Merger_h
 
+#include <vtkKdTree.h>
+#include <vtkModifiedBSPTree.h>
+
 #include "vtkPolyDataBooleanFilter.h"
 
 typedef std::vector<std::size_t> GroupType;

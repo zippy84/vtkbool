@@ -26,8 +26,6 @@ limitations under the License.
 #include <type_traits>
 
 #include <vtkPolyDataAlgorithm.h>
-#include <vtkKdTree.h>
-#include <vtkModifiedBSPTree.h>
 #include <vtkMatrixToLinearTransform.h>
 #include <vtkMatrix4x4.h>
 
