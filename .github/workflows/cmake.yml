@@ -63,31 +63,26 @@ jobs:
       run: |
         PY_VERSION=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
         VTK_PY_DIR="/opt/vtk/install/lib/python${PY_VERSION}/site-packages"
-        cmake -B "${{github.workspace}}/build" \
+        cmake -B build \
           -DCMAKE_BUILD_TYPE=Profile \
           -DCMAKE_PREFIX_PATH=/opt/vtk/install \
           -DVTKBOOL_COVERAGE=ON \
           -DVTK_EXTRA_PYTHONPATH="$VTK_PY_DIR"
 
     - name: Build
-      run: cmake --build ${{github.workspace}}/build --parallel
+      run: cmake --build build --parallel
 
     - name: Test
       env:
         LD_LIBRARY_PATH: /opt/vtk/install/lib
       run: |
-        ctest --test-dir ${{github.workspace}}/build --output-on-failure
-        gcovr \
-          -r "${{github.workspace}}" \
-          "${{github.workspace}}/build" \
+        ctest --test-dir build --output-on-failure
+        gcovr build \
           --exclude-throw-branches \
-          --xml -o ${{github.workspace}}/coverage.xml
-        echo "GCDA_DIR=${{github.workspace}}" >> "$GITHUB_ENV"
-        echo "GCDA_DIR=${{github.workspace}}"
+          --xml -o coverage.xml
 
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v7
       with:
         token: ${{secrets.CODECOV_TOKEN}}
         files: coverage.xml
-        working-directory: ${{env.GCDA_DIR}}
