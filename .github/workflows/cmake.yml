@@ -39,7 +39,7 @@ jobs:
       run: cmake --build ${{github.workspace}}/build --config ${{matrix.build_type}} --parallel
 
     - name: Test
-      run: ctest --test-dir {{github.workspace}}/build --output-on-failure -C ${{matrix.build_type}}
+      run: ctest --test-dir ${{github.workspace}}/build --output-on-failure -C ${{matrix.build_type}}
 
   Coverage:
     if: github.ref == 'refs/heads/master'
@@ -67,7 +67,7 @@ jobs:
 
     - name: Test
       run: |
-        ctest --test-dir {{github.workspace}}/build --output-on-failure
+        ctest --test-dir ${{github.workspace}}/build --output-on-failure
         gcovr -r .. . --exclude-throw-branches --xml -o coverage.xml
 
     - name: Upload coverage reports to Codecov
