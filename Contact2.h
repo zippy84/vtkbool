@@ -40,8 +40,9 @@ struct Face {
     double d = 0;
     std::optional<size_t> globalPlaneId;
     vtkIdType origCellId;
-    double quality = 0;
     FaceSource source = FaceSource::A;
+    double area = 0;
+    double quality = 0;
 };
 
 struct Mesh {

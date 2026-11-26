@@ -10,4 +10,4 @@ identifiers:
     value: 10.5281/zenodo.10461186
 repository-code: 'https://github.com/zippy84/vtkbool'
 license: Apache-2.0
-version: 3.2.0
+version: 4.0.0

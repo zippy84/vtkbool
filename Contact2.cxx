@@ -333,6 +333,8 @@ void UpdatePlanes (Mesh &mesh) {
             double lenSq = face.normal.x * face.normal.x + face.normal.y * face.normal.y + face.normal.z * face.normal.z;
 
             if (lenSq > 1e-12) {
+                face.area = lenSq;
+
                 double len = std::sqrt(lenSq);
                 face.normal.x /= len;
                 face.normal.y /= len;
@@ -1589,7 +1591,29 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
 
     std::vector<std::set<Node>> groups;
 
-    for (auto& [k, v] : graph) {
+    using GraphEntry = std::pair<Node, std::set<Node>>;
+
+    std::vector<GraphEntry> sortedEntries(graph.begin(), graph.end());
+
+    std::sort(sortedEntries.begin(), sortedEntries.end(), [&](const GraphEntry &l, const GraphEntry &r) {
+        const Face &lFace = mergedMesh.faces[l.first.index];
+        const Face &rFace = mergedMesh.faces[r.first.index];
+
+        const size_t lNum = lFace.vertIds.size();
+        const size_t rNum = rFace.vertIds.size();
+
+        if (lFace.area != rFace.area) {
+            return lFace.area > rFace.area;
+        }
+
+        if (lNum != rNum) {
+            return lNum > rNum;
+        }
+
+        return lFace.quality > rFace.quality;
+    });
+
+    for (auto& [k, v] : sortedEntries) {
         if (visited.find(k) == visited.end()) {
             std::set<Node> group;
 
@@ -1905,7 +1929,7 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
             }
         }
     } catch (...) {
-        std::cerr << "Contact failed" << std::endl;
+        std::cerr << "Intersection goes through non-manifold edges." << std::endl;
 
         return nullptr;
     }
@@ -2061,13 +2085,13 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
     }
 
     if (lineEnds.size() != 0) {
-        std::cerr << "lineEnds [";
+        std::cerr << "At least one line-end has only one neighbor. lineEnds are [";
         for (auto id : lineEnds) {
             std::cerr << id << ", ";
         }
         std::cerr << "]" << std::endl;
 
-        // return nullptr;
+        return nullptr;
     }
 
     return newLines;

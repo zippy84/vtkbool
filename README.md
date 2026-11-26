@@ -227,31 +227,19 @@ from vtkbool.vtkbool import vtkPolyDataBooleanFilter
 
 ## Errors and their meaning
 
-- *Contact failed with ...*
+- *Contact failed.*
 
-  - *Found invalid intersection points.*
+  - *At least one line-end has only one neighbor.*
 
-    ~~This problem occurs when an intersection point is located on congruent edges of a self-intersecting polygon.~~
-
-  - *Intersection points do not lie on the edges (cells a, b).*
-
-    ~~At least one intersection point does not lie on the boundary of the intersected polygon. The points of the polygon do not lie on a plane. The polygon is degenerated.~~
+    The intersection is incomplete. Therefore the cell cannot be divided.
 
   - *Intersection goes through non-manifold edges.*
 
     Non-manifold edges are generally not a problem. Unless they are part of the intersection.
 
-- *Cannot prevent equal capture points.*
-
-  A capture point is the projection of a point onto one of the edges of the intersected polygon. This point, not the projection, is usually used by two lines that are assigned to the two adjacent polygons, sharing this edge. There is a case where two different points have the same projection. ~~The error occurs when the problem could not be solved.~~
-
 - *There is no contact.*
 
   What it says.
-
-- *At least one line-end has only one neighbor.*
-
-  The intersection is incomplete. Therefore the cell cannot be divided.
 
 - *Strips are invalid.*
 
