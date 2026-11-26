@@ -22,7 +22,6 @@ This is an extension of the graphics library VTK. The goal of the extension is t
 
 ## Limitations
 
-- ~~the filter assumes well defined triangles, quads and polygons~~
 - PointData is not preserved - you have to do your own mapping with *OrigCellIdsA* and *OrigCellIdsB*
 
 ## Requirements
