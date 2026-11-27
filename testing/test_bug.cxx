@@ -48,10 +48,10 @@ int main () {
             return EXIT_FAILURE;
         }
 
-        auto writer = vtkSmartPointer<vtkPolyDataWriter>::New();
+        /*auto writer = vtkSmartPointer<vtkPolyDataWriter>::New();
         writer->SetInputConnection(bf->GetOutputPort());
         writer->SetFileName("Test1_result.vtk");
-        writer->Update();
+        writer->Update();*/
     }
 
     {
@@ -98,10 +98,10 @@ int main () {
             return EXIT_FAILURE;
         }
 
-        auto writer = vtkSmartPointer<vtkPolyDataWriter>::New();
+        /*auto writer = vtkSmartPointer<vtkPolyDataWriter>::New();
         writer->SetInputConnection(bf->GetOutputPort());
         writer->SetFileName("Test2_result.vtk");
-        writer->Update();
+        writer->Update();*/
     }
 
     {
@@ -132,7 +132,7 @@ int main () {
             return EXIT_FAILURE;
         }
 
-        contact.SaveAll("Test3_");
+        // contact.SaveAll("Test3_");
     }
 
     return EXIT_SUCCESS;

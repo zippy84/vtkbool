@@ -19,12 +19,11 @@ from collections import defaultdict
 from operator import itemgetter
 import math
 import pytest
-from functools import reduce
 
 from vtkmodules.vtkCommonCore import vtkIdList, vtkIdTypeArray, vtkPoints
 from vtkmodules.vtkCommonDataModel import vtkPolyData, VTK_POLYGON
 from vtkmodules.vtkFiltersSources import vtkCubeSource, vtkCylinderSource, vtkSphereSource, vtkPolyLineSource
-from vtkmodules.vtkCommonDataModel import vtkKdTreePointLocator
+from vtkmodules.vtkCommonDataModel import vtkStaticPointLocator
 from vtkmodules.vtkFiltersCore import vtkAppendPolyData, vtkCleanPolyData, vtkPolyDataNormals
 from vtkmodules.vtkIOLegacy import vtkPolyDataWriter, vtkPolyDataReader
 from vtkmodules.vtkCommonExecutionModel import vtkTrivialProducer
@@ -71,9 +70,9 @@ def check_result(bf, expected_regs=None):
     for name, pd in [('pdA', pdA), ('pdB', pdB)]:
         print(f'checking {name}')
 
-        loc = vtkKdTreePointLocator()
-        loc.SetDataSet(pd)
-        loc.BuildLocator()
+        locator = vtkStaticPointLocator()
+        locator.SetDataSet(pd)
+        locator.BuildLocator()
 
         it = lines.GetLines().NewIterator()
 
@@ -104,8 +103,8 @@ def check_result(bf, expected_regs=None):
             ptsA = vtkIdList()
             ptsB = vtkIdList()
 
-            loc.FindPointsWithinRadius(1e-5, ptA, ptsA)
-            loc.FindPointsWithinRadius(1e-5, ptB, ptsB)
+            locator.FindPointsWithinRadius(1e-5, ptA, ptsA)
+            locator.FindPointsWithinRadius(1e-5, ptB, ptsB)
 
             neigs = defaultdict(list)
 

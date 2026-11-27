@@ -1469,15 +1469,15 @@ Contact::Contact (vtkPolyData *origPdA, vtkPolyData *origPdB) : tol(1e-5) {
 
     newPd = GetPolyData(mergedMesh);
 
-    Save(newPd, "newPd.vtk");
+    // Save(newPd, "newPd.vtk");
 
     // std::cout << ComputeMaxPlanarityError(newPd) << std::endl;
 
     pdA = GetPolyData(mergedMesh, FaceSource::A);
     pdB = GetPolyData(mergedMesh, FaceSource::B);
 
-    Save(pdA, "newPdA.vtk");
-    Save(pdB, "newPdB.vtk");
+    // Save(pdA, "newPdA.vtk");
+    // Save(pdB, "newPdB.vtk");
 
     lines = CreateLines();
 }
@@ -1661,7 +1661,7 @@ vtkSmartPointer<vtkPolyData> Contact::CreateLines () {
         std::cout << std::endl;*/
 
         if (group.size() == 1) {
-            std::cerr << "group has only one face" << std::endl;
+            std::cerr << "Group has only one face." << std::endl;
 
             continue;
         }
